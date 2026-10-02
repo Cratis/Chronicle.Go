@@ -53,6 +53,12 @@ func (s *EventStore) registerStages(ctx context.Context, g *generation) ([]Artif
 	}{"constraints", func(ctx context.Context) error {
 		return s.sharedStage(ctx, g, "constraints", func(ctx context.Context) error { return s.registerConstraints(ctx, g) })
 	}})
+	if len(s.projectionDefinitions()) > 0 {
+		stages = append(stages, struct {
+			name string
+			run  func(context.Context) error
+		}{"projections", func(ctx context.Context) error { return s.registerProjections(ctx, g) }})
+	}
 	for _, stage := range stages {
 		if err := ctx.Err(); err != nil {
 			return artifacts, err

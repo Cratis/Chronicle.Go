@@ -19,6 +19,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/google/uuid"
 )
@@ -39,14 +40,16 @@ type node struct {
 type field struct {
 	index               int
 	name                string
+	goName, tag         string
 	value               *node
 	omitEmpty, omitZero bool
 	isZero              func(reflect.Value) bool
 }
 
 // Compile validates a struct shape before registration. Embedded fields, recursive
-// types, custom marshalers, interface values and chronicle field tags are rejected
-// rather than generating a schema that disagrees with serialization.
+// types, custom marshalers, interface values and unsupported chronicle directives
+// are rejected rather than generating a schema that disagrees with serialization.
+// Recognized model directives are metadata; event registries must also ValidateRole.
 func Compile(typ reflect.Type) (*Plan, error) {
 	if typ == nil || typ.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("%w: event must be a named struct", faults.ErrInvalidConfiguration)
@@ -153,18 +156,16 @@ func (n *node) compileFields(active map[reflect.Type]bool) error {
 	required := []string{}
 	for i := 0; i < n.typ.NumField(); i++ {
 		f := n.typ.Field(i)
-		if !f.IsExported() {
-			continue
-		}
+		tag := f.Tag.Get("chronicle")
 		tags := strings.Split(f.Tag.Get("json"), ",")
-		if tags[0] == "-" {
+		if !f.IsExported() || tags[0] == "-" {
+			if tag != "" {
+				return &declarations.DeclarationError{Artifact: n.typ.String(), GoField: f.Name, Offset: 0, Message: "declaration on an ignored field", Cause: faults.ErrInvalidConfiguration}
+			}
 			continue
 		}
 		if f.Anonymous {
 			return unsupported(n.typ, "embedded fields require an explicit nested property")
-		}
-		if f.Tag.Get("chronicle") != "" {
-			return unsupported(n.typ, "classification/routing field tags are not yet supported")
 		}
 		name := tags[0]
 		if name == "" {
@@ -173,11 +174,14 @@ func (n *node) compileFields(active map[reflect.Type]bool) error {
 		if _, exists := properties[name]; exists {
 			return unsupported(n.typ, "duplicate JSON property: "+name)
 		}
+		if err := validateTag(tag, declarations.Model, n.typ.String(), f.Name, name); err != nil {
+			return err
+		}
 		value, err := compile(f.Type, active)
 		if err != nil {
 			return err
 		}
-		entry := field{index: i, name: name, value: value}
+		entry := field{index: i, name: name, goName: f.Name, tag: tag, value: value}
 		for _, option := range tags[1:] {
 			switch option {
 			case "omitempty":

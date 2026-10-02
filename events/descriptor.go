@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/serialization"
 )
@@ -29,6 +30,9 @@ func (d Descriptor) GoType() reflect.Type { return d.typ }
 
 // Schema returns the JSON Schema registered with the kernel.
 func (d Descriptor) Schema() string { return d.plan.Schema() }
+
+// Fields returns detached metadata from the shared serialization/schema plan.
+func (d Descriptor) Fields() []serialization.Field { return d.plan.Fields() }
 
 // Tags returns a copy of static event tags.
 func (d Descriptor) Tags() []Tag { return append([]Tag(nil), d.tags...) }
@@ -95,6 +99,9 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 	}
 	plan, err := serialization.Compile(typ)
 	if err != nil {
+		return Type[T]{}, err
+	}
+	if err := plan.ValidateRole(declarations.Event); err != nil {
 		return Type[T]{}, err
 	}
 	return Type[T]{descriptor: Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...), subject: config.subject}}, nil
