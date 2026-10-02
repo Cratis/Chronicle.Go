@@ -158,10 +158,13 @@ jobs:
       - name: Lint workflows
         run: actionlint -color
 
+  contracts:
+    uses: ./.github/workflows/contracts.yml
+
   gate:
     name: Go gate
     if: always()
-    needs: [test, race, lint, vulnerabilities, workflows]
+    needs: [test, race, lint, vulnerabilities, workflows, contracts]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

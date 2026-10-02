@@ -1,0 +1,100 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+version: v2
+managed:
+  enabled: true
+  disable:
+    - file_option: go_package
+      path: google/protobuf
+  override:
+    - file_option: go_package
+      path: captures.proto
+      value: github.com/cratis/chronicle.go/contracts/captures
+    - file_option: go_package
+      path: clients.proto
+      value: github.com/cratis/chronicle.go/contracts/clients
+    - file_option: go_package
+      path: compliance.proto
+      value: github.com/cratis/chronicle.go/contracts/compliance
+    - file_option: go_package
+      path: events_constraints.proto
+      value: github.com/cratis/chronicle.go/contracts/events/constraints
+    - file_option: go_package
+      path: eventsequences.proto
+      value: github.com/cratis/chronicle.go/contracts/eventsequences
+    - file_option: go_package
+      path: eventstores.proto
+      value: github.com/cratis/chronicle.go/contracts/eventstores
+    - file_option: go_package
+      path: eventtypes.proto
+      value: github.com/cratis/chronicle.go/contracts/eventtypes
+    - file_option: go_package
+      path: externalservices.proto
+      value: github.com/cratis/chronicle.go/contracts/externalservices
+    - file_option: go_package
+      path: host.proto
+      value: github.com/cratis/chronicle.go/contracts/host
+    - file_option: go_package
+      path: identities.proto
+      value: github.com/cratis/chronicle.go/contracts/identities
+    - file_option: go_package
+      path: jobs.proto
+      value: github.com/cratis/chronicle.go/contracts/jobs
+    - file_option: go_package
+      path: namespaces.proto
+      value: github.com/cratis/chronicle.go/contracts/namespaces
+    - file_option: go_package
+      path: observation.proto
+      value: github.com/cratis/chronicle.go/contracts/observation
+    - file_option: go_package
+      path: observation_eventstoresubscriptions.proto
+      value: github.com/cratis/chronicle.go/contracts/observation/eventstoresubscriptions
+    - file_option: go_package
+      path: observation_reactors.proto
+      value: github.com/cratis/chronicle.go/contracts/observation/reactors
+    - file_option: go_package
+      path: observation_reducers.proto
+      value: github.com/cratis/chronicle.go/contracts/observation/reducers
+    - file_option: go_package
+      path: observation_webhooks.proto
+      value: github.com/cratis/chronicle.go/contracts/observation/webhooks
+    - file_option: go_package
+      path: patterns.proto
+      value: github.com/cratis/chronicle.go/contracts/patterns
+    - file_option: go_package
+      path: projectioneditor.proto
+      value: github.com/cratis/chronicle.go/contracts/projectioneditor
+    - file_option: go_package
+      path: projections.proto
+      value: github.com/cratis/chronicle.go/contracts/projections
+    - file_option: go_package
+      path: protobuf-net/bcl.proto
+      value: github.com/cratis/chronicle.go/contracts/bcl
+    - file_option: go_package
+      path: readmodelexplorer.proto
+      value: github.com/cratis/chronicle.go/contracts/readmodelexplorer
+    - file_option: go_package
+      path: readmodels.proto
+      value: github.com/cratis/chronicle.go/contracts/readmodels
+    - file_option: go_package
+      path: recommendations.proto
+      value: github.com/cratis/chronicle.go/contracts/recommendations
+    - file_option: go_package
+      path: security.proto
+      value: github.com/cratis/chronicle.go/contracts/security
+    - file_option: go_package
+      path: seeding.proto
+      value: github.com/cratis/chronicle.go/contracts/seeding
+    - file_option: go_package
+      path: sequences.proto
+      value: github.com/cratis/chronicle.go/contracts/sequences
+    - file_option: go_package
+      path: statistics.proto
+      value: github.com/cratis/chronicle.go/contracts/statistics
+plugins:
+  - local: protoc-gen-go
+    out: .
+    opt: module=github.com/cratis/chronicle.go
+  - local: protoc-gen-go-grpc
+    out: .
+    opt: module=github.com/cratis/chronicle.go
