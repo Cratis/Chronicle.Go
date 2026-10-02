@@ -33,6 +33,7 @@ type ConnectionString struct {
 	srv, noAuth, explicitCredentials         bool
 	skipTLS, tlsSpecified, skipCompatibility bool
 	unsupported                              []string
+	loadBalancer, nameServer                 string
 }
 
 // Addresses returns a defensive copy of the configured endpoints.
@@ -40,7 +41,7 @@ func (s ConnectionString) Addresses() []ServerAddress {
 	return append([]ServerAddress(nil), s.addresses...)
 }
 
-// IsSRV reports whether DNS SRV discovery was requested (not implemented in slice 1).
+// IsSRV reports whether DNS SRV discovery was requested.
 func (s ConnectionString) IsSRV() bool { return s.srv }
 
 // String renders only scheme and addresses; credentials and query values are omitted.
@@ -101,6 +102,9 @@ func ParseConnectionString(value string) (ConnectionString, error) {
 		}
 		s.addresses = append(s.addresses, address)
 	}
+	if len(s.addresses) > 64 || (s.srv && len(s.addresses) != 1) {
+		return s, invalidURI("endpoint count")
+	}
 	seen := make(map[string]bool)
 	for _, entry := range strings.Split(query, "&") {
 		if entry == "" {
@@ -141,7 +145,21 @@ func ParseConnectionString(value string) (ConnectionString, error) {
 			} else {
 				s.skipCompatibility = value == "true"
 			}
-		case "certificatepath", "certificatepassword", "loadbalancer", "srvnameserver", "disabletls":
+		case "loadbalancer":
+			if value != "least-connections" && value != "round-robin" && value != "random" {
+				return s, invalidURI("load balancer")
+			}
+			s.loadBalancer = value
+		case "srvnameserver":
+			if !strings.Contains(value, ":") {
+				value = net.JoinHostPort(value, "53")
+			}
+			address, err := parseAddress(value)
+			if err != nil {
+				return s, invalidURI("SRV name server")
+			}
+			s.nameServer = address.String()
+		case "certificatepath", "certificatepassword", "disabletls":
 			s.unsupported = append(s.unsupported, name)
 		default:
 			return s, invalidURI("unknown option")

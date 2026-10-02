@@ -131,28 +131,33 @@ func TestConnectionLossAndRejectedOAuthRecover(t *testing.T) {
 			if err = appendEvent(); err != nil {
 				t.Fatal(err)
 			}
+			client.mu.Lock()
+			old, supervisor := client.current, client.supervisor
+			client.mu.Unlock()
 			accepted.Store(2)
 			kernel.endStream <- status.Error(code, "connection ended")
-			// No new work is admitted while joining the terminated stream/worker.
-			joined := make(chan struct{})
-			go func() { client.work.Wait(); close(joined) }()
 			select {
-			case <-joined:
+			case <-old.ctx.Done():
 			case <-ctx.Done():
-				t.Fatal("keep-alive worker did not terminate")
+				t.Fatal("old generation did not cancel")
 			}
-			if err = appendEvent(); err == nil || !strings.Contains(err.Error(), "connection lost") || kernel.appends.Load() != 1 {
-				t.Fatalf("lost connection admitted append: %v", err)
+			if err = appendEvent(); err == nil || kernel.appends.Load() != 1 {
+				t.Fatalf("lost generation admitted append: %v", err)
 			}
-			if code == codes.Unavailable {
-				// The next preflight discovers the rotated credential; it must not
-				// retry invisibly, but must discard it for the next explicit Connect.
-				if err = client.Connect(ctx); status.Code(err) != codes.Unauthenticated {
-					t.Fatalf("expected rejected preflight: %v", err)
+			if code == codes.Unauthenticated {
+				select {
+				case <-supervisor.done:
+				case <-ctx.Done():
+					t.Fatal("terminal supervisor did not join")
 				}
-			}
-			if err = client.Connect(ctx); err != nil {
-				t.Fatalf("reconnect after token rotation: %v", err)
+				if err = client.Ready(ctx); status.Code(err) != codes.Unauthenticated {
+					t.Fatalf("terminal auth readiness: %v", err)
+				}
+				if err = client.Connect(ctx); err != nil {
+					t.Fatal(err)
+				}
+			} else if err = client.Ready(ctx); err != nil {
+				t.Fatalf("automatic reconnect: %v", err)
 			}
 			if err = appendEvent(); err != nil || kernel.appends.Load() != 2 || tokenCalls.Load() != 2 {
 				t.Fatalf("recovery: appends=%d tokens=%d error=%v", kernel.appends.Load(), tokenCalls.Load(), err)
@@ -170,9 +175,8 @@ func (s *invalidatingSource) Invalidate() { s.invalidations.Add(1) }
 
 func TestExternalTokenInvalidation(t *testing.T) {
 	source := &invalidatingSource{}
-	client := &Client{tokens: source}
-	client.invalidateRejectedToken(status.Error(codes.Unavailable, "transport"))
-	client.invalidateRejectedToken(status.Error(codes.Unauthenticated, "auth"))
+	invalidateRejectedToken(source, status.Error(codes.Unavailable, "transport"))
+	invalidateRejectedToken(source, status.Error(codes.Unauthenticated, "auth"))
 	if source.invalidations.Load() != 1 {
 		t.Fatal("external invalidation contract not honored")
 	}

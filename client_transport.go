@@ -7,124 +7,91 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
-	"time"
 
 	"github.com/cratis/chronicle.go/internal/faults"
-	contextmetadata "github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 func joinClose(err, closeError error) error { return errors.Join(err, closeError) }
 
-func (c *Client) admit(ctx context.Context) (context.Context, func(), error) {
+// acquire pins a generation before releasing the admission lock. Retirement
+// removes it under that lock before joining, so Add cannot race with Wait.
+func (c *Client) acquire(ctx context.Context) (*generation, context.Context, func(), error) {
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
-		return nil, nil, ErrClosed
+		return nil, nil, nil, ErrClosed
 	}
+	g := c.current
+	if g == nil || g.ctx.Err() != nil {
+		err := c.connectionError
+		if err == nil {
+			err = errors.New("chronicle: connection unavailable")
+		}
+		c.mu.Unlock()
+		return nil, nil, nil, err
+	}
+	g.work.Add(1)
 	c.work.Add(1)
 	c.mu.Unlock()
 	ctx, cancel := context.WithCancel(ctx)
-	stop := context.AfterFunc(c.life, cancel)
+	stop := context.AfterFunc(g.ctx, cancel)
 	var once sync.Once
-	done := func() { once.Do(func() { stop(); cancel(); c.work.Done() }) }
+	done := func() { once.Do(func() { stop(); cancel(); g.work.Done(); c.work.Done() }) }
 	if err := ctx.Err(); err != nil {
 		done()
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return ctx, done, nil
+	return g, ctx, done, nil
 }
 
-func (c *Client) authorize(ctx context.Context) (context.Context, error) {
-	md, _ := metadata.FromOutgoingContext(ctx)
-	md = md.Copy()
-	if id := contextmetadata.Correlation(ctx); id != (contextmetadata.CorrelationID{}) {
-		md.Set("x-correlation-id", id.String())
-	}
-	if c.tokens != nil {
-		token, err := c.tokens.Token(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if token.AccessToken == "" || strings.ContainsAny(token.AccessToken, "\r\n") || (!token.Expiry.IsZero() && !time.Now().Before(token.Expiry)) {
-			return nil, fmt.Errorf("chronicle: token source returned an empty, invalid or expired credential")
-		}
-		md.Set("authorization", "Bearer "+token.AccessToken)
-	}
-	return metadata.NewOutgoingContext(ctx, md), nil
+type clientTransport struct {
+	client *Client
+	store  *EventStore
 }
-
-func (c *Client) invalidateRejectedToken(err error) {
-	if status.Code(err) == codes.Unauthenticated {
-		if source, ok := c.tokens.(TokenInvalidator); ok {
-			source.Invalidate()
-		}
-	}
-}
-
-type clientTransport struct{ client *Client }
 
 func (t *clientTransport) Invoke(ctx context.Context, method string, args, reply any, options ...grpc.CallOption) error {
-	ctx, done, err := t.client.admit(ctx)
+	g, ctx, done, err := t.client.acquire(ctx)
 	if err != nil {
 		return &faults.BeforeDispatch{Cause: err}
 	}
 	defer done()
-	t.client.mu.Lock()
-	connectionError := t.client.connectionError
-	t.client.mu.Unlock()
-	if connectionError != nil && !strings.HasPrefix(method, "/Cratis.Chronicle.Contracts.Clients.ConnectionService/") {
-		return &faults.BeforeDispatch{Cause: fmt.Errorf("chronicle: connection lost; call Connect before resuming: %w", connectionError)}
+	if t.store != nil {
+		if _, err = t.store.register(ctx, g); err != nil {
+			return &faults.BeforeDispatch{Cause: fmt.Errorf("chronicle: registration: %w", err)}
+		}
 	}
-	ctx, err = t.client.authorize(ctx)
-	if err != nil {
-		return &faults.BeforeDispatch{Cause: err}
-	}
-	if err = ctx.Err(); err != nil {
-		return &faults.BeforeDispatch{Cause: err}
-	}
-	err = t.client.raw.Invoke(ctx, method, args, reply, options...)
-	t.client.invalidateRejectedToken(err)
-	if err != nil && ctx.Err() != nil {
-		return errors.Join(err, ctx.Err())
-	}
-	return err
+	return g.transport.Invoke(ctx, method, args, reply, options...)
 }
 
 func (t *clientTransport) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, options ...grpc.CallOption) (grpc.ClientStream, error) {
-	ctx, done, err := t.client.admit(ctx)
+	g, ctx, done, err := t.client.acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ctx, err = t.client.authorize(ctx)
+	if t.store != nil {
+		if _, err = t.store.register(ctx, g); err != nil {
+			done()
+			return nil, err
+		}
+	}
+	stream, err := g.transport.NewStream(ctx, desc, method, options...)
 	if err != nil {
 		done()
 		return nil, err
 	}
-	stream, err := t.client.raw.NewStream(ctx, desc, method, options...)
-	if err != nil {
-		t.client.invalidateRejectedToken(err)
-		done()
-		return nil, err
-	}
-	return &ownedStream{ClientStream: stream, done: done, rejected: t.client.invalidateRejectedToken}, nil
+	return &ownedStream{ClientStream: stream, done: done}, nil
 }
 
 type ownedStream struct {
 	grpc.ClientStream
-	done     func()
-	rejected func(error)
+	done func()
 }
 
 func (s *ownedStream) RecvMsg(message any) error {
 	err := s.ClientStream.RecvMsg(message)
 	if err != nil {
-		s.rejected(err)
 		s.done()
 	}
 	return err
@@ -132,16 +99,13 @@ func (s *ownedStream) RecvMsg(message any) error {
 func (s *ownedStream) CloseSend() error {
 	err := s.ClientStream.CloseSend()
 	if err != nil {
-		s.rejected(err)
 		s.done()
 	}
 	return err
 }
-
 func (s *ownedStream) SendMsg(message any) error {
 	err := s.ClientStream.SendMsg(message)
 	if err != nil {
-		s.rejected(err)
 		s.done()
 	}
 	return err

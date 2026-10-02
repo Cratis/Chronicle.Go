@@ -33,6 +33,17 @@ type TokenSource interface {
 	Token(context.Context) (Token, error)
 }
 
+// AuthenticationError identifies rejected credentials or an unusable token response.
+// It deliberately excludes response bodies and credential values.
+type AuthenticationError struct {
+	// StatusCode is the rejected HTTP status, or zero for an unusable token response.
+	StatusCode int
+}
+
+func (e *AuthenticationError) Error() string {
+	return fmt.Sprintf("chronicle: authentication failed (HTTP %d)", e.StatusCode)
+}
+
 // OAuth owns one HTTP transport and serializes refreshes without background work.
 type OAuth struct {
 	client               *http.Client
@@ -111,6 +122,9 @@ func (s *OAuth) fetch(ctx context.Context) (Token, error) {
 	// change the token result or conceal an incomplete read.
 	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
+		if response.StatusCode == http.StatusBadRequest || response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
+			return Token{}, &AuthenticationError{StatusCode: response.StatusCode}
+		}
 		return Token{}, fmt.Errorf("chronicle: token endpoint returned HTTP %d", response.StatusCode)
 	}
 	body, err := io.ReadAll(io.LimitReader(response.Body, 1024*1024+1))
@@ -126,14 +140,14 @@ func (s *OAuth) fetch(ctx context.Context) (Token, error) {
 		TokenType   string `json:"token_type"`
 	}
 	if json.Unmarshal(body, &data) != nil || data.AccessToken == "" || (data.TokenType != "" && !strings.EqualFold(data.TokenType, "bearer")) {
-		return Token{}, errors.New("chronicle: invalid token response")
+		return Token{}, &AuthenticationError{}
 	}
 	seconds := int64(3600)
 	if data.ExpiresIn != nil {
 		seconds = *data.ExpiresIn
 	}
 	if seconds <= 0 || seconds > 31536000 {
-		return Token{}, errors.New("chronicle: invalid token lifetime")
+		return Token{}, &AuthenticationError{}
 	}
 	return Token{AccessToken: data.AccessToken, Expiry: time.Now().Add(time.Duration(seconds) * time.Second)}, nil
 }
