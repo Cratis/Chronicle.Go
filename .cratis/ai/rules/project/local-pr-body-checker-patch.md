@@ -9,8 +9,11 @@ Pending [Cratis/AI#478](https://github.com/Cratis/AI/issues/478), the managed
 line one and its `cratis-ai-managed` marker on line two. The installer currently
 prepends the JavaScript marker above the shebang, which causes a Node syntax error
 and blocks the [Claude PR body guard](../../hooks/scripts/cratis-guard-pr-body.sh).
-The guard also has execute permission because the Claude settings invoke it
-directly; the installed copy lacked that permission. Preserve it during updates.
+The Claude settings invoke five hook scripts directly, so each must keep its
+execute bit: `cratis-guard-pr-body.sh`, `cratis-guard-writes.sh`,
+`cratis-guard-store-mutations.sh`, `cratis-pattern-scan.sh` and
+`cratis-quality-gate.sh`. The installer writes them without it
+([Cratis/AI#480](https://github.com/Cratis/AI/issues/480)); preserve the bit during updates.
 This is a narrowly scoped exception to the no-hand-edits rule for managed files.
 
 The installer determines ownership from `.cratis/ai.manifest.json`, not the
