@@ -1,0 +1,11 @@
+---
+description: Load repository-owned Go project context and language guidance.
+alwaysApply: true
+---
+
+# Go project adapter
+
+Read and follow `@Documentation/project-context.md`. For Go source or module
+work, always load `@.cratis/ai/rules/go.md` and
+`@.cratis/ai/rules/go-cratis-parity.md`. These are repository-owned additions;
+leave the managed Cratis entry point unchanged.

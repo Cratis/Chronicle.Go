@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0",
+  "harnesses": [
+    "claude",
+    "codex",
+    "copilot",
+    "cursor",
+    "opencode",
+    "pi"
+  ],
+  "profiles": [
+    "cratis/engineering/core",
+    "cratis/documentation",
+    "cratis/chronicle/core",
+    "cratis/chronicle/compliance",
+    "cratis/chronicle/multi-tenancy",
+    "cratis/specifications",
+    "cratis/cli",
+    "cratis/review",
+    "cratis/fundamentals",
+    "cratis/methodology/governed-releases"
+  ],
+  "languages": [
+    "language-agnostic",
+    "markdown",
+    "shell"
+  ]
+}
