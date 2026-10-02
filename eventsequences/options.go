@@ -30,7 +30,9 @@ type Expectation struct {
 // Resolve asks the optimistic strategy to query the matching tail at append time.
 func Resolve() Expectation { return Expectation{} }
 
-// Exact requires the matching tail to equal position.
+// Exact supplies an explicit upper bound: the kernel rejects a matching tail
+// greater than position, but accepts a lower tail or no matching history. It does
+// not require equality. Use NoMatchingEvent to require an empty matching history.
 func Exact(position events.SequenceNumber) Expectation {
 	return Expectation{kind: 1, position: position}
 }

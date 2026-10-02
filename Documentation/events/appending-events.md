@@ -1,6 +1,6 @@
 ---
 title: Append events
-description: Inspect append outcomes and select exact, optimistic or protected-empty concurrency scopes.
+description: Inspect append outcomes and select explicit, optimistic or protected-empty concurrency scopes.
 ---
 
 Use `store.EventLog().Append(ctx, sourceID, event, options...)` to persist one registered fact. A sequence position is unsigned and sequence-wide, not a source revision; the first position is zero. `EventSequence(id)` returns another sequence handle and a construction error for a blank ID. The event log is the same sequence implementation.
@@ -22,11 +22,11 @@ A result includes correlation, whether concurrency checking actually ran, every 
 | --- | --- |
 | Omitted scope | Resolve the current source/route tail, then compare during append; an empty tail is unchecked |
 | `eventsequences.Resolve()` | Query the tail using the supplied scope's exact narrowing |
-| `eventsequences.Exact(position)` | Require the matching tail to equal an earlier observed position |
+| `eventsequences.Exact(position)` | Reject a matching tail greater than `position`; lower or absent tails pass |
 | `eventsequences.NoMatchingEvent()` | Protect the absence of matching history |
 | `eventsequences.NoCheck()` | Explicitly disable checking; combining it with narrowing is rejected |
 
-Default optimistic resolution detects a race between its tail query and append. It does **not** protect business state read earlier. Use an exact expectation from that read instead.
+Default optimistic resolution detects a race between its tail query and append. It does **not** protect business state read earlier. Use `Exact(position)` from that read instead. Despite the name, this supplies the kernel's upper bound, not an equality condition; `Exact(10)` accepts a tail of `3` or no history. Use `NoMatchingEvent()` when absence itself must be protected.
 
 This excerpt protects first append for one source. It assumes the registered `CustomerRegistered` and `store` from [getting started](../clients/go/getting-started.md):
 
