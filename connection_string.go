@@ -66,6 +66,7 @@ func (s ConnectionString) GoString() string { return s.String() }
 func ParseConnectionString(value string) (ConnectionString, error) {
 	s := ConnectionString{clientID: developmentClient, secret: developmentSecret}
 	scheme, rest, ok := strings.Cut(value, "://")
+	scheme = strings.ToLower(scheme)
 	if !ok || (scheme != "chronicle" && scheme != "chronicle+srv") {
 		return s, invalidURI("scheme")
 	}
@@ -100,36 +101,47 @@ func ParseConnectionString(value string) (ConnectionString, error) {
 		}
 		s.addresses = append(s.addresses, address)
 	}
-	values, err := url.ParseQuery(query)
-	if err != nil {
-		return s, invalidURI("query")
-	}
-	for name, entries := range values {
-		if len(entries) != 1 {
+	seen := make(map[string]bool)
+	for _, entry := range strings.Split(query, "&") {
+		if entry == "" {
+			continue
+		}
+		name, value, _ := strings.Cut(entry, "=")
+		name, err := url.PathUnescape(name)
+		if err != nil {
+			return s, invalidURI("query")
+		}
+		value, err = url.PathUnescape(value)
+		if err != nil {
+			return s, invalidURI("query")
+		}
+		name = strings.ToLower(name)
+		if seen[name] {
 			return s, invalidURI("duplicate option")
 		}
-		value := entries[0]
+		seen[name] = true
 		switch name {
 		case "auth":
-			if value != "none" {
+			if !strings.EqualFold(value, "none") {
 				return s, invalidURI("authentication mode")
 			}
 			s.noAuth = true
-		case "apiKey":
+		case "apikey":
 			if value == "" {
 				return s, invalidURI("empty API key")
 			}
 			s.apiKey = value
-		case "skipTlsValidation", "skipCompatibilityCheck":
+		case "skiptlsvalidation", "skipcompatibilitycheck":
+			value = strings.ToLower(strings.TrimSpace(value))
 			if value != "true" && value != "false" {
 				return s, invalidURI("boolean option")
 			}
-			if name == "skipTlsValidation" {
+			if name == "skiptlsvalidation" {
 				s.skipTLS, s.tlsSpecified = value == "true", true
 			} else {
 				s.skipCompatibility = value == "true"
 			}
-		case "certificatePath", "certificatePassword", "loadBalancer", "srvNameServer", "disableTls":
+		case "certificatepath", "certificatepassword", "loadbalancer", "srvnameserver", "disabletls":
 			s.unsupported = append(s.unsupported, name)
 		default:
 			return s, invalidURI("unknown option")

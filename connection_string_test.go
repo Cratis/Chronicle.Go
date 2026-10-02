@@ -24,6 +24,9 @@ func TestParseConnectionString(t *testing.T) {
 		{"encoded auth", "chronicle://my%40client:p%3Ass%40word@host", "host:35000", 1, false},
 		{"SRV", "chronicle+srv://cluster", "cluster:35000", 1, false},
 		{"anonymous", "chronicle://host/?auth=none", "host:35000", 1, false},
+		{"case insensitive", "CHRONICLE://host/?AUTH=NONE&SkipTlsValidation=TRUE&SkipCompatibilityCheck=False", "host:35000", 1, false},
+		{"case duplicate", "chronicle://host?auth=none&AUTH=NONE", "", 0, true},
+		{"invalid query escape", "chronicle://host?auth=%ZZ", "", 0, true},
 		{"API key", "chronicle://host?apiKey=sensitive", "host:35000", 1, false},
 		{"scheme", "https://host", "", 0, true},
 		{"empty host", "chronicle://", "", 0, true},
@@ -71,6 +74,17 @@ func TestParseConnectionString(t *testing.T) {
 	defaults, err := ParseConnectionString("chronicle://localhost")
 	if err != nil || defaults.clientID != developmentClient || defaults.secret != developmentSecret || defaults.skipTLS {
 		t.Fatal("wrong defaults")
+	}
+}
+
+func TestConnectionStringOptionValues(t *testing.T) {
+	parsed, err := ParseConnectionString("chronicle://host?SkipTlsValidation=TRUE&SkipCompatibilityCheck=%20True%20&AUTH=NONE")
+	if err != nil || !parsed.skipTLS || !parsed.tlsSpecified || !parsed.skipCompatibility || !parsed.noAuth {
+		t.Fatalf("case insensitive values not applied: %v", err)
+	}
+	parsed, err = ParseConnectionString("chronicle://host?APIKEY=a+b%2Bc")
+	if err != nil || parsed.apiKey != "a+b+c" {
+		t.Fatal("plus decoding differs from C#", err)
 	}
 }
 
