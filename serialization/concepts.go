@@ -26,7 +26,7 @@ func compileConcept(n *node, representation concepts.Representation, active map[
 	case concepts.KindTimeSpan:
 		format = "duration"
 	default:
-		underlying, err := compile(representation.Type, active, policy)
+		underlying, err := compile(representation.Type, active, policy, false)
 		if err != nil {
 			return nil, err
 		}

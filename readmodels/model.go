@@ -237,7 +237,7 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 	if config.observer == Reducer && config.sink.Type == NoSink {
 		return Model[T]{}, fmt.Errorf("%w: passive reducers require an in-process fold", faults.ErrUnsupported)
 	}
-	plan, err := serialization.Compile(typ)
+	plan, err := serialization.CompileReadModel(typ)
 	if err != nil {
 		return Model[T]{}, err
 	}

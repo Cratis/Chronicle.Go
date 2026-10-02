@@ -38,7 +38,7 @@ func TestReadModelNormalizesRootIDAlias(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assertReleaseJSON(t, string(raw.Value), `{"ID":"owner","Nested":{"_id":"nested"},"__subject":"lineage"}`)
+			assertReleaseJSON(t, string(raw.Value), `{"Id":"owner","Nested":{"_id":"nested"},"__subject":"lineage"}`)
 		})
 	}
 }
@@ -48,7 +48,7 @@ func TestReadModelDeclaredIDIsNotOverwritten(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	payload := `{"ID":"declared","_id":"sink"}`
+	payload := `{"Id":"declared","_id":"sink"}`
 	service, ctx := serviceFixture(t, &modelKernel{get: func(context.Context, *contracts.GetInstanceByKeyRequest) (*contracts.GetInstanceByKeyResponse, error) {
 		return &contracts.GetInstanceByKeyResponse{ReadModel: payload}, nil
 	}}, model.Descriptor())
@@ -70,6 +70,13 @@ func TestReadModelReleaseUntaggedIDSubject(t *testing.T) {
 	service, ctx := serviceFixture(t, &modelKernel{release: func(_ context.Context, request *compliance.ReleaseRequest) (*compliance.ReleaseResponse, error) {
 		if request.Subject != "owner" {
 			t.Errorf("subject = %q", request.Subject)
+		}
+		var schema struct{ Properties map[string]any }
+		if err := json.Unmarshal([]byte(request.Schema), &schema); err != nil {
+			t.Errorf("release schema: %v", err)
+		}
+		if schema.Properties["Id"] == nil || schema.Properties["ID"] != nil {
+			t.Errorf("release schema ID naming: %s", request.Schema)
 		}
 		return &compliance.ReleaseResponse{Payload: `{"Name":"released"}`}, nil
 	}}, model.Descriptor())

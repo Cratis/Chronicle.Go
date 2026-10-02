@@ -53,6 +53,18 @@ type field struct {
 // Recognized model directives are metadata; event registries must also ValidateRole.
 // Naming defaults to PreservePropertyNames; the last optional policy wins.
 func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
+	return compilePlan(typ, false, policies...)
+}
+
+// CompileReadModel applies Compile's contract, translating only an untagged root
+// Go ID field to C#'s Id before applying the naming policy. MongoDB read-model
+// keys round-trip through the kernel only when the schema declares id or Id.
+// Explicit json tags, nested fields and all other initialisms are unchanged.
+func CompileReadModel(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
+	return compilePlan(typ, true, policies...)
+}
+
+func compilePlan(typ reflect.Type, readModel bool, policies ...NamingPolicy) (*Plan, error) {
 	policy := PreservePropertyNames
 	for _, candidate := range policies {
 		policy = candidate
@@ -63,7 +75,7 @@ func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
 	if typ == nil || typ.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("%w: event must be a named struct", faults.ErrInvalidConfiguration)
 	}
-	root, err := compile(typ, make(map[reflect.Type]bool), policy)
+	root, err := compile(typ, make(map[reflect.Type]bool), policy, readModel)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +91,7 @@ func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
 // Schema returns the immutable JSON Schema string with the same property names as Marshal.
 func (p *Plan) Schema() string { return p.schema }
 
-func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy) (*node, error) {
+func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy, readModelRoot bool) (*node, error) {
 	if active[typ] {
 		return nil, unsupported(typ, "recursive shape")
 	}
@@ -99,7 +111,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy
 	// Traverse pointers before testing marshaler interfaces: pointers to the
 	// supported built-ins inherit their marshaling methods too.
 	if typ.Kind() == reflect.Pointer {
-		item, err := compile(typ.Elem(), active, policy)
+		item, err := compile(typ.Elem(), active, policy, false)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +146,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy
 		if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
 			return nil, unsupported(typ, "byte slices need an explicit wire format")
 		}
-		item, err := compile(typ.Elem(), active, policy)
+		item, err := compile(typ.Elem(), active, policy, false)
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +158,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy
 			n.schema["type"], n.schema["items"] = "array", item.schema
 		}
 	case reflect.Struct:
-		if err := n.compileFields(active, policy); err != nil {
+		if err := n.compileFields(active, policy, readModelRoot); err != nil {
 			return nil, err
 		}
 	case reflect.Bool:
@@ -170,7 +182,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy
 	return n, nil
 }
 
-func (n *node) compileFields(active map[reflect.Type]bool, policy NamingPolicy) error {
+func (n *node) compileFields(active map[reflect.Type]bool, policy NamingPolicy, readModelRoot bool) error {
 	properties := make(map[string]any)
 	required := []string{}
 	for i := 0; i < n.typ.NumField(); i++ {
@@ -188,7 +200,11 @@ func (n *node) compileFields(active map[reflect.Type]bool, policy NamingPolicy) 
 		}
 		name := tags[0]
 		if name == "" {
-			name = policy.name(f.Name)
+			goName := f.Name
+			if _, tagged := f.Tag.Lookup("json"); readModelRoot && goName == "ID" && !tagged {
+				goName = "Id"
+			}
+			name = policy.name(goName)
 		}
 		if _, exists := properties[name]; exists {
 			return fmt.Errorf("%w: %s: duplicate JSON property: %s", faults.ErrInvalidConfiguration, n.typ, name)
@@ -196,7 +212,7 @@ func (n *node) compileFields(active map[reflect.Type]bool, policy NamingPolicy) 
 		if err := validateTag(tag, declarations.Model, n.typ.String(), f.Name, name); err != nil {
 			return err
 		}
-		value, err := compile(f.Type, active, policy)
+		value, err := compile(f.Type, active, policy, false)
 		if err != nil {
 			return err
 		}

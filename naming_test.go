@@ -133,6 +133,61 @@ func TestFluentNamingRebindsOnlyPlanPaths(t *testing.T) {
 	}
 }
 
+type idNamingEvent struct {
+	ID   string
+	Name string
+}
+
+type idNamingModel struct {
+	ID   string `chronicle:"key"`
+	Name string
+}
+
+func TestClientReadModelIDTranslationRebindsProjectionPaths(t *testing.T) {
+	r := NewRegistry()
+	e, err := RegisterEvent[idNamingEvent](r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := RegisterReadModel[idNamingModel](r, readmodels.WithIndexes("Id"), readmodels.WithPII("Name"), readmodels.WithSubjectProperty("Id"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := projections.NewBuilder("id-naming", m)
+	projections.From(b, e, func(f *projections.FromBuilder[idNamingModel, idNamingEvent]) {
+		projections.Map(f, projections.Path[idNamingModel, string]("Id"), projections.Path[idNamingEvent, string]("ID"))
+		projections.Map(f, projections.Path[idNamingModel, string]("Name"), projections.Path[idNamingEvent, string]("Name"))
+	}, projections.UsingKey(projections.Path[idNamingEvent, string]("ID")))
+	declaration, err := b.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.AddProjection(declaration); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		policy           serialization.NamingPolicy
+		modelID, eventID string
+	}{
+		{serialization.PreservePropertyNames, "Id", "ID"},
+		{serialization.CamelCase, "id", "ID"},
+		{serialization.LegacyGoCamelCase, "id", "id"},
+	} {
+		client, err := NewClient(WithRegistry(r), WithNamingPolicy(tc.policy))
+		if err != nil {
+			t.Fatal(err)
+		}
+		definition := client.projections[0]
+		from := definition.KernelDefinition().From[0].Value
+		if definition.KeyField() != tc.modelID || from.Key != tc.eventID || from.Properties[tc.modelID] != tc.eventID || definition.Model().Indexes()[0] != tc.modelID {
+			t.Fatalf("policy %v: key=%q projection=%+v indexes=%v", tc.policy, definition.KeyField(), from, definition.Model().Indexes())
+		}
+		if err := client.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 type namingCollision struct {
 	Person string
 	Other  string `json:"person"`
