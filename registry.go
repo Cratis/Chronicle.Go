@@ -22,6 +22,7 @@ type Registry struct {
 	constraints []constraints.Definition
 	readModels  []readmodels.Descriptor
 	projections []projections.Declaration
+	reactors    []reactorDeclaration
 }
 
 // NewRegistry returns an empty registry; there is no global discovery or init hook.

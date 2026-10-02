@@ -149,6 +149,11 @@ func (s *EventStore) register(ctx context.Context, g *generation) (RegistrationO
 	if outcome.Failure != nil {
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
+	if err := s.startReactors(ctx, g); err != nil {
+		outcome.Failure = err
+		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "reactors", Failure: err})
+		return outcome, &RegistrationError{Outcome: outcome}
+	}
 	return outcome, nil
 }
 
