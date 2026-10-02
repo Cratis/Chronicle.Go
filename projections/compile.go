@@ -60,12 +60,10 @@ func Compile(declaration Declaration, catalog *events.Catalog) (Definition, erro
 		}
 	}
 	froms := map[events.TypeRef]*fromDefinition{}
-	eventDescriptors := map[events.TypeRef]events.Descriptor{}
 	ensure := func(event events.Descriptor) *fromDefinition {
 		ref := event.Ref()
 		if froms[ref] == nil {
 			froms[ref] = &fromDefinition{event: ref, key: expression{kind: sourceExpression}}
-			eventDescriptors[ref] = event
 		}
 		return froms[ref]
 	}
@@ -153,14 +151,9 @@ func Compile(declaration Declaration, catalog *events.Catalog) (Definition, erro
 	if len(froms) == 0 {
 		return locate(invalid("projection must subscribe to at least one registered event"))
 	}
-	for ref, from := range froms {
+	for _, from := range froms {
 		if d.passive && from.key.kind != sourceExpression {
 			return locate(invalid("passive key redirection is not supported by immediate instance reads"))
-		}
-		if !d.noAuto {
-			if err = validateAutoMap(compiled, from, fields, eventDescriptors[ref].Fields()); err != nil {
-				return locate(err)
-			}
 		}
 		slices.SortFunc(from.writes, func(a, b write) int { return strings.Compare(a.path, b.path) })
 		compiled.from = append(compiled.from, *from)
@@ -201,21 +194,6 @@ func addWrite(d *definition, from *fromDefinition, w write, modelFields, eventFi
 	}
 	from.writes = append(from.writes, w)
 	d.provenance = append(d.provenance, w.provenance)
-	return nil
-}
-func validateAutoMap(d *definition, from *fromDefinition, modelFields, eventFields []serialization.Field) error {
-	for _, target := range serialization.RootFields(modelFields) {
-		excluded := slices.ContainsFunc(d.exclusions, func(path string) bool { return strings.EqualFold(path, target.Path) })
-		written := slices.ContainsFunc(from.writes, func(w write) bool { return w.path == target.Path })
-		if excluded || written {
-			continue
-		}
-		for _, source := range serialization.RootFields(eventFields) {
-			if strings.EqualFold(source.Name, target.Name) && !scalarCompatible(target, source) {
-				return invalid("AutoMap found incompatible event and model property representations")
-			}
-		}
-	}
 	return nil
 }
 func priority(name string) int {
