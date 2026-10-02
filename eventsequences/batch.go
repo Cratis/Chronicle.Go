@@ -53,7 +53,18 @@ func (s *Sequence) AppendMany(ctx context.Context, source events.SourceID, value
 		entries[i] = Entry{Source: source, Event: value, Route: config.route, Occurred: config.occurred, Subject: config.subject}
 	}
 	tags = append(tags, config.tags...)
-	batch, err := s.prepareBatch(ctx, entries, batchConfig{correlation: config.correlation, tags: tags, named: config.named, scopes: []LabeledScope{{Label: string(source), Scope: scope}}})
+	// Validate and serialize every event before invoking a user strategy or I/O.
+	batch, err := s.snapshotBatch(ctx, entries, batchConfig{correlation: config.correlation, tags: tags, named: config.named})
+	if err != nil {
+		return BatchResult{}, err
+	}
+	if config.scope == nil {
+		scope, err = s.automaticScope(ctx, source, config.route)
+		if err != nil {
+			return BatchResult{}, err
+		}
+	}
+	batch, err = s.resolveBatch(ctx, batch, []LabeledScope{{Label: string(source), Scope: scope}})
 	if err != nil {
 		return BatchResult{}, err
 	}
@@ -97,7 +108,7 @@ func (s *Sequence) prepareBatch(ctx context.Context, entries []Entry, config bat
 	if err != nil {
 		return preparedBatch{}, err
 	}
-	scopes, err := batchScopes(entries, config.scopes)
+	scopes, err := s.automaticBatchScopes(ctx, entries, config.scopes)
 	if err != nil {
 		return preparedBatch{}, err
 	}
@@ -131,6 +142,11 @@ func (s *Sequence) snapshotBatch(ctx context.Context, entries []Entry, config ba
 		}
 		options := appendConfig{route: entry.Route, scope: &Scope{Expectation: NoCheck()}, correlation: config.correlation, subject: entry.Subject, occurred: entry.Occurred,
 			tags: append(append([]events.Tag(nil), entry.Tags...), config.tags...), named: append(append([]events.NamedTag(nil), entry.NamedTags...), config.named...)}
+		if options.subject == nil {
+			if subject, ok := descriptor.ResolveSubject(entry.Event); ok {
+				options.subject = &subject
+			}
+		}
 		one, err := s.request(ctx, entry.Source, descriptor, string(content), options)
 		if err != nil {
 			return preparedBatch{}, err

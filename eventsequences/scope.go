@@ -14,9 +14,12 @@ import (
 )
 
 func (s *Sequence) resolveScope(ctx context.Context, source events.SourceID, config appendConfig) (*sequences.ConcurrencyScope, error) {
-	scope := defaultScope(source, config.route)
 	if config.scope != nil {
-		scope = *config.scope
+		return s.resolveLabeledScope(ctx, source, *config.scope)
+	}
+	scope, err := s.automaticScope(ctx, source, config.route)
+	if err != nil {
+		return nil, err
 	}
 	return s.resolveLabeledScope(ctx, source, scope)
 }
@@ -35,6 +38,8 @@ func (s *Sequence) resolveLabeledScope(ctx context.Context, source events.Source
 	}
 	if exists {
 		result.SequenceNumber = uint64(tail)
+	} else if s.concurrency.CheckFirstAppendIntoAScope {
+		result.ExpectsNoMatchingEvent = true
 	}
 	return result, nil
 }
@@ -44,9 +49,9 @@ func scopeContract(source events.SourceID, scope Scope) (*sequences.ConcurrencyS
 	if filter.SourceID != nil && (*filter.SourceID == "" || *filter.SourceID != source) {
 		return nil, fmt.Errorf("%w: source-bound scope must name its target or label", faults.ErrInvalidConfiguration)
 	}
-	if (filter.SourceType != nil && *filter.SourceType == "") || (filter.StreamType != nil && *filter.StreamType == "") || (filter.StreamID != nil && *filter.StreamID == "") {
-		return nil, fmt.Errorf("%w: empty scope dimension", faults.ErrInvalidConfiguration)
-	}
+	filter.SourceType = scopeDimension(filter.SourceType)
+	filter.StreamType = scopeDimension(filter.StreamType)
+	filter.StreamID = scopeDimension(filter.StreamID)
 	if scope.Expectation.kind == 1 && scope.Expectation.position >= events.Unavailable-2 {
 		return nil, fmt.Errorf("%w: reserved exact sequence number", faults.ErrInvalidConfiguration)
 	}
@@ -73,6 +78,13 @@ func scopeContract(source events.SourceID, scope Scope) (*sequences.ConcurrencyS
 		return nil, faults.ErrInvalidConfiguration
 	}
 	return result, nil
+}
+
+func scopeDimension[T ~string](value *T) *T {
+	if value != nil && *value == "" {
+		return nil
+	}
+	return value
 }
 
 func stringValue[T ~string](value *T) string {

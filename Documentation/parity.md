@@ -25,6 +25,12 @@ Statuses: **Implemented** means the named behavior has executable regression evi
 | Correlation/auditing / `DotNET/Auditing`, `Identities/Identity`; connection correlation interceptor | **Implemented** for immutable explicit correlation, ordered causation and deduplicated actor chains | `TestImmutableMetadata`, `TestIdentityDeduplicatesCycles`, `TestCorrelationJSON`, `TestAppendMetadataAndNamedTags`, `TestDotNETGuidVector`, `TestDateTimeOffsetPreservesOffsetAndTruncates`; no implicit process/program root causation or ambient context |
 | Single append / `DotNET/EventSequences/EventSequence`, `AppendResult` | **Implemented** for single append, routing, subject/time, tags, named tags and complete results | `TestAppendScopesOnTheWire`, `TestAppendMetadataAndNamedTags`, `TestAppendDomainRejectionsPreserveEveryDiagnostic`, `TestMalformedAppendResponsesFailClosed`, `TestKernelRegisterAppendRead` |
 | Concurrency / `DotNET/EventSequences/Concurrency/OptimisticConcurrencyStrategy`, `ConcurrencyScopeConverters` | **Implemented** for default/resolve/exact/no-match/no-check single-event scopes | `TestAppendScopesOnTheWire`, `TestProtectedAppendCannotSilentlyDowngrade`, `TestAppendValidationDoesNotDispatch`; `TestKernelExactIsAnUpperBound` accepts absent/lower tails and rejects greater tails; the smoke test rejects a second protected-empty append |
+| Configurable concurrency / `DotNET/ChronicleOptions.cs`, `DotNET/EventSequences/Concurrency/{ConcurrencyOptions,IConcurrencyScopeStrategy,OptimisticConcurrencyStrategy}.cs` (baseline revision above) | **Implemented**: `WithCheckFirstAppendIntoAScope`, `WithDefaultConcurrencyStrategy`, `ConcurrencyScopeStrategy.GetScope(ctx, sequence, filter)` | `TestFirstAppendPolicyAndSubjectsAcrossAllPaths`, `TestDefaultStrategyReplacesAutomaticScopesAndExplicitScopesWin`, `TestKernelConfiguredFirstAppendRejectsConcurrentWriter`; defaults remain optimistic with first-append protection off. Explicit scopes bypass the replaceable strategy; `Resolve` still honors first-append policy. Strategy callbacks can read the sequence tail themselves or return `Resolve` for exactly one deferred tail read |
+| Declared subjects / `DotNET/SubjectResolver.cs`, `DotNET/EventSequences/EventSequence.cs:409,561,738` (baseline revision above) | **Go-specific**: `events.WithSubjectResolver[T](func(T) (events.Subject, bool))` on `RegisterEvent[T]`; append override → declaration resolver → source ID | `TestSubjectResolverDeclarationAndLookup`, `TestFirstAppendPolicyAndSubjectsAcrossAllPaths`; typed callback replaces attributes/reflection, accepts appended values and pointers, false represents C# null, and resolves once at staging for units of work. Existing nonblank append-subject validation also applies to resolved subjects |
+| Empty concurrency dimensions / `DotNET/Events/EventSourceType.cs`, `DotNET/EventSequences/Concurrency/ConcurrencyScopeConverters.cs:26-34` (baseline revision above) | **Implemented**: empty source classification/stream type/stream ID are non-narrowing, like reads; source IDs and scope labels remain validated | `TestEmptyScopeDimensionsAreConsistentWithTailReads`; nonempty dimensions and append route defaults retain their existing wire spelling |
+| Append operation metadata / `DotNET/EventSequences/EventSequence.cs:463-469,606-613` (baseline revision above) | **Go-specific**: `AppendWithMetadata`, `AppendManyWithMetadata`, `AppendBatchWithMetadata` return wrappers with `Result()` and outcome-independent `Operation()`; `PreparedBatch.Operation()` exposes staged metadata | `TestOperationMetadataSurvivesRejectionAndUnknownOutcome`, `TestManyAndPreparedOperationMetadata`, `TestLegacyResultLayoutsRemainUnchanged`; store/namespace/sequence and distinct exact `TypeRef` generations are owned independently of committed-only `Target`. Existing `AppendResult`/`BatchResult` layouts and methods stay unchanged for Arc.Go and unkeyed literals; adding even a private metadata field would break those callers. Existing transaction results consequently retain their old layout rather than acquiring implicit metadata |
+| Reverse event catalog / `DotNET/Events/IEventTypes.cs:42-65` (baseline revision above) | **Implemented**: `Catalog.LookupID(TypeID)` and `Catalog.LookupRef(TypeRef)` return `(Descriptor, bool)` including schema and Go type | `TestSubjectResolverDeclarationAndLookup`; missing IDs/generations do not match, current-ID lookup returns the sole registered generation; historical codec registration remains outside this slice |
+| Canonical identities and names / `DotNET/Identities/Identity.cs:28-33`, `DotNET/EventSequences/EventSequenceId.cs:26-66`, `DotNET/{EventStoreName,EventStoreNamespaceName}.cs` (baseline revision above) | **Implemented**: `identities.Unknown()`, `identities.System()`, `events.{UnspecifiedSequence,SystemSequence,Outbox,Inbox,InboxPrefix,UnspecifiedSourceType}`, `SequenceID.IsEventLog()`, `metadata.{NotSetStore,SystemStore,NotSetNamespace}` | `TestCanonicalIdentities`, `TestCanonicalSequences`, `TestCanonicalNames`; identity functions return independent copies instead of mutable global values; existing `EventLog` and `DefaultNamespace` remain unchanged |
 | Append results / `DotNET/EventSequences/{EventSequence,IAppendResult}`; `Kernel/Core/EventSequences/EventSequence` (repository root), baseline revision above | **Go-specific**: C# exposes `IsSuccess`/`Errors` without a disposition. Single/batch errors-only failures are `Unknown`, with `OutcomeUnknownError` from the operation and `Err()`; the kernel cannot distinguish pre- from post-commit failures. Constraint/concurrency violations are `Rejected`, even with errors | `TestAppendFailureDispositionAndErrorIdentity`, `TestAppendNeverRetriesAnAmbiguousWrite`, `TestCloseCancelsInFlightAppend`; diagnostics and error identities preserved; callers must not treat errors-only results as safe to retry |
 | Atomic batches / `DotNET/EventSequences/EventSequence` (`AppendManyCore`, `AppendManyForEventSources`, `ResolveConcurrencyScopes`) | **Implemented**: `AppendMany`, `AppendBatch`, ordered `Entry`, `LabeledScope`, full `BatchResult` | `TestAppendManyRoutesAndStaticTagUnion`, `TestBatchPreservesOrderMetadataAndIndependentScopes`, `TestBatchScopeExpectationsAndResolution`, `TestBatchSnapshotsBeforeResolvingTail`, `TestBatchFailuresAndCompleteDiagnostics`, `TestKernelOrderedAtomicBatchAndHistory`, `TestKernelSameSourceBatchRoutesAndTagUnion`; A1/B1/A2 is one atomic request, routed same-source batches retain the static-tag union |
 | Eventless checks / `DotNET/EventSequences/EventsWithConcurrencyScopes`; `Kernel/Core/Sequences/AppendMany*Validator` (repository root) | **Implemented**: protected empty `AppendBatch` and `AppendMany` | `TestEventlessProtectedBatchAndOlderKernelRefusal`, `TestResolvedEmptyEventlessScopeIsNotASuccessfulNoOp`, `TestKernelEventlessChecksAndUpperBoundExpectations`; unsupported older kernels fail loudly |
@@ -59,6 +65,42 @@ The Kotlin and TypeScript client comparisons informed vocabulary and transport t
 16. **Persisted timestamp precision is kernel-limited.** The Go wire keeps 100 ns precision, but the 19.29.4-development MongoDB kernel returns occurrence/causation dates truncated to milliseconds. `TestKernelOrderedAtomicBatchAndHistory` records this server behavior; `TestReadPreservesEnvelopeMetadataAndGenerations` proves conversion retains all precision actually returned. No client-side reconstruction or extra persistence path is invented.
 
 Batch/read C# references above use revision `2e31b0dfba489159b3db323238f16d0f277056b4`; kernel behavior is exercised against the pinned 19.29.4-development image. The runnable [batch example](../examples/batches/main.go) also uses the public production APIs.
+
+## Append configuration and declaration migration
+
+Register the subject policy once alongside the event schema:
+
+```go
+registered, err := chronicle.RegisterEvent[CustomerChanged](registry,
+    events.WithSubjectResolver(func(event CustomerChanged) (events.Subject, bool) {
+        return events.Subject(event.CustomerID), event.CustomerID != ""
+    }))
+```
+
+`CustomerChanged` is the application's named event struct; the callback must match
+that exact declaration type. An append-level `WithSubject` (or `Entry.Subject`)
+wins without invoking the callback. Missing subjects fall back to the source ID.
+
+Add `chronicle.WithCheckFirstAppendIntoAScope(true)` to client construction to
+protect first writes across all sequence handles, batches and unit-of-work commits.
+It stays off by default, matching C# `ConcurrencyOptions`. Explicit `NoCheck`
+remains unchecked. A competing writer after an empty-tail read becomes a known
+concurrency rejection rather than an unchecked success.
+
+`WithDefaultConcurrencyStrategy` preserves C#'s extension point without dependency
+injection: the callback receives the sequence and default source/route filter.
+Return an explicit expectation after a `sequence.Tail(ctx, eventsequences.TailFilter(filter))` read, or return
+`Resolve` to have the SDK perform its existing matching-tail read. Explicit
+expectations do not trigger an extra read. Batch defaults invoke the strategy once
+per source using its first entry's route; units of work defer it to commit, never
+staging. No retry or extra kernel round-trip is required by this translation.
+
+Operation metadata is available through the new `*WithMetadata` append methods,
+not by changing the original public result structs. `Operation().EventTypes()`
+retains generations on success, rejection and unknown outcomes; `Result().Target`
+still describes only confirmed committed work. Local failures include registered
+input types only, because an unregistered value has no persisted identity. Existing
+callers can keep their original methods and unkeyed literals unchanged.
 
 ## Connection API and default comparison
 
