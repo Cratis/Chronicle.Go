@@ -84,9 +84,7 @@ func WithRoute(route Route) AppendOption { return func(c *appendConfig) { c.rout
 
 // WithScope overrides the default source-and-route optimistic scope.
 func WithScope(scope Scope) AppendOption {
-	f := &scope.Filter
-	f.SourceID, f.SourceType, f.StreamType, f.StreamID = copyPointer(f.SourceID), copyPointer(f.SourceType), copyPointer(f.StreamType), copyPointer(f.StreamID)
-	f.EventTypes = append([]events.TypeRef(nil), f.EventTypes...)
+	scope = cloneScope(scope)
 	return func(c *appendConfig) { copy := scope; c.scope = &copy }
 }
 

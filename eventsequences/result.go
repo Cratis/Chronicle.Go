@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-// Package eventsequences appends registered events to Chronicle sequences.
+// Package eventsequences appends registered events and reads Chronicle sequences.
 // Event logs use the same Sequence implementation. Writes are never retried by the SDK.
 package eventsequences
 
@@ -34,7 +34,7 @@ func (e AppendError) Error() string { return string(e) }
 
 // ConcurrencyViolation preserves expected and actual tails, including sentinels.
 type ConcurrencyViolation struct {
-	// SourceID is the source named by the kernel.
+	// SourceID is the source or independent batch scope label named by the kernel.
 	SourceID events.SourceID
 	// Expected is the supplied sequence-wide expectation.
 	Expected events.SequenceNumber

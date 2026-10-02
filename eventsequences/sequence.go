@@ -111,25 +111,9 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 }
 
 func (s *Sequence) request(ctx context.Context, source events.SourceID, descriptor events.Descriptor, content string, config appendConfig) (*sequences.AppendRequest, error) {
-	if config.route.SourceType == "" {
-		config.route.SourceType = events.DefaultSourceType
-	}
-	if config.route.StreamType == "" {
-		config.route.StreamType = events.AllStreamTypes
-	}
-	if config.route.StreamID == "" {
-		config.route.StreamID = events.DefaultStreamID
-	}
-	if config.subject != nil && *config.subject == "" {
-		return nil, fmt.Errorf("%w: empty compliance subject", faults.ErrInvalidConfiguration)
-	}
-	for _, tag := range config.named {
-		if strings.TrimSpace(tag.Name) == "" {
-			return nil, fmt.Errorf("%w: empty named tag name", faults.ErrInvalidConfiguration)
-		}
-	}
-	if config.occurred != nil && (config.occurred.Year() < 1 || config.occurred.Year() > 9999) {
-		return nil, fmt.Errorf("%w: occurrence outside .NET date range", faults.ErrInvalidConfiguration)
+	config.route = normalizedRoute(config.route)
+	if err := validateAppendMetadata(config.subject, config.occurred, config.named); err != nil {
+		return nil, err
 	}
 	if config.correlation == (metadata.CorrelationID{}) {
 		var err error

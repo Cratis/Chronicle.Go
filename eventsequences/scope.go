@@ -11,17 +11,38 @@ import (
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
-	"github.com/cratis/chronicle.go/internal/wire"
 )
 
 func (s *Sequence) resolveScope(ctx context.Context, source events.SourceID, config appendConfig) (*sequences.ConcurrencyScope, error) {
-	scope := Scope{Filter: ScopeFilter{SourceID: &source, SourceType: &config.route.SourceType, StreamType: &config.route.StreamType, StreamID: &config.route.StreamID}}
+	scope := defaultScope(source, config.route)
 	if config.scope != nil {
 		scope = *config.scope
 	}
+	return s.resolveLabeledScope(ctx, source, scope)
+}
+
+func (s *Sequence) resolveLabeledScope(ctx context.Context, source events.SourceID, scope Scope) (*sequences.ConcurrencyScope, error) {
+	result, err := scopeContract(source, scope)
+	if err != nil {
+		return nil, err
+	}
+	if scope.Expectation.kind != 0 {
+		return result, nil
+	}
+	tail, exists, err := s.tail(ctx, scope.Filter)
+	if err != nil {
+		return nil, fmt.Errorf("chronicle: resolve concurrency tail: %w", err)
+	}
+	if exists {
+		result.SequenceNumber = uint64(tail)
+	}
+	return result, nil
+}
+
+func scopeContract(source events.SourceID, scope Scope) (*sequences.ConcurrencyScope, error) {
 	filter := scope.Filter
 	if filter.SourceID != nil && (*filter.SourceID == "" || *filter.SourceID != source) {
-		return nil, fmt.Errorf("%w: single append scope must name its target source", faults.ErrInvalidConfiguration)
+		return nil, fmt.Errorf("%w: source-bound scope must name its target or label", faults.ErrInvalidConfiguration)
 	}
 	if (filter.SourceType != nil && *filter.SourceType == "") || (filter.StreamType != nil && *filter.StreamType == "") || (filter.StreamID != nil && *filter.StreamID == "") {
 		return nil, fmt.Errorf("%w: empty scope dimension", faults.ErrInvalidConfiguration)
@@ -31,33 +52,15 @@ func (s *Sequence) resolveScope(ctx context.Context, source events.SourceID, con
 	}
 	result := &sequences.ConcurrencyScope{SequenceNumber: uint64(events.Unavailable), EventSourceId: filter.SourceID != nil,
 		EventSourceType: stringValue(filter.SourceType), EventStreamType: stringValue(filter.StreamType), EventStreamId: stringValue(filter.StreamID)}
-	var ids []string
 	for _, eventType := range filter.EventTypes {
 		if eventType.ID == "" || strings.Contains(string(eventType.ID), ",") || eventType.Generation == 0 {
 			return nil, fmt.Errorf("%w: invalid scope event type", faults.ErrInvalidConfiguration)
 		}
-		ids = append(ids, string(eventType.ID))
 		result.EventTypes = append(result.EventTypes, &sequences.EventType{Id: string(eventType.ID), Generation: uint32(eventType.Generation)})
 	}
 	switch scope.Expectation.kind {
 	case 0:
-		envelope, err := s.service.TailSequenceNumber(ctx, &sequences.TailSequenceNumberRequest{
-			EventStore: string(s.store), Namespace: string(s.namespace), EventSequenceId: string(s.id), EventSourceId: stringValue(filter.SourceID),
-			EventSourceType: result.EventSourceType, EventStreamType: result.EventStreamType, EventStreamId: result.EventStreamId, EventTypeIds: strings.Join(ids, ","),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("chronicle: resolve concurrency tail: %w", err)
-		}
-		if err = wire.CheckEnvelope(envelope); err != nil {
-			return nil, err
-		}
-		if err = wire.RequireMessage(envelope, "Data"); err != nil {
-			return nil, err
-		}
-		result.SequenceNumber = envelope.Data.SequenceNumber
-		if result.SequenceNumber != uint64(events.Unavailable) && result.SequenceNumber >= uint64(events.Unavailable-2) {
-			return nil, faults.ErrProtocol
-		}
+		// The caller resolves only after the complete batch has been validated.
 	case 1:
 		result.SequenceNumber = uint64(scope.Expectation.position)
 	case 2:
