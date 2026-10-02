@@ -20,6 +20,8 @@
       href: events/reading-events.md
     - name: Unit of work
       href: events/unit-of-work.md
+- name: Serialization
+  href: serialization.md
 - name: Read models
   href: read-models/index.md
 - name: Projections
