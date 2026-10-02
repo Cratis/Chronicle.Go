@@ -138,8 +138,10 @@ client, err := chronicle.NewClient(
 
 Check `err` and close the client before its provider. Constructors can take an
 optional leading context and service parameters, returning `R` or `(R, error)`.
-A registered artifact takes precedence over its constructor; a nil constructor
-requests service activation. When the factory supplies Fundamentals' optional
+An artifact advertised by the provider's `Catalog` takes precedence over its
+constructor; a nil constructor requests service activation even without a catalog.
+Without a catalog, an explicit constructor remains the activation path rather
+than guessing whether a failed resolution means an absent service. When the factory supplies Fundamentals' optional
 `Catalog`, `NewClient` checks constructor and handler service parameters against
 it. Without `Catalog`, service availability is checked at invocation, as agreed
 for C#'s permissive default-provider counterpart.

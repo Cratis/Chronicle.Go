@@ -92,7 +92,7 @@ type ReadModelKeyResolver interface {
 // Define admits R for later catalog-based validation, without invoking its factory.
 // R must be a named struct or pointer to one. A constructor may take an optional
 // context.Context then services (or Scope), and return R or (R,error). A nil factory
-// requests service activation. Registered services take precedence over constructors.
+// requests service activation. Catalog-advertised services take precedence over constructors.
 func Define[R any](factory any, options ...Option) (Declaration, error) {
 	typ := reflect.TypeFor[R]()
 	base := typ
