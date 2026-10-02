@@ -32,7 +32,9 @@ The output identifies `customer-registered`, generation `1`, with content `{"nam
 
 The default ID is the simple Go type name, matching C#'s simple-name convention. Prefer an explicit `events.WithID` for cross-language events so a refactor cannot rename stored history. IDs are strings, not necessarily UUIDs; comma-containing IDs are rejected because kernel tail filters use comma-separated IDs.
 
-`events.WithGeneration(n)` selects a positive generation (default `1`). Duplicate Go types or current persisted IDs fail deterministically without changing the registry. Historical generation codecs, migration chains, tombstones and compensation declarations are not yet implemented. Registration leaves kernel schema/generation validation enabled.
+`events.WithGeneration(n)` selects a positive generation (default `1`). Duplicate Go types or current persisted IDs fail deterministically without changing the registry. Historical generation codecs, migration chains, tombstones and compensation declarations are not yet implemented. Each registration sends the current schema in both `Schema` and `Generations`, like C#.
+
+Like the C# client, kernel schema/generation validation is **disabled by default**, so a current generation above `1` can register without migrations. Enable `chronicle.WithEventTypeGenerationValidation(true)` to reject incompatible re-registration of an existing generation. With validation enabled, generations above `1` cannot register until migration authoring is supported. Disabling validation permits overwriting schemas: do not change a generation that already has history. A shared C#/Go event ID also requires compatible schemas, not just matching JSON property names; validation rejects differing generated schemas.
 
 `events.WithTags(...)` adds immutable static tags. Append merges static and dynamic tags distinctly, preserving order. `store.EventTypes()` exposes a frozen catalog for lookup, including downstream Arc event classification.
 
@@ -44,16 +46,17 @@ One compiled field plan supplies both serialization and the registered schema:
 | --- | --- |
 | Untagged exported properties | C#-style camelCase (`URLValue` becomes `urlValue`) |
 | `json:"name"` | Explicit persisted property name; recommended across languages |
-| Named string, numeric and boolean primitives | JSON scalars, not wrapper objects |
+| Named string, numeric and boolean primitives | JSON scalars with kernel numeric formats, not wrapper objects |
 | `time.Time` | RFC 3339 string with `date-time` schema format |
 | `uuid.UUID` | Canonical UUID string with `uuid` schema format |
 | Nested structs | Nested objects following the same naming rules |
 | String-keyed maps, arrays and slices | Objects/arrays with typed schema members |
-| Nil pointer/map/slice properties | Omitted, matching Chronicle's omit-null profile |
+| Pointers, including `*time.Time` and `*uuid.UUID` | Nullable schemas; nil properties omitted and distinct from present zero/false |
+| Nil map/slice properties | Omitted, matching Chronicle's omit-null profile |
 | Zero numbers and false | Preserved unless explicitly tagged for omission |
-| `json:"-"`, `omitempty`, `omitzero` | Exclusion or explicit omission policy |
+| `json:"-"`, `omitempty`, `omitzero` | Exclusion or explicit omission; `omitzero` honors `IsZero()` as `encoding/json` does |
 
-Empty non-nil slices remain `[]`; null collection elements and null map values fail serialization. Integers retain their full width and never pass through `float64`. Use a separate event for an optional fact rather than a nullable domain property.
+Empty non-nil slices remain `[]`; null collection elements and null map values fail serialization. Scalar and array integers use kernel formats (`int64`, `uint64`, etc.), preserving precision above 2^53. The 19.29.4 MongoDB append path parses JSON integers as signed BSON values, so unsigned values above `MaxInt64` return `ErrUnsupported` before dispatch; use strings for that range. Go `int`/`uint` use stable 64-bit schemas; `int8`/`uint16` widen to the kernel's `int16`/`uint32` formats. The 19.29.4 kernel ignores dictionary value schemas and converts all nested numbers through `double`: integer values under any map are restricted to the inclusive range -2^53 through 2^53 (unsigned: 0 through 2^53). Values outside that range return `ErrUnsupported` before dispatch, including integers inside nested structs, pointers and collections. Use typed struct properties or string values for wider dictionary integers. Omission tags control outgoing JSON; non-nullable omitted scalars may materialize as kernel defaults on read-back. Use a separate event for an optional fact rather than a nullable domain property.
 
 Interfaces, recursive shapes, embedded/anonymous fields, byte slices, custom JSON/text marshalers (except the built-in time/UUID cases), complex-key maps and unsupported JSON tag options fail registration. Rich custom-schema codecs, enums, date-only/time-only, polymorphism and GeoJSON are later work. Every nonempty `chronicle` field tag also fails: this client will not pretend to encrypt PII or silently ignore subject/routing metadata.
 

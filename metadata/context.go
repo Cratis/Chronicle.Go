@@ -21,7 +21,7 @@ type StoreName string
 type Namespace string
 
 // DefaultNamespace is used when none is selected.
-const DefaultNamespace Namespace = "default"
+const DefaultNamespace Namespace = "Default"
 
 // CorrelationID is an RFC 4122 UUID; its zero value means not supplied.
 // Text and JSON use the canonical UUID form, never BCL byte order.

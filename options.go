@@ -38,6 +38,7 @@ type clientConfig struct {
 	connectTimeout                         time.Duration
 	borrowed                               *grpc.ClientConn
 	tlsSet, tokenSet, borrowedSet, uriSet  bool
+	validateEventTypes                     bool
 	registry                               *Registry
 	stores                                 map[StoreName]*Registry
 }
@@ -91,6 +92,14 @@ func WithSkipCompatibilityCheck() ClientOption {
 // the channel already handles authentication. Client lifecycle checks still apply.
 func WithGRPCConnection(conn *grpc.ClientConn) ClientOption {
 	return func(c *clientConfig) { c.borrowed, c.borrowedSet = conn, true }
+}
+
+// WithEventTypeGenerationValidation enables kernel schema and migration-chain
+// validation. Like C#, validation defaults to disabled. When enabled, changed
+// schemas for existing generations are rejected, and generations above one require
+// migrations, whose authoring is not yet supported by this SDK.
+func WithEventTypeGenerationValidation(enabled bool) ClientOption {
+	return func(c *clientConfig) { c.validateEventTypes = enabled }
 }
 
 // WithRegistry snapshots registered event types at NewClient time; later mutations

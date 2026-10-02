@@ -150,10 +150,13 @@ func (c *Client) registerStore(ctx context.Context, key storeKey) (*EventStore, 
 	if err = store.Namespaces().Ensure(ctx, key.namespace); err != nil {
 		return nil, err
 	}
-	request := &eventtypes.RegisterEventTypesRequest{EventStore: string(key.name)}
+	request := &eventtypes.RegisterEventTypesRequest{EventStore: string(key.name), DisableValidation: !c.config.validateEventTypes}
 	for _, descriptor := range catalog.Descriptors() {
 		ref := descriptor.Ref()
-		request.Types = append(request.Types, &eventtypes.EventTypeRegistration{Type: &eventtypes.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Schema: descriptor.Schema()})
+		request.Types = append(request.Types, &eventtypes.EventTypeRegistration{
+			Type: &eventtypes.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Schema: descriptor.Schema(),
+			Generations: []*eventtypes.EventTypeGenerationDefinition{{Generation: uint32(ref.Generation), Schema: descriptor.Schema()}},
+		})
 	}
 	if len(request.Types) > 0 {
 		registered, err := eventtypes.NewEventTypesClient(c.transport).RegisterEventTypes(ctx, request)

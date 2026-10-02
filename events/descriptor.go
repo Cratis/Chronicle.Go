@@ -57,7 +57,9 @@ type typeConfig struct {
 func WithID(id TypeID) TypeOption { return func(c *typeConfig) { c.id = id } }
 
 // WithGeneration selects a positive schema generation (default one).
-// Migration authoring is not yet supported; the kernel validates existing generations.
+// Like C#, clients default to disabling generation validation, allowing a current
+// generation above one without migrations. Enabling client generation validation
+// rejects such registrations until migration authoring is supported.
 func WithGeneration(generation Generation) TypeOption {
 	return func(c *typeConfig) { c.generation = generation }
 }

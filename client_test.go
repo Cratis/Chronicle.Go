@@ -63,6 +63,10 @@ func TestStoreRegistrationCacheAndNamespaceIsolation(t *testing.T) {
 	if len(request.Types) != 1 || request.Types[0].Type.Id != "CustomerRegistered" || request.Types[0].Type.Generation != 1 || request.Types[0].Schema == "" {
 		t.Fatal("incomplete registration")
 	}
+	registration := request.Types[0]
+	if !request.DisableValidation || len(registration.Generations) != 1 || registration.Generations[0].Generation != registration.Type.Generation || registration.Generations[0].Schema != registration.Schema || len(registration.Migrations) != 0 {
+		t.Fatalf("registration differs from C# current-generation contract: %v", request)
+	}
 	other, err := client.EventStore(ctx, "customers", chronicle.WithNamespace("tenant-b"))
 	if err != nil || other == first || other.Namespace() != "tenant-b" {
 		t.Fatalf("namespace isolation: %v", err)
@@ -92,6 +96,18 @@ func TestStoreRegistrationCacheAndNamespaceIsolation(t *testing.T) {
 	}
 	if _, err = clients.NewConnectionServiceClient(conn).CheckCompatibility(ctx, &clients.CompatibilityRequest{}); err != nil {
 		t.Fatalf("borrowed connection was closed: %v", err)
+	}
+}
+
+func TestRegistrationValidationOptIn(t *testing.T) {
+	requests := make(chan *eventtypes.RegisterEventTypesRequest, 1)
+	kernel := &fakeKernel{register: func(request *eventtypes.RegisterEventTypesRequest) { requests <- request }}
+	client, _ := testClient(t, kernel, chronicle.WithEventTypeGenerationValidation(true))
+	if _, err := client.EventStore(testContext(t), "customers"); err != nil {
+		t.Fatal(err)
+	}
+	if (<-requests).DisableValidation {
+		t.Fatal("explicit validation was disabled")
 	}
 }
 
