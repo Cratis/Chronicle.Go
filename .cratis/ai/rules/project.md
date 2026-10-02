@@ -16,3 +16,4 @@ are project-owned instructions and override conflicting shared guidance.
 
 - [Third-party Go skills](project/third-party-go-skills.md)
 - [Local PR body checker patch](project/local-pr-body-checker-patch.md)
+- [Cross-repository coordination](project/cross-repository-coordination.md)
