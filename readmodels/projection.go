@@ -28,7 +28,7 @@ func BindProjection(d Descriptor, id string, sequence events.SequenceID, passive
 	if config.observer != Projection || (config.observerID != "" && config.observerID != id) {
 		return Descriptor{}, invalid("model has a conflicting producer")
 	}
-	if config.sequence != events.EventLog && config.sequence != sequence {
+	if config.sequenceExplicit && config.sequence != sequence {
 		return Descriptor{}, invalid("model and projection event sequences conflict")
 	}
 	if passive {

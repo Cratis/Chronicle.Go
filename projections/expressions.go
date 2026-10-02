@@ -74,7 +74,7 @@ func validateLiteral(e expression, target serialization.Field) error {
 		}
 		return nil
 	}
-	if !kernelLiteral.MatchString(e.text) {
+	if !representableLiteral(e.text) {
 		return invalid("literal cannot be represented by the kernel expression grammar")
 	}
 	if target.Scalar == serialization.NotScalar {
@@ -131,7 +131,7 @@ func validateExpression(e expression, target serialization.Field, eventFields []
 	switch e.kind {
 	case pathExpression:
 		source, ok := serialization.FieldAt(eventFields, e.text)
-		if !declarations.Path(e.text) || !ok || source.Collection {
+		if !eventPropertyPath(e.text) || !ok || source.Collection {
 			return invalid("unknown or unsupported event property path")
 		}
 		if sourceType != nil && source.Type != sourceType {
@@ -206,15 +206,35 @@ func validateKey(e expression, expected reflect.Type, fields []serialization.Fie
 	case sourceExpression:
 		return nil
 	case literalExpression:
-		if e.literalKind == declarations.String && e.text != "" && kernelLiteral.MatchString(e.text) {
+		if e.literalKind == declarations.String && e.text != "" && representableLiteral(e.text) {
 			return nil
 		}
 	case pathExpression:
 		field, ok := serialization.FieldAt(fields, e.text)
-		if ok && !field.Collection && field.Scalar != serialization.NotScalar && !field.Nullable && declarations.Path(e.text) && (expected == nil || expected == field.Type) {
+		if ok && !field.Collection && field.Scalar != serialization.NotScalar && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
 			return nil
 		}
 	}
 	return invalid("invalid or unrepresentable correlation key")
 }
+func representableLiteral(value string) bool {
+	// .NET's regex matches UTF-16 code units, not supplementary-plane runes.
+	for _, r := range value {
+		if r > 0xffff {
+			return false
+		}
+	}
+	return kernelLiteral.MatchString(value)
+}
+
+func eventPropertyPath(path string) bool {
+	// LiteralExpressionResolver takes precedence over event content in the kernel.
+	switch path {
+	case "true", "True", "false", "False":
+		return false
+	default:
+		return declarations.Path(path)
+	}
+}
+
 func blank(value string) bool { return strings.TrimSpace(value) == "" }

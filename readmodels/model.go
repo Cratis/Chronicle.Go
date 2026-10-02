@@ -132,6 +132,7 @@ type modelConfig struct {
 	observer           ObserverType
 	observerID         string
 	sequence           events.SequenceID
+	sequenceExplicit   bool
 	indexes            []string
 	pii                []string
 	subject            string
@@ -167,7 +168,7 @@ func WithObserver(kind ObserverType, id string) ModelOption {
 
 // WithEventSequence selects the sequence for immediate reads (default event-log).
 func WithEventSequence(sequence events.SequenceID) ModelOption {
-	return func(c *modelConfig) { c.sequence = sequence }
+	return func(c *modelConfig) { c.sequence, c.sequenceExplicit = sequence, true }
 }
 
 // WithIndexes declares nested serialized property paths, including paths through

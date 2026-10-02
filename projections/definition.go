@@ -67,20 +67,40 @@ func (d Definition) Model() readmodels.Descriptor {
 }
 
 // EventSequence returns the selected input sequence.
-func (d Definition) EventSequence() events.SequenceID { return d.data.sequence }
+func (d Definition) EventSequence() events.SequenceID {
+	if d.data == nil {
+		return ""
+	}
+	return d.data.sequence
+}
 
 // IsPassive reports whether the model is computed on demand rather than materialized.
-func (d Definition) IsPassive() bool { return d.data.passive }
+func (d Definition) IsPassive() bool { return d.data != nil && d.data.passive }
 
 // KeyField returns explicit key metadata; empty means no field was annotated.
 // It does not redirect the event's correlation key or invent a root mapping.
-func (d Definition) KeyField() string { return d.data.keyField }
+func (d Definition) KeyField() string {
+	if d.data == nil {
+		return ""
+	}
+	return d.data.keyField
+}
 
 // Provenance returns detached mapping/convention origins.
-func (d Definition) Provenance() []Provenance { return slices.Clone(d.data.provenance) }
+func (d Definition) Provenance() []Provenance {
+	if d.data == nil {
+		return nil
+	}
+	return slices.Clone(d.data.provenance)
+}
 
 // Diagnostics returns detached shadowing diagnostics from normalization.
-func (d Definition) Diagnostics() []Diagnostic { return slices.Clone(d.data.diagnostics) }
+func (d Definition) Diagnostics() []Diagnostic {
+	if d.data == nil {
+		return nil
+	}
+	return slices.Clone(d.data.diagnostics)
+}
 
 // KernelDefinition is the one encoder for every front end. Each call returns an
 // owned protobuf; mutating it never changes this definition or reconnect snapshots.

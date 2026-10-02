@@ -29,7 +29,8 @@ func Path[T, V any](path string) Field[T, V] {
 // Build returns an immutable snapshot; later builder changes cannot affect it.
 type Builder[M any] struct{ data *declaration }
 
-// NewBuilder creates a fluent builder. Empty id selects the full model type name.
+// NewBuilder creates a fluent builder. Empty id uses the model's observer identity
+// when set, otherwise the full model type name.
 // Model mapping tags cannot be mixed with fluent writes; use ModelBound instead.
 func NewBuilder[M any](id string, model readmodels.Model[M], options ...Option) *Builder[M] {
 	d := newDeclaration(model.Descriptor(), options)
@@ -57,6 +58,14 @@ func From[M, E any](builder *Builder[M], event events.Type[E], define func(*From
 // Map assigns an event field to a model field of the same declared Go type.
 func Map[M, E, V any](builder *FromBuilder[M, E], target Field[M, V], source Field[E, V]) {
 	builder.add(target.path, reflect.TypeFor[V](), reflect.TypeFor[V](), expression{kind: pathExpression, text: source.path}, "set")
+}
+
+// MapAs assigns an event field to a model field with a different declared Go type.
+// Build/Compile validates both field types and their serialized representations
+// using the same compatibility check as model-bound set (for example string to
+// *string). It does not perform arbitrary conversions or invoke user code.
+func MapAs[M, E, T, S any](from *FromBuilder[M, E], target Field[M, T], source Field[E, S]) {
+	from.add(target.path, reflect.TypeFor[T](), reflect.TypeFor[S](), expression{kind: pathExpression, text: source.path}, "set")
 }
 
 // Context assigns a kernel EventContext property (for example occurred). Context

@@ -99,8 +99,10 @@ func fluentDeclarations() (*chronicle.Registry, readmodels.Model[FluentInventory
 ```
 
 `Path[T,V]` checks both the serialized name and declared Go value type. `Map`,
-`Context`, `Value`, `EventSourceID`, and `From` are package functions, not generic
-methods. Callbacks run once during authoring; reconnect never calls them again.
+`MapAs`, `Context`, `Value`, `EventSourceID`, and `From` are package functions, not generic
+methods. Use `MapAs` when declared Go types differ but their serialized representations
+are compatible, such as an event `string` mapped to a model `*string`. Supply each
+field's actual type in `Path`; `Build` validates compatibility, not arbitrary conversions. Callbacks run once during authoring; reconnect never calls them again.
 `Build` freezes the result and rejects duplicate writes for the same event/property.
 
 ## Field declarations
@@ -119,7 +121,9 @@ methods. Callbacks run once during authoring; reconnect never calls them again.
 Inside a Go tag, escape JSON string quotes as `\"`. Commas and semicolons inside
 quoted strings are parsed as literal contents, not separators. The kernel's
 `$value(...)` grammar cannot represent every JSON string: commas, semicolons,
-parentheses, quotes and newlines are rejected rather than misencoded. `null`
+parentheses, quotes, newlines and characters above U+FFFF are rejected rather than
+misencoded. Property paths exactly equal to `true`, `True`, `false` or `False` are
+also rejected: the kernel resolves those as boolean literals, not event fields. `null`
 is not an empty string or zero value; use pointers for nullable scalars.
 
 Paths come exclusively from the serialization plan: explicit `json` spelling wins.
@@ -152,14 +156,16 @@ are last-wins, so a later constant key overrides an earlier property key.
 
 | Option | Default and effect |
 | --- | --- |
-| `WithIdentifier(id)` | Full Go model type name by default; choose a stable C# name for shared definitions |
-| `WithEventSequence(id)` / `WithEventLog()` | `event-log`; model reads use the same sequence |
+| `WithIdentifier(id)` | Model observer ID when set, otherwise full Go model type name; choose a stable C# name for shared definitions |
+| `WithEventSequence(id)` / `WithEventLog()` | Model event sequence (default `event-log`); model reads use the same sequence |
 | `NoAutoMap()` / `AutoMap()` | Enabled by default |
 | `NotRewindable()` | Rewindable by default |
 | `Passive()` | Active by default; passive disables observation and selects the `None` sink for immediate reads |
 
-An explicit `NewBuilder` ID wins over `WithIdentifier`. Conflicting model producer,
-nondefault sequence or passive sink settings fail construction. Passive key
+An explicit `NewBuilder` ID wins over `WithIdentifier`. Discovered projections also
+inherit the model's observer ID and event sequence. Explicit conflicting producer
+or sequence settings (including an explicitly selected `event-log`) and incompatible
+passive sink settings fail construction. Passive key
 redirection is rejected because immediate instance reads select by event source.
 `key` does not create a mapping to an arbitrarily named root property: explicitly
 map such a property with `context(E,from=eventSourceId)` or `EventSourceID`.

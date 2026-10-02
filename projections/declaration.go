@@ -68,6 +68,10 @@ func newDeclaration(model readmodels.Descriptor, options []Option) *declaration 
 	d := &declaration{model: model, sequence: events.EventLog, aliases: map[string]events.Descriptor{}}
 	if typ := model.GoType(); typ != nil {
 		d.id = typ.PkgPath() + "." + typ.Name()
+		d.sequence = model.EventSequence()
+		if _, id := model.Observer(); id != "" {
+			d.id = id
+		}
 	}
 	for _, option := range options {
 		if option == nil {
@@ -95,11 +99,11 @@ func (d Declaration) Model() readmodels.Descriptor {
 	return d.data.model
 }
 
-// WithIdentifier selects a stable projection identity. The default is the full
-// Go model type name, matching the C# model-bound/explicit registration convention.
+// WithIdentifier selects a stable projection identity. The default is the model's
+// observer identity when set, otherwise the full Go model type name.
 func WithIdentifier(id string) Option { return func(d *declaration) { d.id = id } }
 
-// WithEventSequence selects the source sequence (default event-log).
+// WithEventSequence selects the source sequence (default the model's sequence).
 func WithEventSequence(sequence events.SequenceID) Option {
 	return func(d *declaration) { d.sequence = sequence }
 }
