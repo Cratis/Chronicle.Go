@@ -12,8 +12,13 @@
     "cratis/engineering/core",
     "cratis/documentation",
     "cratis/chronicle/core",
+    "cratis/chronicle/compliance",
+    "cratis/chronicle/multi-tenancy",
     "cratis/specifications",
-    "cratis/cli"
+    "cratis/cli",
+    "cratis/review",
+    "cratis/fundamentals",
+    "cratis/methodology/governed-releases"
   ],
   "languages": [
     "language-agnostic",

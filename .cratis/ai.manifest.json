@@ -617,6 +617,16 @@
       "Hash": "71433D310F2B90567F0BC239255B01DC9AA3ED995A84B92372D534DA53DAF821"
     },
     {
+      "Source": "skills/cratis-chronicle-compliance/LICENSE",
+      "Destination": "skills/cratis-chronicle-compliance/LICENSE",
+      "Hash": "E8D6A34CCC42CE2747B7E9F715511196C6BC1984E5F3B37E2C4EAFC39C208ADF"
+    },
+    {
+      "Source": "skills/cratis-chronicle-compliance/SKILL.md",
+      "Destination": "skills/cratis-chronicle-compliance/SKILL.md",
+      "Hash": "019DB0EB9E0E6BC3C05C320C2FE783FAA4DA5B3CCA789DA48751BA73F436BD75"
+    },
+    {
       "Source": "skills/cratis-chronicle-event-constraints/LICENSE",
       "Destination": "skills/cratis-chronicle-event-constraints/LICENSE",
       "Hash": "689BF4DBA871CBD4E28E7F97BD7DDAE2A865274426C2057D1D6F7C4DDCCD0C23"
@@ -645,6 +655,16 @@
       "Source": "skills/cratis-chronicle-event-type-migration/SKILL.md",
       "Destination": "skills/cratis-chronicle-event-type-migration/SKILL.md",
       "Hash": "9D6231BEBFD2BD977C8B603CD441A1D92367BCE3A41F2EBDB9B9FB7244708C3C"
+    },
+    {
+      "Source": "skills/cratis-chronicle-multi-tenancy/LICENSE",
+      "Destination": "skills/cratis-chronicle-multi-tenancy/LICENSE",
+      "Hash": "0755D54D95FC389B369BBD17F021E146371323B5FAEA5293F1D0B599647469BD"
+    },
+    {
+      "Source": "skills/cratis-chronicle-multi-tenancy/SKILL.md",
+      "Destination": "skills/cratis-chronicle-multi-tenancy/SKILL.md",
+      "Hash": "E746D544EA9CD7DD5173B3252C765228E6774819E7136E805F46D6CC5232CC00"
     },
     {
       "Source": "skills/cratis-chronicle-projection/LICENSE",
@@ -705,6 +725,16 @@
       "Source": "skills/cratis-chronicle-reducer/SKILL.md",
       "Destination": "skills/cratis-chronicle-reducer/SKILL.md",
       "Hash": "A53C43E52243542353BEB455BAA293C583243ABAFEF911D3AC8BC2F61E18454F"
+    },
+    {
+      "Source": "skills/cratis-code-review/LICENSE",
+      "Destination": "skills/cratis-code-review/LICENSE",
+      "Hash": "5F3C0351BDC2F6D2FFB27445039883F945B8353AA728894140824138161C7BBC"
+    },
+    {
+      "Source": "skills/cratis-code-review/SKILL.md",
+      "Destination": "skills/cratis-code-review/SKILL.md",
+      "Hash": "6E60A5A6EB84EEFD2F2F1C4E229E8B17362406AEB1A40BD4098597909C18B054"
     },
     {
       "Source": "skills/cratis-documentation-writing/LICENSE",
@@ -777,6 +807,26 @@
       "Hash": "27106D41BF65DA6C7E9FF0B58327FAAE16BFE0D34F696F0E28D2E9139228851C"
     },
     {
+      "Source": "skills/cratis-fundamentals-concept/LICENSE",
+      "Destination": "skills/cratis-fundamentals-concept/LICENSE",
+      "Hash": "684D145292D11EDBB702EE30C0803302F38D504D4DEF72452197827B46ADA567"
+    },
+    {
+      "Source": "skills/cratis-fundamentals-concept/SKILL.md",
+      "Destination": "skills/cratis-fundamentals-concept/SKILL.md",
+      "Hash": "C5B2A3A6BFAB758271D44A3DF6B26FF61C702796535C13A29B836701428BD117"
+    },
+    {
+      "Source": "skills/cratis-governed-release-methodology/LICENSE",
+      "Destination": "skills/cratis-governed-release-methodology/LICENSE",
+      "Hash": "53224BD7BD23AB5ABB4216886DF6FC96082654DA22C2A535FB7029B360F9E5D9"
+    },
+    {
+      "Source": "skills/cratis-governed-release-methodology/SKILL.md",
+      "Destination": "skills/cratis-governed-release-methodology/SKILL.md",
+      "Hash": "6309279472C792504451EDE978AB9BE584266432B8ABD54C81BC1FA1EA78F766"
+    },
+    {
       "Source": "skills/cratis-llm-friendly-documentation/LICENSE",
       "Destination": "skills/cratis-llm-friendly-documentation/LICENSE",
       "Hash": "DD81D43746FB4CC84CF300D3F554EB5A2C217E68D7A9D15D3C71638AC15FF751"
@@ -787,6 +837,16 @@
       "Hash": "B182F2DAE489E0B4E7410E094DCCD3BDCB0BF45A5FB52B416E8692E0E7B67D37"
     },
     {
+      "Source": "skills/cratis-performance-review/LICENSE",
+      "Destination": "skills/cratis-performance-review/LICENSE",
+      "Hash": "7D72F0E533742976305D8D4D0C4344F78195E5692055C60AAA1DF07AF0592CC0"
+    },
+    {
+      "Source": "skills/cratis-performance-review/SKILL.md",
+      "Destination": "skills/cratis-performance-review/SKILL.md",
+      "Hash": "0C04BD0CBFEE654FC92CAD6B8B65B569A0A9CA94AD33E5697B7A4C729819E085"
+    },
+    {
       "Source": "skills/cratis-release-notes/LICENSE",
       "Destination": "skills/cratis-release-notes/LICENSE",
       "Hash": "BA7AC4CBE084A2098E5222F75CF4C8981A700D8DB8EDA1DB93905EB46F91D3D3"
@@ -795,6 +855,16 @@
       "Source": "skills/cratis-release-notes/SKILL.md",
       "Destination": "skills/cratis-release-notes/SKILL.md",
       "Hash": "3C07E4671DCA604927D9E829983AFC40CA6D61E4B02363BC43326D23790AF50B"
+    },
+    {
+      "Source": "skills/cratis-security-review/LICENSE",
+      "Destination": "skills/cratis-security-review/LICENSE",
+      "Hash": "48C71F4CA012BCCE21299F4E35ABF2422BE316617E9A28ADA65D4142547C0350"
+    },
+    {
+      "Source": "skills/cratis-security-review/SKILL.md",
+      "Destination": "skills/cratis-security-review/SKILL.md",
+      "Hash": "21714BA64634D033E6967802483245FF68CC04E58843ED3A2C1CB84747583824"
     },
     {
       "Source": "skills/cratis-specification-by-example/LICENSE",
@@ -841,7 +911,7 @@
     },
     {
       "Path": ".claude/CLAUDE.md",
-      "Target": "../.cratis/ai/rules/general.md",
+      "Target": "../.cratis/ai/rules/project.md",
       "IsDirectory": false,
       "PreserveExisting": true
     },
@@ -1189,7 +1259,7 @@
     },
     {
       "Path": ".github/copilot-instructions.md",
-      "Target": "../.cratis/ai/rules/general.md",
+      "Target": "../.cratis/ai/rules/project.md",
       "IsDirectory": false,
       "PreserveExisting": true
     },
@@ -1459,13 +1529,13 @@
     },
     {
       "Path": "AGENTS.md",
-      "Target": ".cratis/ai/rules/general.md",
+      "Target": ".cratis/ai/rules/project.md",
       "IsDirectory": false,
       "PreserveExisting": true
     },
     {
       "Path": "CLAUDE.md",
-      "Target": ".cratis/ai/rules/general.md",
+      "Target": ".cratis/ai/rules/project.md",
       "IsDirectory": false,
       "PreserveExisting": true
     }
