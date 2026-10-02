@@ -14,46 +14,45 @@ import (
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/connection"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
-// Client owns a shared RPC transport and immutable registry snapshots. Construct
-// with NewClient or Dial; the zero value is not usable. It is safe for concurrent
-// use. Unary calls honor caller deadlines (no blanket per-call timeout).
+// Client owns a generation supervisor and frozen registries. Construct with
+// NewClient or Dial; the zero value is not usable. It is safe for concurrent use.
 type Client struct {
 	mu              sync.Mutex
 	closed          bool
 	closeOnce       sync.Once
+	closeDone       chan struct{}
 	closeError      error
 	life            context.Context
 	cancel          context.CancelFunc
 	work            sync.WaitGroup
-	raw             *grpc.ClientConn
 	transport       *clientTransport
-	owned           bool
-	oauth           *connection.OAuth
-	tokens          TokenSource
 	config          clientConfig
+	uri             ConnectionString
+	tls             *tls.Config
+	balancer        *connection.Balancer
 	catalog         *events.Catalog
 	catalogs        map[StoreName]*events.Catalog
-	stores          map[storeKey]*storeAttempt
-	connected       bool
-	attempt         *connectAttempt
+	stores          map[storeKey]*EventStore
+	current         *generation
+	supervisor      *supervision
+	changed         chan struct{}
+	nextGeneration  uint64
 	connectionError error
 }
 
-// String describes the client without revealing endpoints, credentials or registries.
+// String describes the client without revealing endpoints or credentials.
 func (c *Client) String() string { return "Chronicle client" }
 
 // GoString is the credential-safe representation for fmt's %#v format.
 func (c *Client) GoString() string { return c.String() }
 
-// NewClient validates configuration and freezes registries without network I/O.
-// TLS validation defaults to enabled; omitted credentials use Chronicle's dev
-// client credentials. Production callers should provide explicit credentials.
+// NewClient validates and freezes configuration without network I/O. TLS validates
+// by default. Omitted credentials select Chronicle's public development credentials.
 func NewClient(options ...ClientOption) (*Client, error) {
-	config := clientConfig{uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second}
+	config := clientConfig{uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
+		keepAliveTimeout: 5 * time.Second, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
 	for _, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("%w: nil client option", ErrInvalidConfiguration)
@@ -64,51 +63,47 @@ func NewClient(options ...ClientOption) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &Client{config: config, catalog: snapshot(config.registry), catalogs: make(map[StoreName]*events.Catalog), stores: make(map[storeKey]*storeAttempt)}
+	c := &Client{config: config, uri: uri, tls: tlsConfig, catalog: snapshot(config.registry),
+		catalogs: make(map[StoreName]*events.Catalog), stores: make(map[storeKey]*EventStore),
+		changed: make(chan struct{}), closeDone: make(chan struct{})}
 	for name, registry := range config.stores {
 		if strings.TrimSpace(string(name)) == "" {
 			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
 		}
 		c.catalogs[name] = snapshot(registry)
 	}
-	c.tokens = config.tokenSource
-	if c.tokens == nil && !config.noAuth && !uri.noAuth {
-		c.oauth = connection.NewOAuth(uri.addresses[0].String(), uri.clientID, uri.secret, tlsConfig)
-		c.tokens = c.oauth
-	}
-	c.raw, c.owned = config.borrowed, config.borrowed == nil
-	if c.owned {
-		c.raw, err = grpc.NewClient("dns:///"+uri.addresses[0].String(), grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
-			grpc.WithDisableRetry(), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024), grpc.MaxCallSendMsgSize(100*1024*1024)))
-		if err != nil {
-			if c.oauth != nil {
-				c.oauth.Close()
-			}
-			return nil, fmt.Errorf("chronicle: create channel: %w", err)
-		}
-	}
+	c.config.registry, c.config.stores = nil, nil
 	c.config.skipCompatibility = config.skipCompatibility || uri.skipCompatibility
+	if c.config.resolver == nil {
+		c.config.resolver = connection.Resolver(uri.nameServer)
+	}
+	c.balancer = connection.NewBalancer(uri.loadBalancer, tlsConfig)
 	c.life, c.cancel = context.WithCancel(context.Background())
 	c.transport = &clientTransport{client: c}
 	return c, nil
 }
 
 func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) {
-	if (config.tlsSet && config.tls == nil) || (config.borrowedSet && config.borrowed == nil) || (config.tokenSet && nilTokenSource(config.tokenSource)) {
-		return ConnectionString{}, nil, fmt.Errorf("%w: nil TLS, transport or token source", ErrInvalidConfiguration)
+	if (config.tlsSet && config.tls == nil) || (config.borrowedSet && config.borrowed == nil) ||
+		(config.tokenSet && nilValue(config.tokenSource)) || (config.resolverSet && nilValue(config.resolver)) {
+		return ConnectionString{}, nil, fmt.Errorf("%w: nil TLS, transport, resolver or token source", ErrInvalidConfiguration)
 	}
 	if config.borrowed != nil && !config.uriSet && !config.tokenSet && !config.noAuth {
-		return ConnectionString{}, nil, fmt.Errorf("%w: borrowed connection requires an explicit OAuth authority, token source or no authentication", ErrInvalidConfiguration)
+		return ConnectionString{}, nil, fmt.Errorf("%w: borrowed connection requires explicit authentication", ErrInvalidConfiguration)
 	}
 	uri, err := ParseConnectionString(config.uri)
 	if err != nil {
 		return uri, nil, err
 	}
-	if uri.srv || len(uri.addresses) != 1 || uri.apiKey != "" || len(uri.unsupported) > 0 {
-		return uri, nil, fmt.Errorf("%w: SRV, multi-host, API keys and certificate URI options require a later client slice; use WithTLS for PEM material", ErrUnsupported)
+	if uri.apiKey != "" || len(uri.unsupported) > 0 {
+		return uri, nil, fmt.Errorf("%w: API keys and certificate/plaintext URI options; use WithTLS for PEM material", ErrUnsupported)
 	}
-	if config.connectTimeout <= 0 {
-		return uri, nil, fmt.Errorf("%w: connect timeout must be positive", ErrInvalidConfiguration)
+	if config.borrowed != nil && (uri.srv || len(uri.addresses) > 1 || uri.loadBalancer != "") {
+		return uri, nil, fmt.Errorf("%w: borrowed channels own endpoint selection", ErrInvalidConfiguration)
+	}
+	policy := config.registrationRetry
+	if config.connectTimeout <= 0 || config.keepAliveTimeout <= 0 || policy.MaxAttempts < 1 || policy.MaxAttempts > 100 || policy.InitialDelay <= 0 || policy.MaximumDelay < policy.InitialDelay || policy.AttemptTimeout <= 0 {
+		return uri, nil, fmt.Errorf("%w: invalid lifecycle timeout or retry policy", ErrInvalidConfiguration)
 	}
 	if (config.noAuth && (uri.explicitCredentials || config.tokenSource != nil)) || (config.tokenSource != nil && (uri.noAuth || uri.explicitCredentials)) {
 		return uri, nil, fmt.Errorf("%w: conflicting authentication options", ErrInvalidConfiguration)
@@ -124,18 +119,18 @@ func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) 
 		}
 	} else {
 		tlsConfig.InsecureSkipVerify = uri.skipTLS || (config.development && !uri.tlsSpecified)
-	} // Explicit development opt-out only.
+	}
 	return uri, tlsConfig, nil
 }
 
-func nilTokenSource(source TokenSource) bool {
-	if source == nil {
+func nilValue(value any) bool {
+	if value == nil {
 		return true
 	}
-	value := reflect.ValueOf(source)
-	switch value.Kind() {
+	reflected := reflect.ValueOf(value)
+	switch reflected.Kind() {
 	case reflect.Pointer, reflect.Map, reflect.Func, reflect.Interface, reflect.Slice, reflect.Chan:
-		return value.IsNil()
+		return reflected.IsNil()
 	default:
 		return false
 	}
@@ -153,22 +148,4 @@ func Dial(ctx context.Context, options ...ClientOption) (*Client, error) {
 	return client, nil
 }
 
-// Close cancels admitted work, joins the keep-alive worker and closes owned
-// transports. Repeated calls return the same result. Borrowed connections remain
-// open. External TokenSource implementations must honor cancellation to allow joining.
-func (c *Client) Close() error {
-	c.closeOnce.Do(func() {
-		c.mu.Lock()
-		c.closed = true
-		c.cancel()
-		c.mu.Unlock()
-		if c.owned {
-			c.closeError = c.raw.Close()
-		}
-		c.work.Wait()
-		if c.oauth != nil {
-			c.oauth.Close()
-		}
-	})
-	return c.closeError
-}
+func (c *Client) notifyLocked() { close(c.changed); c.changed = make(chan struct{}) }

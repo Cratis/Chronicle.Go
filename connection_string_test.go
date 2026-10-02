@@ -88,6 +88,20 @@ func TestConnectionStringOptionValues(t *testing.T) {
 	}
 }
 
+func TestSRVNameServerDefaultsToDNSPort(t *testing.T) {
+	for _, test := range []struct{ value, want string }{
+		{"dns.example", "dns.example:53"},
+		{"127.0.0.1", "127.0.0.1:53"},
+		{"[::1]", "[::1]:53"},
+		{"[::1]:5353", "[::1]:5353"},
+	} {
+		parsed, err := ParseConnectionString("chronicle+srv://cluster?srvNameServer=" + test.value)
+		if err != nil || parsed.nameServer != test.want {
+			t.Fatalf("%s: got %s, want %s: %v", test.value, parsed.nameServer, test.want, err)
+		}
+	}
+}
+
 func TestConnectionStringRedaction(t *testing.T) {
 	for _, input := range []string{"chronicle://user:sensitive@host", "chronicle://host?apiKey=sensitive", "chronicle://host?certificatePassword=sensitive"} {
 		value, err := ParseConnectionString(input)
@@ -116,7 +130,7 @@ func TestClientOptionValidation(t *testing.T) {
 			t.Fatalf("error = %v", err)
 		}
 	}
-	for _, input := range []string{"chronicle://host,other", "chronicle+srv://host", "chronicle://host?disableTls=true", "chronicle://host?certificatePath=a.pem", "chronicle://host?apiKey=key"} {
+	for _, input := range []string{"chronicle://host?disableTls=true", "chronicle://host?certificatePath=a.pem", "chronicle://host?apiKey=key"} {
 		_, err := NewClient(WithConnectionString(input))
 		if !errors.Is(err, ErrUnsupported) {
 			t.Fatalf("%s: %v", input, err)
@@ -130,7 +144,7 @@ func TestTLSValidationPrecedence(t *testing.T) {
 		{WithDevelopmentDefaults(), WithTLS(&tls.Config{MinVersion: tls.VersionTLS12})},
 		{WithConnectionString("chronicle://localhost?skipTlsValidation=false"), WithDevelopmentDefaults()},
 	} {
-		config := clientConfig{uri: "chronicle://localhost", connectTimeout: 1}
+		config := clientConfig{uri: "chronicle://localhost", connectTimeout: 1, keepAliveTimeout: 1, registrationRetry: RegistrationRetry{MaxAttempts: 1, InitialDelay: 1, MaximumDelay: 1, AttemptTimeout: 1}}
 		for _, option := range options {
 			option(&config)
 		}

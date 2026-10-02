@@ -3,7 +3,7 @@ title: Connect to Chronicle
 description: Configure endpoints, TLS, OAuth credentials and client ownership in Go.
 ---
 
-A client shares one gRPC channel across stores and namespaces. Create it with `chronicle.NewClient(options...)` for lazy construction, or `chronicle.Dial(ctx, options...)` to complete authentication, structural compatibility and the first kernel keep-alive before returning.
+A client shares one supervised connection generation across stores and namespaces. Create it with `chronicle.NewClient(options...)` for lazy construction, or `chronicle.Dial(ctx, options...)` to complete authentication, structural compatibility and the first kernel keep-alive before returning.
 
 ## Connection strings
 
@@ -19,7 +19,11 @@ Percent-encode reserved characters in credentials. Omitted credentials select th
 
 `ParseConnectionString` performs no I/O. `String()` and Go formatting redact credentials by displaying only scheme and addresses. Errors never echo the input URI. Option names, boolean values and `auth=none` are case-insensitive, like C#. Percent escapes are decoded without changing literal `+` characters into spaces. Unknown query options and duplicate query keys (including case variants) fail instead of becoming ignored configuration.
 
-The parser recognizes multihost authorities, `chronicle+srv`, API keys, certificate options and balancing options for diagnostics. This foundation rejects them at client construction with `ErrUnsupported`. Plaintext `disableTls` is also rejected. Use one endpoint; discovery and supervised reconnection are a later slice.
+Use `chronicle://one:35000,two:35000` for multiple endpoints or `chronicle+srv://cluster.example` for `_chronicle._tcp.cluster.example` discovery. SRV records are resolved again on each generation, ordered by priority then descending weight like C#. A connection accepts at most 64 endpoints/records; SRV accepts one seed name and must return a nonempty set. `srvNameServer=127.0.0.1:53` selects a DNS server; `WithSRVResolver` supplies a caller-owned, cancelable resolver.
+
+`loadBalancer=least-connections` is the default. It probes HTTPS `/connections/count` with a two-second budget per endpoint, randomly breaks ties, and makes a best-effort `/connections/reserve` request. Probes run concurrently over the bounded endpoint set after up to 250ms of jitter. Reservations expire server-side after 30 seconds; there is no release endpoint. `loadBalancer=round-robin` starts at a random offset; `loadBalancer=random` independently selects a candidate. Selection happens per generation, not per append. Single endpoints need no probe.
+
+API keys, URI certificate/password options and plaintext `disableTls` still return `ErrUnsupported`. Configure PEM material through `WithTLS`.
 
 ## TLS and token sources
 
@@ -29,19 +33,19 @@ Certificate validation is **enabled by default**, unlike the C# development defa
 
 `WithTokenSource(source)` accepts a concurrent, context-aware `Token(ctx) (chronicle.Token, error)` implementation. You own that source; the client never closes it. Nonzero expiration must be in the future. Tokens format as redacted, but their `AccessToken` field is sensitive.
 
-Built-in OAuth sends a form POST to the selected kernel's `/connect/token`, caches tokens, refreshes within one minute of expiry and serializes refreshes. A failed refresh can serve a still-valid token; failed exchanges are throttled for five seconds. The default lifetime without `expires_in` is 3600 seconds. Expired credentials, redirects and malformed responses fail closed. Token requests have a five-second budget. An `Unauthenticated` unary or stream failure invalidates the cached token, including its failed-refresh fallback. The next operation or explicit `Connect` obtains a fresh token; no operation is automatically retried. External sources can implement the concurrency-safe, nonblocking `TokenInvalidator.Invalidate()` contract for the same notification.
+Built-in OAuth sends a form POST to the selected kernel's `/connect/token`, caches tokens, refreshes within one minute of expiry and serializes refreshes. A failed refresh can serve a still-valid token; failed exchanges are throttled for five seconds. The default lifetime without `expires_in` is 3600 seconds. Expired credentials, redirects and malformed responses fail closed. Token requests have a five-second budget. An `Unauthenticated` unary or stream failure invalidates the cached token, including its failed-refresh fallback. The next credential acquisition obtains a fresh token; no application operation is automatically retried. Every replacement generation acquires OAuth credentials from its newly selected endpoint. External sources can implement the concurrency-safe, nonblocking `TokenInvalidator.Invalidate()` contract for the same notification.
 
 ## Lifecycle and cancellation
 
 - Client, store and sequence handles support concurrent calls. Caller event values must not be mutated during serialization.
 - `WithConnectTimeout` defaults to five seconds and never extends a shorter caller deadline.
 - Unary operations use the caller's deadline, not a hidden short timeout. Always supply a bounded context for external I/O.
-- Concurrent `Connect` and same-store creation calls share an attempt. Its initiating context bounds that attempt; other waiters can cancel independently. Failed store registration is not cached permanently.
+- Concurrent `Connect` calls share startup. Its initiating context bounds that first attempt; other waiters can cancel independently. Later generations use only client-owned lifetimes. Store registrations are single-flight per generation; failed passes remain inspectable and can recover.
 - `EventStore(ctx, name, WithNamespace("tenant"))` caches by both store and namespace. The default namespace is `Default`, matching C# and the kernel (case matters). Namespace selection is not authorization.
-- `Close()` is idempotent. It cancels admitted RPCs and joins the keep-alive worker. Later operations return `ErrClosed`. A custom token source that ignores cancellation can prevent shutdown from completing.
-- `WithGRPCConnection(conn)` borrows a channel; you own its security, retry policy and eventual close. The SDK still applies its own admission, metadata and compatibility checks. You must explicitly select `WithConnectionString` as the OAuth authority, `WithTokenSource`, or `WithNoAuthentication`; the SDK never guesses a localhost authority for a borrowed channel. Use `WithNoAuthentication` if the supplied channel owns credentials. Do not enable application-level append retries on a borrowed channel.
+- `Close()` cancels and joins owned work. `CloseContext(ctx)` bounds that wait; `Shutdown(ctx)` first drains admitted RPCs. A context error means cleanup is incomplete, not successful. Later operations return `ErrClosed`. A custom source that ignores cancellation can delay actual cleanup.
+- `WithGRPCConnection(conn)` borrows a channel; you own its security, retry policy and eventual close. The SDK still applies its own admission, metadata and compatibility checks. Multihost/SRV selection on a borrowed channel is rejected because its owner controls routing. You must explicitly select `WithConnectionString` as the OAuth authority, `WithTokenSource`, or `WithNoAuthentication`; the SDK never guesses a localhost authority for a borrowed channel. Use `WithNoAuthentication` if the supplied channel owns credentials. Do not enable application-level append retries on a borrowed channel.
 
-The foundation acknowledges keep-alives but has no missing-heartbeat watchdog, graceful drain, cluster balancing, background registration retry or automatic connection-generation supervisor. When the stream ends, existing handles fail until an explicit successful `Connect`; supervised recovery is a later slice.
+Transient stream loss or missing heartbeats triggers automatic reconnection and registration replay. Existing handles remain usable after recovery. Authentication rejection and incompatible protocols stop supervision until an explicit `Connect`; readiness never silently bypasses those failures. See [connection lifecycle and readiness](lifecycle.md) for admission, retry and shutdown contracts.
 
 ## Diagnose connection failures
 

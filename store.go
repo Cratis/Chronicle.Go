@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/cratis/chronicle.go/contracts/eventstores"
-	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/wire"
@@ -45,11 +44,6 @@ type storeKey struct {
 	name      StoreName
 	namespace Namespace
 }
-type storeAttempt struct {
-	done  chan struct{}
-	store *EventStore
-	err   error
-}
 
 // EventStore is an immutable, concurrency-safe registered store/namespace handle.
 // It borrows its Client; Close the client to release resources.
@@ -78,12 +72,12 @@ func (s *EventStore) EventSequence(id events.SequenceID) (*eventsequences.Sequen
 	if id == events.EventLog {
 		return s.log, nil
 	}
-	return eventsequences.New(s.name, s.namespace, id, s.catalog, s.client.transport)
+	return eventsequences.New(s.name, s.namespace, id, s.catalog, &clientTransport{client: s.client, store: s})
 }
 
 // EventStore connects, ensures the store/namespace and registers its explicit
 // events before returning a cached handle. Cache keys include both coordinates.
-// Concurrent calls share registration; failures are evicted so a later call can retry.
+// Concurrent calls share registration; failed passes can be retried on the same handle.
 // Required registrations never report successful readiness after a failed envelope.
 func (c *Client) EventStore(ctx context.Context, name StoreName, options ...StoreOption) (*EventStore, error) {
 	config := storeConfig{namespace: DefaultNamespace}
@@ -96,7 +90,7 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 	if strings.TrimSpace(string(name)) == "" || strings.TrimSpace(string(config.namespace)) == "" {
 		return nil, fmt.Errorf("%w: store and namespace must be nonblank", ErrInvalidConfiguration)
 	}
-	if err := c.Connect(ctx); err != nil {
+	if err := c.connect(ctx, false); err != nil {
 		return nil, err
 	}
 	key := storeKey{name: name, namespace: config.namespace}
@@ -105,70 +99,23 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 		c.mu.Unlock()
 		return nil, ErrClosed
 	}
-	if attempt, found := c.stores[key]; found {
-		c.mu.Unlock()
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-attempt.done:
-			return attempt.store, attempt.err
+	store := c.stores[key]
+	if store == nil {
+		catalog := c.catalog
+		if selected, ok := c.catalogs[key.name]; ok {
+			catalog = selected
 		}
-	}
-	attempt := &storeAttempt{done: make(chan struct{})}
-	c.stores[key] = attempt
-	c.work.Add(1)
-	c.mu.Unlock()
-	defer c.work.Done()
-	store, err := c.registerStore(ctx, key)
-	c.mu.Lock()
-	if c.closed && err == nil {
-		err = ErrClosed
-		store = nil
-	}
-	attempt.store, attempt.err = store, err
-	if err != nil {
-		delete(c.stores, key)
-	}
-	close(attempt.done)
-	c.mu.Unlock()
-	return store, err
-}
-
-func (c *Client) registerStore(ctx context.Context, key storeKey) (*EventStore, error) {
-	result, err := eventstores.NewEventStoresClient(c.transport).EnsureEventStore(ctx, &eventstores.EnsureEventStoreRequest{Name: string(key.name)})
-	if err != nil {
-		return nil, err
-	}
-	if err = wire.CheckEnvelope(result); err != nil {
-		return nil, err
-	}
-	catalog := c.catalog
-	if selected, ok := c.catalogs[key.name]; ok {
-		catalog = selected
-	}
-	store := &EventStore{client: c, name: key.name, namespace: key.namespace, catalog: catalog}
-	if err = store.Namespaces().Ensure(ctx, key.namespace); err != nil {
-		return nil, err
-	}
-	request := &eventtypes.RegisterEventTypesRequest{EventStore: string(key.name), DisableValidation: !c.config.validateEventTypes}
-	for _, descriptor := range catalog.Descriptors() {
-		ref := descriptor.Ref()
-		request.Types = append(request.Types, &eventtypes.EventTypeRegistration{
-			Type: &eventtypes.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Schema: descriptor.Schema(),
-			Generations: []*eventtypes.EventTypeGenerationDefinition{{Generation: uint32(ref.Generation), Schema: descriptor.Schema()}},
-		})
-	}
-	if len(request.Types) > 0 {
-		registered, err := eventtypes.NewEventTypesClient(c.transport).RegisterEventTypes(ctx, request)
+		store = &EventStore{client: c, name: key.name, namespace: key.namespace, catalog: catalog}
+		var err error
+		store.log, err = eventsequences.New(key.name, key.namespace, events.EventLog, catalog, &clientTransport{client: c, store: store})
 		if err != nil {
+			c.mu.Unlock()
 			return nil, err
 		}
-		if err = wire.CheckEnvelope(registered); err != nil {
-			return nil, err
-		}
+		c.stores[key] = store
 	}
-	store.log, err = eventsequences.New(key.name, key.namespace, events.EventLog, catalog, c.transport)
-	if err != nil {
+	c.mu.Unlock()
+	if _, err := store.WaitForRegistration(ctx); err != nil {
 		return nil, err
 	}
 	return store, nil
@@ -176,7 +123,7 @@ func (c *Client) registerStore(ctx context.Context, key storeKey) (*EventStore, 
 
 // EventStores lists authorized logical stores after connection preflight.
 func (c *Client) EventStores(ctx context.Context) ([]StoreName, error) {
-	if err := c.Connect(ctx); err != nil {
+	if err := c.connect(ctx, false); err != nil {
 		return nil, err
 	}
 	result, err := eventstores.NewEventStoresClient(c.transport).AllEventStores(ctx, &emptypb.Empty{})

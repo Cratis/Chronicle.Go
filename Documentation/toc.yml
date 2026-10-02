@@ -4,6 +4,8 @@
   href: clients/go/getting-started.md
 - name: Connecting
   href: connection-strings/index.md
+- name: Lifecycle and readiness
+  href: connection-strings/lifecycle.md
 - name: Events
   items:
     - name: Event types

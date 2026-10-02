@@ -36,6 +36,10 @@ type clientConfig struct {
 	tokenSource                            TokenSource
 	noAuth, development, skipCompatibility bool
 	connectTimeout                         time.Duration
+	keepAliveTimeout                       time.Duration
+	registrationRetry                      RegistrationRetry
+	resolver                               SRVResolver
+	resolverSet                            bool
 	borrowed                               *grpc.ClientConn
 	tlsSet, tokenSet, borrowedSet, uriSet  bool
 	validateEventTypes                     bool
