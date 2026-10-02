@@ -14,6 +14,7 @@ import (
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/connection"
+	"github.com/cratis/chronicle.go/readmodels"
 )
 
 // Client owns a generation supervisor and frozen registries. Construct with
@@ -40,6 +41,9 @@ type Client struct {
 	changed         chan struct{}
 	nextGeneration  uint64
 	connectionError error
+
+	readModelCatalog  *readmodels.Catalog
+	readModelCatalogs map[StoreName]*readmodels.Catalog
 }
 
 // String describes the client without revealing endpoints or credentials.
@@ -72,6 +76,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		}
 		c.catalogs[name] = snapshot(registry)
 	}
+	c.snapshotReadModels(config)
 	c.config.registry, c.config.stores = nil, nil
 	c.config.skipCompatibility = config.skipCompatibility || uri.skipCompatibility
 	if c.config.resolver == nil {

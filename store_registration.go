@@ -39,6 +39,12 @@ func (s *EventStore) registerStages(ctx context.Context, g *generation) ([]Artif
 			return s.sharedStage(ctx, g, "event-types", func(ctx context.Context) error { return s.registerEventTypes(ctx, g) })
 		}},
 	}
+	if s.readModels != nil && len(s.readModels.Catalog().Descriptors()) > 0 {
+		stages = append(stages, struct {
+			name string
+			run  func(context.Context) error
+		}{"read-models", func(ctx context.Context) error { return s.registerReadModels(ctx, g) }})
+	}
 	for _, stage := range stages {
 		if err := ctx.Err(); err != nil {
 			return artifacts, err
