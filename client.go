@@ -63,7 +63,7 @@ func (c *Client) GoString() string { return c.String() }
 // by default. Omitted credentials select Chronicle's public development credentials.
 func NewClient(options ...ClientOption) (*Client, error) {
 	config := clientConfig{uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
-		keepAliveTimeout: 5 * time.Second, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
+		keepAliveTimeout: 5 * time.Second, reactorRetryWait: connection.Wait, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
 	for _, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("%w: nil client option", ErrInvalidConfiguration)

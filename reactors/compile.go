@@ -79,9 +79,31 @@ func (p *Plan) EventTypes() []events.TypeRef { return slices.Clone(p.ordered) }
 // PerEvent reports the explicit activation override.
 func (p *Plan) PerEvent() bool { return p.declaration.config.perEvent }
 
+// IsReplayable reports whether the kernel may replay this reactor.
+func (p *Plan) IsReplayable() bool { return p.declaration.config.replayable }
+
+// Tags returns detached artifact labels.
+func (p *Plan) Tags() []string { return slices.Clone(p.declaration.config.tags) }
+
+// FilterTags returns detached event tag filters.
+func (p *Plan) FilterTags() []string { return slices.Clone(p.declaration.config.filterTags) }
+
+// EventSourceType returns the source-type filter, empty for all source types.
+func (p *Plan) EventSourceType() events.SourceType { return p.declaration.config.sourceType }
+
+// EventStreamType returns the stream-type filter, All by default.
+func (p *Plan) EventStreamType() events.StreamType { return p.declaration.config.streamType }
+
 // Compile validates every signature without activating user code. Services may
 // be nil for the zero-container default. No cache is shared across catalogs.
 func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog, services ScopeFactory) (*Plan, error) {
+	return CompileWithMiddleware(d, catalog, models, services, nil)
+}
+
+// CompileWithMiddleware compiles a declaration with registry middleware factories
+// preceding its per-reactor middleware. The input slice is not retained; factories
+// follow WithMiddleware's activation and ownership contract.
+func CompileWithMiddleware(d Declaration, catalog *events.Catalog, models *readmodels.Catalog, services ScopeFactory, middlewareFactories []any) (*Plan, error) {
 	if d.Identifier() == "" || catalog == nil || models == nil {
 		return nil, invalid("reactor and catalogs required")
 	}
@@ -175,7 +197,7 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 			p.ordered = append(p.ordered, descriptor.Ref())
 		}
 	}
-	for _, factory := range d.config.middlewares {
+	for _, factory := range append(slices.Clone(middlewareFactories), d.config.middlewares...) {
 		if nilLike(factory) {
 			return fail("middleware", nil, invalid("nil middleware factory"))
 		}

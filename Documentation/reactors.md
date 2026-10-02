@@ -161,10 +161,13 @@ for the client's lifetime.
 
 ### Middleware and Arc adapters
 
-`reactors.WithMiddleware(factory)` activates a `reactors.Middleware` from the
-same scope as the reactor. Its `Before` and `After` hooks receive an `Invocation`
-with the event, context, delivery identity and borrowed scope. Hooks run in
-registration order. All before hooks run; any before error prevents handling.
+`chronicle.RegisterReactorMiddleware(registry, factory)` applies a middleware to
+every reactor in that registry. `reactors.WithMiddleware(factory)` adds one to a
+single reactor. Both activate a `reactors.Middleware` from the same scope as the
+reactor. Its `Before` and `After` hooks receive an `Invocation` with the event,
+context, delivery identity and borrowed scope. Registry middleware runs first,
+then per-reactor middleware, each in registration order. `NewClient` freezes the
+registry list; later additions do not change existing clients. All before hooks run; any before error prevents handling.
 After hooks run even when handling fails; their errors are logged and do not
 change the acknowledgement after effects have run.
 
@@ -179,7 +182,9 @@ between an external effect and a Chronicle append.
 Event types and read models register before constraints/projections; reactor
 streams start after that registration pass succeeds. The duplex protocol has no
 registration acknowledgement: a successful store/readiness call means reactor
-registration was **sent**, not that a handler has caught up.
+registration was **sent**, not that a handler has caught up. A caller's deadline
+bounds this readiness wait, not the subscription lifetime. Failed stream opens
+retry independently; unregistering during an open releases readiness waiters.
 
 Events execute in received order, with no application queue. A failed event stops
 the batch; the result names only the last successful sequence number, or
@@ -192,14 +197,21 @@ resets to unavailable. **Effects may already have happened and can repeat on
 kernel recovery.** Make them idempotent. Middleware activation also fails closed,
 rather than C#'s log-and-skip policy.
 
-Stream failure replaces the existing connection generation, joins old workers,
-and re-registers frozen plans. The kernel retains progress; the client does not
-invent a resume position. This can interrupt other observers on that generation.
+When a reactor stream fails or completes, only that reactor resubscribes after
+two seconds on the same connection. This does not cancel unrelated appends or
+observers. Unregister and shutdown cancel the retry delay. The keep-alive
+watchdog owns recovery from actual connection loss: a new generation re-registers
+frozen plans without waiting for old handlers to finish. The kernel retains
+progress; the client does not invent a resume position.
 `store.UnregisterReactor(ctx, id)` cancels and joins a local reactor, retaining its
 removal across reconnect. It does not delete kernel state. Do not synchronously
 unregister a reactor from its own handler.
 
-`Close` cancels and joins workers. `CloseContext` bounds the caller's wait when
-user code ignores cancellation; a timeout means cleanup is still incomplete.
+`Close` cancels and joins workers, including observers from retired generations.
+Old owned channels close only after their observers finish. A handler that
+ignores cancellation cannot block reconnection or unrelated RPCs, but it can
+outlive its generation and overlap delivery on the new one. Honor cancellation
+and make effects idempotent. `CloseContext` bounds the caller's wait when user
+code ignores cancellation; a timeout means cleanup is still incomplete.
 Replay replacement/OnceOnly, read-model reactors, observer administration and
 completion/tail APIs remain outside this slice.

@@ -195,6 +195,17 @@ func (c *Client) retire(g *generation) {
 		drainStream(g.stream)
 	}
 	g.work.Wait()
+	// The supervisor still holds c.work while admitting this retirement worker.
+	// Slow user handlers cannot prevent the next generation from connecting, but
+	// Close/CloseContext still join them before closing the retired channel.
+	c.work.Add(1)
+	go func() {
+		defer c.work.Done()
+		c.joinRetired(g)
+	}()
+}
+
+func (c *Client) joinRetired(g *generation) {
 	g.observers.Wait()
 	if g.owned {
 		if err := g.raw.Close(); err != nil {

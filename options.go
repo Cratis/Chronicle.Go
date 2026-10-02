@@ -4,6 +4,7 @@
 package chronicle
 
 import (
+	"context"
 	"crypto/tls"
 	"time"
 
@@ -51,6 +52,7 @@ type clientConfig struct {
 	stores                                 map[StoreName]*Registry
 	reactorServices                        reactorScopeFactory
 	reactorServicesSet                     bool
+	reactorRetryWait                       func(context.Context, time.Duration) error
 }
 
 // WithConnectionString selects the URI; it is validated by NewClient.

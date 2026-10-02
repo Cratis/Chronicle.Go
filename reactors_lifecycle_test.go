@@ -51,7 +51,7 @@ func TestReactorUnregisterIsRetainedAcrossReconnect(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	kernel := &reactorKernel{}
+	kernel := &reactorKernel{endConnection: make(chan error, 1)}
 	_, store, ctx := reactorClient(t, kernel, registry)
 	a, b := receive(t, ctx, kernel.sessions), receive(t, ctx, kernel.sessions)
 	if a.registration.Reactor.ReactorId == "retained" {
@@ -61,10 +61,10 @@ func TestReactorUnregisterIsRetainedAcrossReconnect(t *testing.T) {
 		t.Fatal(err)
 	}
 	receive(t, ctx, a.done)
-	close(b.end)
+	kernel.endConnection <- errors.New("connection lost")
 	receive(t, ctx, b.done)
 	next := receive(t, ctx, kernel.sessions)
-	if next.registration.Reactor.ReactorId != "retained" {
+	if next.registration.Reactor.ReactorId != "retained" || next.registration.ConnectionId == b.registration.ConnectionId {
 		t.Fatal(next.registration)
 	}
 	// Ready joins replay of the complete frozen set, including the removal check.

@@ -51,6 +51,21 @@ func RegisterReactorHandlers(registry *Registry, id reactors.ID, handlers []reac
 	return addReactor(registry, declaration)
 }
 
+// RegisterReactorMiddleware adds a constructor for every reactor in this registry.
+// Registry middleware runs in registration order before per-reactor middleware.
+// Factory signatures and services are validated at NewClient, without activation,
+// just like reactors.WithMiddleware. Duplicate registrations run independently.
+// NewClient freezes the list; later registrations do not affect existing clients.
+func RegisterReactorMiddleware(registry *Registry, factory any) error {
+	if registry == nil || nilValue(factory) {
+		return fmt.Errorf("%w: registry and middleware factory required", ErrInvalidConfiguration)
+	}
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	registry.reactorMiddlewares = append(registry.reactorMiddlewares, factory)
+	return nil
+}
+
 func addReactor(registry *Registry, declaration reactors.Declaration) error {
 	if registry == nil {
 		return fmt.Errorf("%w: nil registry", ErrInvalidConfiguration)
@@ -80,9 +95,9 @@ func WithServices(factory reactors.ScopeFactory) ClientOption {
 	return func(c *clientConfig) { c.reactorServices = factory; c.reactorServicesSet = true }
 }
 
-func compileReactors(snapshot *registrySnapshot, declarations []reactorDeclaration, services reactorScopeFactory) error {
+func compileReactors(snapshot *registrySnapshot, declarations []reactorDeclaration, services reactorScopeFactory, middlewares []any) error {
 	for _, declaration := range declarations {
-		plan, err := reactors.Compile(declaration, snapshot.events, snapshot.models, services)
+		plan, err := reactors.CompileWithMiddleware(declaration, snapshot.events, snapshot.models, services, middlewares)
 		if err != nil {
 			return err
 		}

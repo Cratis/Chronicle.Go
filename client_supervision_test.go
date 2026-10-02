@@ -17,6 +17,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/eventstores"
 	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	"github.com/cratis/chronicle.go/contracts/namespaces"
+	reactorcontracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	projectioncontracts "github.com/cratis/chronicle.go/contracts/projections"
 	readmodelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/contracts/sequences"
@@ -44,6 +45,8 @@ type supervisedKernel struct {
 	namespaceCounts     map[string]int
 	readModels          readmodelcontracts.ReadModelsServer
 	projections         projectioncontracts.ProjectionsServer
+	reactors            reactorcontracts.ReactorsServer
+	streamInterceptor   grpc.StreamClientInterceptor
 }
 
 func (*supervisedKernel) EnsureEventStore(context.Context, *eventstores.EnsureEventStoreRequest) (*eventstores.CommandResult, error) {
@@ -102,6 +105,9 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 	if k.projections != nil {
 		projectioncontracts.RegisterProjectionsServer(server, k.projections)
 	}
+	if k.reactors != nil {
+		reactorcontracts.RegisterReactorsServer(server, k.reactors)
+	}
 	served := make(chan struct{})
 	go func() {
 		defer close(served)
@@ -109,7 +115,7 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 			t.Error(err)
 		}
 	}()
-	conn, err := grpc.NewClient("passthrough:///supervision", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
+	conn, err := grpc.NewClient("passthrough:///supervision", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }), grpc.WithStreamInterceptor(k.streamInterceptor))
 	if err != nil {
 		t.Fatal(err)
 	}

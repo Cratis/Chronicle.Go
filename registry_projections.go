@@ -45,6 +45,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 	var models []readmodels.Descriptor
 	var declarations []projections.Declaration
 	var reactorDeclarations []reactorDeclaration
+	var reactorMiddlewares []any
 	snapshot := registrySnapshot{}
 	if registry != nil {
 		registry.mu.Lock()
@@ -52,6 +53,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 		models = slices.Clone(registry.readModels)
 		declarations = slices.Clone(registry.projections)
 		reactorDeclarations = slices.Clone(registry.reactors)
+		reactorMiddlewares = slices.Clone(registry.reactorMiddlewares)
 		snapshot.constraints = slices.Clone(registry.constraints)
 		registry.mu.Unlock()
 	}
@@ -131,6 +133,6 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 			return registrySnapshot{}, err
 		}
 	}
-	err = compileReactors(&snapshot, reactorDeclarations, services)
+	err = compileReactors(&snapshot, reactorDeclarations, services, reactorMiddlewares)
 	return snapshot, err
 }

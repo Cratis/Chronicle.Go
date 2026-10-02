@@ -29,7 +29,9 @@ import (
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -44,7 +46,7 @@ type observerSession struct {
 	registration *contracts.RegisterReactor
 	batches      chan *contracts.EventsToObserve
 	results      chan *contracts.ReactorResult
-	end          chan struct{}
+	end          chan error
 	done         chan struct{}
 }
 type reactorKernel struct {
@@ -56,6 +58,20 @@ type reactorKernel struct {
 	constraintsReady atomic.Bool
 	readKey          chan string
 	modelJSON        string
+	endConnection    chan error
+}
+
+func (k *reactorKernel) Connect(request *clients.ConnectRequest, stream grpc.ServerStreamingServer[clients.ConnectionKeepAlive]) error {
+	k.connectCalls.Add(1)
+	if err := stream.Send(&clients.ConnectionKeepAlive{ConnectionId: request.ConnectionId}); err != nil {
+		return err
+	}
+	select {
+	case err := <-k.endConnection:
+		return err
+	case <-stream.Context().Done():
+		return stream.Context().Err()
+	}
 }
 
 func (k *reactorKernel) Register(context.Context, *constraints.RegisterConstraintsRequest) (*emptypb.Empty, error) {
@@ -72,7 +88,7 @@ func (k *reactorKernel) Observe(stream grpc.BidiStreamingServer[contracts.Reacto
 	if !k.constraintsReady.Load() || k.registrations.Load() == 0 {
 		return errors.New("observer started before definitions")
 	}
-	s := &observerSession{registration: first.GetContent().GetValue0(), batches: make(chan *contracts.EventsToObserve, 1), results: make(chan *contracts.ReactorResult, 1), end: make(chan struct{}), done: make(chan struct{})}
+	s := &observerSession{registration: first.GetContent().GetValue0(), batches: make(chan *contracts.EventsToObserve, 1), results: make(chan *contracts.ReactorResult, 1), end: make(chan error, 1), done: make(chan struct{})}
 	defer close(s.done)
 	select {
 	case k.sessions <- s:
@@ -83,8 +99,8 @@ func (k *reactorKernel) Observe(stream grpc.BidiStreamingServer[contracts.Reacto
 		select {
 		case <-stream.Context().Done():
 			return stream.Context().Err()
-		case <-s.end:
-			return nil
+		case err := <-s.end:
+			return err
 		case batch := <-s.batches:
 			if err := stream.Send(batch); err != nil {
 				return err
@@ -260,7 +276,11 @@ func TestReactorOrderedBatchPartialFailureAndCleanupBeforeAck(t *testing.T) {
 	kernel := &reactorKernel{}
 	_, _, ctx := reactorClient(t, kernel, registry, chronicle.WithServices(scopes))
 	session := receive(t, ctx, kernel.sessions)
-	if session.registration.Reactor.ReactorId != "batch" || session.registration.Reactor.EventTypes[0].Key != "$eventSourceId" || session.registration.Reactor.EventTypes[0].EventType.Generation != 2 {
+	definition := session.registration.Reactor
+	if !definition.IsReplayable || definition.Filters.EventStreamType != "All" || definition.Filters.EventSourceType != "" || len(definition.Tags) != 0 || len(definition.Filters.FilterTags) != 0 {
+		t.Fatal("incorrect default reactor metadata", definition)
+	}
+	if definition.ReactorId != "batch" || definition.EventTypes[0].Key != "$eventSourceId" || definition.EventTypes[0].EventType.Generation != 2 {
 		t.Fatal(session.registration)
 	}
 	session.batches <- batch(0, 1, 2, 3)
@@ -361,21 +381,54 @@ func TestReactorMiddlewareOrderAndFailurePolicies(t *testing.T) {
 	}
 }
 func TestReactorReconnectUnregisterAndWorkerJoining(t *testing.T) {
+	for _, streamError := range []error{nil, status.Error(codes.InvalidArgument, "bad definition")} {
+		t.Run(fmt.Sprint(streamError), func(t *testing.T) {
+			testReactorResubscription(t, streamError)
+		})
+	}
+}
+
+func testReactorResubscription(t *testing.T, streamError error) {
 	registry := reactorRegistry(t)
 	var handled atomic.Int32
 	if err := chronicle.RegisterReactorHandler(registry, "callback", func(context.Context, ReactorInput) error { handled.Add(1); return nil }); err != nil {
 		t.Fatal(err)
 	}
+	entered, release := make(chan struct{}), make(chan struct{})
+	defer close(release)
 	kernel := &reactorKernel{}
-	client, store, ctx := reactorClient(t, kernel, registry)
+	kernel.append = func(ctx context.Context, request *sequences.AppendRequest) (*sequences.CommandResult_AppendResponse, error) {
+		close(entered)
+		select {
+		case <-release:
+			return success(request, 0), nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	retrying, resume, wait := reactorRetryClock(t)
+	client, store, ctx := reactorClient(t, kernel, registry, wait)
 	first := receive(t, ctx, kernel.sessions)
 	first.batches <- batch(0)
 	receive(t, ctx, first.results)
-	close(first.end)
+	appendDone := make(chan error, 1)
+	go func() {
+		result, err := store.EventLog().Append(ctx, "other", ReactorOutput{42})
+		appendDone <- errors.Join(err, result.Err())
+	}()
+	receive(t, ctx, entered)
+	first.end <- streamError
 	receive(t, ctx, first.done)
+	receive(t, ctx, retrying)
+	resume <- struct{}{}
 	second := receive(t, ctx, kernel.sessions)
-	if first.registration.ConnectionId == second.registration.ConnectionId || kernel.registrations.Load() != 2 || kernel.active.Load() != 1 {
-		t.Fatal("generation did not retire and re-register")
+	if first.registration.ConnectionId != second.registration.ConnectionId || kernel.registrations.Load() != 1 || kernel.active.Load() != 1 {
+		t.Fatal("observer resubscription replaced the shared generation")
+	}
+	select {
+	case err := <-appendDone:
+		t.Fatalf("unrelated append interrupted: %v", err)
+	default:
 	}
 	second.batches <- batch(1)
 	receive(t, ctx, second.results)
@@ -383,6 +436,11 @@ func TestReactorReconnectUnregisterAndWorkerJoining(t *testing.T) {
 		t.Fatal(err)
 	}
 	receive(t, ctx, second.done)
+	// Release the append normally before shutdown; it must not have an unknown outcome.
+	release <- struct{}{}
+	if err := receive(t, ctx, appendDone); err != nil {
+		t.Fatal(err)
+	}
 	if err := client.CloseContext(ctx); err != nil {
 		t.Fatal(err)
 	}

@@ -40,7 +40,11 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 	if err != nil {
 		return nil, err
 	}
-	definition := &contracts.ReactorDefinition{ReactorId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()), IsReplayable: true, Filters: &contracts.ObserverFilters{EventStreamType: "All"}}
+	definition := &contracts.ReactorDefinition{
+		ReactorId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()),
+		IsReplayable: plan.IsReplayable(), Tags: plan.Tags(),
+		Filters: &contracts.ObserverFilters{FilterTags: plan.FilterTags(), EventSourceType: string(plan.EventSourceType()), EventStreamType: string(plan.EventStreamType())},
+	}
 	for _, ref := range plan.EventTypes() {
 		definition.EventTypes = append(definition.EventTypes, &contracts.EventTypeWithKeyExpression{EventType: &contracts.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Key: "$eventSourceId"})
 	}

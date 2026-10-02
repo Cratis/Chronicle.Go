@@ -31,6 +31,11 @@ type configuration struct {
 	id          ID
 	sequence    events.SequenceID
 	perEvent    bool
+	replayable  bool
+	tags        []string
+	filterTags  []string
+	sourceType  events.SourceType
+	streamType  events.StreamType
 	middlewares []any
 	handlers    []Handler
 	key         func(context.Context, any, events.Context) (readmodels.Key, error)
@@ -121,7 +126,7 @@ func DefineHandlers(id ID, handlers []Handler, options ...Option) (Declaration, 
 	return define(nil, nil, true, id, append(initial, options...))
 }
 func define(typ reflect.Type, factory any, explicit bool, id ID, options []Option) (Declaration, error) {
-	c := configuration{id: id, sequence: events.EventLog, logger: slog.Default()}
+	c := configuration{id: id, sequence: events.EventLog, replayable: true, streamType: "All", logger: slog.Default()}
 	for _, option := range options {
 		if option == nil {
 			return Declaration{}, invalid("nil reactor option")

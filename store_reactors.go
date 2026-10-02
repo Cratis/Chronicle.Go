@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/observerruntime"
@@ -25,7 +26,6 @@ type reactorRun struct {
 	cancel     context.CancelFunc
 	ready      chan struct{}
 	done       chan struct{}
-	err        error
 }
 
 func (s *EventStore) reactorPlans() []*reactors.Plan {
@@ -44,51 +44,57 @@ func (s *EventStore) startReactors(ctx context.Context, g *generation) error {
 			s.reactors.mu.Unlock()
 			continue
 		}
-		if run := s.reactors.runs[plan.Identifier()]; run != nil && run.generation == g.number {
-			s.reactors.mu.Unlock()
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-run.ready:
-				if run.err != nil {
-					return run.err
-				}
+		run := s.reactors.runs[plan.Identifier()]
+		if run == nil || run.generation != g.number {
+			runCtx, cancel := context.WithCancel(g.ctx)
+			run = &reactorRun{generation: g.number, cancel: cancel, ready: make(chan struct{}), done: make(chan struct{})}
+			if s.reactors.runs == nil {
+				s.reactors.runs = make(map[reactors.ID]*reactorRun)
 			}
-			continue
+			s.reactors.runs[plan.Identifier()] = run
+			// Admission is pinned by g.work or the registration worker. Retirement
+			// drains both before joining observers, so Add cannot race with Wait.
+			g.observers.Add(1)
+			go s.runReactor(runCtx, g, plan, run)
 		}
-		runCtx, cancel := context.WithCancel(g.ctx)
-		run := &reactorRun{generation: g.number, cancel: cancel, ready: make(chan struct{}), done: make(chan struct{})}
-		if s.reactors.runs == nil {
-			s.reactors.runs = make(map[reactors.ID]*reactorRun)
-		}
-		s.reactors.runs[plan.Identifier()] = run
-		// The caller is either admitted in g.work or the joined registration worker.
-		// Retirement waits for both before joining these observer workers.
-		g.observers.Add(1)
 		s.reactors.mu.Unlock()
-		stop := context.AfterFunc(ctx, cancel)
-		stream, err := observerruntime.Open(runCtx, g.transport, g.id, s.name, s.namespace, plan, reactorStoreRuntime{s})
-		stop()
-		run.err = err
-		close(run.ready)
-		if err != nil {
-			cancel()
-			close(run.done)
-			g.observers.Done()
-			g.cancel()
-			return err
+		// A caller owns only its readiness wait, never the subscription lifetime.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-g.ctx.Done():
+			return g.ctx.Err()
+		case <-run.ready:
 		}
-		go func() {
-			defer g.observers.Done()
-			defer close(run.done)
-			defer cancel()
-			if err := stream.Run(runCtx); err != nil && runCtx.Err() == nil {
-				slog.WarnContext(runCtx, "reactor stream ended; replacing generation", "reactor", plan.Identifier(), "error", err)
-				g.cancel()
-			}
-		}()
 	}
 	return nil
+}
+
+func (s *EventStore) runReactor(ctx context.Context, g *generation, plan *reactors.Plan, run *reactorRun) {
+	defer g.observers.Done()
+	defer close(run.done)
+	defer run.cancel()
+	var ready sync.Once
+	markReady := func() { ready.Do(func() { close(run.ready) }) }
+	// Removal during Open releases readiness waiters without poisoning registration.
+	defer markReady()
+	for ctx.Err() == nil {
+		// Each failed attempt releases its stream before another is opened.
+		attempt, cancel := context.WithCancel(ctx)
+		stream, err := observerruntime.Open(attempt, g.transport, g.id, s.name, s.namespace, plan, reactorStoreRuntime{s})
+		if err == nil {
+			markReady()
+			err = stream.Run(attempt)
+		}
+		cancel()
+		if ctx.Err() != nil {
+			return
+		}
+		slog.WarnContext(ctx, "reactor stream ended; resubscribing", "reactor", plan.Identifier(), "error", err)
+		if s.client.config.reactorRetryWait(ctx, 2*time.Second) != nil {
+			return
+		}
+	}
 }
 
 // UnregisterReactor disconnects and joins this store/namespace's reactor. Unknown
