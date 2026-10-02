@@ -39,39 +39,74 @@ func (e *RegistrationError) Unwrap() error { return e.Outcome.Failure }
 // for this namespace and current generation. Failures are explicit and retryable
 // on a later call; successful store-wide definitions are shared across namespaces.
 func (s *EventStore) WaitForRegistration(ctx context.Context) (RegistrationOutcome, error) {
-	if err := s.client.connect(ctx, false); err != nil {
-		return RegistrationOutcome{}, err
+	for {
+		g, attemptCtx, done, err := s.client.acquireReady(ctx)
+		if err != nil {
+			return RegistrationOutcome{}, err
+		}
+		outcome, err := s.register(attemptCtx, g)
+		if err == nil {
+			err = g.ctx.Err()
+		}
+		if err == nil {
+			err = attemptCtx.Err()
+		}
+		retry := g.ctx.Err() != nil && retryReadiness(ctx, err)
+		done()
+		if !retry {
+			return outcome, err
+		}
 	}
-	g, ctx, done, err := s.client.acquire(ctx)
-	if err != nil {
-		return RegistrationOutcome{}, err
-	}
-	defer done()
-	outcome, err := s.register(ctx, g)
-	if err == nil && ctx.Err() != nil {
-		return outcome, ctx.Err()
-	}
-	return outcome, err
 }
 
 // Ready waits for a healthy generation and registrations for all handles known
 // when called. Connect alone does not imply artifact readiness. Concurrently
 // created stores carry their own barrier. Terminal failures are not retried here.
 func (c *Client) Ready(ctx context.Context) error {
-	if err := c.connect(ctx, false); err != nil {
-		return err
-	}
-	g, ctx, done, err := c.acquire(ctx)
-	if err != nil {
-		return err
-	}
-	defer done()
-	for _, store := range c.storeSnapshot() {
-		if _, err = store.register(ctx, g); err != nil {
+	stores := c.storeSnapshot()
+	for {
+		g, attemptCtx, done, err := c.acquireReady(ctx)
+		if err != nil {
+			return err
+		}
+		for _, store := range stores {
+			if _, err = store.register(attemptCtx, g); err != nil {
+				break
+			}
+		}
+		if err == nil {
+			err = g.ctx.Err()
+		}
+		if err == nil {
+			err = attemptCtx.Err()
+		}
+		retry := g.ctx.Err() != nil && retryReadiness(ctx, err)
+		done()
+		if !retry {
 			return err
 		}
 	}
-	return ctx.Err()
+}
+
+func retryReadiness(ctx context.Context, err error) bool {
+	return err != nil && ctx.Err() == nil && !terminalConnectionError(err)
+}
+
+// acquireReady tolerates a generation disappearing between connection readiness
+// and admission. It never retries a dispatched application operation.
+func (c *Client) acquireReady(ctx context.Context) (*generation, context.Context, func(), error) {
+	for {
+		if err := c.connect(ctx, false); err != nil {
+			if retryReadiness(ctx, err) {
+				continue
+			}
+			return nil, nil, nil, err
+		}
+		g, attemptCtx, done, err := c.acquire(ctx)
+		if !retryReadiness(ctx, err) {
+			return g, attemptCtx, done, err
+		}
+	}
 }
 
 func (c *Client) storeSnapshot() []*EventStore {

@@ -70,7 +70,8 @@ func (c *Client) connect(ctx context.Context, explicit bool) error {
 	case <-c.life.Done():
 		return ErrClosed
 	case <-s.first:
-		if s.err != nil {
+		startupCanceled := errors.Is(s.err, context.Canceled) || errors.Is(s.err, context.DeadlineExceeded)
+		if s.err != nil && (ctx.Err() != nil || !startupCanceled) {
 			return s.err
 		}
 	}
@@ -117,6 +118,12 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 	}()
 	attempt := 0
 	for c.life.Err() == nil {
+		c.mu.Lock()
+		closed := c.closed
+		c.mu.Unlock()
+		if closed {
+			return
+		}
 		parent := c.life
 		if startup != nil {
 			parent = startup
@@ -171,7 +178,7 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 func terminalConnectionError(err error) bool {
 	var incompatible *CompatibilityError
 	var auth *connection.AuthenticationError
-	if errors.As(err, &incompatible) || errors.As(err, &auth) || errors.Is(err, ErrProtocol) {
+	if errors.As(err, &incompatible) || errors.As(err, &auth) || errors.Is(err, ErrProtocol) || errors.Is(err, ErrClosed) {
 		return true
 	}
 	switch status.Code(err) {

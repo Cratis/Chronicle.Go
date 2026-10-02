@@ -81,7 +81,10 @@ func (t *clientTransport) NewStream(ctx context.Context, desc *grpc.StreamDesc, 
 		done()
 		return nil, err
 	}
-	return &ownedStream{ClientStream: stream, done: done}, nil
+	// Once established, a stream owns its lease until completion or context
+	// cancellation, even if its caller never receives from it again.
+	stop := context.AfterFunc(ctx, done)
+	return &ownedStream{ClientStream: stream, done: func() { stop(); done() }}, nil
 }
 
 type ownedStream struct {

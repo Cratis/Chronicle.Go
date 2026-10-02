@@ -6,6 +6,7 @@ package registration
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"testing/synctest"
@@ -52,6 +53,50 @@ func TestSingleFlightRetriesAndSnapshots(t *testing.T) {
 			t.Fatal("single-flight or snapshot broken")
 		}
 	})
+}
+
+func TestLiveJoinerRetriesCanceledStarter(t *testing.T) {
+	for _, deadline := range []bool{false, true} {
+		t.Run(fmt.Sprintf("deadline=%t", deadline), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				var barrier Barrier
+				starterCtx, cancel := context.WithCancel(t.Context())
+				if deadline {
+					cancel()
+					starterCtx, cancel = context.WithTimeout(t.Context(), time.Second)
+				}
+				defer cancel()
+				policy := Policy{1, time.Second, time.Second, time.Minute}
+				entered := make(chan struct{})
+				starter, joiner := make(chan Outcome, 1), make(chan Outcome, 1)
+				calls := 0
+				run := func(ctx context.Context) ([]Artifact, error) {
+					calls++
+					if calls == 1 {
+						close(entered)
+						<-ctx.Done()
+						return nil, fmt.Errorf("registration: %w", ctx.Err())
+					}
+					return []Artifact{{Name: "store"}}, nil
+				}
+				go func() { starter <- barrier.Run(starterCtx, 1, policy, func(error) bool { return true }, run) }()
+				<-entered
+				go func() { joiner <- barrier.Run(t.Context(), 1, policy, func(error) bool { return true }, run) }()
+				synctest.Wait()
+				if deadline {
+					time.Sleep(time.Second) // Advance fake time to the starter's deadline.
+				} else {
+					cancel()
+				}
+				if outcome := <-starter; !errors.Is(outcome.Failure, starterCtx.Err()) {
+					t.Fatal(outcome)
+				}
+				if outcome := <-joiner; !outcome.IsSuccess() || outcome.Pass != 2 || calls != 2 {
+					t.Fatalf("live joiner inherited starter failure: %+v, calls=%d", outcome, calls)
+				}
+			})
+		})
+	}
 }
 
 func TestCanceledWaiterDoesNotCancelOwnerAndFailureCanRetry(t *testing.T) {

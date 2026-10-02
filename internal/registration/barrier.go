@@ -6,6 +6,7 @@ package registration
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"sync"
 	"time"
@@ -66,8 +67,9 @@ type Policy struct {
 }
 
 type attempt struct {
-	done    chan struct{}
-	outcome Outcome
+	done        chan struct{}
+	outcome     Outcome
+	callerError error
 }
 
 // Barrier is single-flight; only success is cached. Callbacks run without locks.
@@ -81,20 +83,28 @@ func clone(o Outcome) Outcome        { o.Artifacts = slices.Clone(o.Artifacts); 
 func (b *Barrier) Snapshot() Outcome { b.mu.Lock(); defer b.mu.Unlock(); return clone(b.outcome) }
 
 func (b *Barrier) Run(ctx context.Context, generation uint64, policy Policy, retryable func(error) bool, run func(context.Context) ([]Artifact, error)) Outcome {
-	b.mu.Lock()
-	if b.outcome.IsSuccess() {
-		o := clone(b.outcome)
-		b.mu.Unlock()
-		return o
-	}
-	if current := b.running; current != nil {
-		b.mu.Unlock()
-		select {
-		case <-ctx.Done():
-			return Outcome{Generation: generation, Failure: ctx.Err()}
-		case <-current.done:
-			return clone(current.outcome)
+	for {
+		b.mu.Lock()
+		if b.outcome.IsSuccess() {
+			o := clone(b.outcome)
+			b.mu.Unlock()
+			return o
 		}
+		if current := b.running; current != nil {
+			b.mu.Unlock()
+			select {
+			case <-ctx.Done():
+				return Outcome{Generation: generation, Failure: ctx.Err()}
+			case <-current.done:
+				// A starter's cancellation must not fail a live joiner. Attempt
+				// timeouts still retain the pass's bounded retry semantics.
+				if current.callerError != nil && errors.Is(current.outcome.Failure, current.callerError) && ctx.Err() == nil {
+					continue
+				}
+				return clone(current.outcome)
+			}
+		}
+		break // Keep the lock while claiming the next pass.
 	}
 	current := &attempt{done: make(chan struct{})}
 	b.running = current
@@ -118,6 +128,7 @@ func (b *Barrier) Run(ctx context.Context, generation uint64, policy Policy, ret
 	b.mu.Lock()
 	b.outcome = clone(outcome)
 	current.outcome = clone(outcome)
+	current.callerError = ctx.Err()
 	b.running = nil
 	close(current.done)
 	b.mu.Unlock()
