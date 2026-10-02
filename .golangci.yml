@@ -1,0 +1,12 @@
+version: '2'
+run:
+  timeout: 3m
+  tests: true
+linters:
+  default: none
+  enable:
+    - errcheck
+    - ineffassign
+    - staticcheck
+    - unused
+# gofmt is checked independently; go vet runs on every platform/toolchain.

@@ -1,0 +1,13 @@
+name: Verify No Work Records
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  work-records:
+    uses: Cratis/Workflows/.github/workflows/verify-no-work-records.yml@main

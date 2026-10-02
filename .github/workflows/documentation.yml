@@ -1,0 +1,21 @@
+# Activate after Cratis/Documentation consumes this repository and the secret exists.
+name: Trigger documentation build
+
+on:
+  push:
+    branches: [main]
+    paths: ['Documentation/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: go-documentation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trigger:
+    uses: Cratis/Workflows/.github/workflows/trigger-documentation-build.yml@main
+    secrets:
+      PAT_DOCUMENTATION: ${{ secrets.PAT_DOCUMENTATION }}

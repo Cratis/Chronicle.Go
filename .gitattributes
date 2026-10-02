@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+# Add generated-source classifications only for real generated files.

@@ -1,0 +1,172 @@
+# Validate the single root Go module independently of local workspaces.
+name: Go Build
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+  schedule:
+    - cron: '19 5 * * 1'
+
+permissions:
+  contents: read
+
+# A literal prefix prevents collisions when Publish calls this workflow.
+concurrency:
+  group: go-build-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GOTOOLCHAIN: local
+  GOWORK: 'off'
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }}, Go ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        go: ['1.26.x', '1.27.x']
+        include:
+          - os: macos-latest
+            go: '1.27.x'
+          - os: windows-latest
+            go: '1.27.x'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.go }}
+          cache: ${{ hashFiles('go.sum') != '' }}
+          cache-dependency-path: go.sum
+      - name: Download dependencies
+        run: go mod download
+      - name: Verify dependency checksums
+        run: go mod verify
+      - name: Compile all packages
+        run: go build ./...
+      - name: Vet all packages
+        run: go vet ./...
+      - name: Test all packages
+        run: go test -count=1 -timeout=2m ./...
+
+  race:
+    name: Race detector
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CGO_ENABLED: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.x'
+          cache: ${{ hashFiles('go.sum') != '' }}
+          cache-dependency-path: go.sum
+      - run: go test -race -count=1 -timeout=3m ./...
+
+  lint:
+    name: Go lint and module hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.x'
+          cache: ${{ hashFiles('go.sum') != '' }}
+          cache-dependency-path: go.sum
+      - name: Verify gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          unformatted=$(git ls-files -z -- '*.go' | xargs -0 -r gofmt -l)
+          if [ -n "$unformatted" ]; then
+            printf 'Run gofmt on:\n%s\n' "$unformatted"
+            exit 1
+          fi
+      - name: Enforce single-module layout and portable paths
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          files = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          files = [p for p in files if p]
+          modules = [p for p in files if p == 'go.mod' or p.endswith('/go.mod')]
+          if modules != ['go.mod']:
+              raise SystemExit('This release workflow supports exactly one root go.mod; design nested module releases first.')
+          folded = [p.casefold() for p in files]
+          if len(set(folded)) != len(folded):
+              raise SystemExit('Paths differing only by case are not portable.')
+          module = json.loads(subprocess.check_output(['go', 'mod', 'edit', '-json']))
+          if module.get('Replace'):
+              raise SystemExit('Published modules must not rely on replace directives; consumers ignore them.')
+          PY
+      - name: Check tidy manifests with the minimum supported Go
+        run: |
+          go mod tidy
+          changes=$(git status --porcelain --untracked-files=normal -- go.mod go.sum)
+          if [ -n "$changes" ]; then
+            printf 'Commit go mod tidy changes:\n%s\n' "$changes"
+            exit 1
+          fi
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
+          args: --timeout=3m
+
+  vulnerabilities:
+    name: Go vulnerability check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.x'
+          cache: ${{ hashFiles('go.sum') != '' }}
+          cache-dependency-path: go.sum
+      - name: Install pinned govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+      - run: govulncheck ./...
+
+  workflows:
+    name: Workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.x'
+          cache: false
+      - name: Install actionlint
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - name: Lint workflows
+        run: actionlint -color
+
+  gate:
+    name: Go gate
+    if: always()
+    needs: [test, race, lint, vulnerabilities, workflows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require all Go checks
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          jq -e 'all(.[]; . == "success")' <<< "$RESULTS"

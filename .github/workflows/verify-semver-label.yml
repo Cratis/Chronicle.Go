@@ -1,0 +1,55 @@
+name: Verify Semver Label
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, labeled, unlabeled, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-intent-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    uses: Cratis/Workflows/.github/workflows/verify-release-intent.yml@main
+
+  go-major-policy:
+    name: Go major-release policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Require an approved v1 launch and block accidental v2
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          MAX_MAJOR: ${{ vars.GO_RELEASE_MAJOR_CEILING || '0' }}
+        run: |
+          case "$MAX_MAJOR" in
+            0|1) ;;
+            *) echo 'GO_RELEASE_MAJOR_CEILING must be 0 or 1' >&2; exit 1 ;;
+          esac
+          if ! jq -e 'index("major") != null' <<< "$LABELS" > /dev/null; then
+            exit 0
+          fi
+          if [ "$MAX_MAJOR" = 0 ]; then
+            echo 'Remain on v0.x: major would publish v1.0.0. Obtain maintainer approval before changing the release ceiling.' >&2
+            exit 1
+          fi
+          releases=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100")
+          versions=$(jq -r '.[][] | select(.draft == false and .prerelease == false) | .tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))' <<< "$releases")
+          if [ -z "$versions" ]; then
+            versions=$(gh api --paginate "repos/$GITHUB_REPOSITORY/tags?per_page=100" --jq '.[].name')
+          fi
+          current_major=$(printf '%s\n' "$versions" | jq -Rs '
+            [ split("\n")[] | select(test("^v[0-9]+(\\.[0-9]+){0,2}$"))
+              | ltrimstr("v") | split(".")[0] | tonumber ] | max // 0
+          ')
+          if [ "$current_major" -ge "$MAX_MAJOR" ]; then
+            echo 'A major bump would require a /v2+ module path and revised release design; it is not permitted by this workflow.' >&2
+            exit 1
+          fi

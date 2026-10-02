@@ -1,0 +1,14 @@
+{
+  "config": {
+    "MD013": false
+  },
+  "ignores": [
+    ".ai-work/**",
+    ".cratis/**",
+    ".agents/**",
+    ".claude/**",
+    ".cursor/**",
+    ".opencode/**",
+    ".pi/**"
+  ]
+}

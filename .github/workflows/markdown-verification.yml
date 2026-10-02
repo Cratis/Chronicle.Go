@@ -1,0 +1,29 @@
+name: Markdown Verification
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  markdown-lint:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          globs: |
+            *.md
+            Documentation/**/*.md
+            examples/**/*.md
+            .github/ISSUE_TEMPLATE/*.md
+            .github/pull_request_template.md
+            !AGENTS.md
+            !CLAUDE.md
