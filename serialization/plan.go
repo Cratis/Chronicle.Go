@@ -3,13 +3,17 @@
 
 // Package serialization compiles one immutable field plan for JSON and JSON Schema.
 // Primitive named values, structs, pointers, slices, arrays, string-keyed maps,
-// time.Time and uuid.UUID are supported. Unsupported custom/protected shapes fail closed.
+// time.Time and uuid.UUID are supported. Integers nested under maps are restricted
+// to -2^53 through 2^53 by the kernel's dictionary conversion; unsigned values
+// above MaxInt64 are rejected by the pinned kernel's MongoDB append path. Unsupported
+// custom/protected shapes fail closed.
 package serialization
 
 import (
 	"encoding"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 	"time"
@@ -37,6 +41,7 @@ type field struct {
 	name                string
 	value               *node
 	omitEmpty, omitZero bool
+	isZero              func(reflect.Value) bool
 }
 
 // Compile validates a struct shape before registration. Embedded fields, recursive
@@ -79,13 +84,28 @@ func compile(typ reflect.Type, active map[reflect.Type]bool) (*node, error) {
 		n.schema["type"], n.schema["format"] = "string", "uuid"
 		return n, nil
 	}
+	// Traverse pointers before testing marshaler interfaces: pointers to the
+	// supported built-ins inherit their marshaling methods too.
+	if typ.Kind() == reflect.Pointer {
+		item, err := compile(typ.Elem(), active)
+		if err != nil {
+			return nil, err
+		}
+		n.item, n.schema = item, maps.Clone(item.schema)
+		if format, ok := n.schema["format"].(string); ok {
+			n.schema["format"] = strings.TrimSuffix(format, "?") + "?"
+		} else if kind, ok := n.schema["type"].(string); ok {
+			n.schema["type"] = []string{kind, "null"}
+		}
+		return n, nil
+	}
 	for _, contract := range []reflect.Type{reflect.TypeFor[json.Marshaler](), reflect.TypeFor[encoding.TextMarshaler]()} {
 		if typ.Implements(contract) || reflect.PointerTo(typ).Implements(contract) {
 			return nil, unsupported(typ, "custom marshalers need an explicit schema codec (not yet supported)")
 		}
 	}
 	switch typ.Kind() {
-	case reflect.Pointer, reflect.Slice, reflect.Array, reflect.Map:
+	case reflect.Slice, reflect.Array, reflect.Map:
 		if typ.Kind() == reflect.Map && typ.Key().Kind() != reflect.String {
 			return nil, unsupported(typ, "map key must be a string")
 		}
@@ -98,8 +118,6 @@ func compile(typ reflect.Type, active map[reflect.Type]bool) (*node, error) {
 		}
 		n.item = item
 		switch typ.Kind() {
-		case reflect.Pointer:
-			n.schema = item.schema
 		case reflect.Map:
 			n.schema["type"], n.schema["additionalProperties"] = "object", item.schema
 		default:
@@ -114,11 +132,16 @@ func compile(typ reflect.Type, active map[reflect.Type]bool) (*node, error) {
 	case reflect.String:
 		n.schema["type"] = "string"
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		n.schema["type"] = "integer"
+		n.schema["type"], n.schema["format"] = "integer", integerFormat(typ)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		n.schema["type"], n.schema["minimum"] = "integer", 0
-	case reflect.Float32, reflect.Float64:
-		n.schema["type"] = "number"
+		n.schema["type"], n.schema["format"], n.schema["minimum"] = "integer", integerFormat(typ), 0
+		if typ.Kind() == reflect.Uint || typ.Kind() == reflect.Uint64 {
+			n.schema["maximum"] = uint64(1<<63 - 1)
+		}
+	case reflect.Float32:
+		n.schema["type"], n.schema["format"] = "number", "float"
+	case reflect.Float64:
+		n.schema["type"], n.schema["format"] = "number", "double"
 	default:
 		return nil, unsupported(typ, "unsupported JSON shape")
 	}
@@ -160,7 +183,7 @@ func (n *node) compileFields(active map[reflect.Type]bool) error {
 			case "omitempty":
 				entry.omitEmpty = true
 			case "omitzero":
-				entry.omitZero = true
+				entry.omitZero, entry.isZero = true, zeroFunc(f.Type)
 			default:
 				return unsupported(n.typ, "unsupported JSON tag option")
 			}
@@ -173,6 +196,25 @@ func (n *node) compileFields(active map[reflect.Type]bool) error {
 	}
 	n.schema["type"], n.schema["properties"], n.schema["required"] = "object", properties, required
 	return nil
+}
+
+// Chronicle has no int8 or uint16 format. Widen those to the nearest supported
+// CLR format. int/uint use stable 64-bit schemas on every Go architecture.
+func integerFormat(typ reflect.Type) string {
+	switch typ.Kind() {
+	case reflect.Int8, reflect.Int16:
+		return "int16"
+	case reflect.Int32:
+		return "int32"
+	case reflect.Uint8:
+		return "byte"
+	case reflect.Uint16, reflect.Uint32:
+		return "uint32"
+	case reflect.Uint, reflect.Uint64:
+		return "uint64"
+	default:
+		return "int64"
+	}
 }
 
 func unsupported(typ reflect.Type, reason string) error {

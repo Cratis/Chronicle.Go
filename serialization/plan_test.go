@@ -33,13 +33,13 @@ func TestSchemaAndSerializationShareNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	value := fixture{URLValue: "https://example.test", ID: uuid.MustParse("00112233-4455-6677-8899-aabbccddeeff"), Amount: 18446744073709551614, Values: []int{}, When: time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)}
+	value := fixture{URLValue: "https://example.test", ID: uuid.MustParse("00112233-4455-6677-8899-aabbccddeeff"), Amount: 9223372036854775807, Values: []int{}, When: time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)}
 	value.Nested.FullName = "Ada"
 	data, err := plan.Marshal(value)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"amount":18446744073709551614,"enabled":false,"id":"00112233-4455-6677-8899-aabbccddeeff","nested":{"fullName":"Ada"},"urlValue":"https://example.test","values":[],"when":"2026-01-02T03:04:05Z"}`
+	want := `{"amount":9223372036854775807,"enabled":false,"id":"00112233-4455-6677-8899-aabbccddeeff","nested":{"fullName":"Ada"},"urlValue":"https://example.test","values":[],"when":"2026-01-02T03:04:05Z"}`
 	if string(data) != want {
 		t.Fatalf("JSON = %s\nwant = %s", data, want)
 	}
