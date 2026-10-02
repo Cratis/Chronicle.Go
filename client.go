@@ -73,7 +73,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	frozen, err := freezeRegistry(config.registry)
+	frozen, err := freezeRegistry(config.registry, config.naming)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		if strings.TrimSpace(string(name)) == "" {
 			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
 		}
-		frozen, err := freezeRegistry(registry)
+		frozen, err := freezeRegistry(registry, config.naming)
 		if err != nil {
 			return nil, err
 		}
@@ -105,6 +105,9 @@ func NewClient(options ...ClientOption) (*Client, error) {
 }
 
 func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) {
+	if err := config.naming.Validate(); err != nil {
+		return ConnectionString{}, nil, err
+	}
 	if (config.tlsSet && config.tls == nil) || (config.borrowedSet && config.borrowed == nil) ||
 		(config.tokenSet && nilValue(config.tokenSource)) || (config.resolverSet && nilValue(config.resolver)) {
 		return ConnectionString{}, nil, fmt.Errorf("%w: nil TLS, transport, resolver or token source", ErrInvalidConfiguration)

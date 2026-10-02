@@ -36,7 +36,7 @@ func TestNumericFormatsMatchKernel(t *testing.T) {
 			if err = json.Unmarshal([]byte(plan.Schema()), &schema); err != nil {
 				t.Fatal(err)
 			}
-			if schema.Properties["value"].Format != tc.format {
+			if schema.Properties["Value"].Format != tc.format {
 				t.Fatalf("schema = %s", plan.Schema())
 			}
 		})
@@ -59,16 +59,16 @@ func TestNullableScalars(t *testing.T) {
 	if err = json.Unmarshal([]byte(plan.Schema()), &schema); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(schema.Properties["flag"]["type"], []any{"boolean", "null"}) || schema.Properties["count"]["format"] != "int64?" || schema.Properties["when"]["format"] != "date-time?" || schema.Properties["id"]["format"] != "uuid?" || schema.Properties["value"]["format"] != "int64" {
+	if !reflect.DeepEqual(schema.Properties["Flag"]["type"], []any{"boolean", "null"}) || schema.Properties["Count"]["format"] != "int64?" || schema.Properties["When"]["format"] != "date-time?" || schema.Properties["ID"]["format"] != "uuid?" || schema.Properties["Value"]["format"] != "int64" {
 		t.Fatalf("schema = %s", plan.Schema())
 	}
 	data, err := plan.Marshal(nullable{})
-	if err != nil || string(data) != `{"value":0}` {
+	if err != nil || string(data) != `{"Value":0}` {
 		t.Fatalf("nil = %s, %v", data, err)
 	}
 	flag, count, when, id := false, int64(0), time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC), uuid.MustParse("00112233-4455-6677-8899-aabbccddeeff")
 	data, err = plan.Marshal(nullable{Flag: &flag, Count: &count, When: &when, ID: &id})
-	if err != nil || string(data) != `{"count":0,"flag":false,"id":"00112233-4455-6677-8899-aabbccddeeff","value":0,"when":"2026-01-02T03:04:05Z"}` {
+	if err != nil || string(data) != `{"Count":0,"Flag":false,"ID":"00112233-4455-6677-8899-aabbccddeeff","Value":0,"When":"2026-01-02T03:04:05Z"}` {
 		t.Fatalf("present = %s, %v", data, err)
 	}
 }

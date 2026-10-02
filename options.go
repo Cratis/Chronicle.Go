@@ -9,6 +9,7 @@ import (
 
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/connection"
+	"github.com/cratis/chronicle.go/serialization"
 	"google.golang.org/grpc"
 )
 
@@ -45,6 +46,7 @@ type clientConfig struct {
 	tlsSet, tokenSet, borrowedSet, uriSet  bool
 	validateEventTypes                     bool
 	concurrency                            eventsequences.ConcurrencyPolicy
+	naming                                 serialization.NamingPolicy
 	registry                               *Registry
 	stores                                 map[StoreName]*Registry
 }
@@ -106,6 +108,13 @@ func WithGRPCConnection(conn *grpc.ClientConn) ClientOption {
 // migrations, whose authoring is not yet supported by this SDK.
 func WithEventTypeGenerationValidation(enabled bool) ClientOption {
 	return func(c *clientConfig) { c.validateEventTypes = enabled }
+}
+
+// WithNamingPolicy selects property naming for every artifact in this client.
+// The default preserves Go spelling. Explicit json tags always win. Last wins;
+// invalid policies fail NewClient. Registry declarations are not mutated.
+func WithNamingPolicy(policy serialization.NamingPolicy) ClientOption {
+	return func(c *clientConfig) { c.naming = policy }
 }
 
 // WithRegistry snapshots registered events, read models and constraints at NewClient time; later mutations

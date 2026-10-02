@@ -64,6 +64,7 @@ type Descriptor struct{ definition *definition }
 type definition struct {
 	typ    reflect.Type
 	plan   *serialization.Plan
+	origin *serialization.Plan
 	config modelConfig
 	schema string
 }
@@ -243,7 +244,7 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 	if err != nil {
 		return Model[T]{}, err
 	}
-	descriptor := Descriptor{definition: &definition{typ: typ, plan: plan, config: config, schema: schema}}
+	descriptor := Descriptor{definition: &definition{typ: typ, plan: plan, origin: plan, config: config, schema: schema}}
 	for _, path := range config.pii {
 		if path == idProperty(descriptor) {
 			return Model[T]{}, invalid("PII cannot protect the model key")
