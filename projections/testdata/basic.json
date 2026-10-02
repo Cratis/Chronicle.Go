@@ -1,0 +1,25 @@
+{
+  "EventSequenceId": "event-log",
+  "Identifier": "Example.AccountProjection",
+  "ReadModel": "Example.Account",
+  "IsActive": true,
+  "IsRewindable": true,
+  "InitialModelState": "{}",
+  "From": [{
+    "Key": {"Id": "account-opened", "Generation": 1},
+    "Value": {
+      "Key": "$eventSourceId",
+      "Properties": {
+        "name": "fullName",
+        "updated": "$eventContext(occurred)",
+        "state": "$value(active)",
+        "number": "$value(42)",
+        "enabled": "$value(True)",
+        "note": "$null"
+      }
+    }
+  }],
+  "All": {},
+  "AutoMap": "Enabled",
+  "NoAutoMapProperties": ["excluded", "local"]
+}
