@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cratis/chronicle.go/identities"
+	"github.com/cratis/fundamentals.go/correlation"
 	"github.com/google/uuid"
 )
 
@@ -65,19 +66,17 @@ type Causation struct {
 	Properties map[string]string
 }
 
-type correlationKey struct{}
 type identityKey struct{}
 type causationKey struct{}
 
 // WithCorrelation returns a derived context; it does not mutate ctx.
 func WithCorrelation(ctx context.Context, id CorrelationID) context.Context {
-	return context.WithValue(ctx, correlationKey{}, id)
+	return correlation.WithID(ctx, correlation.ID([16]byte(id)))
 }
 
 // Correlation returns the correlation or its zero value when absent.
 func Correlation(ctx context.Context) CorrelationID {
-	value, _ := ctx.Value(correlationKey{}).(CorrelationID)
-	return value
+	return CorrelationID([16]byte(correlation.FromContext(ctx)))
 }
 
 // WithIdentity stores a defensive, deduplicated actor snapshot.
