@@ -42,16 +42,16 @@ result, err := store.EventLog().Append(ctx, source,
 
 Check `err` and `result.Err()` as above. A competing append is rejected rather than both writers winning; the real-kernel integration test exercises this contract.
 
-`ScopeFilter` can narrow source type, stream type, stream ID and event types. Nil dimensions do not narrow. The kernel's `Default`/`All` sentinels remain wildcards; do not treat them as exact read filters. A single append cannot guard a different source: that requires the future heterogeneous batch API.
+`ScopeFilter` can narrow source type, stream type, stream ID and event types. Nil dimensions do not narrow. The kernel's `Default`/`All` sentinels remain wildcards; do not treat them as exact read filters. A single append cannot guard a different source: use an independent labeled scope in [AppendBatch](batches.md) to guard another source.
 
 Reserved sequence sentinels are invalid exact positions. Protected absence sends both the unavailable number and its dedicated wire flag. If a kernel commits while reporting that a requested check did not run, Append returns the committed result **and** `ErrUnsupported`. This is not safe to retry and is not advertised as protected success.
 
 ## Routing and audit metadata
 
-Use `WithRoute`, `WithOccurred`, `WithSubject`, `WithTags`, `WithNamedTags` and `WithCorrelation` for per-append options. Source type defaults to `Default`, stream type to `All`, stream ID to `Default`; the stream ID is not inferred from the source. Subject defaults to the source ID. Occurrence defaults to kernel append time; supplied times retain their offset and truncate sub-100ns precision.
+Use `WithRoute`, `WithOccurred`, `WithSubject`, `WithTags`, `WithNamedTags` and `WithCorrelation` for per-append options. Source type defaults to `Default`, stream type to `All`, stream ID to `Default`; the stream ID is not inferred from the source. Subject defaults to the source ID. Occurrence defaults to kernel append time; supplied times retain their offset and truncate sub-100ns precision on the wire. The pinned MongoDB kernel persists these times at millisecond precision.
 
 `metadata.WithCorrelation`, `WithIdentity` and `WithCausation` capture immutable context metadata. Correlation is a UUID, also sent as `x-correlation-id` RPC metadata. Causation is an ordered chain; actor on-behalf-of chains keep the first occurrence of each subject. Authentication identifies the client, while `CausedBy` identifies the actor. Do not put credentials or sensitive payloads into causation properties.
 
 Named tags retain exact name/value pairs. A name must be nonblank; an empty value is valid. Identical records are coalesced without flattening values to strings or losing distinct values under one name.
 
-Batches, high-level event reads, transactions, append notifications, constraint declarations, enrichment hooks and field-derived routing/subjects are not yet implemented. Use only the supported options; unimplemented field tags fail explicitly. See [parity and limitations](../parity.md).
+For more than one event, use [atomic batches](batches.md). Use [ReadHistory](reading-events.md) to protect earlier loaded state. Transactions, append notifications, constraint declarations, enrichment hooks and field-derived routing/subjects are not yet implemented. Use only the supported options; unimplemented field tags fail explicitly. See [parity and limitations](../parity.md).

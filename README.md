@@ -8,7 +8,7 @@ The idiomatic Go client for [Cratis Chronicle](https://github.com/Cratis/Chronic
 
 ## Status and installation
 
-**Experimental foundation, v0.x.** Connection/TLS/OAuth, compatibility, event registration and single append are implemented. Batches, high-level reads, observers, projections and automatic lifecycle recovery are not yet implemented. See [parity and limitations](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md).
+**Experimental foundation, v0.x.** Connection/TLS/OAuth, compatibility, event registration, single/atomic batch appends and event history reads are implemented. Observers, projections and automatic lifecycle recovery are not yet implemented. See [parity and limitations](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md).
 
 Requires Go **1.26 or later**. After the first tagged release:
 
@@ -90,6 +90,8 @@ func appendCustomer(ctx context.Context) (err error) {
 - [Connecting and lifecycle](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/connection-strings/index.md)
 - [Event types](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/event-types.md)
 - [Appending and concurrency](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/appending-events.md)
+- [Atomic batches](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/batches.md)
+- [Reading events and history](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/reading-events.md)
 - [Contributing and required checks](https://github.com/Cratis/Chronicle.Go/blob/main/CONTRIBUTING.md)
 
 ```sh

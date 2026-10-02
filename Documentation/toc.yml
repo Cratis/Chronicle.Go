@@ -10,6 +10,10 @@
       href: events/event-types.md
     - name: Appending events
       href: events/appending-events.md
+    - name: Atomic batches
+      href: events/batches.md
+    - name: Reading events
+      href: events/reading-events.md
 - name: Parity and limitations
   href: parity.md
 - name: Releases
