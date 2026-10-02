@@ -113,3 +113,83 @@ func TestReadModelMetadataUsesSerializationPlan(t *testing.T) {
 		t.Fatal("schema and codec differ")
 	}
 }
+
+func TestPassiveReadModelRequiresObserver(t *testing.T) {
+	for _, id := range []string{"", " \t\n"} {
+		if _, err := readmodels.Define[Person](readmodels.WithSink(readmodels.Sink{Type: readmodels.NoSink}), readmodels.WithObserver(readmodels.Projection, id)); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			t.Fatalf("observer %q: %v", id, err)
+		}
+	}
+	if _, err := readmodels.Define[Person](readmodels.WithSink(readmodels.Sink{Type: readmodels.NoSink}), readmodels.WithObserver(readmodels.Reducer, "")); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+		t.Fatalf("blank reducer observer: %v", err)
+	}
+	if _, err := readmodels.Define[Person](readmodels.WithSink(readmodels.Sink{Type: readmodels.NoSink})); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+		t.Fatalf("omitted observer: %v", err)
+	}
+	if _, err := readmodels.Define[Person](readmodels.WithSink(readmodels.Sink{Type: readmodels.NoSink}), readmodels.WithObserver(readmodels.Projection, "producer")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReadModelPropertyOptionsAccumulate(t *testing.T) {
+	type OptionModel struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+	}
+	indexes := []string{"name"}
+	pii := []string{"name"}
+	indexOption, piiOption := readmodels.WithIndexes(indexes...), readmodels.WithPII(pii...)
+	indexes[0], pii[0] = "changed", "changed"
+	// Reusing an option must not retain or mutate another declaration's paths.
+	for range 2 {
+		model, err := readmodels.Define[OptionModel](indexOption, readmodels.WithIndexes("email"), piiOption, readmodels.WithPII("email"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := model.Descriptor().Indexes(); !reflect.DeepEqual(got, []string{"name", "email"}) {
+			t.Fatalf("indexes = %v", got)
+		}
+		var schema map[string]any
+		if err := json.Unmarshal([]byte(model.Descriptor().Schema()), &schema); err != nil {
+			t.Fatal(err)
+		}
+		properties := schema["properties"].(map[string]any)
+		name := properties["name"].(map[string]any)
+		email := properties["email"].(map[string]any)
+		if name["compliance"] == nil || email["compliance"] == nil {
+			t.Fatal("PII options did not accumulate")
+		}
+	}
+	for _, options := range [][]readmodels.ModelOption{
+		{readmodels.WithIndexes("name"), readmodels.WithIndexes("name")},
+		{readmodels.WithPII("name"), readmodels.WithPII("name")},
+		{readmodels.WithPII("name", "name")},
+	} {
+		if _, err := readmodels.Define[Person](options...); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			t.Fatalf("duplicate paths: %v", err)
+		}
+	}
+}
+
+type GenericReadModel[T any] struct {
+	Value T `json:"value"`
+}
+
+func TestGenericReadModelRequiresExplicitNames(t *testing.T) {
+	for _, options := range [][]readmodels.ModelOption{
+		nil,
+		{readmodels.WithContainerName("Boxes")},
+		{readmodels.WithIdentifier("Shared.Box")},
+	} {
+		if _, err := chronicle.RegisterReadModel[GenericReadModel[string]](chronicle.NewRegistry(), options...); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			t.Fatalf("implicit generic names: %v", err)
+		}
+	}
+	model, err := chronicle.RegisterReadModel[GenericReadModel[string]](chronicle.NewRegistry(), readmodels.WithIdentifier("Shared.Box"), readmodels.WithContainerName("Boxes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if model.Identifier() != "Shared.Box" || model.Descriptor().ContainerName() != "Boxes" {
+		t.Fatal("explicit generic names lost")
+	}
+}

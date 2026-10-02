@@ -118,11 +118,14 @@ func (m Model[T]) Descriptor() Descriptor { return m.descriptor }
 // Identifier returns the persisted model identity.
 func (m Model[T]) Identifier() Identifier { return m.descriptor.Identifier() }
 
-// ModelOption configures a declaration. Scalars are last-wins; slices are copied.
+// ModelOption configures a declaration. Scalars are last-wins; property path options
+// accumulate and reject duplicates. Slices are copied.
 // Nil options and invalid final configurations fail before registry admission.
 type ModelOption func(*modelConfig)
 type modelConfig struct {
 	identifier         Identifier
+	identifierExplicit bool
+	containerExplicit  bool
 	generation         Generation
 	container, display string
 	sink               Sink
@@ -136,7 +139,9 @@ type modelConfig struct {
 
 // WithIdentifier overrides the default full Go import path plus type name. Use an
 // explicit C# full name to share a persisted model across languages.
-func WithIdentifier(id Identifier) ModelOption { return func(c *modelConfig) { c.identifier = id } }
+func WithIdentifier(id Identifier) ModelOption {
+	return func(c *modelConfig) { c.identifier, c.identifierExplicit = id, true }
+}
 
 // WithGeneration selects a positive schema generation (default one).
 func WithGeneration(generation Generation) ModelOption {
@@ -145,7 +150,9 @@ func WithGeneration(generation Generation) ModelOption {
 
 // WithContainerName overrides the case-preserving pluralized simple type name,
 // corresponding to C# ReadModelNameAttribute. It does not change the identifier.
-func WithContainerName(name string) ModelOption { return func(c *modelConfig) { c.container = name } }
+func WithContainerName(name string) ModelOption {
+	return func(c *modelConfig) { c.container, c.containerExplicit = name, true }
+}
 
 // WithDisplayName overrides the simple type name used for display.
 func WithDisplayName(name string) ModelOption { return func(c *modelConfig) { c.display = name } }
@@ -164,18 +171,21 @@ func WithEventSequence(sequence events.SequenceID) ModelOption {
 }
 
 // WithIndexes declares nested serialized property paths, including paths through
-// collection items. Unknown and duplicate paths fail declaration.
+// collection items. Calls accumulate paths in declaration order. Unknown paths and
+// duplicates within or across calls fail declaration with ErrInvalidConfiguration.
 func WithIndexes(paths ...string) ModelOption {
 	copy := append([]string(nil), paths...)
-	return func(c *modelConfig) { c.indexes = copy }
+	return func(c *modelConfig) { c.indexes = append(c.indexes, copy...) }
 }
 
 // WithPII marks scalar string properties as personal data in the model schema.
-// Paths use serialized names. Container/type-wide PII and encryption classifications
+// Paths use serialized names and accumulate across calls. Duplicate paths within or
+// across calls fail declaration with ErrInvalidConfiguration.
+// Container/type-wide PII and encryption classifications
 // remain unsupported; the shared serializer rejects unsupported chronicle tags.
 func WithPII(paths ...string) ModelOption {
 	copy := append([]string(nil), paths...)
-	return func(c *modelConfig) { c.pii = copy }
+	return func(c *modelConfig) { c.pii = append(c.pii, copy...) }
 }
 
 // WithSubjectProperty selects a top-level serialized string property for Release.
@@ -183,7 +193,8 @@ func WithPII(paths ...string) ModelOption {
 func WithSubjectProperty(path string) ModelOption { return func(c *modelConfig) { c.subject = path } }
 
 // Define compiles T without registration or I/O. T must be a named, non-pointer
-// struct accepted by serialization.Compile. Most callers use RegisterReadModel.
+// struct accepted by serialization.Compile. Generic instantiations require explicit
+// WithIdentifier and WithContainerName options. Most callers use RegisterReadModel.
 func Define[T any](options ...ModelOption) (Model[T], error) {
 	typ := reflect.TypeFor[T]()
 	if typ.Kind() != reflect.Struct || typ.Name() == "" {
@@ -196,6 +207,9 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 			return Model[T]{}, invalid("nil model option")
 		}
 		option(&config)
+	}
+	if strings.Contains(typ.Name(), "[") && (!config.identifierExplicit || !config.containerExplicit) {
+		return Model[T]{}, invalid("generic models require an explicit identifier and container name")
 	}
 	if strings.TrimSpace(string(config.identifier)) == "" || strings.TrimSpace(config.container) == "" || strings.TrimSpace(config.display) == "" || config.generation == 0 || strings.TrimSpace(string(config.sequence)) == "" {
 		return Model[T]{}, invalid("nonblank model identity, container, display, sequence and positive generation required")
@@ -214,6 +228,9 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 	id, err := uuid.Parse(config.sink.ConfigurationID)
 	if err != nil || id.String() != config.sink.ConfigurationID {
 		return Model[T]{}, invalid("sink configuration requires a canonical UUID")
+	}
+	if config.sink.Type == NoSink && strings.TrimSpace(config.observerID) == "" {
+		return Model[T]{}, invalid("passive models require a nonblank observer identifier")
 	}
 	if config.observer == Reducer && config.sink.Type == NoSink {
 		return Model[T]{}, fmt.Errorf("%w: passive reducers require an in-process fold", faults.ErrUnsupported)
