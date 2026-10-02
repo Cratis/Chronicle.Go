@@ -13,8 +13,10 @@ import (
 	"strings"
 
 	"github.com/cratis/chronicle.go/contracts/compliance"
+	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // ErrRelease identifies a failed protected-value release. No original ciphertext
@@ -62,7 +64,7 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 	subject := ""
 	// Stored lineage is authoritative for raw documents; a typed instance normally
 	// resolves the explicitly selected property, then the Go ID property.
-	for _, name := range []string{"__subject", d.definition.config.subject, idProperty(d)} {
+	for _, name := range []string{"__subject", d.definition.config.subject, idProperty(d), "_id", "id", "Id", "ID"} {
 		if name == "" {
 			continue
 		}
@@ -152,21 +154,19 @@ func (s *Service) releaseSlice(ctx context.Context, d Descriptor, subject string
 }
 
 func idProperty(d Descriptor) string {
-	typ := d.GoType()
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		if field.IsExported() && strings.EqualFold(field.Name, "id") {
-			name := strings.Split(field.Tag.Get("json"), ",")[0]
-			if name == "-" {
-				return ""
+	id := ""
+	for _, field := range serialization.RootFields(d.definition.plan.Fields()) {
+		directives, _ := declarations.Parse(declarations.V1, field.Tag) // The plan validated tags.
+		for _, directive := range directives {
+			if directive.Name == "key" {
+				return field.Path
 			}
-			if name == "" {
-				return "id"
-			}
-			return name
+		}
+		if strings.EqualFold(field.GoField, "id") {
+			id = field.Path
 		}
 	}
-	return ""
+	return id
 }
 
 // Release decrypts a value fetched directly from a sink. No value is returned on
@@ -190,6 +190,10 @@ func (r *Reader[T]) Release(ctx context.Context, value T) (T, error) {
 	released, err := r.service.Release(ctx, d.Identifier(), data)
 	if err != nil {
 		return zero, err
+	}
+	released, err = normalizeID(released, d)
+	if err != nil {
+		return zero, &ReleaseError{Cause: err}
 	}
 	result, err := decode[T](Instance[json.RawMessage]{Value: released, Exists: true})
 	if err != nil {

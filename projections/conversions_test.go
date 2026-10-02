@@ -4,7 +4,9 @@
 package projections_test
 
 import (
+	"errors"
 	"testing"
+	"time"
 
 	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/internal/conceptfixtures"
@@ -68,6 +70,74 @@ func TestProjectionAcceptsKernelScalarAndObjectConversions(t *testing.T) {
 	t.Run("concept to string", checkConversion[conceptfixtures.AuthorID, string])
 	t.Run("nullable to string", checkConversion[*string, string])
 	t.Run("objects in different packages", checkConversion[first.Opened, second.Opened])
+}
+
+func rejectConversion[S, T any](t *testing.T) {
+	t.Helper()
+	r := chronicle.NewRegistry()
+	e, err := chronicle.RegisterEvent[conversionEvent[S]](r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := chronicle.RegisterReadModel[conversionModel[T]](r, readmodels.WithIdentifier("model"), readmodels.WithContainerName("Models"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.AddProjection(projections.ModelBound(m, projections.BindEvent("changed", e))); err != nil {
+		t.Fatal(err)
+	}
+	c, err := chronicle.NewClient(chronicle.WithRegistry(r))
+	if err == nil {
+		_ = c.Close()
+		t.Fatal("incompatible explicit mapping accepted")
+	}
+	if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+		t.Fatal(err)
+	}
+}
+
+func TestProjectionRejectsIncompatibleExplicitConversions(t *testing.T) {
+	t.Run("uuid to date", rejectConversion[concepts.UUID, concepts.DateOnly])
+	t.Run("duration to uuid", rejectConversion[concepts.TimeSpan, concepts.UUID])
+	t.Run("timestamp to time", rejectConversion[time.Time, concepts.TimeOnly])
+	t.Run("incompatible objects", rejectConversion[struct{ Name string }, struct{ Name int }])
+	t.Run("incompatible elements", rejectConversion[[]string, []int])
+	t.Run("nested incompatible elements", rejectConversion[struct{ Values []string }, struct{ Values []int }])
+}
+
+type oversizedConceptLiteralModel struct {
+	Value conceptfixtures.Unsigned `chronicle:"value(@changed,value=18446744073709551615)"`
+}
+
+func TestProjectionRejectsOversizedWrappedConceptLiteral(t *testing.T) {
+	r := chronicle.NewRegistry()
+	e, err := chronicle.RegisterEvent[conversionEvent[string]](r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := chronicle.RegisterReadModel[oversizedConceptLiteralModel](r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.AddProjection(projections.ModelBound(m, projections.BindEvent("changed", e))); err != nil {
+		t.Fatal(err)
+	}
+	c, err := chronicle.NewClient(chronicle.WithRegistry(r))
+	if err == nil {
+		_ = c.Close()
+		t.Fatal("oversized concept literal accepted")
+	}
+	if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+		t.Fatal(err)
+	}
+}
+
+func TestProjectionAcceptsCompatibleFormattedConversions(t *testing.T) {
+	t.Run("same dates", checkConversion[concepts.DateOnly, concepts.DateOnly])
+	t.Run("uuid aliases", checkConversion[uuid.UUID, concepts.UUID])
+	t.Run("plain string to uuid", checkConversion[string, concepts.UUID])
+	t.Run("date to plain string", checkConversion[concepts.DateOnly, string])
+	t.Run("collection widening", checkConversion[[]int32, []float64])
 }
 
 type contextConversionModel struct {

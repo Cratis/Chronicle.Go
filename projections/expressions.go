@@ -103,7 +103,13 @@ func validateLiteral(e expression, target serialization.Field) error {
 	}
 	// The plan has already rejected custom codecs. Decode only to validate scalar
 	// ranges/formats; never call a concept accessor on a fabricated value.
-	value := reflect.New(target.Type)
+	typ := target.Type
+	if representation, ok, err := concepts.Underlying(typ); err != nil {
+		return invalid("invalid concept representation")
+	} else if ok {
+		typ = representation.Type
+	}
+	value := reflect.New(typ)
 	if err := json.Unmarshal(data, value.Interface()); err != nil {
 		return invalid("literal does not fit target scalar range or format")
 	}
@@ -121,7 +127,7 @@ func validateLiteral(e expression, target serialization.Field) error {
 
 // scalarCompatible checks wire conversion, not exact Go width or nullability.
 // Typed field/key validation separately preserves declared domain identity.
-func scalarCompatible(target, source serialization.Field) bool {
+func scalarCompatible(target, source serialization.Field, targetFields, sourceFields []serialization.Field) bool {
 	targetScalar, targetOK := scalarRepresentation(target)
 	sourceScalar, sourceOK := scalarRepresentation(source)
 	if !targetOK || !sourceOK {
@@ -129,9 +135,74 @@ func scalarCompatible(target, source serialization.Field) bool {
 	}
 	target.Scalar, source.Scalar = targetScalar, sourceScalar
 	if target.Scalar == serialization.NotScalar || source.Scalar == serialization.NotScalar {
-		return target.Scalar == source.Scalar && indirectKind(target.Type) == indirectKind(source.Type)
+		if target.Scalar != source.Scalar {
+			return false
+		}
+		return objectCompatible(target, source, targetFields, sourceFields)
+	}
+	if target.Scalar == serialization.String && source.Scalar == serialization.String {
+		return target.Format == "" || source.Format == "" || stringFormat(target.Format) == stringFormat(source.Format)
 	}
 	return target.Scalar == source.Scalar || target.Scalar == serialization.Number && source.Scalar == serialization.Integer
+}
+
+func stringFormat(format string) string {
+	if format == "guid" {
+		return "uuid"
+	}
+	return format
+}
+
+func objectCompatible(target, source serialization.Field, targetFields, sourceFields []serialization.Field) bool {
+	targetType, sourceType := indirectType(target.Type), indirectType(source.Type)
+	switch targetType.Kind() {
+	case reflect.Slice, reflect.Array, reflect.Map:
+		if targetType.Kind() == reflect.Map {
+			if sourceType.Kind() != reflect.Map {
+				return false
+			}
+		} else if sourceType.Kind() != reflect.Slice && sourceType.Kind() != reflect.Array {
+			return false
+		}
+		targetElement, targetOK := elementField(target, targetType.Elem())
+		sourceElement, sourceOK := elementField(source, sourceType.Elem())
+		return targetOK && sourceOK && scalarCompatible(targetElement, sourceElement, targetFields, sourceFields)
+	case reflect.Struct:
+		if sourceType.Kind() != reflect.Struct {
+			return false
+		}
+		for _, property := range childFields(targetFields, target.Path) {
+			if corresponding, ok := serialization.FieldAt(sourceFields, source.Path+"."+property.Name); ok &&
+				!scalarCompatible(property, corresponding, targetFields, sourceFields) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
+func childFields(fields []serialization.Field, path string) []serialization.Field {
+	var children []serialization.Field
+	for _, field := range fields {
+		if strings.TrimSuffix(field.Path, "."+field.Name) == path {
+			children = append(children, field)
+		}
+	}
+	return children
+}
+
+func elementField(parent serialization.Field, typ reflect.Type) (serialization.Field, bool) {
+	// Collection metadata describes the container, so compile only the element's
+	// scalar classification. Descendant names still come from the original plans.
+	plan, err := serialization.Compile(reflect.StructOf([]reflect.StructField{{Name: "Value", Type: typ}}))
+	if err != nil {
+		return serialization.Field{}, false
+	}
+	field := plan.Fields()[0]
+	field.Path = parent.Path
+	return field, true
 }
 
 func scalarRepresentation(field serialization.Field) (serialization.Scalar, bool) {
@@ -154,13 +225,13 @@ func scalarRepresentation(field serialization.Field) (serialization.Scalar, bool
 	}
 }
 
-func indirectKind(typ reflect.Type) reflect.Kind {
+func indirectType(typ reflect.Type) reflect.Type {
 	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	return typ.Kind()
+	return typ
 }
-func validateExpression(e expression, target serialization.Field, eventFields []serialization.Field, sourceType reflect.Type) error {
+func validateExpression(e expression, target serialization.Field, modelFields, eventFields []serialization.Field, sourceType reflect.Type) error {
 	switch e.kind {
 	case pathExpression:
 		source, ok := serialization.FieldAt(eventFields, e.text)
@@ -170,7 +241,7 @@ func validateExpression(e expression, target serialization.Field, eventFields []
 		if sourceType != nil && source.Type != sourceType {
 			return invalid("event field descriptor has the wrong Go value type")
 		}
-		if !scalarCompatible(target, source) {
+		if !scalarCompatible(target, source, modelFields, eventFields) {
 			return invalid("incompatible event and model property representations")
 		}
 	case sourceExpression:

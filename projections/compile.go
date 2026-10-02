@@ -177,7 +177,7 @@ func addWrite(d *definition, from *fromDefinition, w write, modelFields, eventFi
 	if err := validateTarget(target, w.targetType); err != nil {
 		return declarationFailure(d.id, w.provenance, err)
 	}
-	if err := validateExpression(w.expression, target, eventFields, w.sourceType); err != nil {
+	if err := validateExpression(w.expression, target, modelFields, eventFields, w.sourceType); err != nil {
 		return declarationFailure(d.id, w.provenance, err)
 	}
 	for i, previous := range from.writes {
