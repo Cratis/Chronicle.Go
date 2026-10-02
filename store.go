@@ -14,6 +14,7 @@ import (
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
+	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -55,6 +56,8 @@ type EventStore struct {
 	catalog     *events.Catalog
 	constraints []constraints.Definition
 	log         *eventsequences.Sequence
+
+	readModels *readmodels.Service
 }
 
 // Name returns the logical store name.
@@ -78,7 +81,7 @@ func (s *EventStore) EventSequence(id events.SequenceID) (*eventsequences.Sequen
 }
 
 // EventStore connects, ensures the store/namespace and registers its explicit
-// events and constraints before returning a cached handle. Cache keys include both coordinates.
+// events, read models and constraints before returning a cached handle. Cache keys include both coordinates.
 // Concurrent calls share registration; failed passes can be retried on the same handle.
 // Required registrations never report successful readiness after a failed envelope.
 func (c *Client) EventStore(ctx context.Context, name StoreName, options ...StoreOption) (*EventStore, error) {
@@ -111,6 +114,10 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 		var err error
 		store.log, err = eventsequences.New(key.name, key.namespace, events.EventLog, catalog, &clientTransport{client: c, store: store})
 		if err != nil {
+			c.mu.Unlock()
+			return nil, err
+		}
+		if err = store.initializeReadModels(); err != nil {
 			c.mu.Unlock()
 			return nil, err
 		}

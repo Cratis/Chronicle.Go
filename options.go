@@ -108,7 +108,7 @@ func WithEventTypeGenerationValidation(enabled bool) ClientOption {
 	return func(c *clientConfig) { c.validateEventTypes = enabled }
 }
 
-// WithRegistry snapshots registered events and constraints at NewClient time; later mutations
+// WithRegistry snapshots registered events, read models and constraints at NewClient time; later mutations
 // do not affect this client. Nil means an empty registry.
 func WithRegistry(registry *Registry) ClientOption {
 	return func(c *clientConfig) { c.registry = registry }

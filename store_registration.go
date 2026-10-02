@@ -38,10 +38,21 @@ func (s *EventStore) registerStages(ctx context.Context, g *generation) ([]Artif
 		{"event-types", func(ctx context.Context) error {
 			return s.sharedStage(ctx, g, "event-types", func(ctx context.Context) error { return s.registerEventTypes(ctx, g) })
 		}},
-		{"constraints", func(ctx context.Context) error {
-			return s.sharedStage(ctx, g, "constraints", func(ctx context.Context) error { return s.registerConstraints(ctx, g) })
-		}},
 	}
+	// C# EventStore.RegisterAllArtifacts registers event types and read models
+	// first, then constraints and observers.
+	if s.readModels != nil && len(s.readModels.Catalog().Descriptors()) > 0 {
+		stages = append(stages, struct {
+			name string
+			run  func(context.Context) error
+		}{"read-models", func(ctx context.Context) error { return s.registerReadModels(ctx, g) }})
+	}
+	stages = append(stages, struct {
+		name string
+		run  func(context.Context) error
+	}{"constraints", func(ctx context.Context) error {
+		return s.sharedStage(ctx, g, "constraints", func(ctx context.Context) error { return s.registerConstraints(ctx, g) })
+	}})
 	for _, stage := range stages {
 		if err := ctx.Err(); err != nil {
 			return artifacts, err

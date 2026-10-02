@@ -9,6 +9,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/readmodels"
 )
 
 // Registry is an isolated collection of explicit declarations. Its zero value is
@@ -18,6 +19,7 @@ type Registry struct {
 	mu          sync.Mutex
 	descriptors []events.Descriptor
 	constraints []constraints.Definition
+	readModels  []readmodels.Descriptor
 }
 
 // NewRegistry returns an empty registry; there is no global discovery or init hook.
