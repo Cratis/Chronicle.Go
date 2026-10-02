@@ -16,6 +16,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/eventstores"
 	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	"github.com/cratis/chronicle.go/contracts/namespaces"
+	readmodelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"google.golang.org/grpc"
@@ -36,6 +37,7 @@ type supervisedKernel struct {
 	appendCall      func(context.Context) error
 	mu              sync.Mutex
 	namespaceCounts map[string]int
+	readModels      readmodelcontracts.ReadModelsServer
 }
 
 func (*supervisedKernel) EnsureEventStore(context.Context, *eventstores.EnsureEventStoreRequest) (*eventstores.CommandResult, error) {
@@ -79,6 +81,9 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 	eventtypes.RegisterEventTypesServer(server, k)
 	namespaces.RegisterNamespacesServer(server, k)
 	sequences.RegisterEventSequencesServer(server, k)
+	if k.readModels != nil {
+		readmodelcontracts.RegisterReadModelsServer(server, k.readModels)
+	}
 	served := make(chan struct{})
 	go func() {
 		defer close(served)
