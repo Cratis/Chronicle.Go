@@ -10,9 +10,11 @@ Use `store.EventLog().Append(ctx, sourceID, event, options...)` to persist one r
 `Append` returns `(eventsequences.AppendResult, error)`. Always inspect the operation error before calling `result.Err()`:
 
 - `Committed` plus a non-nil `Position` confirms persistence. Zero is a valid position.
-- `Rejected` preserves constraint details, expected/actual concurrency tails and append error codes. Domain rejection returns a nil operation error. `result.Err()` exposes `ConstraintError` and `ConcurrencyError` through `errors.As`, including both when present.
-- `Unknown` is not success. An `OutcomeUnknownError` means a dispatched write may have committed. It unwraps the transport or protocol cause. **Do not blindly retry.**
+- `Rejected` means constraint or concurrency violations prevented storage, even when accompanied by errors. It preserves every diagnostic and returns a nil operation error. `result.Err()` exposes `ConstraintError` and `ConcurrencyError` through `errors.As`, including both when present.
+- `Unknown` is not success. Errors-only kernel failures may occur before or after a durable commit, so both the operation error and `result.Err()` expose `OutcomeUnknownError` through `errors.As`. Diagnostics remain in `result.Errors` and in the unwrapped error, inspectable with `errors.Is(err, eventsequences.AppendError(message))`. Transport or protocol failures also expose `OutcomeUnknownError`. **Do not blindly retry.**
 - Local validation, unknown events and known pre-dispatch credential/closed-client failures do not claim a commit. Authorization/validation envelopes are known rejections; execution exceptions or missing/inconsistent response envelopes remain ambiguous.
+
+C# exposes `IsSuccess` and `Errors` without a disposition. Go classifies errors-only failures as `Unknown` because the kernel cannot distinguish pre-commit from post-commit failures in its response.
 
 A result includes correlation, whether concurrency checking actually ran, every constraint's name/type/message/details/type ID/position, all append error codes, and a client-independent observer completion target. Waiting for observers is not implemented yet; append success means persistence, not completed side effects.
 

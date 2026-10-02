@@ -19,9 +19,11 @@ import (
 type Disposition uint8
 
 const (
-	// Unknown means no authoritative write disposition is available; never assume success.
+	// Unknown means no authoritative write disposition is available, including
+	// errors-only kernel failures that may occur after commit; never assume success.
 	Unknown Disposition = iota
-	// Rejected means the kernel rejected the append without committing it.
+	// Rejected means a known pre-storage rejection, such as constraint or
+	// concurrency violations (even with errors), or an authorization/validation envelope.
 	Rejected
 	// Committed means the kernel confirmed persistence.
 	Committed
@@ -80,7 +82,8 @@ type ConcurrencyError struct {
 func (e *ConcurrencyError) Error() string { return "chronicle: append rejected by concurrency" }
 
 // OutcomeUnknownError means an append may have committed despite the operation
-// error. Do not blindly retry. Unwrap preserves transport status and context identity.
+// error or an errors-only kernel result. Do not blindly retry. Unwrap preserves
+// kernel diagnostics, transport status and context identity.
 type OutcomeUnknownError struct {
 	// Cause is the original failure.
 	Cause error
@@ -92,7 +95,8 @@ func (e *OutcomeUnknownError) Error() string {
 func (e *OutcomeUnknownError) Unwrap() error { return e.Cause }
 
 // Err returns nil only for Committed results without diagnostics. It exposes both
-// constraint and concurrency errors via errors.As when both occur.
+// constraint and concurrency errors via errors.As when both occur. Unknown
+// results expose OutcomeUnknownError and preserve diagnostic error identities.
 func (r AppendResult) Err() error {
 	var result []error
 	if len(r.ConstraintViolations) > 0 {
@@ -105,7 +109,11 @@ func (r AppendResult) Err() error {
 		result = append(result, err)
 	}
 	if len(result) == 0 && r.Disposition != Committed {
-		return fmt.Errorf("chronicle: append has no committed disposition")
+		result = append(result, fmt.Errorf("chronicle: append has no committed disposition"))
 	}
-	return errors.Join(result...)
+	cause := errors.Join(result...)
+	if r.Disposition == Unknown {
+		return &OutcomeUnknownError{Cause: cause}
+	}
+	return cause
 }

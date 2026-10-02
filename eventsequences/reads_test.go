@@ -74,6 +74,40 @@ func TestHistoryUsesOnlyLoadedEventsAndNormalizedFilter(t *testing.T) {
 	}
 }
 
+func TestHistoryScopePreservesPaddedSourceID(t *testing.T) {
+	for _, source := range []events.SourceID{" a", "a ", " a "} {
+		t.Run(string(source), func(t *testing.T) {
+			sequence, calls := sequenceFixture(t, map[string]rpcHandler{
+				"ForEventSourceIdAndEventTypes": func(_ context.Context, raw any) (any, error) {
+					request := raw.(*sequences.ForEventSourceIdAndEventTypesRequest)
+					if request.EventSourceId != string(source) {
+						t.Error("read changed source ID", request)
+					}
+					return readResponse(), nil
+				},
+				"Append": func(_ context.Context, raw any) (any, error) {
+					request := raw.(*sequences.AppendRequest)
+					if request.EventSourceId != string(source) || !request.ConcurrencyScope.EventSourceId || !request.ConcurrencyScope.ExpectsNoMatchingEvent {
+						t.Error("append lost history scope", request)
+					}
+					return &sequences.CommandResult_AppendResponse{IsAuthorized: true, Response: &sequences.AppendResponse{IsSuccess: true, ConcurrencyCheckPerformed: true}}, nil
+				},
+			})
+			history, err := sequence.ReadHistory(testContext(t), source, eventsequences.SourceFilter{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if history.Filter.SourceID == nil || *history.Filter.SourceID != source {
+				t.Fatal("history changed source ID", history.Filter)
+			}
+			result, err := sequence.Append(testContext(t), source, opened{}, eventsequences.WithScope(history.Scope()))
+			if err != nil || result.Err() != nil || calls.Load() != 2 {
+				t.Fatalf("result=%+v err=%v calls=%d", result, err, calls.Load())
+			}
+		})
+	}
+}
+
 func TestReadPreservesEnvelopeMetadataAndGenerations(t *testing.T) {
 	id, err := metadata.ParseCorrelationID("00112233-4455-6677-8899-aabbccddeeff")
 	if err != nil {

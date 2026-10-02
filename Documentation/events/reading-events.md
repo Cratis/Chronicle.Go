@@ -20,7 +20,7 @@ All methods accept caller cancellation and inspect kernel response envelopes. In
 
 `SourceFilter` supports source type, stream type, stream ID and event types. `FromFilter` supports only source ID and event types because the from-position RPC has no route fields. `TailFilter` has the same dimensions as `ScopeFilter`.
 
-Empty dimensions and the kernel's `Default` source type, `All` stream type and `Default` stream ID do **not** narrow. Read normalization trims dimensions, removes these wildcards, sorts/deduplicates type IDs and canonicalizes their generation to one: these queries and their concurrency checks match IDs across generations, not exact generation numbers. A source read still requires a nonblank source. An empty type set means all types.
+Empty dimensions and the kernel's `Default` source type, `All` stream type and `Default` stream ID do **not** narrow. Read normalization trims route dimensions, removes these wildcards, sorts/deduplicates type IDs and canonicalizes their generation to one: these queries and their concurrency checks match IDs across generations, not exact generation numbers. A source read still requires a nonblank source. Nonblank source IDs pass through unchanged, like C#, so `History.Scope()` remains bound to the exact ID supplied to an append. The kernel trims source IDs for read/tail queries. An empty type set means all types.
 
 ## Save against the history you loaded
 

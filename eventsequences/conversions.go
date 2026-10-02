@@ -54,7 +54,7 @@ func (s *Sequence) result(response *sequences.AppendResponse, eventType events.T
 	if response.HasConstraintViolations != constraintsPresent || response.HasConcurrencyViolations != concurrencyPresent || response.HasErrors != errorsPresent || response.IsSuccess == (constraintsPresent || concurrencyPresent || errorsPresent) {
 		return AppendResult{}, fmt.Errorf("%w: inconsistent append result flags", faults.ErrProtocol)
 	}
-	result := AppendResult{Disposition: Rejected, CorrelationID: wire.Correlation(response.CorrelationId), ConcurrencyCheckPerformed: response.ConcurrencyCheckPerformed}
+	result := AppendResult{Disposition: Unknown, CorrelationID: wire.Correlation(response.CorrelationId), ConcurrencyCheckPerformed: response.ConcurrencyCheckPerformed}
 	for _, violation := range response.ConstraintViolations {
 		if violation == nil {
 			return AppendResult{}, faults.ErrProtocol
@@ -67,6 +67,9 @@ func (s *Sequence) result(response *sequences.AppendResponse, eventType events.T
 	}
 	for _, err := range response.Errors {
 		result.Errors = append(result.Errors, AppendError(err))
+	}
+	if constraintsPresent || concurrencyPresent {
+		result.Disposition = Rejected
 	}
 	if response.IsSuccess {
 		position := events.SequenceNumber(response.SequenceNumber)

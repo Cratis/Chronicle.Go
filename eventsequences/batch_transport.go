@@ -118,5 +118,8 @@ func (s *Sequence) finishBatch(batch preparedBatch, envelope *sequences.CommandR
 	if allProtected && result.Disposition == Committed && !result.ConcurrencyCheckPerformed {
 		return result, fmt.Errorf("%w: kernel committed without the requested concurrency checks; do not retry", faults.ErrUnsupported)
 	}
+	if result.Disposition == Unknown {
+		return result, result.Err()
+	}
 	return result, nil
 }

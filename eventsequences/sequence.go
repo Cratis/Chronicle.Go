@@ -107,6 +107,9 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	if protected && result.Disposition == Committed && !result.ConcurrencyCheckPerformed {
 		return result, fmt.Errorf("%w: kernel committed without the requested concurrency check; do not retry", faults.ErrUnsupported)
 	}
+	if result.Disposition == Unknown {
+		return result, result.Err()
+	}
 	return result, nil
 }
 

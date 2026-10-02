@@ -17,7 +17,8 @@ import (
 )
 
 // BatchResult owns an atomic append's disposition and complete diagnostics.
-// Known rejection has no positions; transport failure returns Unknown, not Rejected.
+// Known rejection has no positions; transport and errors-only kernel failures
+// return Unknown, not Rejected.
 type BatchResult struct {
 	// Disposition reports confirmed commitment, rejection or unknown outcome.
 	Disposition Disposition
@@ -38,7 +39,7 @@ type BatchResult struct {
 	Target observation.CompletionTarget
 }
 
-// Err promotes known rejection to the same inspectable errors as AppendResult.Err.
+// Err exposes the same inspectable rejection and unknown-outcome errors as AppendResult.Err.
 // It returns nil only for a committed result without diagnostics.
 func (r BatchResult) Err() error {
 	return (AppendResult{Disposition: r.Disposition, ConstraintViolations: r.ConstraintViolations, ConcurrencyViolations: r.ConcurrencyViolations, Errors: r.Errors}).Err()
@@ -52,7 +53,7 @@ func (s *Sequence) batchResult(response *sequences.AppendManyResponse, refs []ev
 	if response.HasConstraintViolations != constraintsPresent || response.HasConcurrencyViolations != concurrencyPresent || response.HasErrors != errorsPresent || response.IsSuccess == (constraintsPresent || concurrencyPresent || errorsPresent) {
 		return BatchResult{}, fmt.Errorf("%w: inconsistent batch result flags", faults.ErrProtocol)
 	}
-	result := BatchResult{Disposition: Rejected, CorrelationID: wire.Correlation(response.CorrelationId), ConcurrencyCheckPerformed: response.ConcurrencyCheckPerformed}
+	result := BatchResult{Disposition: Unknown, CorrelationID: wire.Correlation(response.CorrelationId), ConcurrencyCheckPerformed: response.ConcurrencyCheckPerformed}
 	for _, violation := range response.ConstraintViolations {
 		if violation == nil {
 			return BatchResult{}, faults.ErrProtocol
@@ -67,6 +68,9 @@ func (s *Sequence) batchResult(response *sequences.AppendManyResponse, refs []ev
 	}
 	for _, err := range response.Errors {
 		result.Errors = append(result.Errors, AppendError(err))
+	}
+	if constraintsPresent || concurrencyPresent {
+		result.Disposition = Rejected
 	}
 	if !response.IsSuccess {
 		if len(response.SequenceNumbers) != 0 {

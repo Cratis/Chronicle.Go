@@ -34,7 +34,9 @@ Both methods return `(BatchResult, error)`. Check the operation error first, the
 
 `ConcurrencyCheckPerformed` means **every supplied scope** was checked. It is legitimately false when a batch mixes protected scopes with `NoCheck` or an unchecked empty resolution. The protocol has no per-scope success flags. When all scopes require checks but a committed result reports false, the SDK returns that committed result plus `ErrUnsupported`; do not retry it.
 
-A transport failure, malformed response, or execution exception is an `OutcomeUnknownError`. The SDK never retries an append, splits one batch into separate commits, or claims exactly-once delivery.
+Constraint or concurrency violations mean `Rejected`, even with accompanying errors: no events committed. Errors-only kernel failures mean `Unknown`, preserve every diagnostic, and expose `OutcomeUnknownError` through both the operation error and `result.Err()`. C# exposes `IsSuccess`/`Errors` without a disposition; Go treats errors-only results as unknown because the kernel response cannot distinguish pre-commit from post-commit failures.
+
+A transport failure, malformed response, or execution exception is also an `OutcomeUnknownError`. The SDK never retries an append, splits one batch into separate commits, or claims exactly-once delivery.
 
 ## Run the example
 

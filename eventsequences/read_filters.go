@@ -44,7 +44,7 @@ type TailFilter ScopeFilter
 type History struct {
 	// Events owns the ordered loaded events.
 	Events []events.Appended
-	// Filter is the normalized filter used for this read (including its source).
+	// Filter is the normalized filter used for this read, preserving the exact source ID.
 	Filter ScopeFilter
 	// Expectation is NoMatchingEvent for empty history, otherwise Exact(last loaded).
 	Expectation Expectation
@@ -64,7 +64,13 @@ func sourceReadFilter(source events.SourceID, filter SourceFilter) (ScopeFilter,
 }
 
 func normalizeReadFilter(filter ScopeFilter) (ScopeFilter, error) {
-	filter.SourceID = readDimension(filter.SourceID, events.SourceID(""))
+	if filter.SourceID != nil && strings.TrimSpace(string(*filter.SourceID)) == "" {
+		filter.SourceID = nil
+	} else {
+		// Source IDs must remain identical to append targets and scope labels.
+		// The kernel, not the client, trims nonblank source IDs for reads.
+		filter.SourceID = copyPointer(filter.SourceID)
+	}
 	filter.SourceType = readDimension(filter.SourceType, events.DefaultSourceType)
 	filter.StreamType = readDimension(filter.StreamType, events.AllStreamTypes)
 	filter.StreamID = readDimension(filter.StreamID, events.DefaultStreamID)
