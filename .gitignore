@@ -1,0 +1,30 @@
+# Local work records, never committed
+.ai-work/
+
+# Go binaries and local diagnostics
+/bin/
+/dist/
+/coverage/
+*.test
+*.exe
+*.prof
+*.pprof
+coverage.out
+*.log
+
+# Personal workspace configuration; CI tests the root module with GOWORK=off
+/go.work
+/go.work.sum
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Editor/OS output
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Do NOT ignore go.sum, generated .go files, testdata, .cratis, or managed harnesses.

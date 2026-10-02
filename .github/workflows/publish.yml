@@ -1,0 +1,210 @@
+# Publish a canonical lowercase root module after the Go and Markdown gates.
+name: Publish
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# GitHub can replace an older PENDING run even with cancellation disabled.
+# Operational requirement: let Publish complete before the next release-bound merge.
+concurrency:
+  group: go-publish-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+
+  markdown:
+    uses: ./.github/workflows/markdown-verification.yml
+    permissions:
+      contents: read
+
+  release:
+    needs: [verify, markdown]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+      issues: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      module: ${{ steps.module.outputs.module }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read and check the canonical lower-case module identity
+        id: module
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, re
+          expected = 'github.com/' + os.environ['GITHUB_REPOSITORY'].lower()
+          allowed = {'github.com/cratis/chronicle.go', 'github.com/cratis/arc.go'}
+          if expected not in allowed:
+              raise SystemExit('Review the module identity before reusing this workflow elsewhere.')
+          match = re.search(r'^module\s+([^\s]+)', pathlib.Path('go.mod').read_text(), re.M)
+          actual = match.group(1).strip('"') if match else ''
+          # This workflow intentionally supports only v0/v1 root modules.
+          if actual != expected:
+              raise SystemExit(f'Expected module {expected}, got {actual}.')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'module={actual}\n')
+          PY
+      # Main computes version, notes and outputs; post creates the release/tag
+      # only after every remaining step in THIS job succeeds.
+      - name: Prepare release from the merged PR's label and body
+        id: release
+        uses: Cratis/release-action@63dd1239df24ac5da1a41378a4eee7f92ecc0796 # v1
+        with:
+          tag-prefix: v
+          # No version override: first minor -> 0.1.0, first major -> 1.0.0.
+          # No release-notes override: the merged PR body is used verbatim.
+      - name: Reject unintended non-publication
+        env:
+          REASON: ${{ steps.release.outputs.reason }}
+        run: |
+          case "$REASON" in
+            no-label|error|'') printf 'Release decision failed: %s\n' "$REASON" >&2; exit 1 ;;
+          esac
+      - name: Enforce stable v0/v1 policy before the post hook can tag
+        if: steps.release.outputs.should-publish == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          # Unset/0: remain v0.x. Set to 1 only for an approved v1 launch.
+          # Values >1 are deliberately rejected: v2 needs a new module-path design.
+          MAX_MAJOR: ${{ vars.GO_RELEASE_MAJOR_CEILING || '0' }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          version = os.environ['RELEASE_VERSION']
+          if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version):
+              raise SystemExit('Only stable semantic versions are published by this workflow.')
+          if os.environ['PRERELEASE'] == 'true' or os.environ['RELEASE_TAG'] != 'v' + version:
+              raise SystemExit('Unexpected tag/prerelease decision.')
+          ceiling = os.environ['MAX_MAJOR']
+          if ceiling not in {'0', '1'}:
+              raise SystemExit('GO_RELEASE_MAJOR_CEILING must be 0 or 1.')
+          if int(version.split('.')[0]) > int(ceiling):
+              raise SystemExit('Major release blocked: obtain maintainer approval; v2+ requires /vN imports and a revised workflow.')
+          PY
+      - name: Refuse a pre-existing version tag without a release
+        if: steps.release.outputs.should-publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          # API failure must fail this job, not masquerade as an absent tag.
+          tags=$(gh api --paginate "repos/$GITHUB_REPOSITORY/tags?per_page=100" --jq '.[].name')
+          if printf '%s\n' "$tags" | grep -Fx -- "$RELEASE_TAG"; then
+            echo 'Version tag already exists; investigate rather than moving it.' >&2
+            exit 1
+          fi
+      - name: Select the tag for post-release verification and retryable indexing
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHOULD_PUBLISH: ${{ steps.release.outputs.should-publish }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          REASON: ${{ steps.release.outputs.reason }}
+        run: |
+          if [ "$SHOULD_PUBLISH" = true ]; then
+            printf 'tag=%s\n' "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          elif [ "$REASON" = already-released ]; then
+            # A rerun after failed indexing must index the SAME tag, not bump again.
+            releases=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100")
+            tag=$(jq -er --arg sha "$GITHUB_SHA" '
+              [ .[][] | select(.target_commitish == $sha and .draft == false and .prerelease == false)
+                | .tag_name | select(test("^v(0|1)\\.[0-9]+\\.[0-9]+$")) ]
+              | if length == 1 then .[0] else error("Expected exactly one stable release for this commit") end
+            ' <<< "$releases")
+            printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
+          fi
+          # All other intentional no-ops leave tag empty and skip downstream jobs.
+
+  verify-release:
+    # A dependent job starts AFTER release-action's success-only post hook.
+    needs: release
+    if: needs.release.outputs.tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Confirm the release and actual Git tag target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          release=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG")
+          jq -e --arg tag "$RELEASE_TAG" '.tag_name == $tag and .draft == false and .prerelease == false' <<< "$release"
+          target=$(gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" --jq .sha)
+          test "$target" = "$GITHUB_SHA"
+
+  index-module:
+    needs: [release, verify-release]
+    if: needs.release.outputs.tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      MODULE_PATH: ${{ needs.release.outputs.module }}
+      RELEASE_TAG: ${{ needs.release.outputs.tag }}
+      GOPROXY: https://proxy.golang.org
+      GOSUMDB: sum.golang.org
+      GOPRIVATE: ''
+      GONOPROXY: ''
+      GONOSUMDB: ''
+      GO111MODULE: 'on'
+      GOWORK: 'off'
+      GOTOOLCHAIN: local
+    steps:
+      # Deliberately no repository checkout: resolve the public tagged module,
+      # not a local main module or a developer workspace replacement.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.x'
+          cache: false
+      - name: Isolate the public module cache
+        run: printf 'GOMODCACHE=%s/published-module-cache\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Fetch the released version through the public Go proxy
+        shell: bash
+        run: |
+          set -euo pipefail
+          success=false
+          for attempt in 1 2 3; do
+            if timeout 30s go list -m -json "$MODULE_PATH@$RELEASE_TAG" > "$RUNNER_TEMP/module.json"; then
+              success=true
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 10; fi
+          done
+          if [ "$success" != true ]; then
+            echo '::error::Tag exists, but public proxy fetch failed. Rerun failed jobs; do not move/delete the tag.'
+            exit 1
+          fi
+          jq -e --arg module "$MODULE_PATH" --arg version "$RELEASE_TAG" \
+            '.Path == $module and .Version == $version' "$RUNNER_TEMP/module.json"
+      - name: Download and checksum the published module archive
+        run: timeout 60s go mod download -json "$MODULE_PATH@$RELEASE_TAG"
+      - name: Request the versioned Go documentation page
+        shell: bash
+        run: |
+          # The proxy request above adds this version to the module index that
+          # pkg.go.dev watches. Rendering is asynchronous, not part of tagging.
+          url="https://pkg.go.dev/$MODULE_PATH@$RELEASE_TAG"
+          status=$(curl --silent --show-error --location --max-time 20 --output /dev/null --write-out '%{http_code}' "$url") || status=000
+          if [ "$status" != 200 ]; then
+            printf '::warning::pkg.go.dev returned %s; indexing was requested via the public proxy. Check %s later.\n' "$status" "$url"
+          fi
+          printf 'Go module: %s@%s\n\nDocumentation: %s\n' "$MODULE_PATH" "$RELEASE_TAG" "$url" >> "$GITHUB_STEP_SUMMARY"

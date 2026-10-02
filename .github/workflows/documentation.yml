@@ -1,0 +1,23 @@
+# Dispatches only when the repository variable DOCUMENTATION_ENABLED is 'true',
+# set once Cratis/Documentation consumes this repository.
+name: Trigger documentation build
+
+on:
+  push:
+    branches: [main]
+    paths: ['Documentation/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: go-documentation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trigger:
+    if: vars.DOCUMENTATION_ENABLED == 'true'
+    uses: Cratis/Workflows/.github/workflows/trigger-documentation-build.yml@main
+    secrets:
+      PAT_DOCUMENTATION: ${{ secrets.PAT_DOCUMENTATION }}
