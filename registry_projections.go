@@ -36,18 +36,21 @@ type registrySnapshot struct {
 	models      *readmodels.Catalog
 	constraints []constraints.Definition
 	projections []projections.Definition
+	reactors    []*reactorPlan
 }
 
-func freezeRegistry(registry *Registry) (registrySnapshot, error) {
+func freezeRegistry(registry *Registry, services ...reactorScopeFactory) (registrySnapshot, error) {
 	var eventTypes []events.Descriptor
 	var models []readmodels.Descriptor
 	var declarations []projections.Declaration
+	var reactorDeclarations []reactorDeclaration
 	snapshot := registrySnapshot{}
 	if registry != nil {
 		registry.mu.Lock()
 		eventTypes = slices.Clone(registry.descriptors)
 		models = slices.Clone(registry.readModels)
 		declarations = slices.Clone(registry.projections)
+		reactorDeclarations = slices.Clone(registry.reactors)
 		snapshot.constraints = slices.Clone(registry.constraints)
 		registry.mu.Unlock()
 	}
@@ -93,5 +96,13 @@ func freezeRegistry(registry *Registry) (registrySnapshot, error) {
 		}
 	}
 	snapshot.models, err = readmodels.NewCatalog(models...)
+	if err != nil {
+		return snapshot, err
+	}
+	var factory reactorScopeFactory
+	if len(services) > 0 {
+		factory = services[0]
+	}
+	err = compileReactors(&snapshot, reactorDeclarations, factory)
 	return snapshot, err
 }

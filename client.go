@@ -50,6 +50,7 @@ type Client struct {
 	readModelCatalogs map[StoreName]*readmodels.Catalog
 	projections       []projections.Definition
 	storeProjections  map[StoreName][]projections.Definition
+	reactors          reactorCatalogs
 }
 
 // String describes the client without revealing endpoints or credentials.
@@ -73,7 +74,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	frozen, err := freezeRegistry(config.registry)
+	frozen, err := freezeRegistry(config.registry, config.reactorServices)
 	if err != nil {
 		return nil, err
 	}
@@ -81,17 +82,19 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		catalogs: make(map[StoreName]*events.Catalog), storeConstraints: make(map[StoreName][]constraints.Definition), stores: make(map[storeKey]*EventStore),
 		readModelCatalog: frozen.models, readModelCatalogs: make(map[StoreName]*readmodels.Catalog),
 		projections: frozen.projections, storeProjections: make(map[StoreName][]projections.Definition),
-		changed: make(chan struct{}), closeDone: make(chan struct{})}
+		changed: make(chan struct{}), closeDone: make(chan struct{}),
+		reactors: reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)}}
 	for name, registry := range config.stores {
 		if strings.TrimSpace(string(name)) == "" {
 			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
 		}
-		frozen, err := freezeRegistry(registry)
+		frozen, err := freezeRegistry(registry, config.reactorServices)
 		if err != nil {
 			return nil, err
 		}
 		c.catalogs[name], c.storeConstraints[name] = frozen.events, frozen.constraints
 		c.readModelCatalogs[name], c.storeProjections[name] = frozen.models, frozen.projections
+		c.reactors.stores[name] = frozen.reactors
 	}
 	c.config.registry, c.config.stores = nil, nil
 	c.config.skipCompatibility = config.skipCompatibility || uri.skipCompatibility
@@ -105,6 +108,9 @@ func NewClient(options ...ClientOption) (*Client, error) {
 }
 
 func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) {
+	if config.reactorServicesSet && nilValue(config.reactorServices) {
+		return ConnectionString{}, nil, fmt.Errorf("%w: nil scope factory", ErrInvalidConfiguration)
+	}
 	if (config.tlsSet && config.tls == nil) || (config.borrowedSet && config.borrowed == nil) ||
 		(config.tokenSet && nilValue(config.tokenSource)) || (config.resolverSet && nilValue(config.resolver)) {
 		return ConnectionString{}, nil, fmt.Errorf("%w: nil TLS, transport, resolver or token source", ErrInvalidConfiguration)

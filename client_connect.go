@@ -195,6 +195,7 @@ func (c *Client) retire(g *generation) {
 		drainStream(g.stream)
 	}
 	g.work.Wait()
+	g.observers.Wait()
 	if g.owned {
 		if err := g.raw.Close(); err != nil {
 			c.mu.Lock()

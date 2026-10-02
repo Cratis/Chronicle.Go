@@ -34,6 +34,7 @@ type generation struct {
 	work          sync.WaitGroup
 	registrations registration.Cache
 	initialStores []*EventStore
+	observers     sync.WaitGroup
 }
 
 func (c *Client) newGeneration(ctx context.Context) (*generation, error) {

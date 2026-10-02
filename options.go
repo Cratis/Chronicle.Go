@@ -47,6 +47,8 @@ type clientConfig struct {
 	concurrency                            eventsequences.ConcurrencyPolicy
 	registry                               *Registry
 	stores                                 map[StoreName]*Registry
+	reactorServices                        reactorScopeFactory
+	reactorServicesSet                     bool
 }
 
 // WithConnectionString selects the URI; it is validated by NewClient.
