@@ -1,39 +1,46 @@
-# Chronicle.Go parity
+---
+title: Chronicle.Go parity
+description: Implemented Go client contracts, executable evidence and deliberate C# differences.
+---
 
-The target is maximum API, behavior, and developer-experience parity with the C#
-client in `../Chronicle/Source/Clients/DotNET`, expressed idiomatically in Go.
-This initial map describes the target, not demonstrated implementation parity.
+Chronicle.Go targets the C# client's concepts and behavior, expressed through Go's explicit ownership, contexts and typed registration. This foundation is **not overall client parity or production lifecycle completeness**.
 
-## Status and evidence
+## Baselines and evidence
 
-- **Not implemented**: no working Go surface yet.
-- **Partial**: only named behavior has executable evidence; list the gaps.
-- **Implemented**: the named contract has tests that detect its regression.
-- **Go-specific**: a deliberate Go shape or behavior; explain the deviation,
-  rationale, compatibility impact, and executable evidence separately.
+C# reference: `Cratis/Chronicle` revision `2e31b0dfba489159b3db323238f16d0f277056b4`, paths below relative to `Source/Clients/`. Generated contracts independently pin Chronicle **19.29.4**, commit `ae5e00a8abaa688138b2c2f689e2b4659cccb4fd`. Real-kernel evidence uses **19.29.2-development**. SDK release numbers are independent of protocol versions.
 
-Do not promote a status from source reading, compilation, or an empty test run.
-Each implemented entry must identify the C# source/revision, Go symbols, and
-concrete tests. Preserve unresolved behavior explicitly.
+Statuses: **Implemented** means the named behavior has executable regression evidence; **Partial** names an implemented subset; **Not implemented** claims no usable surface; **Go-specific** identifies an intentional translation. The evidence column names test functions or the actual deterministic generation check, not source reading alone.
 
-## Initial scope
-
-| Surface | Status | Target and evidence required |
+| Surface / C# reference | Go surface and status | Executable evidence / remaining boundary |
 | --- | --- | --- |
-| Event-log operations | Not implemented | C# client semantics and RPC tests |
-| Typed events and concepts | Not implemented | Identity and wire fixtures |
-| Observers/subscriptions | Not implemented | Lifecycle, resume, and error tests |
-| Generated gRPC contracts | Not implemented | Pinned buf generation and RPC tests |
-| Overall C# client parity | Not implemented | Surface-by-surface evidence |
+| Canonical protobuf / `Kernel/Protobuf` (repository root) | **Implemented**: public `contracts/`, canonical embedded descriptor, immutable source/tool pins | `TestCanonicalDescriptorIsEmbeddedAndCopied`; `scripts/generate-contracts.py --check`; `TestKernelRegisterAppendRead`. No .NET/sibling checkout needed to generate |
+| URI / `Connections/ChronicleConnectionString*` | **Partial**: `ParseConnectionString`, endpoint and auth options, redacted formatting | `TestParseConnectionString`, `TestConnectionStringRedaction`, `FuzzParseConnectionString`. SRV/multihost/API-key/certificate URI modes parse but cannot connect |
+| TLS/OAuth / `Connections/OAuthTokenProvider`, `AuthenticationClientInterceptor` | **Implemented** for single-host TLS and client-credentials acquisition/cache/refresh | `TestOwnedTLSAndOAuthShareTrustPolicy`, `TestOAuthSingleFlightAndRefreshFallback`, `TestTokenWaitHonorsCancellation`, `TestInvalidTokenResponsesFailClosed`; no transparent auth retry, disk token cache or external authority URI |
+| Connection lifecycle / `Connections/ChronicleConnection`, `CompatibilityValidator` | **Partial**: `NewClient`, `Dial`, `Connect`, `Close`, structural preflight, owned keep-alive worker | `TestCompatibilityFailsClosed`, `TestBearerAndCallerMetadataSurvivePreflight`, `TestCloseCancelsInFlightAppend`; no heartbeat watchdog, graceful drain, cluster balancing or automatic generation supervisor |
+| Store/namespace / `DotNET/ChronicleClient`, `EventStore` | **Implemented** for cached handles, ensure/list and required event registration | `TestStoreRegistrationCacheAndNamespaceIsolation`, `TestRegistrationFailureDoesNotPoisonCache`, `TestRegistrySnapshotAndPerStoreSelection`. Runtime registry extension and rich registration outcomes are not implemented |
+| Event declarations / `DotNET/Events/EventTypeAttribute`, `EventTypes` | **Partial**: `Registry`, `RegisterEvent[T]`, immutable `events.Type`, `Descriptor`, `Catalog` | `TestRegistration`, `TestConcurrentDuplicateRegistration`, `TestKernelRegisterAppendRead`; historical codecs/migrations/tombstones/compensation/source-store metadata absent |
+| JSON/schema / `DotNET/Events/EventSerializer`, schema generator | **Partial**: one shared field plan; camelCase, explicit tags, primitive concepts, nesting, typed collections, time/UUID | `TestSchemaAndSerializationShareNames`, `TestUnsupportedShapesFailBeforeRegistration`; enums, custom codecs, recursive/embedded shapes, byte arrays, polymorphism, GeoJSON and protected fields fail explicitly |
+| Correlation/auditing / `DotNET/Auditing`, `Identities/Identity`; connection correlation interceptor | **Implemented** for immutable explicit correlation, ordered causation and deduplicated actor chains | `TestImmutableMetadata`, `TestIdentityDeduplicatesCycles`, `TestCorrelationJSON`, `TestAppendMetadataAndNamedTags`, `TestDotNETGuidVector`, `TestDateTimeOffsetPreservesOffsetAndTruncates`; no implicit process/program root causation or ambient context |
+| Single append / `DotNET/EventSequences/EventSequence`, `AppendResult` | **Implemented** for single append, routing, subject/time, tags, named tags and complete results | `TestAppendScopesOnTheWire`, `TestAppendMetadataAndNamedTags`, `TestAppendDomainRejectionsPreserveEveryDiagnostic`, `TestMalformedAppendResponsesFailClosed`, `TestKernelRegisterAppendRead` |
+| Concurrency / `DotNET/EventSequences/Concurrency/OptimisticConcurrencyStrategy`, `ConcurrencyScopeConverters` | **Implemented** for default/resolve/exact/no-match/no-check single-event scopes | `TestAppendScopesOnTheWire`, `TestProtectedAppendCannotSilentlyDowngrade`, `TestAppendValidationDoesNotDispatch`; real kernel rejects a second protected-empty append without committing it |
+| Write failures / `DotNET/EventSequences/EventSequence` | **Go-specific**: explicit disposition, `OutcomeUnknownError`, final operation error and `AppendResult.Err` | `TestAppendNeverRetriesAnAmbiguousWrite`, `TestCloseCancelsInFlightAppend`; no blind retries or exactly-once claim |
+| Event reads/batches, transactions, constraints authoring | **Not implemented** | Read-back uses public generated contracts only; no high-level read/batch/UOW API yet |
+| Projections, reducers, reactors, watches, jobs, seeding, compliance, subscriptions | **Not implemented** | No inert services or client-side kernel emulation; `observation.CompletionTarget` only records committed coordinates |
 
-## Intended Go translations
+The Kotlin and TypeScript client comparisons informed vocabulary and transport translation, not behavioral authority. Unlike TypeScript's plaintext/certificate URI conveniences, unsupported options are rejected. The canonical descriptor and public package ownership follow the cross-language contract publication convention without a separate Go module.
 
-Context-first operations with final errors, named domain types, explicit typed
-registration, and constructors/options replace C# async methods, concepts,
-attributes/discovery, and dependency injection. These are planned translations,
-not implemented capabilities. Add individual entries with source revisions,
-rationale, exact semantic differences, and migration guidance when implementing.
+## Deliberate differences and migration guidance
 
-Do not assume append retries are safe, checkpoints are interchangeable, or
-exactly-once delivery exists. Establish those guarantees from the server contract
-and test them. Follow the [porting rules](../.cratis/ai/rules/go-cratis-parity.md).
+1. **TLS validates by default.** C#'s local profile skips validation. Add `WithDevelopmentDefaults` only for development; configure real roots/client certificates with `WithTLS` for production. Explicit validating TLS wins over security opt-outs.
+2. **Registration is explicit and snapshotted.** Replace attributes/assembly scanning with `RegisterEvent[T]` before `NewClient`. No global `init` registry. `WithRegistryForStore` replaces, rather than merges with, the default catalog.
+3. **Context replaces ambient state.** Pass `metadata.WithCorrelation`, `WithIdentity` and `WithCausation`; the client does not invent application/program audit facts. Namespace selection remains explicit and does not grant tenant access.
+4. **Errors describe write ambiguity.** Domain rejection is a result; operation failures remain errors. Unknown outcomes are never represented as known rejection. `Err` exposes both constraint and concurrency categories; no transparent append retry is added.
+5. **Unsupported options fail.** API keys, plaintext, SRV/multihost dialing and URI certificate/password formats return `ErrUnsupported`, rather than silently skipping security or routing behavior. Use `WithTLS` for PEM material.
+6. **Serialization has a deliberately bounded schema contract.** Named primitives replace `ConceptAs<T>`. Explicit JSON tags are recommended. Unsupported custom/protected shapes fail registration; no PII/encryption tag can silently send plaintext. Empty exact type IDs and IDs containing commas fail validation.
+7. **Protected concurrency cannot silently downgrade.** No-match uses both wire fields. A confirmed commit without the requested check returns its committed result plus `ErrUnsupported`: do not retry. A single append rejects scopes naming another source; independent checks belong to future batches.
+8. **Resource ownership is explicit.** Constructors are lazy; `Dial` performs preflight. Close cancels/joins owned work but never closes borrowed channels/token sources. `EventSequence` returns a construction error for invalid IDs rather than publishing an invalid handle. Scalar options are last-wins; conflicting auth modes are errors.
+9. **Generation validation stays enabled.** The C# development opt-out is not exposed. Non-current generation evolution remains kernel-validated and requires future migration authoring support.
+
+## Next slices
+
+The next independent increments are ordered atomic batches and high-level event reads; connection supervision, discovery, registration outcomes/retry and graceful shutdown; then constraint declarations, event evolution and protected read/model pipelines. Current generated contracts are available for advanced interoperability, but their existence does not imply an idiomatic wrapper or parity claim for every RPC.

@@ -1,6 +1,6 @@
 # Contributing to Chronicle for Go
 
-Thank you for helping build the Go client for Cratis Chronicle. This repository is in early development: it contains a module scaffold, not client APIs. Discuss larger changes before implementation, and document only capabilities that exist and have been verified.
+Thank you for helping build the Go client for Cratis Chronicle. This repository is in early development: the foundation implements connection, event registration and single append. Discuss larger changes before implementation, and document only capabilities that exist and have been verified.
 
 The [Cratis contribution guide](https://github.com/Cratis/.github/blob/main/contributing.md) and [code of conduct](https://github.com/Cratis/.github/blob/main/CODE_OF_CONDUCT.md) apply.
 
@@ -44,9 +44,31 @@ go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
 govulncheck ./...
 ```
 
-Format Go source with `gofmt`; no files should appear in `gofmt -l doc.go` for the initial scaffold. Check all Go files as the codebase grows. After `go mod tidy`, also check `git status --short -- go.mod go.sum` for untracked manifests. Commit `go.sum` when dependencies require it. Do not commit nested modules, local `replace` directives, or personal `go.work` files: released modules must build without sibling checkouts.
+Format handwritten Go source with `gofmt`; check all tracked Go files. Never hand-edit generated protobuf bindings. After `go mod tidy`, also check `git status --short -- go.mod go.sum` for untracked manifests. Commit `go.sum` when dependencies require it. Do not commit nested modules, local `replace` directives, or personal `go.work` files: released modules must build without sibling checkouts.
 
-Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Workflow lint invokes ShellCheck when it is available. The scaffold has no behavioral or integration tests yet; a passing empty package is not evidence of product compatibility. Add tests with behavior, and explicitly bounded integration checks before claiming kernel compatibility. CodeQL runs separately in GitHub Actions.
+Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Workflow lint invokes ShellCheck when it is available. Normal tests include parser/schema cases, real TLS/OAuth, bufconn RPCs, lifecycle and append behavior. The build gate also checks pinned contract generation and runs kernel integration tests. CodeQL runs separately in GitHub Actions.
+
+## Contracts and kernel integration
+
+Contracts live in this module under public `contracts/` packages. `contracts-source.json` pins Chronicle 19.29.4 at an immutable commit, input hashes and generator versions. Install Buf 1.73.0; Python 3 and Go are the other prerequisites. Generation installs its pinned Go plugins into isolated staging, fetches canonical upstream inputs and promotes only generator-owned files:
+
+```sh
+go generate ./...
+python3 scripts/generate-contracts.py --check
+```
+
+The check also detects stale or unexpected generated files; it does not require .NET, protoc, a sibling checkout or a running kernel. Builds consume checked-in output and do not generate on demand. Review source pins, managed package mappings and generated diffs together when upgrading contracts. Never generate duplicate BCL/protocol packages in downstream clients.
+
+Run the real-kernel test against an independently pinned development kernel:
+
+```sh
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.2-development
+# In another terminal, after https://localhost:35000/health reports Healthy:
+CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
+  go test -tags=integration -count=1 -timeout=2m ./internal/integration
+```
+
+The test creates an isolated random store, registers an event, protects its first append, verifies conflict rejection and reads back the persisted event through public contracts. Stop your test container afterwards. A missing endpoint fails rather than silently skipping integration tests.
 
 ## Conventions
 

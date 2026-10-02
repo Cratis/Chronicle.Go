@@ -1,17 +1,20 @@
-# Chronicle for Go
+---
+title: Chronicle for Go
+description: Register typed events and append them securely to Cratis Chronicle from Go.
+---
 
-Chronicle for Go is the Go client for [Cratis Chronicle](https://github.com/Cratis/Chronicle), currently in early development.
+Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Without the client, you manage OAuth, structural compatibility, schemas and RPC envelopes yourself; with it, you register event structs and append facts through context-aware store handles.
 
-The repository contains a root Go module, package documentation, and development tooling. Client APIs are not implemented yet; usage examples and verified kernel/protocol compatibility will follow as implementation progresses.
+## Start here
 
-## Getting started
+[Append your first event](clients/go/getting-started.md) using a local development kernel. Requires Go 1.26 or newer. The API remains experimental in the v0.x release series.
 
-Go 1.26 or later is required. After the first tagged release:
+## Use the foundation
 
-```sh
-go get github.com/cratis/chronicle.go@latest
-```
+- [Connecting and lifecycle](connection-strings/index.md): endpoints, TLS, OAuth and ownership.
+- [Event types](events/event-types.md): stable identities, generations and supported JSON shapes.
+- [Appending events](events/appending-events.md): full results, metadata and concurrency protection.
+- [Parity and limitations](parity.md): executable evidence and deliberate C# differences.
+- [Release policy](releases.md): module versioning and experimental compatibility.
 
-The planned release series is v0.x; experimental APIs may change between minor releases. See the [README](../README.md), [contribution guide](../CONTRIBUTING.md), and [release policy](releases.md).
-
-The [Go reference](https://pkg.go.dev/github.com/cratis/chronicle.go) will become available after publication. Inclusion on the central Cratis documentation site requires separate site integration.
+Contracts target Chronicle 19.29.4; kernel-backed tests run against 19.29.2-development. Batches, high-level reads, observers, projections and supervised recovery are not part of this foundation. Inclusion in the central Cratis documentation site remains a separate site integration.

@@ -1,4 +1,16 @@
 - name: Overview
   href: index.md
+- name: Get started
+  href: clients/go/getting-started.md
+- name: Connecting
+  href: connection-strings/index.md
+- name: Events
+  items:
+    - name: Event types
+      href: events/event-types.md
+    - name: Appending events
+      href: events/appending-events.md
+- name: Parity and limitations
+  href: parity.md
 - name: Releases
   href: releases.md
