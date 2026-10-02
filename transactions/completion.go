@@ -42,7 +42,7 @@ func (o *Owner) Commit(ctx context.Context) (eventsequences.BatchResult, error) 
 	} else if hasWork {
 		result, err = u.sequence.AppendPreparedBatch(ctx, pending)
 	}
-	if err != nil && ctx.Err() != nil {
+	if err != nil && ctx.Err() != nil && !errors.Is(err, ctx.Err()) {
 		err = errors.Join(err, ctx.Err())
 	}
 	state := Committed

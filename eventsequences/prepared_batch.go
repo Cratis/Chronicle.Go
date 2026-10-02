@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
@@ -93,8 +94,14 @@ func (b *PreparedBatch) Merge(next *PreparedBatch) (*PreparedBatch, error) {
 			return nil, fmt.Errorf("%w: conflicting concurrency scopes for label %q", faults.ErrInvalidConfiguration, incoming.Label)
 		}
 	}
-	request := proto.CloneOf(first)
-	request.Events = slices.Concat(first.Events, second.Events)
+	// Prepared requests are never mutated (dispatch deep-clones), so the merged
+	// header shares nested messages instead of deep-copying every staged event.
+	request := &sequences.AppendManyForEventSourcesRequest{
+		EventStore: first.EventStore, Namespace: first.Namespace, EventSequenceId: first.EventSequenceId,
+		Events: slices.Concat(first.Events, second.Events), CorrelationId: first.CorrelationId,
+		Tags: slices.Clone(first.Tags), Causation: slices.Clone(first.Causation), CausedBy: first.CausedBy,
+		ConcurrencyScopes: slices.Clone(first.ConcurrencyScopes),
+	}
 	return &PreparedBatch{sequence: b.sequence, entries: slices.Concat(b.entries, next.entries), explicit: explicit,
 		batch: preparedBatch{request: request, refs: slices.Concat(b.batch.refs, next.batch.refs), named: slices.Concat(b.batch.named, next.batch.named)}}, nil
 }
