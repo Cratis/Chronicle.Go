@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"time"
 
+	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"google.golang.org/grpc"
 )
@@ -43,6 +44,7 @@ type clientConfig struct {
 	borrowed                               *grpc.ClientConn
 	tlsSet, tokenSet, borrowedSet, uriSet  bool
 	validateEventTypes                     bool
+	concurrency                            eventsequences.ConcurrencyPolicy
 	registry                               *Registry
 	stores                                 map[StoreName]*Registry
 }

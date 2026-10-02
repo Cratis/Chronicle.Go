@@ -14,10 +14,11 @@ import (
 
 // Descriptor is immutable event schema and serialization metadata. Its zero value is invalid.
 type Descriptor struct {
-	typ  reflect.Type
-	ref  TypeRef
-	plan *serialization.Plan
-	tags []Tag
+	typ     reflect.Type
+	ref     TypeRef
+	plan    *serialization.Plan
+	tags    []Tag
+	subject func(any) (Subject, bool)
 }
 
 // Ref returns the persisted identity and generation.
@@ -48,9 +49,11 @@ func (t Type[T]) Ref() TypeRef { return t.descriptor.Ref() }
 // nil options and invalid final values fail declaration. Tag inputs are copied.
 type TypeOption func(*typeConfig)
 type typeConfig struct {
-	id         TypeID
-	generation Generation
-	tags       []Tag
+	id          TypeID
+	generation  Generation
+	tags        []Tag
+	subjectType reflect.Type
+	subject     func(any) (Subject, bool)
 }
 
 // WithID overrides the default simple Go type name; use a stable ID across languages.
@@ -87,11 +90,14 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 	if strings.TrimSpace(string(config.id)) == "" || strings.Contains(string(config.id), ",") || config.generation == 0 {
 		return Type[T]{}, fmt.Errorf("%w: nonblank comma-free type ID and positive generation required", faults.ErrInvalidConfiguration)
 	}
+	if config.subjectType != nil && (config.subjectType != typ || config.subject == nil) {
+		return Type[T]{}, fmt.Errorf("%w: subject resolver must be non-nil and match the declared event type", faults.ErrInvalidConfiguration)
+	}
 	plan, err := serialization.Compile(typ)
 	if err != nil {
 		return Type[T]{}, err
 	}
-	return Type[T]{descriptor: Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...)}}, nil
+	return Type[T]{descriptor: Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...), subject: config.subject}}, nil
 }
 
 // Catalog is a frozen, concurrency-safe set of event descriptors. Use NewCatalog.

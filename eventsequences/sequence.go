@@ -20,11 +20,12 @@ import (
 // Sequence is an immutable concurrency-safe handle. Obtain it from EventStore;
 // it does not own the client and cannot outlive the client's Close.
 type Sequence struct {
-	store     metadata.StoreName
-	namespace metadata.Namespace
-	id        events.SequenceID
-	catalog   *events.Catalog
-	service   sequences.EventSequencesClient
+	store       metadata.StoreName
+	namespace   metadata.Namespace
+	id          events.SequenceID
+	catalog     *events.Catalog
+	service     sequences.EventSequencesClient
+	concurrency ConcurrencyPolicy
 }
 
 // New creates a low-level sequence over a caller-owned connection and registered
@@ -34,14 +35,19 @@ func New(store metadata.StoreName, namespace metadata.Namespace, id events.Seque
 	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || strings.TrimSpace(string(id)) == "" || catalog == nil || conn == nil {
 		return nil, fmt.Errorf("%w: sequence coordinates, catalog and connection are required", faults.ErrInvalidConfiguration)
 	}
-	return &Sequence{store: store, namespace: namespace, id: id, catalog: catalog, service: sequences.NewEventSequencesClient(conn)}, nil
+	sequence := &Sequence{store: store, namespace: namespace, id: id, catalog: catalog, service: sequences.NewEventSequencesClient(conn)}
+	if provider, ok := conn.(ConcurrencyPolicyProvider); ok {
+		sequence.concurrency = provider.ConcurrencyPolicy()
+	}
+	return sequence, nil
 }
 
 // ID returns the selected event sequence.
 func (s *Sequence) ID() events.SequenceID { return s.id }
 
 // Append serializes and persists one registered event. Default concurrency queries
-// the source/route tail; an empty tail is unchecked. Use NoMatchingEvent to protect
+// the source/route tail; an empty tail is unchecked unless the client opts into
+// first-append protection. Use NoMatchingEvent to protect
 // first append, or Exact to protect an earlier read. Known domain rejections are
 // results, not operation errors. Any post-dispatch failure is conservatively
 // OutcomeUnknownError. The SDK never retries writes. Caller-owned event data must
@@ -67,6 +73,11 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 			return AppendResult{}, fmt.Errorf("%w: nil append option", faults.ErrInvalidConfiguration)
 		}
 		option(&config)
+	}
+	if config.subject == nil {
+		if subject, ok := descriptor.ResolveSubject(event); ok {
+			config.subject = &subject
+		}
 	}
 	request, err := s.request(ctx, source, descriptor, string(content), config)
 	if err != nil {

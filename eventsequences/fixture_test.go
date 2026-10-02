@@ -45,6 +45,18 @@ func sequenceFixture(t *testing.T, handlers map[string]rpcHandler) (*eventsequen
 	if err != nil {
 		t.Fatal(err)
 	}
+	return parityFixture(t, handlers, catalog, eventsequences.ConcurrencyPolicy{})
+}
+
+type policyConnection struct {
+	grpc.ClientConnInterface
+	policy eventsequences.ConcurrencyPolicy
+}
+
+func (c policyConnection) ConcurrencyPolicy() eventsequences.ConcurrencyPolicy { return c.policy }
+
+func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events.Catalog, policy eventsequences.ConcurrencyPolicy) (*eventsequences.Sequence, *atomic.Int32) {
+	t.Helper()
 	calls := &atomic.Int32{}
 	listener := bufconn.Listen(1024 * 1024)
 	server := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context, request any, info *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
@@ -77,7 +89,7 @@ func sequenceFixture(t *testing.T, handlers map[string]rpcHandler) (*eventsequen
 		}
 		<-done
 	})
-	sequence, err := eventsequences.New("store", "tenant", "event-log", catalog, conn)
+	sequence, err := eventsequences.New("store", "tenant", "event-log", catalog, policyConnection{ClientConnInterface: conn, policy: policy})
 	if err != nil {
 		t.Fatal(err)
 	}
