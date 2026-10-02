@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/metadata"
@@ -83,6 +84,42 @@ func TestKernelUnitOfWorkSnapshotsAndNestedOrder(t *testing.T) {
 	}
 	if result, err := owner.Commit(ctx); !errors.Is(err, transactions.ErrCompleted) || result.Disposition != eventsequences.Committed {
 		t.Fatal(result, err)
+	}
+}
+
+func TestKernelUnitOfWorkConstraintViolationRejectsAllSources(t *testing.T) {
+	ctx, _, store := constraintsFixture(t, func(e constraintEvents) *constraints.Builder {
+		return constraints.UniqueValues("UniqueEmail").On(e.claimed, "email").WithMessage("{PropertyName} conflicts: {PropertyValue}")
+	})
+	sequence := store.EventLog()
+	unit, owner, err := transactions.Begin(ctx, sequence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := owner.Rollback(); err != nil {
+			t.Error(err)
+		}
+	})
+	if err := unit.Stage(ctx, []eventsequences.Entry{
+		{Source: "left", Event: AddressClaimed{Email: "shared@example.test"}},
+		{Source: "right", Event: AddressClaimed{Email: "shared@example.test"}},
+	}, sourceScope("left", eventsequences.NoCheck()), sourceScope("right", eventsequences.NoCheck())); err != nil {
+		t.Fatal(err)
+	}
+	result, err := owner.Commit(ctx)
+	var constraintError *eventsequences.ConstraintError
+	if err != nil || result.Disposition != eventsequences.Rejected || unit.State() != transactions.Rejected || len(result.Positions) != 0 || !errors.As(result.Err(), &constraintError) || len(result.ConstraintViolations) == 0 {
+		t.Fatalf("expected atomic constraint rejection: %+v, state %v, error %v", result, unit.State(), err)
+	}
+	for _, violation := range result.ConstraintViolations {
+		if violation.ConstraintName != "UniqueEmail" || violation.Message != "email conflicts: shared@example.test" {
+			t.Fatalf("lost constraint name or resolved custom message: %+v", violation)
+		}
+	}
+	loaded, err := sequence.ReadFrom(ctx, 0, eventsequences.FromFilter{})
+	if err != nil || len(loaded) != 0 {
+		t.Fatalf("rejected unit persisted events: %+v, error %v", loaded, err)
 	}
 }
 
