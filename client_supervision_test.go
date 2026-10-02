@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cratis/chronicle.go/contracts/clients"
+	constraintcontracts "github.com/cratis/chronicle.go/contracts/events/constraints"
 	"github.com/cratis/chronicle.go/contracts/eventstores"
 	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	"github.com/cratis/chronicle.go/contracts/namespaces"
@@ -23,6 +24,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type supervisedKernel struct {
@@ -30,12 +32,14 @@ type supervisedKernel struct {
 	eventstores.UnimplementedEventStoresServer
 	eventtypes.UnimplementedEventTypesServer
 	namespaces.UnimplementedNamespacesServer
-	registrations   atomic.Int32
-	registered      chan struct{}
-	register        func(context.Context) error
-	appendCall      func(context.Context) error
-	mu              sync.Mutex
-	namespaceCounts map[string]int
+	constraintcontracts.UnimplementedConstraintsServer
+	registerConstraints func(context.Context, *constraintcontracts.RegisterConstraintsRequest) error
+	registrations       atomic.Int32
+	registered          chan struct{}
+	register            func(context.Context) error
+	appendCall          func(context.Context) error
+	mu                  sync.Mutex
+	namespaceCounts     map[string]int
 }
 
 func (*supervisedKernel) EnsureEventStore(context.Context, *eventstores.EnsureEventStoreRequest) (*eventstores.CommandResult, error) {
@@ -57,6 +61,14 @@ func (k *supervisedKernel) RegisterEventTypes(ctx context.Context, _ *eventtypes
 	k.registered <- struct{}{}
 	return &eventtypes.CommandResult{IsAuthorized: true}, nil
 }
+func (k *supervisedKernel) Register(ctx context.Context, request *constraintcontracts.RegisterConstraintsRequest) (*emptypb.Empty, error) {
+	if k.registerConstraints != nil {
+		if err := k.registerConstraints(ctx, request); err != nil {
+			return nil, err
+		}
+	}
+	return &emptypb.Empty{}, nil
+}
 func (k *supervisedKernel) Append(ctx context.Context, r *sequences.AppendRequest) (*sequences.CommandResult_AppendResponse, error) {
 	k.appends.Add(1)
 	if k.appendCall != nil {
@@ -77,6 +89,7 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 	clients.RegisterConnectionServiceServer(server, k)
 	eventstores.RegisterEventStoresServer(server, k)
 	eventtypes.RegisterEventTypesServer(server, k)
+	constraintcontracts.RegisterConstraintsServer(server, k)
 	namespaces.RegisterNamespacesServer(server, k)
 	sequences.RegisterEventSequencesServer(server, k)
 	served := make(chan struct{})
