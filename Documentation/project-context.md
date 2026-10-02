@@ -13,7 +13,7 @@ skills under `.cratis/ai/skills/`: `go-library-api-design`, `go-testing`,
 `go-grpc-client`. Apply Go conventions over C# syntax/layout/test conventions;
 organization security and release gates still apply.
 
-Optional [third-party Go skills](../.cratis/ai/rules/project.md#third-party-go-skills)
+Optional [third-party Go skills](../.cratis/ai/rules/project/third-party-go-skills.md)
 provide pinned JetBrains, spf13, GitHub Copilot and Samber references. Load by task,
 not all at once; read their local qualifications. Repository Go/parity rules take
 precedence. Each vendored folder retains its license and `UPSTREAM.md`; these are
@@ -82,9 +82,13 @@ work. Preparing guidance or code does not itself authorize publication.
 
 These Go rules, skills, and adapters are repository-owned additions, not entries
 in `.cratis/ai.manifest.json`. Do not add managed markers or edit that manifest.
-The distribution contract preserves unlisted local files on update; check
-`cratis ai status` and conflicts before updating, especially if the upstream
-corpus later adopts the same paths. Never use `--force` to resolve that silently.
+Updates leave unlisted files alone unless a selected corpus asset collides with
+their path; such collisions stop the update. Project instructions are a separate
+migration case: the CLI splits `rules/project.md` at level-two headings when
+`rules/project/` is absent. Keep the entry point heading-free and put concerns in
+that directory. Check `cratis ai status` and conflicts before updating, especially
+if the upstream corpus later adopts the same paths. Never use `--force` to resolve
+that silently.
 
 - Claude reads the rules through `.claude/rules`.
 - Codex, OpenCode, and pi reach this document through root `AGENTS.md` and its
