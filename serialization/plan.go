@@ -3,7 +3,7 @@
 
 // Package serialization compiles one immutable field plan for JSON and JSON Schema.
 // Primitive named values, structs, pointers, slices, arrays, string-keyed maps,
-// time.Time and uuid.UUID are supported. Integers nested under maps are restricted
+// time.Time, uuid.UUID, Fundamentals scalars and concepts are supported. Integers nested under maps are restricted
 // to -2^53 through 2^53 by the kernel's dictionary conversion; unsigned values
 // above MaxInt64 are rejected by the pinned kernel's MongoDB append path. Unsupported
 // custom/protected shapes fail closed.
@@ -17,10 +17,10 @@ import (
 	"reflect"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/fundamentals.go/concepts"
 	"github.com/google/uuid"
 )
 
@@ -31,11 +31,12 @@ type Plan struct {
 	typ    reflect.Type
 }
 type node struct {
-	typ    reflect.Type
-	fields []field
-	item   *node
-	schema map[string]any
-	scalar bool
+	typ     reflect.Type
+	fields  []field
+	item    *node
+	schema  map[string]any
+	scalar  bool
+	concept *concepts.Representation
 }
 type field struct {
 	index               int
@@ -50,11 +51,19 @@ type field struct {
 // types, custom marshalers, interface values and unsupported chronicle directives
 // are rejected rather than generating a schema that disagrees with serialization.
 // Recognized model directives are metadata; event registries must also ValidateRole.
-func Compile(typ reflect.Type) (*Plan, error) {
+// Naming defaults to PreservePropertyNames; the last optional policy wins.
+func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
+	policy := PreservePropertyNames
+	for _, candidate := range policies {
+		policy = candidate
+	}
+	if err := policy.Validate(); err != nil {
+		return nil, err
+	}
 	if typ == nil || typ.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("%w: event must be a named struct", faults.ErrInvalidConfiguration)
 	}
-	root, err := compile(typ, make(map[reflect.Type]bool))
+	root, err := compile(typ, make(map[reflect.Type]bool), policy)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +79,7 @@ func Compile(typ reflect.Type) (*Plan, error) {
 // Schema returns the immutable JSON Schema string with the same property names as Marshal.
 func (p *Plan) Schema() string { return p.schema }
 
-func compile(typ reflect.Type, active map[reflect.Type]bool) (*node, error) {
+func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy) (*node, error) {
 	if active[typ] {
 		return nil, unsupported(typ, "recursive shape")
 	}
@@ -90,7 +99,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool) (*node, error) {
 	// Traverse pointers before testing marshaler interfaces: pointers to the
 	// supported built-ins inherit their marshaling methods too.
 	if typ.Kind() == reflect.Pointer {
-		item, err := compile(typ.Elem(), active)
+		item, err := compile(typ.Elem(), active, policy)
 		if err != nil {
 			return nil, err
 		}
@@ -102,6 +111,11 @@ func compile(typ reflect.Type, active map[reflect.Type]bool) (*node, error) {
 		}
 		return n, nil
 	}
+	if representation, ok, err := concepts.Underlying(typ); err != nil {
+		return nil, fmt.Errorf("%w: %w", faults.ErrInvalidConfiguration, err)
+	} else if ok {
+		return compileConcept(n, representation, active, policy)
+	}
 	for _, contract := range []reflect.Type{reflect.TypeFor[json.Marshaler](), reflect.TypeFor[encoding.TextMarshaler]()} {
 		if typ.Implements(contract) || reflect.PointerTo(typ).Implements(contract) {
 			return nil, unsupported(typ, "custom marshalers need an explicit schema codec (not yet supported)")
@@ -109,13 +123,18 @@ func compile(typ reflect.Type, active map[reflect.Type]bool) (*node, error) {
 	}
 	switch typ.Kind() {
 	case reflect.Slice, reflect.Array, reflect.Map:
-		if typ.Kind() == reflect.Map && typ.Key().Kind() != reflect.String {
-			return nil, unsupported(typ, "map key must be a string")
+		if typ.Kind() == reflect.Map {
+			if _, _, err := concepts.Underlying(typ.Key()); err != nil {
+				return nil, fmt.Errorf("%w: %w", faults.ErrInvalidConfiguration, err)
+			}
+			if typ.Key().Kind() != reflect.String || typ.Key().Implements(reflect.TypeFor[encoding.TextMarshaler]()) {
+				return nil, unsupported(typ, "map key must be a string without a custom codec")
+			}
 		}
 		if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
 			return nil, unsupported(typ, "byte slices need an explicit wire format")
 		}
-		item, err := compile(typ.Elem(), active)
+		item, err := compile(typ.Elem(), active, policy)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +146,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool) (*node, error) {
 			n.schema["type"], n.schema["items"] = "array", item.schema
 		}
 	case reflect.Struct:
-		if err := n.compileFields(active); err != nil {
+		if err := n.compileFields(active, policy); err != nil {
 			return nil, err
 		}
 	case reflect.Bool:
@@ -151,7 +170,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool) (*node, error) {
 	return n, nil
 }
 
-func (n *node) compileFields(active map[reflect.Type]bool) error {
+func (n *node) compileFields(active map[reflect.Type]bool, policy NamingPolicy) error {
 	properties := make(map[string]any)
 	required := []string{}
 	for i := 0; i < n.typ.NumField(); i++ {
@@ -169,15 +188,15 @@ func (n *node) compileFields(active map[reflect.Type]bool) error {
 		}
 		name := tags[0]
 		if name == "" {
-			name = camelCase(f.Name)
+			name = policy.name(f.Name)
 		}
 		if _, exists := properties[name]; exists {
-			return unsupported(n.typ, "duplicate JSON property: "+name)
+			return fmt.Errorf("%w: %s: duplicate JSON property: %s", faults.ErrInvalidConfiguration, n.typ, name)
 		}
 		if err := validateTag(tag, declarations.Model, n.typ.String(), f.Name, name); err != nil {
 			return err
 		}
-		value, err := compile(f.Type, active)
+		value, err := compile(f.Type, active, policy)
 		if err != nil {
 			return err
 		}
@@ -223,19 +242,4 @@ func integerFormat(typ reflect.Type) string {
 
 func unsupported(typ reflect.Type, reason string) error {
 	return fmt.Errorf("%w: %s: %s", faults.ErrUnsupported, typ, reason)
-}
-
-// camelCase matches System.Text.Json's acronym boundary behavior (URLValue -> urlValue).
-func camelCase(value string) string {
-	runes := []rune(value)
-	for i := range runes {
-		if !unicode.IsUpper(runes[i]) {
-			break
-		}
-		if i > 0 && i+1 < len(runes) && !unicode.IsUpper(runes[i+1]) {
-			break
-		}
-		runes[i] = unicode.ToLower(runes[i])
-	}
-	return string(runes)
 }

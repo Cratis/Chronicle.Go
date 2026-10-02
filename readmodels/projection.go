@@ -49,5 +49,5 @@ func BindProjection(d Descriptor, id string, sequence events.SequenceID, passive
 }
 
 func sameDeclaration(a, b Descriptor) bool {
-	return a.definition != nil && b.definition != nil && a.definition.plan == b.definition.plan
+	return a.definition != nil && b.definition != nil && a.definition.origin == b.definition.origin
 }

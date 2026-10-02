@@ -32,11 +32,11 @@ func (p *Plan) Marshal(value any) ([]byte, error) {
 	return json.Marshal(encoded)
 }
 
-func (n *node) encode(value reflect.Value, dictionary bool) (any, error) {
+func (n *node) checkInteger(value reflect.Value, dictionary bool) error {
 	// The pinned MongoDB append path parses payload JSON as BSON, whose bare
 	// integer parser cannot represent unsigned values above MaxInt64.
 	if (value.Kind() == reflect.Uint || value.Kind() == reflect.Uint64) && value.Uint() > 1<<63-1 {
-		return nil, unsupported(n.typ, "kernel MongoDB append requires unsigned integers at most MaxInt64")
+		return unsupported(n.typ, "kernel MongoDB append requires unsigned integers at most MaxInt64")
 	}
 	// The kernel ignores dictionary value schemas and reads all nested numbers
 	// as double. Reject outside its contiguous exact-integer range before RPC.
@@ -44,13 +44,23 @@ func (n *node) encode(value reflect.Value, dictionary bool) (any, error) {
 		switch value.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			if v := value.Int(); v < -(1<<53) || v > 1<<53 {
-				return nil, unsupported(n.typ, "dictionary integers must be between -2^53 and 2^53")
+				return unsupported(n.typ, "dictionary integers must be between -2^53 and 2^53")
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			if value.Uint() > 1<<53 {
-				return nil, unsupported(n.typ, "dictionary integers must be at most 2^53")
+				return unsupported(n.typ, "dictionary integers must be at most 2^53")
 			}
 		}
+	}
+	return nil
+}
+
+func (n *node) encode(value reflect.Value, dictionary bool) (any, error) {
+	if n.concept != nil {
+		return n.encodeConcept(value, dictionary)
+	}
+	if err := n.checkInteger(value, dictionary); err != nil {
+		return nil, err
 	}
 	if n.scalar {
 		return value.Interface(), nil

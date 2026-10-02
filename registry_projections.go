@@ -11,6 +11,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // AddProjection admits immutable authoring metadata. Duplicate identities/models
@@ -38,7 +39,7 @@ type registrySnapshot struct {
 	projections []projections.Definition
 }
 
-func freezeRegistry(registry *Registry) (registrySnapshot, error) {
+func freezeRegistry(registry *Registry, policy serialization.NamingPolicy) (registrySnapshot, error) {
 	var eventTypes []events.Descriptor
 	var models []readmodels.Descriptor
 	var declarations []projections.Declaration
@@ -92,6 +93,40 @@ func freezeRegistry(registry *Registry) (registrySnapshot, error) {
 			}
 		}
 	}
+	// Resolve authoring against declaration plans first, then rebind every path by
+	// field identity into detached client plans. The registry and its handles stay immutable.
+	for i, event := range eventTypes {
+		eventTypes[i], err = event.WithNamingPolicy(policy)
+		if err != nil {
+			return registrySnapshot{}, err
+		}
+	}
+	snapshot.events, err = events.NewCatalog(eventTypes...)
+	if err != nil {
+		return registrySnapshot{}, err
+	}
+	for i, model := range models {
+		models[i], err = model.WithNamingPolicy(policy)
+		if err != nil {
+			return registrySnapshot{}, err
+		}
+	}
 	snapshot.models, err = readmodels.NewCatalog(models...)
-	return snapshot, err
+	if err != nil {
+		return registrySnapshot{}, err
+	}
+	for i, constraint := range snapshot.constraints {
+		snapshot.constraints[i], err = constraint.Rebind(snapshot.events)
+		if err != nil {
+			return registrySnapshot{}, err
+		}
+	}
+	for i, projection := range snapshot.projections {
+		model, _ := snapshot.models.LookupIdentifier(projection.Model().Identifier())
+		snapshot.projections[i], err = projection.Rebind(model, catalog, snapshot.events)
+		if err != nil {
+			return registrySnapshot{}, err
+		}
+	}
+	return snapshot, nil
 }

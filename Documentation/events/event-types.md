@@ -26,7 +26,7 @@ fmt.Println(eventType.Ref().ID, eventType.Ref().Generation)
 fmt.Println(string(content))
 ```
 
-The output identifies `customer-registered`, generation `1`, with content `{"name":"Ada"}`. `T` and `*T` append values resolve to the same declaration; nil event pointers fail. Register the non-pointer struct type.
+The output identifies `customer-registered`, generation `1`, with content `{"name":"Ada"}` because this example's `Name` field has an explicit `json:"name"` tag. `T` and `*T` append values resolve to the same declaration; nil event pointers fail. Register the non-pointer struct type.
 
 ## Persisted identities and generations
 
@@ -44,11 +44,13 @@ One compiled field plan supplies both serialization and the registered schema:
 
 | Go shape | Persisted representation |
 | --- | --- |
-| Untagged exported properties | C#-style camelCase (`URLValue` becomes `urlValue`) |
+| Untagged exported properties | Spelling preserved by default (`URLValue` stays `URLValue`); see [naming policies and migration](../serialization.md) |
 | `json:"name"` | Explicit persisted property name; recommended across languages |
 | Named string, numeric and boolean primitives | JSON scalars with kernel numeric formats, not wrapper objects |
 | `time.Time` | RFC 3339 string with `date-time` schema format |
-| `uuid.UUID` | Canonical UUID string with `uuid` schema format |
+| `uuid.UUID`, `concepts.UUID` | Canonical UUID string with `uuid` schema format |
+| `concepts.DateOnly`, `TimeOnly`, `TimeSpan` | Strings with `date`, `time`, `duration` formats |
+| Valid Fundamentals `Concept[T]` with standard codecs | Declared scalar schema; codec JSON checked before dispatch |
 | Nested structs | Nested objects following the same naming rules |
 | String-keyed maps, arrays and slices | Objects/arrays with typed schema members |
 | Pointers, including `*time.Time` and `*uuid.UUID` | Nullable schemas; nil properties omitted and distinct from present zero/false |
@@ -58,6 +60,6 @@ One compiled field plan supplies both serialization and the registered schema:
 
 Empty non-nil slices remain `[]`; null collection elements and null map values fail serialization. Scalar and array integers use kernel formats (`int64`, `uint64`, etc.), preserving precision above 2^53. The 19.29.4 MongoDB append path parses JSON integers as signed BSON values, so unsigned values above `MaxInt64` return `ErrUnsupported` before dispatch; use strings for that range. Go `int`/`uint` use stable 64-bit schemas; `int8`/`uint16` widen to the kernel's `int16`/`uint32` formats. The 19.29.4 kernel ignores dictionary value schemas and converts all nested numbers through `double`: integer values under any map are restricted to the inclusive range -2^53 through 2^53 (unsigned: 0 through 2^53). Values outside that range return `ErrUnsupported` before dispatch, including integers inside nested structs, pointers and collections. Use typed struct properties or string values for wider dictionary integers. Omission tags control outgoing JSON; non-nullable omitted scalars may materialize as kernel defaults on read-back. Use a separate event for an optional fact rather than a nullable domain property.
 
-Interfaces, recursive shapes, embedded/anonymous fields, byte slices, custom JSON/text marshalers (except the built-in time/UUID cases), complex-key maps and unsupported JSON tag options fail registration. Rich custom-schema codecs, enums, date-only/time-only, polymorphism and GeoJSON are later work. Every nonempty `chronicle` field tag also fails: this client will not pretend to encrypt PII or silently ignore subject/routing metadata.
+Interfaces, recursive shapes, embedded/anonymous fields, byte slices, custom JSON/text marshalers (except supported scalars and valid Fundamentals concepts), complex-key maps and unsupported JSON tag options fail registration. Rich custom-schema codecs, enums, polymorphism and GeoJSON are later work. Every nonempty `chronicle` field tag also fails: this client will not pretend to encrypt PII or silently ignore subject/routing metadata.
 
 Protected fields must not be sent as plaintext through an unsupported classification. [The parity map](../parity.md) tracks the missing compliance and serialization surfaces.

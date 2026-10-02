@@ -39,7 +39,7 @@ func TestSchemaAndSerializationShareNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"amount":9223372036854775807,"enabled":false,"id":"00112233-4455-6677-8899-aabbccddeeff","nested":{"fullName":"Ada"},"urlValue":"https://example.test","values":[],"when":"2026-01-02T03:04:05Z"}`
+	want := `{"Amount":9223372036854775807,"Enabled":false,"Nested":{"FullName":"Ada"},"URLValue":"https://example.test","Values":[],"When":"2026-01-02T03:04:05Z","id":"00112233-4455-6677-8899-aabbccddeeff"}`
 	if string(data) != want {
 		t.Fatalf("JSON = %s\nwant = %s", data, want)
 	}
@@ -53,7 +53,7 @@ func TestSchemaAndSerializationShareNames(t *testing.T) {
 	if len(schema.Properties) != 10 {
 		t.Fatalf("schema properties = %v", schema.Properties)
 	}
-	for _, name := range []string{"urlValue", "id", "amount", "enabled", "null", "empty", "optional", "when", "nested", "values"} {
+	for _, name := range []string{"URLValue", "id", "Amount", "Enabled", "Null", "empty", "optional", "When", "Nested", "Values"} {
 		if _, ok := schema.Properties[name]; !ok {
 			t.Fatalf("missing %s", name)
 		}

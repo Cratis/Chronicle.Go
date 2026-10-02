@@ -11,6 +11,7 @@ import (
 
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/serialization"
+	"github.com/cratis/fundamentals.go/concepts"
 )
 
 type expressionKind uint8
@@ -118,14 +119,46 @@ func validateLiteral(e expression, target serialization.Field) error {
 	return nil
 }
 
-// scalarCompatible is the single representation-compatibility seam. Named
-// primitives use their reflected kind today; the concepts slice can substitute
-// concepts.Underlying here without changing either projection front end.
+// scalarCompatible checks wire conversion, not exact Go width or nullability.
+// Typed field/key validation separately preserves declared domain identity.
 func scalarCompatible(target, source serialization.Field) bool {
-	if target.Scalar == serialization.NotScalar || source.Scalar == serialization.NotScalar {
-		return target.Type == source.Type
+	targetScalar, targetOK := scalarRepresentation(target)
+	sourceScalar, sourceOK := scalarRepresentation(source)
+	if !targetOK || !sourceOK {
+		return false
 	}
-	return target.Scalar == source.Scalar && target.Format == source.Format && (!source.Nullable || target.Nullable)
+	target.Scalar, source.Scalar = targetScalar, sourceScalar
+	if target.Scalar == serialization.NotScalar || source.Scalar == serialization.NotScalar {
+		return target.Scalar == source.Scalar && indirectKind(target.Type) == indirectKind(source.Type)
+	}
+	return target.Scalar == source.Scalar || target.Scalar == serialization.Number && source.Scalar == serialization.Integer
+}
+
+func scalarRepresentation(field serialization.Field) (serialization.Scalar, bool) {
+	r, ok, err := concepts.Underlying(field.Type)
+	if err != nil {
+		return serialization.NotScalar, false
+	}
+	if !ok {
+		return field.Scalar, true
+	}
+	switch r.Kind {
+	case concepts.KindUUID, concepts.KindDateOnly, concepts.KindTimeOnly, concepts.KindTimeSpan, concepts.KindString:
+		return serialization.String, true
+	case concepts.KindBool:
+		return serialization.Boolean, true
+	case concepts.KindFloat32, concepts.KindFloat64:
+		return serialization.Number, true
+	default:
+		return serialization.Integer, true
+	}
+}
+
+func indirectKind(typ reflect.Type) reflect.Kind {
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	return typ.Kind()
 }
 func validateExpression(e expression, target serialization.Field, eventFields []serialization.Field, sourceType reflect.Type) error {
 	switch e.kind {
