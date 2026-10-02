@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 )
 
@@ -16,6 +17,7 @@ import (
 type Registry struct {
 	mu          sync.Mutex
 	descriptors []events.Descriptor
+	constraints []constraints.Definition
 }
 
 // NewRegistry returns an empty registry; there is no global discovery or init hook.
@@ -44,14 +46,16 @@ func RegisterEvent[T any](registry *Registry, options ...events.TypeOption) (eve
 	return declaration, nil
 }
 
-func snapshot(registry *Registry) *events.Catalog {
+func snapshot(registry *Registry) (*events.Catalog, []constraints.Definition) {
 	var descriptors []events.Descriptor
+	var definitions []constraints.Definition
 	if registry != nil {
 		registry.mu.Lock()
 		descriptors = append(descriptors, registry.descriptors...)
+		definitions = append(definitions, registry.constraints...)
 		registry.mu.Unlock()
 	}
 	// Registry admission enforces all NewCatalog invariants; this cannot fail.
 	catalog, _ := events.NewCatalog(descriptors...)
-	return catalog
+	return catalog, definitions
 }

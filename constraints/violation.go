@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-// Package constraints describes kernel append-time constraint violations.
-// Declaration authoring is not yet implemented; no client-side pre-check substitutes for enforcement.
+// Package constraints declares kernel append-time uniqueness and its violation
+// diagnostics. Explicit definitions replace C# attribute discovery; enforcement
+// and removal belong to the kernel, never a client-side pre-check.
 package constraints
 
 import "github.com/cratis/chronicle.go/events"
@@ -23,6 +24,14 @@ const (
 	StreamClosed
 )
 
+const (
+	// PropertyName is the kernel detail key for the offending property path.
+	PropertyName = "PropertyName"
+	// PropertyValue is the kernel detail key for the offending property's value.
+	// Treat it as potentially sensitive; do not log violation details by default.
+	PropertyValue = "PropertyValue"
+)
+
 // Violation contains the complete constraint rejection diagnostic.
 type Violation struct {
 	// EventTypeID identifies the rejected event.
@@ -33,7 +42,7 @@ type Violation struct {
 	Type Type
 	// ConstraintName is the stable constraint identity, not its display message.
 	ConstraintName string
-	// Message is the kernel's diagnostic text.
+	// Message is the kernel diagnostic, optionally resolved by a registered template.
 	Message string
 	// Details contains exact detail keys/values, owned by the result.
 	Details map[string]string

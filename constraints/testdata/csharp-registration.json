@@ -1,0 +1,39 @@
+{
+  "EventStore": "golden-store",
+  "Constraints": [
+    {
+      "Name": "UniqueEmail",
+      "Type": "Unique",
+      "RemovedWith": ["email-released", "email-expired"],
+      "Definition": {
+        "Value0": {
+          "EventDefinitions": [
+            {"EventTypeId": "email-reserved", "Properties": ["tenant", "email"]},
+            {"EventTypeId": "email-changed", "Properties": ["tenant", "contact.emailAddress"]}
+          ],
+          "IgnoreCasing": true
+        }
+      },
+      "Scope": {"EventSourceType": "_scoped_", "EventStreamType": "_scoped_", "EventStreamId": "_scoped_"},
+      "EventSequences": ["event-log", "outbox"]
+    },
+    {
+      "Name": "EmailLifecycle",
+      "Type": "UniqueEventType",
+      "RemovedWith": ["email-released", "email-expired"],
+      "Definition": {"Value1": {"EventTypeIds": ["email-reserved", "email-changed"]}},
+      "Scope": {"EventStreamId": "_scoped_"},
+      "EventSequences": ["event-log"]
+    },
+    {
+      "Name": "ExactEmail",
+      "Type": "Unique",
+      "Definition": {"Value0": {"EventDefinitions": [{"EventTypeId": "email-reserved", "Properties": ["email"]}]}}
+    },
+    {
+      "Name": "email-reserved",
+      "Type": "UniqueEventType",
+      "Definition": {"Value1": {"EventTypeIds": ["email-reserved"]}}
+    }
+  ]
+}

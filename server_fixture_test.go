@@ -12,6 +12,7 @@ import (
 
 	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/contracts/clients"
+	constraintcontracts "github.com/cratis/chronicle.go/contracts/events/constraints"
 	"github.com/cratis/chronicle.go/contracts/eventstores"
 	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	"github.com/cratis/chronicle.go/contracts/namespaces"
@@ -30,12 +31,15 @@ type fakeKernel struct {
 	eventtypes.UnimplementedEventTypesServer
 	namespaces.UnimplementedNamespacesServer
 	sequences.UnimplementedEventSequencesServer
+	constraintcontracts.UnimplementedConstraintsServer
 	incompatible     bool
 	registrations    atomic.Int32
 	failRegistration atomic.Bool
 	appendCalls      atomic.Int32
 	connectCalls     atomic.Int32
 	register         func(*eventtypes.RegisterEventTypesRequest)
+	appendMany       func(*sequences.AppendManyRequest) *sequences.CommandResult_AppendManyResponse
+	appendBatch      func(*sequences.AppendManyForEventSourcesRequest) *sequences.CommandResult_AppendManyResponse
 	append           func(context.Context, *sequences.AppendRequest) (*sequences.CommandResult_AppendResponse, error)
 	named            func(context.Context, *sequences.AppendWithNamedTagsRequest) (*sequences.CommandResult_AppendResponse, error)
 	tail             func(context.Context, *sequences.TailSequenceNumberRequest) (*sequences.QueryResult_EventSequenceTailResponse, error)
@@ -81,6 +85,21 @@ func (s *fakeKernel) RegisterEventTypes(_ context.Context, request *eventtypes.R
 	}
 	return &eventtypes.CommandResult{IsAuthorized: true}, nil
 }
+func (*fakeKernel) Register(context.Context, *constraintcontracts.RegisterConstraintsRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+func (s *fakeKernel) AppendMany(_ context.Context, request *sequences.AppendManyRequest) (*sequences.CommandResult_AppendManyResponse, error) {
+	if s.appendMany != nil {
+		return s.appendMany(request), nil
+	}
+	return nil, status.Error(codes.Unimplemented, "test requires an explicit handler")
+}
+func (s *fakeKernel) AppendManyForEventSources(_ context.Context, request *sequences.AppendManyForEventSourcesRequest) (*sequences.CommandResult_AppendManyResponse, error) {
+	if s.appendBatch != nil {
+		return s.appendBatch(request), nil
+	}
+	return nil, status.Error(codes.Unimplemented, "test requires an explicit handler")
+}
 func (s *fakeKernel) Append(ctx context.Context, request *sequences.AppendRequest) (*sequences.CommandResult_AppendResponse, error) {
 	s.appendCalls.Add(1)
 	if s.append != nil {
@@ -114,6 +133,7 @@ func kernelConnection(t *testing.T, kernel *fakeKernel) *grpc.ClientConn {
 	clients.RegisterConnectionServiceServer(server, kernel)
 	eventstores.RegisterEventStoresServer(server, kernel)
 	eventtypes.RegisterEventTypesServer(server, kernel)
+	constraintcontracts.RegisterConstraintsServer(server, kernel)
 	namespaces.RegisterNamespacesServer(server, kernel)
 	sequences.RegisterEventSequencesServer(server, kernel)
 	done := make(chan struct{})

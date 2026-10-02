@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/contracts/eventstores"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
@@ -48,11 +49,12 @@ type storeKey struct {
 // EventStore is an immutable, concurrency-safe registered store/namespace handle.
 // It borrows its Client; Close the client to release resources.
 type EventStore struct {
-	client    *Client
-	name      StoreName
-	namespace Namespace
-	catalog   *events.Catalog
-	log       *eventsequences.Sequence
+	client      *Client
+	name        StoreName
+	namespace   Namespace
+	catalog     *events.Catalog
+	constraints []constraints.Definition
+	log         *eventsequences.Sequence
 }
 
 // Name returns the logical store name.
@@ -76,7 +78,7 @@ func (s *EventStore) EventSequence(id events.SequenceID) (*eventsequences.Sequen
 }
 
 // EventStore connects, ensures the store/namespace and registers its explicit
-// events before returning a cached handle. Cache keys include both coordinates.
+// events and constraints before returning a cached handle. Cache keys include both coordinates.
 // Concurrent calls share registration; failed passes can be retried on the same handle.
 // Required registrations never report successful readiness after a failed envelope.
 func (c *Client) EventStore(ctx context.Context, name StoreName, options ...StoreOption) (*EventStore, error) {
@@ -101,11 +103,11 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 	}
 	store := c.stores[key]
 	if store == nil {
-		catalog := c.catalog
+		catalog, definitions := c.catalog, c.constraints
 		if selected, ok := c.catalogs[key.name]; ok {
-			catalog = selected
+			catalog, definitions = selected, c.storeConstraints[key.name]
 		}
-		store = &EventStore{client: c, name: key.name, namespace: key.namespace, catalog: catalog}
+		store = &EventStore{client: c, name: key.name, namespace: key.namespace, catalog: catalog, constraints: definitions}
 		var err error
 		store.log, err = eventsequences.New(key.name, key.namespace, events.EventLog, catalog, &clientTransport{client: c, store: store})
 		if err != nil {

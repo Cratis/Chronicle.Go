@@ -62,7 +62,14 @@ func (t *clientTransport) Invoke(ctx context.Context, method string, args, reply
 			return &faults.BeforeDispatch{Cause: fmt.Errorf("chronicle: registration: %w", err)}
 		}
 	}
-	return g.transport.Invoke(ctx, method, args, reply, options...)
+	err = g.transport.Invoke(ctx, method, args, reply, options...)
+	// Message providers are caller code: release the RPC lease before invoking
+	// them, so they cannot deadlock shutdown by retaining their own generation.
+	done()
+	if err == nil && t.store != nil {
+		t.store.resolveConstraintMessages(reply)
+	}
+	return err
 }
 
 func (t *clientTransport) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, options ...grpc.CallOption) (grpc.ClientStream, error) {

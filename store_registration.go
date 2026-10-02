@@ -38,6 +38,9 @@ func (s *EventStore) registerStages(ctx context.Context, g *generation) ([]Artif
 		{"event-types", func(ctx context.Context) error {
 			return s.sharedStage(ctx, g, "event-types", func(ctx context.Context) error { return s.registerEventTypes(ctx, g) })
 		}},
+		{"constraints", func(ctx context.Context) error {
+			return s.sharedStage(ctx, g, "constraints", func(ctx context.Context) error { return s.registerConstraints(ctx, g) })
+		}},
 	}
 	for _, stage := range stages {
 		if err := ctx.Err(); err != nil {

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/connection"
 )
@@ -19,27 +20,29 @@ import (
 // Client owns a generation supervisor and frozen registries. Construct with
 // NewClient or Dial; the zero value is not usable. It is safe for concurrent use.
 type Client struct {
-	mu              sync.Mutex
-	closed          bool
-	closeOnce       sync.Once
-	closeDone       chan struct{}
-	closeError      error
-	life            context.Context
-	cancel          context.CancelFunc
-	work            sync.WaitGroup
-	transport       *clientTransport
-	config          clientConfig
-	uri             ConnectionString
-	tls             *tls.Config
-	balancer        *connection.Balancer
-	catalog         *events.Catalog
-	catalogs        map[StoreName]*events.Catalog
-	stores          map[storeKey]*EventStore
-	current         *generation
-	supervisor      *supervision
-	changed         chan struct{}
-	nextGeneration  uint64
-	connectionError error
+	mu               sync.Mutex
+	closed           bool
+	closeOnce        sync.Once
+	closeDone        chan struct{}
+	closeError       error
+	life             context.Context
+	cancel           context.CancelFunc
+	work             sync.WaitGroup
+	transport        *clientTransport
+	config           clientConfig
+	uri              ConnectionString
+	tls              *tls.Config
+	balancer         *connection.Balancer
+	catalog          *events.Catalog
+	catalogs         map[StoreName]*events.Catalog
+	constraints      []constraints.Definition
+	storeConstraints map[StoreName][]constraints.Definition
+	stores           map[storeKey]*EventStore
+	current          *generation
+	supervisor       *supervision
+	changed          chan struct{}
+	nextGeneration   uint64
+	connectionError  error
 }
 
 // String describes the client without revealing endpoints or credentials.
@@ -63,14 +66,15 @@ func NewClient(options ...ClientOption) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &Client{config: config, uri: uri, tls: tlsConfig, catalog: snapshot(config.registry),
-		catalogs: make(map[StoreName]*events.Catalog), stores: make(map[storeKey]*EventStore),
+	catalog, definitions := snapshot(config.registry)
+	c := &Client{config: config, uri: uri, tls: tlsConfig, catalog: catalog, constraints: definitions,
+		catalogs: make(map[StoreName]*events.Catalog), storeConstraints: make(map[StoreName][]constraints.Definition), stores: make(map[storeKey]*EventStore),
 		changed: make(chan struct{}), closeDone: make(chan struct{})}
 	for name, registry := range config.stores {
 		if strings.TrimSpace(string(name)) == "" {
 			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
 		}
-		c.catalogs[name] = snapshot(registry)
+		c.catalogs[name], c.storeConstraints[name] = snapshot(registry)
 	}
 	c.config.registry, c.config.stores = nil, nil
 	c.config.skipCompatibility = config.skipCompatibility || uri.skipCompatibility
