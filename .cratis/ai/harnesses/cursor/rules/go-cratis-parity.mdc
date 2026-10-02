@@ -1,0 +1,11 @@
+---
+description: Preserve Cratis behavior, APIs, and wire compatibility in the Go port.
+globs: "**/*.go,go.mod,go.sum,**/go.mod,**/go.sum,**/*.proto,Documentation/**"
+alwaysApply: false
+---
+
+# Go parity adapter
+
+Read and follow `@.cratis/ai/rules/go-cratis-parity.md` and
+`@Documentation/project-context.md`. Record intentional differences in
+`@Documentation/parity.md`; do not modify other language ports for Go's sake.

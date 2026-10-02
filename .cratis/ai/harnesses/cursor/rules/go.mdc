@@ -1,0 +1,11 @@
+---
+description: Apply canonical Go language rules for every Go source and module change.
+globs: "**/*.go,go.mod,go.sum,**/go.mod,**/go.sum"
+alwaysApply: false
+---
+
+# Go language adapter
+
+Read and follow `@.cratis/ai/rules/go.md` and
+`@Documentation/project-context.md`. Load the relevant Go skills from
+`.cratis/ai/skills/`. This repository-owned adapter contains no separate policy.
