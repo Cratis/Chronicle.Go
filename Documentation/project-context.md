@@ -13,6 +13,12 @@ skills under `.cratis/ai/skills/`: `go-library-api-design`, `go-testing`,
 `go-grpc-client`. Apply Go conventions over C# syntax/layout/test conventions;
 organization security and release gates still apply.
 
+Optional [third-party Go skills](../.cratis/ai/rules/project.md#third-party-go-skills)
+provide pinned JetBrains, spf13, GitHub Copilot and Samber references. Load by task,
+not all at once; read their local qualifications. Repository Go/parity rules take
+precedence. Each vendored folder retains its license and `UPSTREAM.md`; these are
+unmanaged local additions shared with Arc.Go, not installer-managed files.
+
 ## Product and parity target
 
 - Module: `github.com/cratis/chronicle.go`; root package: `chronicle`.
