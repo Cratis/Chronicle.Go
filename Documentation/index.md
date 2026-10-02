@@ -13,6 +13,7 @@ Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Without th
 
 - [Connecting and lifecycle](connection-strings/index.md): endpoints, TLS, OAuth and ownership.
 - [Event types](events/event-types.md): stable identities, generations and supported JSON shapes.
+- [Serialization](serialization.md): property naming, migration and shared Fundamentals values.
 - [Appending events](events/appending-events.md): full results, metadata and concurrency protection.
 - [Atomic batches](events/batches.md): ordered mixed-source events and independent checks.
 - [Reading events](events/reading-events.md): complete history and expectations derived from loaded state.

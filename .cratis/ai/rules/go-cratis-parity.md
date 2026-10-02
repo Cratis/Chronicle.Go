@@ -71,7 +71,9 @@ seek an upstream decision separately; do not silently redefine it in Go.
 
 ## Wire compatibility is not optional
 
-- Preserve camelCase JSON property names with explicit `json` tags where needed.
+- Preserve the configured JSON property spelling. Chronicle defaults preserve names;
+  Fundamentals camelCase preserves leading acronyms. Use explicit `json` tags for
+  stable shared names; legacy Go camelCase is a separate compatibility policy.
 - Preserve routes, HTTP verbs, status codes, response envelopes, validation
   results, pagination/sorting, and observable-query framing.
 - Preserve protobuf field numbers, names, enum values, presence, and RPC paths.
