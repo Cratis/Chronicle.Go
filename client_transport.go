@@ -14,7 +14,9 @@ import (
 	"github.com/cratis/chronicle.go/internal/faults"
 	contextmetadata "github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func joinClose(err, closeError error) error { return errors.Join(err, closeError) }
@@ -57,6 +59,14 @@ func (c *Client) authorize(ctx context.Context) (context.Context, error) {
 	return metadata.NewOutgoingContext(ctx, md), nil
 }
 
+func (c *Client) invalidateRejectedToken(err error) {
+	if status.Code(err) == codes.Unauthenticated {
+		if source, ok := c.tokens.(TokenInvalidator); ok {
+			source.Invalidate()
+		}
+	}
+}
+
 type clientTransport struct{ client *Client }
 
 func (t *clientTransport) Invoke(ctx context.Context, method string, args, reply any, options ...grpc.CallOption) error {
@@ -79,6 +89,7 @@ func (t *clientTransport) Invoke(ctx context.Context, method string, args, reply
 		return &faults.BeforeDispatch{Cause: err}
 	}
 	err = t.client.raw.Invoke(ctx, method, args, reply, options...)
+	t.client.invalidateRejectedToken(err)
 	if err != nil && ctx.Err() != nil {
 		return errors.Join(err, ctx.Err())
 	}
@@ -97,20 +108,23 @@ func (t *clientTransport) NewStream(ctx context.Context, desc *grpc.StreamDesc, 
 	}
 	stream, err := t.client.raw.NewStream(ctx, desc, method, options...)
 	if err != nil {
+		t.client.invalidateRejectedToken(err)
 		done()
 		return nil, err
 	}
-	return &ownedStream{ClientStream: stream, done: done}, nil
+	return &ownedStream{ClientStream: stream, done: done, rejected: t.client.invalidateRejectedToken}, nil
 }
 
 type ownedStream struct {
 	grpc.ClientStream
-	done func()
+	done     func()
+	rejected func(error)
 }
 
 func (s *ownedStream) RecvMsg(message any) error {
 	err := s.ClientStream.RecvMsg(message)
 	if err != nil {
+		s.rejected(err)
 		s.done()
 	}
 	return err
@@ -118,6 +132,7 @@ func (s *ownedStream) RecvMsg(message any) error {
 func (s *ownedStream) CloseSend() error {
 	err := s.ClientStream.CloseSend()
 	if err != nil {
+		s.rejected(err)
 		s.done()
 	}
 	return err
@@ -126,6 +141,7 @@ func (s *ownedStream) CloseSend() error {
 func (s *ownedStream) SendMsg(message any) error {
 	err := s.ClientStream.SendMsg(message)
 	if err != nil {
+		s.rejected(err)
 		s.done()
 	}
 	return err

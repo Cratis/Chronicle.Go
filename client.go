@@ -97,6 +97,9 @@ func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) 
 	if (config.tlsSet && config.tls == nil) || (config.borrowedSet && config.borrowed == nil) || (config.tokenSet && nilTokenSource(config.tokenSource)) {
 		return ConnectionString{}, nil, fmt.Errorf("%w: nil TLS, transport or token source", ErrInvalidConfiguration)
 	}
+	if config.borrowed != nil && !config.uriSet && !config.tokenSet && !config.noAuth {
+		return ConnectionString{}, nil, fmt.Errorf("%w: borrowed connection requires an explicit OAuth authority, token source or no authentication", ErrInvalidConfiguration)
+	}
 	uri, err := ParseConnectionString(config.uri)
 	if err != nil {
 		return uri, nil, err

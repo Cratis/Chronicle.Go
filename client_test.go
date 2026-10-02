@@ -95,6 +95,27 @@ func TestStoreRegistrationCacheAndNamespaceIsolation(t *testing.T) {
 	}
 }
 
+func TestBorrowedConnectionRequiresAuthenticationChoice(t *testing.T) {
+	conn := kernelConnection(t, &fakeKernel{})
+	if client, err := chronicle.NewClient(chronicle.WithGRPCConnection(conn)); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+		if client != nil {
+			_ = client.Close()
+		}
+		t.Fatalf("implicit localhost authority accepted: %v", err)
+	}
+	for _, option := range []chronicle.ClientOption{
+		chronicle.WithNoAuthentication(), chronicle.WithTokenSource(tokenSource{}), chronicle.WithConnectionString("chronicle://authority.example:35000"),
+	} {
+		client, err := chronicle.NewClient(chronicle.WithGRPCConnection(conn), option)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = client.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestRegistrationFailureDoesNotPoisonCache(t *testing.T) {
 	kernel := &fakeKernel{}
 	kernel.failRegistration.Store(true)

@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -62,6 +63,51 @@ func TestOAuthSingleFlightAndRefreshFallback(t *testing.T) {
 	}
 	if strings.Contains(fmt.Sprintf("%#v", Token{AccessToken: "bearer-secret"}), "bearer-secret") {
 		t.Fatal("token leaked through formatting")
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestRefreshFailureUsesCompletionTime(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		source := NewOAuth("localhost:35000", "client", "secret", &tls.Config{MinVersion: tls.VersionTLS12})
+		defer source.Close()
+		calls := 0
+		source.cached = Token{AccessToken: "cached", Expiry: time.Now().Add(time.Second)}
+		source.client.Transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+			calls++
+			time.Sleep(6 * time.Second)
+			return nil, errors.New("failed exchange")
+		})
+		// Disable the real HTTP timeout so the synthetic exchange controls time.
+		source.client.Timeout = 0
+		if token, err := source.Token(t.Context()); err == nil || token.AccessToken != "" {
+			t.Fatal("returned a token that expired during refresh", err)
+		}
+		if source.failedAt != time.Now() {
+			t.Fatal("cooldown did not start when refresh failed")
+		}
+		if _, err := source.Token(t.Context()); err == nil || calls != 1 {
+			t.Fatalf("cooldown missed: calls=%d, error=%v", calls, err)
+		}
+	})
+}
+
+func TestInvalidationDiscardsCachedFallbackAndCooldown(t *testing.T) {
+	source := NewOAuth("localhost:35000", "client", "secret", &tls.Config{MinVersion: tls.VersionTLS12})
+	defer source.Close()
+	source.cached = Token{AccessToken: "rejected", Expiry: time.Now().Add(time.Hour)}
+	source.failedAt, source.lastError = time.Now(), errors.New("previous failure")
+	calls := 0
+	source.client.Transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+		calls++
+		return nil, errors.New("exchange failed")
+	})
+	source.Invalidate()
+	if token, err := source.Token(t.Context()); err == nil || token.AccessToken != "" || calls != 1 {
+		t.Fatalf("rejected token reused: calls=%d error=%v", calls, err)
 	}
 }
 

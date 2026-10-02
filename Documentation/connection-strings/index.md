@@ -17,7 +17,7 @@ chronicle://localhost:35000?auth=none
 
 Percent-encode reserved characters in credentials. Omitted credentials select the public development client `chronicle-dev-client` / `chronicle-dev-secret`; use explicit credentials or `WithTokenSource` in production. `WithNoAuthentication` and `auth=none` suppress SDK token exchange and authorization metadata. Combining authentication modes fails construction.
 
-`ParseConnectionString` performs no I/O. `String()` and Go formatting redact credentials by displaying only scheme and addresses. Errors never echo the input URI. Unknown query options and duplicate query keys fail instead of becoming ignored configuration.
+`ParseConnectionString` performs no I/O. `String()` and Go formatting redact credentials by displaying only scheme and addresses. Errors never echo the input URI. Option names, boolean values and `auth=none` are case-insensitive, like C#. Percent escapes are decoded without changing literal `+` characters into spaces. Unknown query options and duplicate query keys (including case variants) fail instead of becoming ignored configuration.
 
 The parser recognizes multihost authorities, `chronicle+srv`, API keys, certificate options and balancing options for diagnostics. This foundation rejects them at client construction with `ErrUnsupported`. Plaintext `disableTls` is also rejected. Use one endpoint; discovery and supervised reconnection are a later slice.
 
@@ -29,7 +29,7 @@ Certificate validation is **enabled by default**, unlike the C# development defa
 
 `WithTokenSource(source)` accepts a concurrent, context-aware `Token(ctx) (chronicle.Token, error)` implementation. You own that source; the client never closes it. Nonzero expiration must be in the future. Tokens format as redacted, but their `AccessToken` field is sensitive.
 
-Built-in OAuth sends a form POST to the selected kernel's `/connect/token`, caches tokens, refreshes within one minute of expiry and serializes refreshes. A failed refresh can serve a still-valid token; failed exchanges are throttled for five seconds. The default lifetime without `expires_in` is 3600 seconds. Expired credentials, redirects and malformed responses fail closed. Token requests have a five-second budget. No write is retried after authentication or transport failure.
+Built-in OAuth sends a form POST to the selected kernel's `/connect/token`, caches tokens, refreshes within one minute of expiry and serializes refreshes. A failed refresh can serve a still-valid token; failed exchanges are throttled for five seconds. The default lifetime without `expires_in` is 3600 seconds. Expired credentials, redirects and malformed responses fail closed. Token requests have a five-second budget. An `Unauthenticated` unary or stream failure invalidates the cached token, including its failed-refresh fallback. The next operation or explicit `Connect` obtains a fresh token; no operation is automatically retried. External sources can implement the concurrency-safe, nonblocking `TokenInvalidator.Invalidate()` contract for the same notification.
 
 ## Lifecycle and cancellation
 
@@ -37,9 +37,9 @@ Built-in OAuth sends a form POST to the selected kernel's `/connect/token`, cach
 - `WithConnectTimeout` defaults to five seconds and never extends a shorter caller deadline.
 - Unary operations use the caller's deadline, not a hidden short timeout. Always supply a bounded context for external I/O.
 - Concurrent `Connect` and same-store creation calls share an attempt. Its initiating context bounds that attempt; other waiters can cancel independently. Failed store registration is not cached permanently.
-- `EventStore(ctx, name, WithNamespace("tenant"))` caches by both store and namespace. Namespace selection is not authorization.
+- `EventStore(ctx, name, WithNamespace("tenant"))` caches by both store and namespace. The default namespace is `Default`, matching C# and the kernel (case matters). Namespace selection is not authorization.
 - `Close()` is idempotent. It cancels admitted RPCs and joins the keep-alive worker. Later operations return `ErrClosed`. A custom token source that ignores cancellation can prevent shutdown from completing.
-- `WithGRPCConnection(conn)` borrows a channel; you own its security, retry policy and eventual close. The SDK still applies its own admission, metadata and compatibility checks. Use `WithNoAuthentication` if the supplied channel owns credentials. Do not enable application-level append retries on a borrowed channel.
+- `WithGRPCConnection(conn)` borrows a channel; you own its security, retry policy and eventual close. The SDK still applies its own admission, metadata and compatibility checks. You must explicitly select `WithConnectionString` as the OAuth authority, `WithTokenSource`, or `WithNoAuthentication`; the SDK never guesses a localhost authority for a borrowed channel. Use `WithNoAuthentication` if the supplied channel owns credentials. Do not enable application-level append retries on a borrowed channel.
 
 The foundation acknowledges keep-alives but has no missing-heartbeat watchdog, graceful drain, cluster balancing, background registration retry or automatic connection-generation supervisor. When the stream ends, existing handles fail until an explicit successful `Connect`; supervised recovery is a later slice.
 

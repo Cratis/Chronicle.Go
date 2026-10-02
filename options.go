@@ -15,7 +15,15 @@ import (
 type Token = connection.Token
 
 // TokenSource supplies credentials, honors context cancellation and supports concurrent calls.
+// Sources may also implement TokenInvalidator to discard rejected credentials.
 type TokenSource = connection.TokenSource
+
+// TokenInvalidator is optionally implemented by a TokenSource. Invalidate discards
+// cached credentials after Unauthenticated; it must be concurrency-safe and nonblocking.
+// The failed operation is not retried. The next operation requests a fresh token.
+type TokenInvalidator interface {
+	Invalidate()
+}
 
 // ClientOption configures construction only. Nil options are invalid. Scalar options
 // are last-wins; authentication conflicts are errors. TLS validation cannot be
@@ -29,13 +37,15 @@ type clientConfig struct {
 	noAuth, development, skipCompatibility bool
 	connectTimeout                         time.Duration
 	borrowed                               *grpc.ClientConn
-	tlsSet, tokenSet, borrowedSet          bool
+	tlsSet, tokenSet, borrowedSet, uriSet  bool
 	registry                               *Registry
 	stores                                 map[StoreName]*Registry
 }
 
 // WithConnectionString selects the URI; it is validated by NewClient.
-func WithConnectionString(value string) ClientOption { return func(c *clientConfig) { c.uri = value } }
+func WithConnectionString(value string) ClientOption {
+	return func(c *clientConfig) { c.uri, c.uriSet = value, true }
+}
 
 // WithTLS snapshots a TLS configuration. Supply RootCAs and/or Certificates for PEM
 // material loaded with crypto/x509 and tls.LoadX509KeyPair. Nil is invalid.
@@ -76,8 +86,9 @@ func WithSkipCompatibilityCheck() ClientOption {
 }
 
 // WithGRPCConnection borrows a connection, which Close will not close. The caller
-// owns transport security. Use WithNoAuthentication when that connection already
-// handles authentication. Client lifecycle checks still apply to SDK operations.
+// owns transport security and must explicitly select WithConnectionString (the
+// OAuth authority), WithTokenSource, or WithNoAuthentication. Use the latter when
+// the channel already handles authentication. Client lifecycle checks still apply.
 func WithGRPCConnection(conn *grpc.ClientConn) ClientOption {
 	return func(c *clientConfig) { c.borrowed, c.borrowedSet = conn, true }
 }

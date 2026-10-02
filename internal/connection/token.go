@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -40,6 +41,7 @@ type OAuth struct {
 	cached               Token
 	failedAt             time.Time
 	lastError            error
+	invalidated          atomic.Bool
 }
 
 func NewOAuth(address, id, secret string, config *tls.Config) *OAuth {
@@ -51,6 +53,10 @@ func NewOAuth(address, id, secret string, config *tls.Config) *OAuth {
 
 func (s *OAuth) Close() { s.client.CloseIdleConnections() }
 
+// Invalidate discards a rejected token on the next acquisition without waiting
+// for an in-flight HTTP refresh. Failed-refresh fallback must not reuse it.
+func (s *OAuth) Invalidate() { s.invalidated.Store(true) }
+
 func (s *OAuth) Token(ctx context.Context) (Token, error) {
 	select {
 	case s.gate <- struct{}{}:
@@ -60,6 +66,9 @@ func (s *OAuth) Token(ctx context.Context) (Token, error) {
 	defer func() { <-s.gate }()
 	if err := ctx.Err(); err != nil {
 		return Token{}, err
+	}
+	if s.invalidated.Swap(false) {
+		s.cached, s.failedAt, s.lastError = Token{}, time.Time{}, nil
 	}
 	now := time.Now()
 	if s.cached.AccessToken != "" && now.Before(s.cached.Expiry.Add(-time.Minute)) {
@@ -76,6 +85,7 @@ func (s *OAuth) Token(ctx context.Context) (Token, error) {
 		if ctx.Err() != nil {
 			return Token{}, ctx.Err()
 		}
+		now = time.Now()
 		s.failedAt, s.lastError = now, err
 		if now.Before(s.cached.Expiry) {
 			return s.cached, nil
