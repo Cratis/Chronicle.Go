@@ -24,4 +24,4 @@ Wait for Publish to finish before merging another release-bound PR: GitHub concu
 
 If proxy indexing fails after publication, rerun the failed jobs. A full rerun resolves the existing stable release for the same commit and indexes that tag without bumping again. Investigate any conflicting tag or release; never move or delete a published tag. Correct a bad release with a new version and, where appropriate, a Go `retract` directive.
 
-The first public-proxy installation and pkg.go.dev visibility can be verified only after a release exists. Central Cratis documentation publication additionally requires registering this repository in Cratis/Documentation and configuring `PAT_DOCUMENTATION`; it is independent of Go module indexing.
+The first public-proxy installation and pkg.go.dev visibility can be verified only after a release exists. Central Cratis documentation publication requires registering this repository in Cratis/Documentation and setting the repository variable `DOCUMENTATION_ENABLED` to `true`; it is independent of Go module indexing.

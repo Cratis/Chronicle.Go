@@ -1,4 +1,5 @@
-# Activate after Cratis/Documentation consumes this repository and the secret exists.
+# Dispatches only when the repository variable DOCUMENTATION_ENABLED is 'true',
+# set once Cratis/Documentation consumes this repository.
 name: Trigger documentation build
 
 on:
@@ -16,6 +17,7 @@ concurrency:
 
 jobs:
   trigger:
+    if: vars.DOCUMENTATION_ENABLED == 'true'
     uses: Cratis/Workflows/.github/workflows/trigger-documentation-build.yml@main
     secrets:
       PAT_DOCUMENTATION: ${{ secrets.PAT_DOCUMENTATION }}
