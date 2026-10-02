@@ -161,10 +161,13 @@ jobs:
   contracts:
     uses: ./.github/workflows/contracts.yml
 
+  integration:
+    uses: ./.github/workflows/integration.yml
+
   gate:
     name: Go gate
     if: always()
-    needs: [test, race, lint, vulnerabilities, workflows, contracts]
+    needs: [test, race, lint, vulnerabilities, workflows, contracts, integration]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
