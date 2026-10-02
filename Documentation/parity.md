@@ -167,4 +167,4 @@ The [read-model reference](read-models/index.md), `ExampleRegisterReadModel` and
 
 ## Next slices
 
-The next independent increments are projections (model-bound and fluent together, see https://github.com/Cratis/Chronicle.Go/issues/24), observers (reactors with middleware, then reducers), event evolution and protected read/model pipelines. Current generated contracts are available for advanced interoperability, but their existence does not imply an idiomatic wrapper or parity claim for every RPC.
+The next independent increments are projections (model-bound and fluent together, see [#24](https://github.com/Cratis/Chronicle.Go/issues/24)), observers (reactors with middleware, then reducers), event evolution and protected read/model pipelines. Current generated contracts are available for advanced interoperability, but their existence does not imply an idiomatic wrapper or parity claim for every RPC.
