@@ -93,6 +93,18 @@ type preparedBatch struct {
 }
 
 func (s *Sequence) prepareBatch(ctx context.Context, entries []Entry, config batchConfig) (preparedBatch, error) {
+	batch, err := s.snapshotBatch(ctx, entries, config)
+	if err != nil {
+		return preparedBatch{}, err
+	}
+	scopes, err := batchScopes(entries, config.scopes)
+	if err != nil {
+		return preparedBatch{}, err
+	}
+	return s.resolveBatch(ctx, batch, scopes)
+}
+
+func (s *Sequence) snapshotBatch(ctx context.Context, entries []Entry, config batchConfig) (preparedBatch, error) {
 	if err := validateAppendMetadata(nil, nil, config.named); err != nil {
 		return preparedBatch{}, err
 	}
@@ -138,10 +150,11 @@ func (s *Sequence) prepareBatch(ctx context.Context, entries []Entry, config bat
 		batch.named = append(batch.named, namedRequest(one, options.named).NamedTags)
 		batch.refs = append(batch.refs, descriptor.Ref())
 	}
-	scopes, err := batchScopes(entries, config.scopes)
-	if err != nil {
-		return preparedBatch{}, err
-	}
+	return batch, nil
+}
+
+func (s *Sequence) resolveBatch(ctx context.Context, batch preparedBatch, scopes []LabeledScope) (preparedBatch, error) {
+	request := batch.request
 	for _, labeled := range scopes {
 		scope, err := s.resolveLabeledScope(ctx, events.SourceID(labeled.Label), labeled.Scope)
 		if err != nil {
@@ -149,7 +162,7 @@ func (s *Sequence) prepareBatch(ctx context.Context, entries []Entry, config bat
 		}
 		request.ConcurrencyScopes = append(request.ConcurrencyScopes, &sequences.EventSourceConcurrencyScope{EventSourceId: labeled.Label, Scope: scope})
 	}
-	if len(entries) == 0 && !hasProtectedScope(request.ConcurrencyScopes) {
+	if len(batch.refs) == 0 && !hasProtectedScope(request.ConcurrencyScopes) {
 		return preparedBatch{}, fmt.Errorf("%w: an empty batch requires a protected scope", faults.ErrInvalidConfiguration)
 	}
 	return batch, nil
