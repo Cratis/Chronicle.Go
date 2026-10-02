@@ -41,28 +41,28 @@ error identity; the callback must honor its context.
 package operation
 
 import (
- "context"
- "fmt"
- "time"
+	"context"
+	"fmt"
+	"time"
 )
 
 // Run executes call within both the parent's and the supplied time budget.
 // Errors returned by call remain inspectable through errors.Is and errors.As.
 func Run(ctx context.Context, budget time.Duration,
- call func(context.Context) error,
+	call func(context.Context) error,
 ) error {
- if budget <= 0 || call == nil {
-  return fmt.Errorf("positive budget and non-nil call required")
- }
- ctx, cancel := context.WithTimeout(ctx, budget)
- defer cancel()
- if err := ctx.Err(); err != nil {
-  return err
- }
- if err := call(ctx); err != nil {
-  return fmt.Errorf("run operation: %w", err)
- }
- return nil
+	if budget <= 0 || call == nil {
+		return fmt.Errorf("positive budget and non-nil call required")
+	}
+	ctx, cancel := context.WithTimeout(ctx, budget)
+	defer cancel()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := call(ctx); err != nil {
+		return fmt.Errorf("run operation: %w", err)
+	}
+	return nil
 }
 ```
 

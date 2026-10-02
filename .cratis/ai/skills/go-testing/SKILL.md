@@ -40,32 +40,32 @@ than claiming a Cratis parser API exists.
 package parsing_test
 
 import (
- "errors"
- "strconv"
- "testing"
+	"errors"
+	"strconv"
+	"testing"
 )
 
 func TestParseInt(t *testing.T) {
- cases := []struct {
-  name  string
-  input string
-  want  int64
-  err   error
- }{
-  {name: "valid", input: "42", want: 42},
-  {name: "invalid", input: "no", err: strconv.ErrSyntax},
- }
- for _, tc := range cases {
-  t.Run(tc.name, func(t *testing.T) {
-   got, err := strconv.ParseInt(tc.input, 10, 64)
-   if !errors.Is(err, tc.err) {
-    t.Fatalf("error = %v, want %v", err, tc.err)
-   }
-   if err == nil && got != tc.want {
-    t.Errorf("value = %d, want %d", got, tc.want)
-   }
-  })
- }
+	cases := []struct {
+		name  string
+		input string
+		want  int64
+		err   error
+	}{
+		{name: "valid", input: "42", want: 42},
+		{name: "invalid", input: "no", err: strconv.ErrSyntax},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := strconv.ParseInt(tc.input, 10, 64)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("error = %v, want %v", err, tc.err)
+			}
+			if err == nil && got != tc.want {
+				t.Errorf("value = %d, want %d", got, tc.want)
+			}
+		})
+	}
 }
 ```
 

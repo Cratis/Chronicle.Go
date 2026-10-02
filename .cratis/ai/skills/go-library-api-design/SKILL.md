@@ -42,7 +42,7 @@ import "fmt"
 
 // Client owns immutable client configuration.
 type Client struct {
- buffer int
+	buffer int
 }
 
 // Option configures a Client during construction.
@@ -50,22 +50,22 @@ type Option func(*Client)
 
 // WithBuffer sets a positive queue capacity. The last value wins.
 func WithBuffer(n int) Option {
- return func(c *Client) { c.buffer = n }
+	return func(c *Client) { c.buffer = n }
 }
 
 // New creates a Client with a default queue capacity of 64.
 func New(options ...Option) (*Client, error) {
- c := &Client{buffer: 64}
- for _, option := range options {
-  if option == nil {
-   return nil, fmt.Errorf("nil client option")
-  }
-  option(c)
- }
- if c.buffer <= 0 {
-  return nil, fmt.Errorf("buffer must be positive: %d", c.buffer)
- }
- return c, nil
+	c := &Client{buffer: 64}
+	for _, option := range options {
+		if option == nil {
+			return nil, fmt.Errorf("nil client option")
+		}
+		option(c)
+	}
+	if c.buffer <= 0 {
+		return nil, fmt.Errorf("buffer must be positive: %d", c.buffer)
+	}
+	return c, nil
 }
 ```
 

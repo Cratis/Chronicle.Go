@@ -56,17 +56,17 @@ separate option from transport encryption.
 package transport
 
 import (
- "crypto/tls"
+	"crypto/tls"
 
- "google.golang.org/grpc"
- "google.golang.org/grpc/credentials"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // NewConnection creates an owned, lazily connecting TLS channel.
 // It does not prove server availability or successful authentication.
 func NewConnection(target string) (*grpc.ClientConn, error) {
- creds := credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
- return grpc.NewClient(target, grpc.WithTransportCredentials(creds))
+	creds := credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
+	return grpc.NewClient(target, grpc.WithTransportCredentials(creds))
 }
 ```
 

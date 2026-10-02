@@ -62,7 +62,7 @@ infrastructure make tags effectively immutable. Release a correction. If the
 bad version should no longer be selected, add a documented `retract` directive
 in a newer published version, explaining the affected range and replacement:
 
-```go
+```gomod
 retract v0.1.1 // Incorrect event metadata encoding; use v0.1.2 or later.
 ```
 

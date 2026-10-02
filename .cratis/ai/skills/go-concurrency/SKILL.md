@@ -41,36 +41,36 @@ import "context"
 
 // Run consumes values until input closes, handling fails, or ctx is canceled.
 func Run(ctx context.Context, input <-chan int,
- handle func(context.Context, int) error,
+	handle func(context.Context, int) error,
 ) error {
- result := make(chan error, 1)
- done := make(chan struct{})
- go func() {
-  defer close(done)
-  for {
-   select {
-   case <-ctx.Done():
-    result <- ctx.Err()
-    return
-   case value, ok := <-input:
-    if !ok {
-     result <- nil
-     return
-    }
-    if err := ctx.Err(); err != nil {
-     result <- err
-     return
-    }
-    if err := handle(ctx, value); err != nil {
-     result <- err
-     return
-    }
-   }
-  }
- }()
- err := <-result
- <-done
- return err
+	result := make(chan error, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			select {
+			case <-ctx.Done():
+				result <- ctx.Err()
+				return
+			case value, ok := <-input:
+				if !ok {
+					result <- nil
+					return
+				}
+				if err := ctx.Err(); err != nil {
+					result <- err
+					return
+				}
+				if err := handle(ctx, value); err != nil {
+					result <- err
+					return
+				}
+			}
+		}
+	}()
+	err := <-result
+	<-done
+	return err
 }
 ```
 
