@@ -31,22 +31,3 @@ func RegisterReadModel[T any](registry *Registry, options ...readmodels.ModelOpt
 	registry.readModels = append(registry.readModels, descriptor)
 	return model, nil
 }
-
-func snapshotReadModels(registry *Registry) *readmodels.Catalog {
-	var descriptors []readmodels.Descriptor
-	if registry != nil {
-		registry.mu.Lock()
-		descriptors = append(descriptors, registry.readModels...)
-		registry.mu.Unlock()
-	}
-	// Registry admission enforces catalog invariants.
-	catalog, _ := readmodels.NewCatalog(descriptors...)
-	return catalog
-}
-func (c *Client) snapshotReadModels(config clientConfig) {
-	c.readModelCatalog = snapshotReadModels(config.registry)
-	c.readModelCatalogs = make(map[StoreName]*readmodels.Catalog)
-	for name, registry := range config.stores {
-		c.readModelCatalogs[name] = snapshotReadModels(registry)
-	}
-}

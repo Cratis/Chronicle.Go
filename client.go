@@ -15,6 +15,7 @@ import (
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/connection"
+	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
@@ -47,6 +48,8 @@ type Client struct {
 
 	readModelCatalog  *readmodels.Catalog
 	readModelCatalogs map[StoreName]*readmodels.Catalog
+	projections       []projections.Definition
+	storeProjections  map[StoreName][]projections.Definition
 }
 
 // String describes the client without revealing endpoints or credentials.
@@ -70,17 +73,26 @@ func NewClient(options ...ClientOption) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	catalog, definitions := snapshot(config.registry)
-	c := &Client{config: config, uri: uri, tls: tlsConfig, catalog: catalog, constraints: definitions,
+	frozen, err := freezeRegistry(config.registry)
+	if err != nil {
+		return nil, err
+	}
+	c := &Client{config: config, uri: uri, tls: tlsConfig, catalog: frozen.events, constraints: frozen.constraints,
 		catalogs: make(map[StoreName]*events.Catalog), storeConstraints: make(map[StoreName][]constraints.Definition), stores: make(map[storeKey]*EventStore),
+		readModelCatalog: frozen.models, readModelCatalogs: make(map[StoreName]*readmodels.Catalog),
+		projections: frozen.projections, storeProjections: make(map[StoreName][]projections.Definition),
 		changed: make(chan struct{}), closeDone: make(chan struct{})}
 	for name, registry := range config.stores {
 		if strings.TrimSpace(string(name)) == "" {
 			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
 		}
-		c.catalogs[name], c.storeConstraints[name] = snapshot(registry)
+		frozen, err := freezeRegistry(registry)
+		if err != nil {
+			return nil, err
+		}
+		c.catalogs[name], c.storeConstraints[name] = frozen.events, frozen.constraints
+		c.readModelCatalogs[name], c.storeProjections[name] = frozen.models, frozen.projections
 	}
-	c.snapshotReadModels(config)
 	c.config.registry, c.config.stores = nil, nil
 	c.config.skipCompatibility = config.skipCompatibility || uri.skipCompatibility
 	if c.config.resolver == nil {

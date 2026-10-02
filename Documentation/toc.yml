@@ -22,6 +22,8 @@
       href: events/unit-of-work.md
 - name: Read models
   href: read-models/index.md
+- name: Projections
+  href: projections/index.md
 - name: Parity and limitations
   href: parity.md
 - name: Releases

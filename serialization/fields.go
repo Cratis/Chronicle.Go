@@ -1,0 +1,133 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+package serialization
+
+import (
+	"errors"
+	"reflect"
+	"strings"
+
+	"github.com/cratis/chronicle.go/declarations"
+)
+
+// Scalar classifies the serialized representation, not the declared Go type.
+type Scalar uint8
+
+const (
+	NotScalar Scalar = iota // NotScalar describes an object or collection.
+	String                  // String includes UUID and timestamp formats.
+	Boolean                 // Boolean is a JSON boolean.
+	Integer                 // Integer is a JSON integer.
+	Number                  // Number is a JSON floating-point number.
+)
+
+// Field is a detached snapshot of one serialized field. Type preserves the exact
+// declared type for identity conventions. Index is an owned Go field-index path;
+// Collection indicates that the path crosses an array, slice or map boundary.
+// Nullable describes the field itself, not an optional ancestor. Tag is decoded
+// chronicle metadata; consumers must not log it because it may contain literals.
+type Field struct {
+	GoField    string
+	Index      []int
+	Name       string
+	Path       string
+	Type       reflect.Type
+	Nullable   bool
+	Scalar     Scalar
+	Format     string
+	Collection bool
+	Tag        string
+}
+
+// Fields returns owned metadata in declaration/traversal order. Names come from
+// the exact same compiled plan as Schema and Marshal, never a second naming policy.
+func (p *Plan) Fields() []Field {
+	if p == nil {
+		return nil
+	}
+	var fields []Field
+	collectFields(p.root, "", "", nil, false, &fields)
+	return fields
+}
+func collectFields(n *node, path, goPath string, index []int, collection bool, result *[]Field) {
+	if n.item != nil {
+		collectFields(n.item, path, goPath, index, collection || n.typ.Kind() != reflect.Pointer, result)
+		return
+	}
+	for _, f := range n.fields {
+		fieldPath, fieldName := f.name, f.goName
+		if path != "" {
+			fieldPath = path + "." + f.name
+			fieldName = goPath + "." + f.goName
+		}
+		indices := append(append([]int(nil), index...), f.index)
+		scalar, format := classify(f.value)
+		*result = append(*result, Field{GoField: fieldName, Index: indices, Name: f.name, Path: fieldPath, Type: f.value.typ, Nullable: f.value.typ.Kind() == reflect.Pointer, Scalar: scalar, Format: format, Collection: collection, Tag: f.tag})
+		collectFields(f.value, fieldPath, fieldName, indices, collection, result)
+	}
+}
+func classify(n *node) (Scalar, string) {
+	if n.typ.Kind() == reflect.Pointer {
+		return classify(n.item)
+	}
+	format, _ := n.schema["format"].(string)
+	switch n.schema["type"] {
+	case "string":
+		return String, format
+	case "boolean":
+		return Boolean, format
+	case "integer":
+		return Integer, format
+	case "number":
+		return Number, format
+	default:
+		return NotScalar, ""
+	}
+}
+
+// ValidateRole rejects declarations that cannot be honored by the artifact role.
+// Compile already validates syntax and supported model directives.
+func (p *Plan) ValidateRole(role declarations.Role) error {
+	for _, f := range p.Fields() {
+		if err := validateTag(f.Tag, role, p.typ.String(), f.GoField, f.Path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func validateTag(tag string, role declarations.Role, artifact, field, path string) error {
+	parsed, err := declarations.Parse(declarations.V1, tag)
+	if err == nil {
+		err = declarations.Validate(role, parsed)
+	}
+	var declaration *declarations.DeclarationError
+	if errors.As(err, &declaration) {
+		declaration.Artifact, declaration.GoField, declaration.Path = artifact, field, path
+	}
+	return err
+}
+
+// FieldAt resolves an exact serialized object-property path. Collection paths are
+// present in Fields for schema tooling but cannot be used as scalar object paths.
+func FieldAt(fields []Field, path string) (Field, bool) {
+	for _, f := range fields {
+		if f.Path == path {
+			f.Index = append([]int(nil), f.Index...)
+			return f, true
+		}
+	}
+	return Field{}, false
+}
+
+// RootFields returns top-level fields from a metadata snapshot.
+func RootFields(fields []Field) []Field {
+	var result []Field
+	for _, f := range fields {
+		if !strings.Contains(f.Path, ".") {
+			f.Index = append([]int(nil), f.Index...)
+			result = append(result, f)
+		}
+	}
+	return result
+}

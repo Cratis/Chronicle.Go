@@ -9,6 +9,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
@@ -20,6 +21,7 @@ type Registry struct {
 	descriptors []events.Descriptor
 	constraints []constraints.Definition
 	readModels  []readmodels.Descriptor
+	projections []projections.Declaration
 }
 
 // NewRegistry returns an empty registry; there is no global discovery or init hook.

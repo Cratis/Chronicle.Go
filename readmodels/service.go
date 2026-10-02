@@ -118,7 +118,7 @@ func (r *Reader[T]) descriptor() (Descriptor, error) {
 		return Descriptor{}, notRegistered()
 	}
 	d, ok := r.service.catalog.LookupIdentifier(r.model.Identifier())
-	if !ok || d.definition != r.model.descriptor.definition {
+	if !ok || !sameDeclaration(d, r.model.descriptor) {
 		return Descriptor{}, notRegistered()
 	}
 	return d, nil
