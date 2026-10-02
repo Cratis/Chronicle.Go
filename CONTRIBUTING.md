@@ -59,16 +59,16 @@ python3 scripts/generate-contracts.py --check
 
 The check also detects stale or unexpected generated files; it does not require .NET, protoc, a sibling checkout or a running kernel. Builds consume checked-in output and do not generate on demand. Review source pins, managed package mappings and generated diffs together when upgrading contracts. Never generate duplicate BCL/protocol packages in downstream clients.
 
-Run the real-kernel test against an independently pinned development kernel:
+Run the real-kernel tests against the development image matching the contract release:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.2-development
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.4-development
 # In another terminal, after https://localhost:35000/health reports Healthy:
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
   go test -tags=integration -count=1 -timeout=2m ./internal/integration
 ```
 
-The test creates an isolated random store, registers an event, protects its first append, verifies conflict rejection and reads back the persisted event through public contracts. Stop your test container afterwards. A missing endpoint fails rather than silently skipping integration tests.
+The tests create isolated random stores, validate registration and schema preservation, exercise numeric/nullable/dictionary round trips and concurrency bounds, and read persisted events through public contracts. Stop your test container afterwards. A missing endpoint fails rather than silently skipping integration tests.
 
 ## Conventions
 

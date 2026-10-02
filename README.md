@@ -16,14 +16,14 @@ Requires Go **1.26 or later**. After the first tagged release:
 go get github.com/cratis/chronicle.go@latest
 ```
 
-Contracts are pinned to Chronicle **19.29.4**; real-kernel tests use **19.29.2-development**. Generated contracts are public packages in this same module, with no .NET or sibling checkout needed.
+Contracts are pinned to Chronicle **19.29.4**; real-kernel tests use **19.29.4-development**. Generated contracts are public packages in this same module, with no .NET or sibling checkout needed.
 
 ## Quick start
 
 Start the development kernel and wait for `https://localhost:35000/health` to report `Healthy`:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.2-development
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.4-development
 ```
 
 This complete program is also available as `go run ./examples/getting-started` in a checkout:
