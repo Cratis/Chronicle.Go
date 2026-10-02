@@ -88,6 +88,20 @@ func TestConnectionStringOptionValues(t *testing.T) {
 	}
 }
 
+func TestSRVNameServerDefaultsToDNSPort(t *testing.T) {
+	for _, test := range []struct{ value, want string }{
+		{"dns.example", "dns.example:53"},
+		{"127.0.0.1", "127.0.0.1:53"},
+		{"[::1]", "[::1]:53"},
+		{"[::1]:5353", "[::1]:5353"},
+	} {
+		parsed, err := ParseConnectionString("chronicle+srv://cluster?srvNameServer=" + test.value)
+		if err != nil || parsed.nameServer != test.want {
+			t.Fatalf("%s: got %s, want %s: %v", test.value, parsed.nameServer, test.want, err)
+		}
+	}
+}
+
 func TestConnectionStringRedaction(t *testing.T) {
 	for _, input := range []string{"chronicle://user:sensitive@host", "chronicle://host?apiKey=sensitive", "chronicle://host?certificatePassword=sensitive"} {
 		value, err := ParseConnectionString(input)

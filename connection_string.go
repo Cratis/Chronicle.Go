@@ -153,6 +153,8 @@ func ParseConnectionString(value string) (ConnectionString, error) {
 		case "srvnameserver":
 			if !strings.Contains(value, ":") {
 				value = net.JoinHostPort(value, "53")
+			} else if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+				value += ":53"
 			}
 			address, err := parseAddress(value)
 			if err != nil {
