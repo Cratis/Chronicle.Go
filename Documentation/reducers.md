@@ -147,6 +147,64 @@ captured by the constructor. Scope-resolved artifacts belong to the provider;
 constructor results belong to Chronicle. Cleanup runs once, before acknowledgement.
 Cleanup failure fails the operation instead of C#'s log-and-swallow behavior.
 
+## Replay lifecycle callbacks
+
+Implement `reducers.ReplayNotifier` for reducer-wide replay, or
+`reducers.PartitionReplayNotifier` for partition replay. The exported method names
+are exactly `BeginReplay`, `EndReplay`, `BeginReplayPartition` and
+`EndReplayPartition`. Each interface requires its begin/end pair. Methods accept
+`context.Context`, followed by `events.SourceID` for partition notifications, and
+return `error`. Invalid signatures fail with `*reducers.DeclarationError` at
+`NewClient`; similarly named prefixes have no lifecycle meaning. A valid ordinary
+fold named `BeginReplay` still dispatches by event signature, not by its name.
+
+For explicit folds, add callbacks with `reducers.WithReplayCallbacks`. Nil fields
+are optional. This option also works with a registered artifact, but a callback
+cannot replace an artifact method for the same notification. For example, with
+your registered model and fold:
+
+```go
+err = chronicle.RegisterReducerHandlers(registry, model, "account-balance",
+    []reducers.Handler{reducers.On(fold)},
+    reducers.WithReplayCallbacks(reducers.ReplayCallbacks{
+        BeginReplay: func(ctx context.Context) error { return ctx.Err() },
+        EndReplay: func(ctx context.Context) error { return ctx.Err() },
+        BeginReplayPartition: func(ctx context.Context, key events.SourceID) error {
+            // key is the opaque kernel partition, not decoded event content.
+            return ctx.Err()
+        },
+        EndReplayPartition: func(ctx context.Context, key events.SourceID) error {
+            return ctx.Err()
+        },
+    }), reducers.WithVersion("1"))
+```
+
+Check the registration error. These callbacks show the accepted shapes; put your
+own replay work inside them. `ExampleRegisterReducerHandlers_replay` compiles and
+validates this authoring path without connecting to a kernel.
+
+Each notification activates a fresh operation scope and artifact, independently
+of normal folds, and finishes cleanup before the next stream message. Explicit
+callbacks get their own scope too; captured collaborators remain caller-owned.
+Constructors can resolve services, but notification and fold methods cannot take
+arbitrary DI parameters. Scope-owned artifacts remain the provider's responsibility.
+
+Like C# `Reducers.HandleReplayNotification`, notifications preserve incoming
+identity, correlation and causation: they do **not** install the ordinary fold's
+System identity or fabricate event metadata. `BatchFromContext` still supplies
+reducer/store/namespace/sequence coordinates. Each callback receives a
+stream-generation-bound context canceled after operation cleanup. Partition keys
+are passed unchanged. Duplicate notifications are dispatched again; this is not
+an exactly-once or durable replay-completion contract.
+
+There is no notification result acknowledgement. Callback errors, panics,
+activation failures and cleanup failures terminate only that reducer's stream,
+which reconnects through the existing observer supervisor. Unlike C#'s
+log-and-ignore activation failure, Go fails closed so a missed start cannot be
+silently followed by continued processing. Unknown future notification states
+also fail before activation rather than folding or reporting successful completion.
+Bump `WithVersion` when lifecycle implementation changes, as for folds.
+
 ## Failure and shutdown
 
 Folds execute in event order. Failure returns no partial state and reports the
@@ -163,9 +221,13 @@ no normal-completion handler. No reducer retry replays an application-side effec
 `store.UnregisterReducer(ctx, id)` cancels and joins local streams, including
 retired generations, and retains removal across reconnect. It does not delete
 kernel state or disable passive reads. Never call it synchronously from that
-reducer's fold. `Client.Close` joins all workers; `CloseContext` bounds the wait,
-not a callback that ignores cancellation. Retired callbacks can overlap a new
+reducer's fold or lifecycle callback. `Client.Close` joins all workers; do not
+call it synchronously from its own callback. A callback can call
+`CloseContext(ctx)` with its operation context: cancellation releases that wait,
+which returns an incomplete-cleanup error; an external later `Close` joins cleanup.
+`CloseContext` bounds the wait, not a callback that ignores cancellation. Retired callbacks can overlap a new
 generation until they honor cancellation, as with reactors.
 
-Replay hooks, snapshots, bounded historical folds and local watch notifications
-are not implemented. Reducer sessions remain unsupported.
+Snapshots and bounded historical folds remain in #33; these replay callbacks do
+not complete all of #31. Local watch notifications use successful folds, not
+lifecycle callbacks. Reducer sessions remain unsupported.
