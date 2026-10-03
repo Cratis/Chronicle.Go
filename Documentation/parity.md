@@ -14,6 +14,14 @@ Chronicle.Go targets the C# client's concepts and behavior, expressed through Go
 | Converter dispatch and kernel schema-unknown numeric conversion | **Go-specific** fail-closed validation: exact dynamic types, required unique exact discriminator, typed-nil rejection, ±2^53 integer subtree bounds, all-variant security audit | `TestDerivedRegistrationValidationAndUnusedVariantAdmission`, `TestDerivedExactDiscriminatorAndFailureAtomicDecode`, `TestDerivedNilNumericMapAndCycleBoundaries`, `TestDerivedSecurityAuditsUnusedVariantsAndProtectedSiblings`, `TestDerivedCallbacksContainPanicsAndPreserveOrdinaryCauses`. Classified families and active protection walks over open families remain unsupported; no metadata stripping or coarse protection promotion |
 | Frozen catalogs, typed consumers and serialization snapshots | **Implemented** for admitted families: variant-qualified metadata, original historical plans, callback-free snapshot rebinding and frozen provider results | `TestHistoricalDerivedCatalogRetainsOriginalDiscriminators`, `TestDerivedDescriptorsFreezeOptionsProvidersAndHistoricalGenerations`, `TestDerivedReconnectReusesFrozenClassificationsAndCodecs`, `TestDerivedModelReadsReleaseWatchWindowsAndFrozenProviders`, `TestDerivedEventReadsAndReactorDispatchUseCompiledFamily`, `TestActiveReducerUsesDerivedEventAndInitialStatePlans`, `TestDecisionDerivedDecodeFailureIssuesNoModelOrToken`, `TestDerivedProjectionCopiesWholeFamiliesButDoesNotInferChildren`. Variant fields are not ordinary migration paths |
 
+Duplicate-member rejection is a **Go-specific** safety contract, not broader C#
+parity: `TestDerivedDuplicateMembersFailBeforeDecodeOrSnapshotRebinding` and
+`TestDerivedModelDuplicatesFailBeforeIDNormalizationAndDelivery` cover the entire
+input before lossy normalization, including unknown arrays and maps.
+`TestDerivedCaseFoldedDiscriminatorPropertiesAreNeverAdmitted` reserves metadata
+spellings, while `TestDecisionErrorCallbacksRemainInsideRecovery` covers panicking
+error traversal and retained ordinary error identities.
+
 See [Register unprotected derived types](derived-codecs.md). Remaining enum,
 binary, custom representation, complex map-key and GeoJSON work stays under
 [#64](https://github.com/Cratis/Chronicle.Go/issues/64); derived-child lowering stays

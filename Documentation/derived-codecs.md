@@ -103,9 +103,16 @@ single child with a one-element array is **not** an equivalent business model.
 
 ## Failure and security boundaries
 
-- Unknown implementations never fall back to ordinary JSON. Missing, unknown,
-  nonstring or duplicate exact `_derivedTypeId` members fail decoding. Ordinary
-  variant property reads remain case-insensitive; the discriminator does not.
+- Unknown implementations never fall back to ordinary JSON. Missing, unknown or
+  nonstring `_derivedTypeId` members fail decoding. Ordinary variant property reads
+  remain case-insensitive; the discriminator requires its exact spelling. Variant
+  declarations cannot use any case-folded spelling of this reserved property,
+  including promoted fields and fields tagged `omitzero`.
+- Decoding and snapshot rebinding reject duplicate JSON member names throughout
+  the input, including maps, arrays and unknown properties, before calling codecs
+  or normalizing read-model IDs. Names are compared exactly after resolving JSON
+  escapes; ordinary names differing only by case are not duplicates. Structural
+  validation is bounded to 100 MiB and 256 nesting levels.
 - Nil interface properties are omitted. Typed-nil variants and null family
   collection elements fail. C#'s derivative dictionary can retain null entries
   despite `WhenWritingNull`; Go intentionally keeps its existing omission policy.
@@ -117,7 +124,9 @@ single child with a one-element array is **not** an equivalent business model.
   `MaxInt64` append guard and string-keyed-map restrictions also remain.
 - Application codec, metadata-provider and `IsZero` failures have payload-free
   messages. Ordinary causes remain available through `errors.Is/As`; deliberate
-  cause inspection can expose sensitive data. Panic values are discarded.
+  cause inspection can expose sensitive data or invoke application error methods.
+  Decision reads contain panics from `As`/`Unwrap` classification as well as codec
+  execution, returning no model or token. Panic values are discarded.
 - Classified families and variants are rejected, including type/provider metadata
   on unused variants. A document containing an open family beside protected
   siblings is also rejected: the kernel's active protection walk cannot safely
