@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	modelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/internal/decision"
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -99,6 +101,10 @@ func (c *decisionCodecConn) Invoke(ctx context.Context, method string, args, rep
 	return nil
 }
 
+type decisionCodecFailure struct{ message string }
+
+func (e *decisionCodecFailure) Error() string { return e.message }
+
 func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
@@ -106,6 +112,13 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 		actionAt  int
 		action    string
 	}{
+		{"decode-panic", false, 1, "panic"},
+		{"protected-validation-panic", true, 1, "panic"},
+		{"protected-decode-panic", true, 2, "panic"},
+		{"decode-error", false, 1, "error"},
+		{"protected-validation-error", true, 1, "error"},
+		{"decode-typed-error", false, 1, "typed-error"},
+		{"protected-validation-typed-error", true, 1, "typed-error"},
 		{"decode-close", false, 1, "close"},
 		{"protected-validation-close", true, 1, "close"},
 		{"protected-decode-close", true, 2, "close"},
@@ -133,7 +146,9 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 			}
 			kernel := &supervisedKernel{}
 			client, ctx := supervisionClient(t, kernel, WithRegistry(registry))
-			value, err := json.Marshal(t.Name())
+			const sensitive = "private-model-content-in-codec-failure"
+			documentValue := t.Name() + sensitive
+			value, err := json.Marshal(documentValue)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -148,8 +163,12 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 			client.mu.Unlock()
 			caller, cancel := context.WithCancel(ctx)
 			defer cancel()
+			codecCause := errors.New(sensitive)
+			if tc.action == "typed-error" {
+				codecCause = &decisionCodecFailure{message: sensitive}
+			}
 			var calls atomic.Int32
-			decisionCodecActions.Store(t.Name(), func() error {
+			decisionCodecActions.Store(documentValue, func() error {
 				if raw.cleaned.Load() != 1 || raw.agreements.Load() != 2 || (tc.protected && raw.released.Load() == 0) {
 					t.Error("application codec ran before cleanup/release/agreement completed")
 				}
@@ -157,6 +176,10 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 					return nil
 				}
 				switch tc.action {
+				case "panic":
+					panic(documentValue)
+				case "error", "typed-error":
+					return codecCause
 				case "close":
 					return client.Close() // Synchronous, not a deadline-based escape.
 				case "cancel":
@@ -173,7 +196,7 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 				}
 				return nil
 			})
-			t.Cleanup(func() { decisionCodecActions.Delete(t.Name()) })
+			t.Cleanup(func() { decisionCodecActions.Delete(documentValue) })
 			var read readmodels.DecisionRead[DecisionCodecModel]
 			done := make(chan struct{})
 			go func() {
@@ -187,6 +210,17 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 			if tc.action == "none" {
 				if err != nil || read.Token.IsZero() || !read.Instance.Exists {
 					t.Fatalf("valid read: %+v %v", read, err)
+				}
+				return
+			}
+			if tc.action == "panic" || tc.action == "error" || tc.action == "typed-error" {
+				if err == nil || !read.Token.IsZero() || read.Instance.Exists || strings.Contains(err.Error(), sensitive) || !errors.Is(err, faults.ErrProtocol) {
+					t.Fatalf("unsafe codec failure: %+v %v", read, err)
+				}
+				var panicked *readmodels.DecisionCodecPanicError
+				var typed *decisionCodecFailure
+				if errors.As(err, &panicked) != (tc.action == "panic") || errors.Is(err, codecCause) != (tc.action != "panic") || errors.As(err, &typed) != (tc.action == "typed-error") {
+					t.Fatalf("lost safe codec failure identity: %v", err)
 				}
 				return
 			}

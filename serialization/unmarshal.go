@@ -19,7 +19,9 @@ import (
 // must be a non-nil pointer to the plan's type. It is replaced only on success.
 // Unknown properties are ignored; exact JSON names win over case-insensitive
 // matches. An exact name declared for another field is never reused as a
-// case-insensitive fallback. Concepts use their declared JSON decoder.
+// case-insensitive fallback. Concepts use their declared JSON decoder. Decoding
+// errors are UnmarshalError values with payload-free messages; errors.Is/As can
+// inspect the original cause, which may contain sensitive data.
 func (p *Plan) Unmarshal(data []byte, target any) error {
 	value := reflect.ValueOf(target)
 	if p == nil || !value.IsValid() || value.Kind() != reflect.Pointer || value.IsNil() || value.Elem().Type() != p.typ {
@@ -31,7 +33,7 @@ func (p *Plan) Unmarshal(data []byte, target any) error {
 	}
 	decoded := reflect.New(p.typ).Elem()
 	if err := p.root.decode(data, decoded, 0); err != nil {
-		return fmt.Errorf("%w: invalid JSON content", faults.ErrProtocol)
+		return &UnmarshalError{cause: err}
 	}
 	value.Elem().Set(decoded)
 	return nil

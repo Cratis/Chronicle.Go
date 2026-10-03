@@ -26,7 +26,7 @@ func (d Descriptor) Unmarshal(data json.RawMessage) (any, error) {
 	}
 	value := reflect.New(d.GoType())
 	if err := d.definition.plan.Unmarshal(data, value.Interface()); err != nil {
-		return nil, protocol("model document does not match declared type")
+		return nil, err
 	}
 	normalizeCollections(value.Elem())
 	return value.Interface(), nil

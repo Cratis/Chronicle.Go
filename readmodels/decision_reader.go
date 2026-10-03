@@ -59,7 +59,8 @@ func (r *DecisionReader[T]) Get(ctx context.Context, key Key) (read DecisionRead
 // codecs run only after cleanup, agreement checks and release of counted RPC work;
 // cancellation, connection generation and catalog epoch are rechecked afterward. The
 // pinned protocol cannot atomically bind definitions or in-place history changes.
-// Errors have payload-free messages; underlying causes remain deliberately
+// Codec panics return DecisionCodecPanicError without retaining the panic value.
+// Errors have payload-free messages; underlying returned causes remain deliberately
 // inspectable through errors.Is/As and may contain sensitive transport diagnostics.
 func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read DecisionRead[T], err error) {
 	defer func() { err = decisionReadFailure(err) }()
@@ -141,16 +142,7 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 		// Release cancels lease.Context, so the final check uses the caller's
 		// context and the separately retained generation/epoch identities.
 		lease.Release()
-		if raw.Exists {
-			if err = validateReleasedDocument(admitted.descriptor, raw.Value); err != nil {
-				return DecisionRead[T]{}, err
-			}
-			raw.Value, err = normalizeID(raw.Value, admitted.descriptor)
-			if err != nil {
-				return DecisionRead[T]{}, err
-			}
-		}
-		instance, err := decode[T](raw, admitted.descriptor)
+		instance, err := decodeDecision[T](raw, admitted.descriptor)
 		if err != nil {
 			return DecisionRead[T]{}, err
 		}

@@ -196,7 +196,7 @@ func decode[T any](raw Instance[json.RawMessage], d Descriptor) (Instance[T], er
 	}
 	value, err := d.Unmarshal(raw.Value)
 	if err != nil {
-		return Instance[T]{}, fmt.Errorf("%w: model document does not match declared type", faults.ErrProtocol)
+		return Instance[T]{}, err
 	}
 	result.Value = *value.(*T)
 	return result, nil
