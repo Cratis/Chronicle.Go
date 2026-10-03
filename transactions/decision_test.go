@@ -34,6 +34,7 @@ type decisionTransport struct {
 	sequence    *eventsequences.Sequence
 	handle      func(any) (*sequences.CommandResult_AppendManyResponse, error)
 	requests    []proto.Message
+	leaseOrigin *eventsequences.Origin
 }
 
 func decisionSequence(t *testing.T) *decisionTransport {
@@ -66,6 +67,9 @@ func (f *decisionTransport) AcquireDecision(ctx context.Context) (*decision.Leas
 		return nil, decision.Unsupported()
 	}
 	generation := f.generation.Load()
+	if f.leaseOrigin != nil {
+		ctx = eventsequences.WithOrigin(ctx, *f.leaseOrigin)
+	}
 	return &decision.Lease{Context: ctx, Conn: f, Generation: generation, Check: func() error {
 		if f.generation.Load() != generation {
 			return decision.ErrStale

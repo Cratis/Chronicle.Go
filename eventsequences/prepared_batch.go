@@ -166,7 +166,7 @@ func (s *Sequence) AppendPreparedBatch(ctx context.Context, snapshot *PreparedBa
 		return BatchResult{}, faults.ErrInvalidConfiguration
 	}
 	if len(snapshot.guards) > 0 {
-		return s.appendDecisionBatch(ctx, snapshot)
+		return s.appendDecisionBatch(ctx, snapshot, OriginFrom(ctx))
 	}
 	scopes, err := s.automaticBatchScopes(ctx, snapshot.entries, snapshot.explicit)
 	if err != nil {

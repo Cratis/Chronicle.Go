@@ -60,7 +60,9 @@ func validateDecisionScopes(explicit []LabeledScope, guards []*decision.Guard) e
 	return nil
 }
 
-func (s *Sequence) appendDecisionBatch(ctx context.Context, snapshot *PreparedBatch) (BatchResult, error) {
+// appendDecisionBatch consumes attribution resolved at the public append
+// boundary. It must never infer it again from a lease or callback context.
+func (s *Sequence) appendDecisionBatch(ctx context.Context, snapshot *PreparedBatch, resolvedOrigin Origin) (BatchResult, error) {
 	if s.decisions == nil {
 		return BatchResult{}, decision.Unsupported()
 	}
@@ -112,7 +114,7 @@ func (s *Sequence) appendDecisionBatch(ctx context.Context, snapshot *PreparedBa
 	if rpcErr == nil && lease.Resolve != nil {
 		lease.Resolve(response)
 	}
-	return s.finishBatch(OriginFrom(ctx), batch, response, rpcErr)
+	return s.finishBatch(resolvedOrigin, batch, response, rpcErr)
 }
 
 func decisionScopes(guards []*decision.Guard) []LabeledScope {
