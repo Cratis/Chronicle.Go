@@ -43,6 +43,7 @@ type Plan struct {
 	ordered     []events.TypeRef
 	shadows     []Shadow
 	hash        string
+	replay      map[ReplayState]bool
 }
 
 // Shadow describes a handler hidden by richest-signature then ordinal precedence.
@@ -116,6 +117,9 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 	}
 	var err error
 	p := &Plan{declaration: d, model: model, services: services, folds: map[events.TypeID]fold{}, descriptors: map[events.TypeID]events.Descriptor{}}
+	if err := p.compileReplay(catalog); err != nil {
+		return nil, err
+	}
 	if !d.explicit {
 		p.factory, err = artifacts.CompileConstructor(d.typ, d.factory, services)
 		if err != nil {
@@ -127,6 +131,9 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 			return fail("constructor", typ, err)
 		}
 		for _, method := range discovery.Methods(d.typ) {
+			if p.replay[ReplayState(slices.Index(replayNames, method.Name)+1)] {
+				continue
+			}
 			t := method.Type
 			first := 1
 			if t.NumIn() > first && t.In(first) == contextType {
@@ -249,6 +256,11 @@ func (p *Plan) fingerprint() string {
 		f := p.folds[events.TypeID(id)]
 		d := p.descriptors[events.TypeID(id)]
 		shape = append(shape, []any{id, d.Ref().Generation, d.GoType().PkgPath() + "." + d.GoType().Name(), f.event.PkgPath(), f.event.String(), f.context, f.eventContext, f.valueCurrent, f.returnsError, f.function.Type().Out(0).Kind() == reflect.Pointer})
+	}
+	for i, callback := range p.declaration.config.replay.values() {
+		if p.replay[ReplayState(i+1)] || !reflect.ValueOf(callback).IsNil() {
+			shape = append(shape, replayNames[i])
+		}
 	}
 	encoded, _ := json.Marshal(shape) // Only closed scalar/slice metadata above.
 	hash := sha256.Sum256(encoded)

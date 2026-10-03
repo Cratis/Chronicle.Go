@@ -49,6 +49,7 @@ type configuration struct {
 	sourceType       events.SourceType
 	streamType       events.StreamType
 	handlers         []Handler
+	replay           ReplayCallbacks
 	logger           *slog.Logger
 	invalid          bool
 }
