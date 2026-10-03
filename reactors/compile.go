@@ -165,6 +165,9 @@ func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readm
 			}
 			for _, descriptor := range matching {
 				id := descriptor.Ref().ID
+				if selected, exists := p.descriptors[id]; exists && selected.Ref() != descriptor.Ref() {
+					return fail(method.Name, t.In(first), invalid("a reactor must select one generation per event ID; use separate reactors for different generations"))
+				}
 				if previous, exists := handlers[id]; exists {
 					p.shadows = append(p.shadows, Shadow{descriptor.Ref(), previous.name, method.Name})
 					d.config.logger.Warn("reactor handler shadowed", "reactor", d.Identifier(), "event", id, "winner", previous.name, "hidden", method.Name)
@@ -200,6 +203,9 @@ func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readm
 		}
 		for _, descriptor := range matching {
 			id := descriptor.Ref().ID
+			if selected, exists := p.descriptors[id]; exists && selected.Ref() != descriptor.Ref() {
+				return fail(name, explicit.event, invalid("a reactor must select one generation per event ID; use separate reactors for different generations"))
+			}
 			if _, exists := handlers[id]; exists {
 				return fail(name, explicit.event, invalid("duplicate explicit event binding"))
 			}
@@ -211,7 +217,7 @@ func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readm
 		return fail("", nil, invalid("no registered event handlers"))
 	}
 	for _, descriptor := range catalog.Descriptors() {
-		if _, ok := p.descriptors[descriptor.Ref().ID]; ok {
+		if selected, ok := p.descriptors[descriptor.Ref().ID]; ok && selected.Ref() == descriptor.Ref() {
 			p.ordered = append(p.ordered, descriptor.Ref())
 		}
 	}

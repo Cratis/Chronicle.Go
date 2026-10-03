@@ -4,12 +4,15 @@
 package chronicle
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/cratis/chronicle.go/contracts/eventstores"
 	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	"github.com/cratis/chronicle.go/contracts/namespaces"
+	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/wire"
 )
 
@@ -84,12 +87,31 @@ func (s *EventStore) sharedStage(ctx context.Context, g *generation, name string
 
 func (s *EventStore) registerEventTypes(ctx context.Context, g *generation) error {
 	request := &eventtypes.RegisterEventTypesRequest{EventStore: string(s.name), DisableValidation: !s.client.config.validateEventTypes}
-	for _, descriptor := range s.catalog.Descriptors() {
+	registrations := make(map[events.TypeID]*eventtypes.EventTypeRegistration)
+	descriptors := s.catalog.Descriptors()
+	for _, descriptor := range descriptors {
+		if descriptor.IsHistorical() {
+			continue
+		}
 		ref := descriptor.Ref()
-		request.Types = append(request.Types, &eventtypes.EventTypeRegistration{
+		registration := &eventtypes.EventTypeRegistration{
 			Type: &eventtypes.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation), Tombstone: false}, Schema: descriptor.Schema(), EventStore: descriptor.SourceStore(),
-			Generations: []*eventtypes.EventTypeGenerationDefinition{{Generation: uint32(ref.Generation), Schema: descriptor.Schema()}},
+		}
+		registrations[ref.ID] = registration
+		request.Types = append(request.Types, registration)
+	}
+	for _, descriptor := range descriptors {
+		registration := registrations[descriptor.Ref().ID]
+		registration.Generations = append(registration.Generations, &eventtypes.EventTypeGenerationDefinition{Generation: uint32(descriptor.Ref().Generation), Schema: descriptor.Schema()})
+	}
+	for _, registration := range request.Types {
+		slices.SortFunc(registration.Generations, func(a, b *eventtypes.EventTypeGenerationDefinition) int {
+			return cmp.Compare(a.Generation, b.Generation)
 		})
+	}
+	for _, migration := range s.catalog.Migrations() {
+		registration := registrations[migration.EventType]
+		registration.Migrations = append(registration.Migrations, &eventtypes.EventTypeMigrationDefinition{FromGeneration: uint32(migration.From), ToGeneration: uint32(migration.To), UpcastJmesPath: migration.UpcastJSON, DowncastJmesPath: migration.DowncastJSON})
 	}
 	if len(request.Types) == 0 {
 		return nil

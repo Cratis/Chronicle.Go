@@ -27,7 +27,7 @@ func DecodeContent(descriptor events.Descriptor, ec events.Context, content []by
 		return ec, nil, faults.ErrProtocol
 	}
 	value := reflect.New(descriptor.GoType())
-	if err := json.Unmarshal(data, value.Interface()); err != nil {
+	if err := descriptor.Unmarshal(data, value.Interface()); err != nil {
 		return ec, nil, fmt.Errorf("%w: invalid event content", faults.ErrProtocol)
 	}
 	return ec, value.Interface(), nil
