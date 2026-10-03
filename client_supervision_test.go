@@ -21,6 +21,7 @@ import (
 	reducercontracts "github.com/cratis/chronicle.go/contracts/observation/reducers"
 	projectioncontracts "github.com/cratis/chronicle.go/contracts/projections"
 	readmodelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
+	seedcontracts "github.com/cratis/chronicle.go/contracts/seeding"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"google.golang.org/grpc"
@@ -48,6 +49,7 @@ type supervisedKernel struct {
 	projections         projectioncontracts.ProjectionsServer
 	reactors            reactorcontracts.ReactorsServer
 	reducers            reducercontracts.ReducersServer
+	seeding             seedcontracts.EventSeedingServer
 	streamInterceptor   grpc.StreamClientInterceptor
 }
 
@@ -112,6 +114,9 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 	}
 	if k.reducers != nil {
 		reducercontracts.RegisterReducersServer(server, k.reducers)
+	}
+	if k.seeding != nil {
+		seedcontracts.RegisterEventSeedingServer(server, k.seeding)
 	}
 	served := make(chan struct{})
 	go func() {

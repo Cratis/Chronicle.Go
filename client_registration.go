@@ -155,6 +155,9 @@ func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, w
 	if outcome.Failure != nil {
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
+	// Seeding must follow observer registration sends even during background
+	// replay. Without seeds, retain the nonblocking observer startup path.
+	waitReady = waitReady || !s.seedDefinition().IsEmpty()
 	if err := s.startReactors(ctx, g, waitReady); err != nil {
 		outcome.Failure = err
 		outcome.RetryPending = ctx.Err() == nil && g.ctx.Err() == nil
@@ -166,6 +169,15 @@ func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, w
 		outcome.RetryPending = ctx.Err() == nil && g.ctx.Err() == nil
 		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "reducers", Failure: err})
 		return outcome, &RegistrationError{Outcome: outcome}
+	}
+	if !s.seedDefinition().IsEmpty() {
+		seedOutcome := s.registerSeeds(ctx, g)
+		outcome.Artifacts = append(outcome.Artifacts, seedOutcome.Artifacts...)
+		outcome.Attempts = max(outcome.Attempts, seedOutcome.Attempts)
+		outcome.Failure, outcome.RetryPending = seedOutcome.Failure, seedOutcome.RetryPending
+		if outcome.Failure != nil {
+			return outcome, &RegistrationError{Outcome: outcome}
+		}
 	}
 	return outcome, nil
 }
@@ -181,9 +193,9 @@ func (c *Client) replayRegistrations(g *generation) {
 				return
 			}
 			outcome := g.registrations.For(registrationKey(store.name, store.namespace)).Snapshot()
-			if !outcome.HasRun || outcome.RetryPending {
-				// Artifact replay must not wait for observer subscriptions. Explicit
-				// readiness callers report Open failures; observer workers own retries.
+			if !outcome.HasRun || outcome.RetryPending || store.needsSeedRegistration(g) {
+				// Ordinary replay starts observer workers without waiting. Seeded
+				// stores must await their registration before dispatching seed data.
 				_, _ = store.registerWithReadiness(g.ctx, g, false)
 			}
 		}
