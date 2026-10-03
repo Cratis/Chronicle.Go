@@ -100,8 +100,9 @@ func (m *MaterializedReader[T]) GetInstances(ctx context.Context, window *Window
 		return nil, err
 	}
 	result := make([]T, len(values))
+	decode := typedValue[T](d)
 	for i, value := range values {
-		result[i], err = typedValue[T](value)
+		result[i], err = decode(value)
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +132,7 @@ func (m *MaterializedReader[T]) ObserveInstances(ctx context.Context, window *Wi
 	if _, err = materializedDescriptor(m.reader.service, d.Identifier()); err != nil {
 		return nil, err
 	}
-	return observeWindow(ctx, m.reader.service, d, window, typedValue[T], options)
+	return observeWindow(ctx, m.reader.service, d, window, typedValue[T](d), options)
 }
 
 func observeWindow[T any](ctx context.Context, s *Service, d Descriptor, window *Window, decode func(json.RawMessage) (T, error), options []WatchOption) (*Subscription[[]T], error) {

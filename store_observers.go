@@ -13,9 +13,10 @@ import (
 
 type observerStream interface{ Run(context.Context) error }
 type observerPlan struct {
-	id      string
-	open    func(context.Context, *generation) (observerStream, error)
-	oneShot bool // Read-model changes have no durable cursor: never silently resume.
+	id              string
+	open            func(context.Context, *generation) (observerStream, error)
+	reportOpenError func(context.Context, error) // Runs on the owned worker after readiness, without locks.
+	oneShot         bool                         // Read-model changes have no durable cursor: never silently resume.
 }
 type storeObservers struct {
 	mu      sync.Mutex
@@ -112,6 +113,9 @@ func (s *storeObservers) run(ctx context.Context, g *generation, plan observerPl
 		stream, err := plan.open(attempt, g)
 		if ctx.Err() == nil {
 			markReady(err)
+			if err != nil && plan.reportOpenError != nil {
+				plan.reportOpenError(attempt, err)
+			}
 		}
 		if err == nil {
 			err = stream.Run(attempt)

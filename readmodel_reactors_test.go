@@ -294,6 +294,109 @@ func TestReadModelReactorMaterializedUsesWindowsAndJoinsCancellation(t *testing.
 	}
 }
 
+func TestReadModelReactorStartupReporterCanReenterSameStore(t *testing.T) {
+	registry, model := projectionRegistry(t)
+	var client *Client
+	reported := make(chan error, 1)
+	if err := RegisterReadModelReactorHandlers(registry, "startup", model,
+		[]reactors.ReadModelHandler{reactors.ReadModelOn(readmodels.Added, func(*ProjectionModel) {})},
+		reactors.WithReadModelErrorHandler(func(ctx context.Context, err error) {
+			if status.Code(err) != codes.Unavailable {
+				t.Errorf("startup error = %v", err)
+			}
+			_, err = client.EventStore(ctx, "store")
+			reported <- err
+		})); err != nil {
+		t.Fatal(err)
+	}
+	outer, k := newModelReactorKernel()
+	var ctx context.Context
+	client, ctx = supervisionClient(t, outer, WithRegistry(registry))
+	registered := make(chan error, 1)
+	go func() { _, err := client.EventStore(ctx, "store"); registered <- err }()
+	select {
+	case session := <-k.sessions:
+		session.end <- status.Error(codes.Unavailable, "startup failed")
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	for _, result := range []<-chan error{registered, reported} {
+		select {
+		case err := <-result:
+			if status.Code(err) != codes.Unavailable {
+				t.Fatalf("registration/reentrant call = %v", err)
+			}
+		case <-ctx.Done():
+			t.Fatal("startup reporter blocked registration", ctx.Err())
+		}
+	}
+	if err := client.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type plannedReactorModel struct {
+	ID         string
+	ExternalID string `json:"ID"`
+}
+
+func TestReadModelReactorDispatchUsesRegisteredNamingPlan(t *testing.T) {
+	for _, materialized := range []bool{false, true} {
+		t.Run(map[bool]string{false: "watch", true: "materialized"}[materialized], func(t *testing.T) {
+			registry := NewRegistry()
+			model, err := RegisterReadModel[plannedReactorModel](registry, readmodels.WithObserver(readmodels.Projection, "planned"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := plannedReactorModel{ID: "person", ExternalID: "external"}
+			data, err := model.Descriptor().Marshal(want)
+			if err != nil {
+				t.Fatal(err)
+			}
+			calls := make(chan plannedReactorModel, 1)
+			options := []reactors.ReadModelOption{reactors.WithReadModelErrorHandler(func(_ context.Context, err error) { t.Error(err) })}
+			if materialized {
+				options = append(options, reactors.Materialized(nil))
+			}
+			if err := RegisterReadModelReactorHandlers(registry, "planned", model,
+				[]reactors.ReadModelHandler{reactors.ReadModelOn(readmodels.Added, func(m *plannedReactorModel) { calls <- *m })}, options...); err != nil {
+				t.Fatal(err)
+			}
+			outer, k := newModelReactorKernel()
+			client, ctx := supervisionClient(t, outer, WithRegistry(registry))
+			registered := make(chan error, 1)
+			go func() { _, err := client.EventStore(ctx, "store"); registered <- err }()
+			if materialized {
+				k.windows <- &contracts.ObserveInstancesResponse{Instances: []string{string(data)}}
+			} else {
+				select {
+				case session := <-k.sessions:
+					session.messages <- &contracts.ReadModelChangeset{Subscribed: true}
+					session.messages <- modelMessage(string(DefaultNamespace), contracts.ReadModelChangeType_Added, string(data))
+				case <-ctx.Done():
+					t.Fatal(ctx.Err())
+				}
+			}
+			select {
+			case err := <-registered:
+				if err != nil {
+					t.Fatal(err)
+				}
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			}
+			select {
+			case got := <-calls:
+				if got != want {
+					t.Fatalf("model = %+v, want %+v", got, want)
+				}
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			}
+		})
+	}
+}
+
 type InvalidModelReactor struct{}
 
 func (*InvalidModelReactor) Added(string) {}

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"strconv"
 )
 
 // Unmarshal decodes a present model document into a pointer to its registered Go
@@ -24,7 +25,7 @@ func (d Descriptor) Unmarshal(data json.RawMessage) (any, error) {
 		return nil, err
 	}
 	value := reflect.New(d.GoType())
-	if err := json.Unmarshal(data, value.Interface()); err != nil {
+	if err := d.definition.plan.Unmarshal(data, value.Interface()); err != nil {
 		return nil, protocol("model document does not match declared type")
 	}
 	normalizeCollections(value.Elem())
@@ -64,7 +65,7 @@ func (d *WindowDiffer) Diff(model Descriptor, window []json.RawMessage) ([]Chang
 		key := ""
 		for _, name := range []string{model.KeyProperty(), "id", "_id", "Id"} {
 			if name != "" {
-				key = releaseSubject(fields[name])
+				key = windowKey(fields[name])
 				if key != "" {
 					break
 				}
@@ -94,4 +95,25 @@ func (d *WindowDiffer) Diff(model Descriptor, window []json.RawMessage) ([]Chang
 	}
 	d.previous, d.order = current, order
 	return changes, nil
+}
+
+// windowKey matches JsonNode.ToString for admitted projection key scalars.
+// Unlike a compliance subject, a projection key may be a boolean.
+func windowKey(data json.RawMessage) string {
+	var value any
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&value); err != nil {
+		return ""
+	}
+	switch value := value.(type) {
+	case string:
+		return value
+	case json.Number:
+		return value.String()
+	case bool:
+		return strconv.FormatBool(value)
+	default:
+		return ""
+	}
 }

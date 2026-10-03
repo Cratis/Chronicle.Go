@@ -70,7 +70,7 @@ func (r *Reader[T]) Watch(ctx context.Context, options ...WatchOption) (*Subscri
 	if err != nil {
 		return nil, err
 	}
-	return watch(ctx, r.service, d, typedValue[T], options)
+	return watch(ctx, r.service, d, typedValue[T](d), options)
 }
 
 func watch[T any](ctx context.Context, s *Service, d Descriptor, decode func(json.RawMessage) (T, error), options []WatchOption) (*Subscription[Change[T]], error) {
@@ -158,8 +158,15 @@ func changeContext(s *Service, d Descriptor, key Key) events.Context {
 	return events.Context{Store: s.store, Namespace: s.namespace, Sequence: d.EventSequence(), SourceID: events.SourceID(key), SourceType: events.DefaultSourceType, StreamType: events.AllStreamTypes, StreamID: events.DefaultStreamID, SequenceNumber: events.Unavailable}
 }
 func rawValue(data json.RawMessage) (json.RawMessage, error) { return data, nil }
-func typedValue[T any](data json.RawMessage) (T, error) {
-	value, err := decode[T](Instance[json.RawMessage]{Value: data, Exists: true})
-	return value.Value, err
+func typedValue[T any](d Descriptor) func(json.RawMessage) (T, error) {
+	return func(data json.RawMessage) (T, error) {
+		var zero T
+		value, err := d.Unmarshal(data)
+		if err != nil {
+			return zero, err
+		}
+		// Typed readers validate that the catalog descriptor belongs to T.
+		return *value.(*T), nil
+	}
 }
 func protocol(message string) error { return fmt.Errorf("%w: %s", faults.ErrProtocol, message) }
