@@ -7,9 +7,7 @@ package integration_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"maps"
 	"testing"
 	"time"
 
@@ -20,13 +18,9 @@ import (
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
-type historyProjectionEvidence struct {
-	last      readmodels.Instance[ProjectionAccount]
-	observed  []historyObservation
-	history   []events.Appended
-	observers []*contracts.ObserverInformation
-	failures  []*contracts.IEnumerable_FailedPartition
-}
+// This identity is produced only by exhaustion of the local polling loop after
+// successful reads, never by a Reader.Get error (including remote deadlines).
+var errInitialHistoryProjectionPollExhausted = errors.New("initial history projection polling budget exhausted")
 
 func awaitInitialHistoryProjection(t *testing.T, f *kernelFixture, store *chronicle.EventStore, reader *readmodels.Reader[ProjectionAccount], source events.SourceID, projectionID string, observed <-chan historyObservation) {
 	t.Helper()
@@ -34,14 +28,15 @@ func awaitInitialHistoryProjection(t *testing.T, f *kernelFixture, store *chroni
 	if err == nil {
 		return
 	}
-	// Diagnose before client cleanup. Only the local poll's deadline may lead
-	// to the known-kernel skip; RPC failures and parent cancellation still fail.
-	if !errors.Is(err, context.DeadlineExceeded) || f.ctx.Err() != nil {
+	// Diagnose before client cleanup, but never turn an unexplained projection
+	// failure into a skip. Public snapshots cannot establish the shared-set
+	// cause in https://github.com/Cratis/Chronicle/issues/4558; disappeared jobs
+	// do not prove successful catch-up and one matching symptom is insufficient.
+	if err != errInitialHistoryProjectionPollExhausted || f.ctx.Err() != nil {
 		t.Fatalf("initial history projection: %+v: %v", last, err)
 	}
 	ctx, cancel := context.WithTimeout(f.ctx, 5*time.Second)
 	defer cancel()
-	evidence := historyProjectionEvidence{last: last}
 	for _, id := range []string{projectionID, "$system.statistics.event-types", "$system.statistics.event-types.global", "history-observer"} {
 		info, infoErr := contracts.NewObserversClient(f.conn).GetObserverInformation(ctx, &contracts.GetObserverInformationRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), EventSequenceId: "event-log", ObserverId: id})
 		failures, failuresErr := contracts.NewFailedPartitionsClient(f.conn).GetFailedPartitions(ctx, &contracts.GetFailedPartitionsRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: id})
@@ -49,35 +44,36 @@ func awaitInitialHistoryProjection(t *testing.T, f *kernelFixture, store *chroni
 		if infoErr != nil || failuresErr != nil {
 			t.Fatal("could not diagnose initial history projection timeout", err)
 		}
-		evidence.observers = append(evidence.observers, info)
-		evidence.failures = append(evidence.failures, failures)
 	}
-	var historyErr error
-	evidence.history, historyErr = store.EventLog().ReadSource(ctx, source, eventsequences.SourceFilter{})
+	history, historyErr := store.EventLog().ReadSource(ctx, source, eventsequences.SourceFilter{})
 	if historyErr != nil {
 		t.Fatal("read history after initial projection timeout", historyErr)
 	}
+	var observations []historyObservation
 	for len(observed) > 0 {
-		evidence.observed = append(evidence.observed, <-observed)
+		observations = append(observations, <-observed)
 	}
-	if ctx.Err() == nil && strandedInitialHistoryProjection(err, source, projectionID, evidence) {
-		t.Skip("kernel shares fresh observers' catch-up partition sets and drops live projection event 1: https://github.com/Cratis/Chronicle/issues/4558")
-	}
-	t.Fatalf("initial history projection store=%s last=%+v observations=%+v history=%+v: %v", f.storeName, last, evidence.observed, evidence.history, err)
+	t.Fatalf("initial history projection store=%s last=%+v observations=%+v history=%+v: %v", f.storeName, last, observations, history, err)
 }
 
 func pollInitialHistoryProjection(parent context.Context, reader *readmodels.Reader[ProjectionAccount], source events.SourceID) (readmodels.Instance[ProjectionAccount], error) {
-	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
+	return pollHistoryProjection(parent, 15*time.Second, func(ctx context.Context) (readmodels.Instance[ProjectionAccount], error) {
+		return reader.Get(ctx, readmodels.Key(source))
+	})
+}
+
+func pollHistoryProjection(parent context.Context, budget time.Duration, read func(context.Context) (readmodels.Instance[ProjectionAccount], error)) (readmodels.Instance[ProjectionAccount], error) {
+	ctx, cancel := context.WithTimeout(parent, budget)
 	defer cancel()
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	var last readmodels.Instance[ProjectionAccount]
 	for {
-		value, err := reader.Get(ctx, readmodels.Key(source))
+		value, err := read(ctx)
 		if err != nil {
-			if ctx.Err() != nil {
-				return last, ctx.Err()
-			}
+			// Preserve the read's failure even if local cancellation/deadline
+			// occurs concurrently. A wire RPC deadline also matches
+			// context.DeadlineExceeded, but is not polling exhaustion.
 			return last, err
 		}
 		last = value
@@ -86,53 +82,11 @@ func pollInitialHistoryProjection(parent context.Context, reader *readmodels.Rea
 		}
 		select {
 		case <-ctx.Done():
-			return last, ctx.Err()
+			if err := parent.Err(); err != nil {
+				return last, err
+			}
+			return last, errInitialHistoryProjectionPollExhausted
 		case <-ticker.C:
 		}
 	}
-}
-
-// The 19.29.4 shared-set defect strands all three projections at 0 while the
-// reactor successfully handles 1. Do not skip a lone projection failure, absent
-// history, a failed/disconnected observer, or any revision/redaction timeout.
-func strandedInitialHistoryProjection(err error, source events.SourceID, projectionID string, e historyProjectionEvidence) bool {
-	if !errors.Is(err, context.DeadlineExceeded) || !e.last.Exists ||
-		e.last.LastHandled == nil || *e.last.LastHandled != 0 ||
-		e.last.Value.ID.String() != string(source) || e.last.Value.Name != "original" ||
-		e.last.Value.Note == nil || *e.last.Value.Note != "present" ||
-		e.last.Value.State != "active" || e.last.Value.Number != 42 || !e.last.Value.Enabled ||
-		e.last.Value.ProductName != "" || e.last.Value.Local != "" || e.last.Value.Excluded != "" ||
-		len(e.observed) != 1 || e.observed[0] != (historyObservation{"before", events.ObservationInitial}) ||
-		len(e.history) != 2 || len(e.observers) != 4 || len(e.failures) != 4 {
-		return false
-	}
-	for i, id := range []string{projectionID, "$system.statistics.event-types", "$system.statistics.event-types.global", "history-observer"} {
-		info := e.observers[i]
-		if info == nil || info.Id != id || info.EventSequenceId != "event-log" ||
-			info.RunningState != contracts.ObserverRunningState_Active || !info.IsSubscribed ||
-			info.TailEventSequenceNumber != 1 || info.HandledEventCount != 1 ||
-			e.failures[i] == nil || len(e.failures[i].Items) != 0 {
-			return false
-		}
-		if i < 3 {
-			if info.Type != contracts.ObserverType_Projection || info.Owner != contracts.ObserverOwner_Kernel ||
-				info.LastHandledEventSequenceNumber != 0 || info.NextEventSequenceNumber != 1 {
-				return false
-			}
-		} else if info.Type != contracts.ObserverType_Reactor || info.Owner != contracts.ObserverOwner_Client ||
-			info.LastHandledEventSequenceNumber != 1 || info.NextEventSequenceNumber != 2 {
-			return false
-		}
-	}
-	for i, id := range []events.TypeID{"ProjectionAccountOpened", "ProjectionAccountRenamed"} {
-		event := e.history[i]
-		if event.Context.SourceID != source || event.Context.SequenceNumber != events.SequenceNumber(i) ||
-			event.Context.EventType != (events.TypeRef{ID: id, Generation: 1}) || len(event.Revisions) != 0 {
-			return false
-		}
-	}
-	var opened, renamed map[string]string
-	return e.last.Value.Occurred.Equal(e.history[0].Context.Occurred) &&
-		json.Unmarshal(e.history[0].Content, &opened) == nil && maps.Equal(opened, map[string]string{"fullName": "original", "productName": "", "local": "", "excluded": ""}) &&
-		json.Unmarshal(e.history[1].Content, &renamed) == nil && maps.Equal(renamed, map[string]string{"name": "before"})
 }
