@@ -13,12 +13,16 @@ import (
 // Decode selects T's registered generation from the kernel's alternate content,
 // or uses Content when no alternate is supplied (C#'s raw fallback). It does not
 // execute migrations locally or relabel the persisted context. T must be a
-// registered non-pointer event struct. Use a Client.Catalogs/EventStore catalog
+// registered non-pointer event struct (except the built-in EventRedacted). Use a Client.Catalogs/EventStore catalog
 // to retain the selected naming policy. An unrelated ID is ErrProtocol.
 func Decode[T any](catalog *Catalog, appended Appended) (T, error) {
 	var result T
 	if catalog == nil {
 		return result, fmt.Errorf("%w: catalog required", faults.ErrInvalidConfiguration)
+	}
+	if reflect.TypeFor[T]() == reflect.TypeFor[EventRedacted]() {
+		redacted, err := appended.Redaction()
+		return any(redacted).(T), err
 	}
 	descriptor, ok := catalog.types[reflect.TypeFor[T]()]
 	if !ok {
@@ -40,9 +44,17 @@ func Decode[T any](catalog *Catalog, appended Appended) (T, error) {
 // Decode selects the exact delivered generation's codec and returns a pointer to
 // its Go event type. An unregistered generation fails explicitly rather than
 // guessing the latest codec; use the generic Decode to request a known shape.
+// The built-in EventRedacted marker is decoded without explicit registration.
 func (a Appended) Decode(catalog *Catalog) (any, error) {
 	if catalog == nil {
 		return nil, fmt.Errorf("%w: catalog required", faults.ErrInvalidConfiguration)
+	}
+	if a.Context.EventType.ID == RedactedTypeID {
+		redacted, err := a.Redaction()
+		if err != nil {
+			return nil, err
+		}
+		return &redacted, nil
 	}
 	descriptor, ok := catalog.LookupRef(a.Context.EventType)
 	if !ok {
