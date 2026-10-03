@@ -15,7 +15,17 @@ This API is experimental in the v0.x SDK. It implements **client-issued optimist
 4. Call the decision reader's `Get(ctx, key)`. It returns `DecisionRead[T]` and automatically enrolls its token into the participant. Missing participants return `ErrDecisionRequiresUnitOfWork`; no implicit unit or successor is created.
 5. Inspect `read.Instance.Exists` before using `Value`. Stage events through `unit.Stage`. Call `owner.Commit(ctx)`, check the operation error, then `result.Err()` and the disposition. Never blindly retry a completed owner or an ambiguous write.
 
-The [typed example](../../examples/decisions/main.go) creates an account from an absent decision, then reads the same name and completes an eventless decision. With a disposable development kernel as described in [getting started](../clients/go/getting-started.md), run:
+This excerpt from the [typed example's `rename` function](../../examples/decisions/main.go) uses its existing `ctx`, `unit`, `store`, `model`, `key` and named `result` return value:
+
+```go
+reader := readmodels.DecisionsFor(store.ReadModels(), model)
+read, err := reader.Get(transactions.WithUnitOfWork(ctx, unit), key)
+if err != nil {
+    return result, err
+}
+```
+
+`read.Instance` is an `Instance[Account]`, and the successful call has already enrolled its token. The example creates an account from an absent decision, then reads the same name and completes an eventless decision. With a disposable development kernel as described in [getting started](../clients/go/getting-started.md), run:
 
 ```sh
 go run ./examples/decisions
