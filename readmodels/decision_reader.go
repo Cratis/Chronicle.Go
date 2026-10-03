@@ -6,7 +6,6 @@ package readmodels
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -34,12 +33,13 @@ type DecisionRead[T any] struct {
 
 // Get reads and enrolls into the existing participant in ctx. It never creates
 // an implicit unit or exposes its owner. Failed enrollment returns no read/token.
-func (r *DecisionReader[T]) Get(ctx context.Context, key Key) (DecisionRead[T], error) {
+func (r *DecisionReader[T]) Get(ctx context.Context, key Key) (read DecisionRead[T], err error) {
+	defer func() { err = decisionReadFailure(err) }()
 	unit, ok := transactions.FromContext(ctx)
 	if !ok {
 		return DecisionRead[T]{}, ErrDecisionRequiresUnitOfWork
 	}
-	read, err := r.GetDetached(ctx, key)
+	read, err = r.GetDetached(ctx, key)
 	if err != nil {
 		return DecisionRead[T]{}, err
 	}
@@ -56,7 +56,10 @@ func (r *DecisionReader[T]) Get(ctx context.Context, key Key) (DecisionRead[T], 
 // Cleanup is awaited, with a five-second cancellation-detached metadata-preserving
 // budget; cleanup/cancellation/generation/epoch failure returns no token. The
 // pinned protocol cannot atomically bind definitions or in-place history changes.
-func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (DecisionRead[T], error) {
+// Errors have payload-free messages; underlying causes remain deliberately
+// inspectable through errors.Is/As and may contain sensitive transport diagnostics.
+func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read DecisionRead[T], err error) {
+	defer func() { err = decisionReadFailure(err) }()
 	admitted, err := r.assess()
 	if err != nil {
 		return DecisionRead[T]{}, err
@@ -173,7 +176,7 @@ func foldDecision[T any](ctx context.Context, service *Service, descriptor Descr
 			cleanupErr = faults.ErrProtocol
 		}
 		if cleanupErr != nil {
-			err = errors.Join(err, fmt.Errorf("chronicle: decision session cleanup: %w", wire.RPCError(cleanupErr)))
+			err = errors.Join(decisionReadFailure(err), &decisionReadError{cause: wire.RPCError(cleanupErr), cleanup: true})
 			instance = Instance[T]{}
 		}
 	}()
