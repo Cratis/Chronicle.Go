@@ -18,6 +18,7 @@ type OperationMetadata struct {
 	namespace metadata.Namespace
 	sequence  events.SequenceID
 	refs      []events.TypeRef
+	appended  []events.TypeRef // Exact input order, including repeated IDs/generations, for completion.
 }
 
 // Store returns the attempted logical store.
@@ -63,9 +64,12 @@ func (s *Sequence) operation(values []any) OperationMetadata {
 	m := OperationMetadata{store: s.store, namespace: s.namespace, sequence: s.id}
 	seen := make(map[events.TypeRef]bool)
 	for _, value := range values {
-		if descriptor, ok := s.catalog.Lookup(value); ok && !seen[descriptor.Ref()] {
-			seen[descriptor.Ref()] = true
-			m.refs = append(m.refs, descriptor.Ref())
+		if descriptor, ok := s.catalog.Lookup(value); ok {
+			m.appended = append(m.appended, descriptor.Ref())
+			if !seen[descriptor.Ref()] {
+				seen[descriptor.Ref()] = true
+				m.refs = append(m.refs, descriptor.Ref())
+			}
 		}
 	}
 	return m
@@ -107,6 +111,7 @@ func (b *PreparedBatch) Operation() OperationMetadata {
 	m := b.sequence.operation(nil)
 	seen := make(map[events.TypeRef]bool)
 	for _, ref := range b.batch.refs {
+		m.appended = append(m.appended, ref)
 		if !seen[ref] {
 			seen[ref] = true
 			m.refs = append(m.refs, ref)
