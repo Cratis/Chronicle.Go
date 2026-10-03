@@ -26,6 +26,9 @@ type Reducer struct {
 	stream    grpc.BidiStreamingClient[contracts.ReducerMessage, contracts.ReduceOperationMessage]
 	store     metadata.StoreName
 	namespace metadata.Namespace
+	// OnChange receives successful local folds before kernel acknowledgement.
+	// Install before Run. It must not block or call user code.
+	OnChange func(string, json.RawMessage)
 }
 
 // OpenReducer sends the immutable registration snapshot. Like reactors, the
@@ -42,7 +45,7 @@ func OpenReducer(ctx context.Context, conn grpc.ClientConnInterface, connectionI
 	if err = stream.Send(&contracts.ReducerMessage{Content: &contracts.OneOf_RegisterReducer_ReducerResult{Value0: &contracts.RegisterReducer{ConnectionId: connectionID, EventStore: string(store), Namespace: string(namespace), Reducer: definition}}}); err != nil {
 		return nil, err
 	}
-	return &Reducer{plan, stream, store, namespace}, nil
+	return &Reducer{plan: plan, stream: stream, store: store, namespace: namespace}, nil
 }
 
 // Run processes one complete fold and cleanup before acknowledging it. Replay
@@ -52,7 +55,15 @@ func (r *Reducer) Run(ctx context.Context) error {
 		if operation.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
 			return nil, nil
 		}
-		return r.handle(ctx, operation), nil
+		result := r.handle(ctx, operation)
+		if result.State == contracts.ObservationState_Success && r.OnChange != nil {
+			var state json.RawMessage
+			if result.ReadModelState != "" {
+				state = json.RawMessage(result.ReadModelState)
+			}
+			r.OnChange(operation.Partition, state)
+		}
+		return result, nil
 	}, func(result *contracts.ReducerResult) error {
 		return r.stream.Send(&contracts.ReducerMessage{Content: &contracts.OneOf_RegisterReducer_ReducerResult{Value1: result}})
 	})

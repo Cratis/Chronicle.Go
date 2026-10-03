@@ -28,6 +28,8 @@
   href: serialization.md
 - name: Read models
   href: read-models/index.md
+- name: Read-model reactors
+  href: read-model-reactors.md
 - name: Projections
   items:
     - name: Overview

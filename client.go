@@ -18,6 +18,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/projections"
+	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/reducers"
 	"github.com/cratis/chronicle.go/seeding"
@@ -58,6 +59,7 @@ type Client struct {
 	reducers          reducerCatalogs
 	seeds             seeding.Definition
 	storeSeeds        map[StoreName]seeding.Definition
+	readModelReactors readModelReactorCatalogs
 }
 
 // String describes the client without revealing endpoints or credentials.
@@ -102,8 +104,9 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 		projections: frozen.projections, storeProjections: make(map[StoreName][]projections.Definition),
 		seeds: frozen.seeds, storeSeeds: make(map[StoreName]seeding.Definition),
 		changed: make(chan struct{}), closeDone: make(chan struct{}),
-		reactors: reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)},
-		reducers: reducerCatalogs{defaults: frozen.reducers, stores: make(map[StoreName][]*reducers.Plan)}}
+		reactors:          reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)},
+		readModelReactors: readModelReactorCatalogs{defaults: frozen.readModelReactors, stores: make(map[StoreName][]*reactors.ReadModelPlan)},
+		reducers:          reducerCatalogs{defaults: frozen.reducers, stores: make(map[StoreName][]*reducers.Plan)}}
 	for _, name := range slices.Sorted(maps.Keys(config.stores)) {
 		registry := config.stores[name]
 		if strings.TrimSpace(string(name)) == "" {
@@ -116,6 +119,7 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 		c.catalogs[name], c.storeConstraints[name] = frozen.events, frozen.constraints
 		c.readModelCatalogs[name], c.storeProjections[name] = frozen.models, frozen.projections
 		c.reactors.stores[name] = frozen.reactors
+		c.readModelReactors.stores[name] = frozen.readModelReactors
 		c.reducers.stores[name] = frozen.reducers
 		c.storeSeeds[name] = frozen.seeds
 	}

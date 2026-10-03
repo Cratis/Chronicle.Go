@@ -23,10 +23,17 @@ func (s *EventStore) reducerPlans() []*reducers.Plan {
 	return s.client.reducers.defaults
 }
 func (s *EventStore) startReducers(ctx context.Context, g *generation, waitReady bool) error {
+	s.readModelChanges.BindGeneration(g.ctx)
 	var plans []observerPlan
 	for _, plan := range s.reducerPlans() {
-		plans = append(plans, observerPlan{string(plan.Identifier()), func(ctx context.Context, g *generation) (observerStream, error) {
-			return observerruntime.OpenReducer(ctx, g.transport, g.id, s.name, s.namespace, plan)
+		plans = append(plans, observerPlan{id: string(plan.Identifier()), open: func(ctx context.Context, g *generation) (observerStream, error) {
+			runtime, err := observerruntime.OpenReducer(ctx, g.transport, g.id, s.name, s.namespace, plan)
+			if err == nil {
+				runtime.OnChange = func(key string, value json.RawMessage) {
+					s.readModelChanges.Publish(g.ctx, plan.Model().Identifier(), readmodels.Key(key), value)
+				}
+			}
+			return runtime, err
 		}})
 	}
 	return s.reducers.start(ctx, g, waitReady, plans, s.client.config.reactorRetryWait)

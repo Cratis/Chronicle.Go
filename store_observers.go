@@ -13,8 +13,10 @@ import (
 
 type observerStream interface{ Run(context.Context) error }
 type observerPlan struct {
-	id   string
-	open func(context.Context, *generation) (observerStream, error)
+	id              string
+	open            func(context.Context, *generation) (observerStream, error)
+	reportOpenError func(context.Context, error) // Runs on the owned worker after readiness, without locks.
+	oneShot         bool                         // Read-model changes have no durable cursor: never silently resume.
 }
 type storeObservers struct {
 	mu      sync.Mutex
@@ -105,18 +107,27 @@ func (s *storeObservers) run(ctx context.Context, g *generation, plan observerPl
 		ready.Do(func() { close(run.ready) })
 		s.mu.Unlock()
 	}
-	defer markReady(nil)
+	defer ready.Do(func() { close(run.ready) })
 	for ctx.Err() == nil {
 		attempt, cancel := context.WithCancel(ctx)
 		stream, err := plan.open(attempt, g)
 		if ctx.Err() == nil {
 			markReady(err)
+			if err != nil && plan.reportOpenError != nil {
+				plan.reportOpenError(attempt, err)
+			}
 		}
 		if err == nil {
 			err = stream.Run(attempt)
 		}
 		cancel()
 		if ctx.Err() != nil {
+			return
+		}
+		if plan.oneShot {
+			// Startup errors remain on the ready barrier; after readiness a
+			// best-effort watch failure must not poison unrelated reads/appends.
+			// The stream reports its terminal outcome through its error handler.
 			return
 		}
 		slog.WarnContext(ctx, "observer stream ended; resubscribing", "observer", plan.id, "error", err)

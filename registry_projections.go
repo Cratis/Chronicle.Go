@@ -11,6 +11,7 @@ import (
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
+	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/reducers"
 	"github.com/cratis/chronicle.go/seeding"
@@ -36,13 +37,14 @@ func (r *Registry) AddProjection(declaration projections.Declaration) error {
 }
 
 type registrySnapshot struct {
-	events      *events.Catalog
-	models      *readmodels.Catalog
-	constraints []constraints.Definition
-	projections []projections.Definition
-	reactors    []*reactorPlan
-	reducers    []*reducers.Plan
-	seeds       seeding.Definition
+	events            *events.Catalog
+	models            *readmodels.Catalog
+	constraints       []constraints.Definition
+	projections       []projections.Definition
+	reactors          []*reactorPlan
+	readModelReactors []*reactors.ReadModelPlan
+	reducers          []*reducers.Plan
+	seeds             seeding.Definition
 }
 
 func freezeRegistry(ctx context.Context, registry *Registry, policy serialization.NamingPolicy, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
@@ -52,6 +54,7 @@ func freezeRegistry(ctx context.Context, registry *Registry, policy serializatio
 	var models []readmodels.Descriptor
 	var declarations []projections.Declaration
 	var reactorDeclarations []reactorDeclaration
+	var readModelReactorDeclarations []reactors.ReadModelDeclaration
 	var reducerDeclarations []reducers.Declaration
 	var seeders []seederDeclaration
 	var reactorMiddlewares []any
@@ -64,6 +67,7 @@ func freezeRegistry(ctx context.Context, registry *Registry, policy serializatio
 		models = slices.Clone(registry.readModels)
 		declarations = slices.Clone(registry.projections)
 		reactorDeclarations = slices.Clone(registry.reactors)
+		readModelReactorDeclarations = slices.Clone(registry.readModelReactors)
 		reducerDeclarations = slices.Clone(registry.reducers)
 		seeders = slices.Clone(registry.seeders)
 		reactorMiddlewares = slices.Clone(registry.reactorMiddlewares)
@@ -172,6 +176,9 @@ func freezeRegistry(ctx context.Context, registry *Registry, policy serializatio
 		return snapshot, err
 	}
 	if err = compileReducers(&snapshot, reducerDeclarations, services); err != nil {
+		return snapshot, err
+	}
+	if err = compileReadModelReactors(&snapshot, readModelReactorDeclarations, services, reactorSideEffects); err != nil {
 		return snapshot, err
 	}
 	snapshot.seeds, err = prepareSeeders(ctx, snapshot.events, seeders, services)

@@ -170,6 +170,11 @@ func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, w
 		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "reducers", Failure: err})
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
+	if err := s.startReadModelReactors(ctx, g, waitReady); err != nil {
+		outcome.Failure = err
+		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "read-model-reactors", Failure: err})
+		return outcome, &RegistrationError{Outcome: outcome}
+	}
 	if !s.seedDefinition().IsEmpty() {
 		seedOutcome := s.registerSeeds(ctx, g)
 		outcome.Artifacts = append(outcome.Artifacts, seedOutcome.Artifacts...)

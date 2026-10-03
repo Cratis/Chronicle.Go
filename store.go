@@ -65,6 +65,8 @@ type EventStore struct {
 	readModels         *readmodels.Service
 	reactors           storeObservers
 	reducers           storeObservers
+	readModelReactors  storeObservers
+	readModelChanges   readmodels.ReductionChanges
 }
 
 // Name returns the logical store name.
