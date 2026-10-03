@@ -15,12 +15,17 @@ import (
 
 // Descriptor is immutable event schema and serialization metadata. Its zero value is invalid.
 type Descriptor struct {
-	typ         reflect.Type
-	ref         TypeRef
-	plan        *serialization.Plan
-	tags        []Tag
-	subject     func(any) (Subject, bool)
-	sourceStore string
+	typ          reflect.Type
+	ref          TypeRef
+	plan         *serialization.Plan
+	tags         []Tag
+	subject      func(any) (Subject, bool)
+	sourceStore  string
+	unique       []Unique
+	removes      []string
+	tombstone    bool
+	compensation *Descriptor
+	schema       string
 }
 
 // Ref returns the persisted identity and generation.
@@ -30,7 +35,12 @@ func (d Descriptor) Ref() TypeRef { return d.ref }
 func (d Descriptor) GoType() reflect.Type { return d.typ }
 
 // Schema returns the JSON Schema registered with the kernel.
-func (d Descriptor) Schema() string { return d.plan.Schema() }
+func (d Descriptor) Schema() string {
+	if d.schema != "" {
+		return d.schema
+	}
+	return d.plan.Schema()
+}
 
 // Fields returns detached metadata from the shared serialization/schema plan.
 func (d Descriptor) Fields() []serialization.Field { return d.plan.Fields() }
@@ -58,12 +68,16 @@ func (t Type[T]) Ref() TypeRef { return t.descriptor.Ref() }
 // nil options and invalid final values fail declaration. Tag inputs are copied.
 type TypeOption func(*typeConfig)
 type typeConfig struct {
-	id          TypeID
-	generation  Generation
-	tags        []Tag
-	sourceStore string
-	subjectType reflect.Type
-	subject     func(any) (Subject, bool)
+	id           TypeID
+	generation   Generation
+	tags         []Tag
+	sourceStore  string
+	subjectType  reflect.Type
+	subject      func(any) (Subject, bool)
+	unique       []Unique
+	removes      []string
+	tombstone    bool
+	compensation *Descriptor
 }
 
 // WithID overrides the default simple Go type name; use a stable ID across languages.
@@ -119,7 +133,13 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 	if err := plan.ValidateRole(declarations.Event); err != nil {
 		return Type[T]{}, err
 	}
-	return Type[T]{descriptor: Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...), subject: config.subject, sourceStore: config.sourceStore}}, nil
+	descriptor := Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...), subject: config.subject, sourceStore: config.sourceStore,
+		unique: config.unique, removes: config.removes, tombstone: config.tombstone, compensation: config.compensation}
+	descriptor, err = descriptor.withCompensationSchema()
+	if err != nil {
+		return Type[T]{}, err
+	}
+	return Type[T]{descriptor: descriptor}, nil
 }
 
 // Catalog is a frozen, concurrency-safe set of event descriptors. Use NewCatalog.

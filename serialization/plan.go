@@ -53,7 +53,7 @@ type field struct {
 // Compile validates a struct shape before registration. Recursive types use schema
 // references. Embedded fields, custom marshalers, interface values and unsupported chronicle directives
 // are rejected rather than generating a schema that disagrees with serialization.
-// Recognized model directives are metadata; event registries must also ValidateRole.
+// Recognized directives are metadata; artifact registries must also ValidateRole.
 // Naming defaults to PreservePropertyNames; the last optional policy wins.
 func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
 	return compilePlan(typ, false, policies...)
@@ -255,7 +255,7 @@ func (n *node) compileFields(state *compileState, policy NamingPolicy, readModel
 		if _, exists := properties[name]; exists {
 			return fmt.Errorf("%w: %s: duplicate JSON property: %s", faults.ErrInvalidConfiguration, n.typ, name)
 		}
-		if err := validateTag(tag, declarations.Model, n.typ.String(), f.Name, name); err != nil {
+		if err := validateTag(tag, declarations.Any, n.typ.String(), f.Name, name); err != nil {
 			return err
 		}
 		value, err := compile(f.Type, state, policy, false)

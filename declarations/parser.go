@@ -54,10 +54,11 @@ const (
 	Boolean             // Boolean is true or false.
 	Null                // Null is an explicit clear, never a Go zero value.
 	Call                // Call is a named expression with ordered arguments.
+	List                // List is an ordered list of values (sequence restrictions).
 )
 
 // Value is an owned syntax tree. Text contains the name or scalar; Args is used
-// only for Call. Callers may mutate parsed trees without affecting another parse.
+// for Call and List. Callers may mutate parsed trees without affecting another parse.
 type Value struct {
 	Kind   Kind
 	Text   string
@@ -212,6 +213,30 @@ func (p *parser) value(depth int) (Value, error) {
 	if p.pos == len(p.text) {
 		return v, p.fail("expected value")
 	}
+	if p.take('[') {
+		if depth > 32 {
+			return v, p.fail("expression nesting limit exceeded")
+		}
+		v.Kind = List
+		p.space()
+		if p.take(']') {
+			return v, nil
+		}
+		for {
+			item, err := p.value(depth + 1)
+			if err != nil {
+				return v, err
+			}
+			v.Args = append(v.Args, Argument{Value: item, Offset: item.Offset})
+			p.space()
+			if p.take(']') {
+				return v, nil
+			}
+			if !p.take(',') {
+				return v, p.fail("expected comma or closing bracket")
+			}
+		}
+	}
 	if p.text[p.pos] == '"' {
 		start := p.pos
 		p.pos++
@@ -278,7 +303,8 @@ type Role uint8
 
 const (
 	Model Role = iota // Model admits implemented model-bound projection declarations.
-	Event             // Event rejects projection declarations; event field attributes are a later slice.
+	Event             // Event admits unique and subject declarations, not projection mappings.
+	Any               // Any validates shared serialization metadata before its artifact role is known.
 )
 
 // Validate checks supported directives and operation-specific arguments. It does
@@ -292,11 +318,23 @@ func Validate(role Role, directives []Directive) error {
 			}
 			return &DeclarationError{Directive: d.Name, Offset: d.Offset, Message: message, Cause: cause}
 		}
-		if role != Model {
+		if d.Name == "pii" || d.Name == "encrypted" {
+			return failure("security declarations require the compliance implementation", true)
+		}
+		if d.Name == "unique" || d.Name == "subject" {
+			if role != Event && role != Any {
+				return failure("event directive on a non-event artifact", true)
+			}
+			if !eventDeclaration(d) {
+				return failure("invalid event declaration arguments", false)
+			}
+			continue
+		}
+		if role != Model && role != Any {
 			return failure("directive is not supported on this artifact role", true)
 		}
 		switch d.Name {
-		case "key", "no-auto", "not-projected", "nested":
+		case "key", "no-auto", "not-projected", "nested", "index":
 			if len(d.Args) != 0 {
 				return failure("directive takes no arguments", false)
 			}
@@ -336,7 +374,7 @@ func Validate(role Role, directives []Directive) error {
 				if expected == "from" && (a.Value.Kind != Name || !Path(a.Value.Text)) {
 					return failure("serialized property path required", false)
 				}
-				if expected == "value" && (a.Value.Kind == Name || a.Value.Kind == Call) {
+				if expected == "value" && (a.Value.Kind == Name || a.Value.Kind == Call || a.Value.Kind == List) {
 					return failure("JSON scalar required", false)
 				}
 			}

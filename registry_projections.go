@@ -44,6 +44,7 @@ type registrySnapshot struct {
 
 func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, services reactorScopeFactory) (registrySnapshot, error) {
 	var eventTypes []events.Descriptor
+	var constraintCompositions []constraintComposition
 	var models []readmodels.Descriptor
 	var declarations []projections.Declaration
 	var reactorDeclarations []reactorDeclaration
@@ -61,9 +62,17 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 		reactorMiddlewares = slices.Clone(registry.reactorMiddlewares)
 		reactorSideEffects = slices.Clone(registry.reactorSideEffects)
 		snapshot.constraints = slices.Clone(registry.constraints)
+		constraintCompositions = slices.Clone(registry.constraintCompositions)
 		registry.mu.Unlock()
 	}
 	catalog, err := events.NewCatalog(eventTypes...)
+	if err != nil {
+		return snapshot, err
+	}
+	if err := catalog.ValidateDeclarations(); err != nil {
+		return snapshot, err
+	}
+	snapshot.constraints, err = compileDeclaredConstraints(catalog, snapshot.constraints, constraintCompositions)
 	if err != nil {
 		return snapshot, err
 	}

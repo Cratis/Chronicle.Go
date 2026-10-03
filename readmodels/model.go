@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/serialization"
@@ -238,6 +239,12 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 	}
 	plan, err := serialization.CompileReadModel(typ)
 	if err != nil {
+		return Model[T]{}, err
+	}
+	if err := plan.ValidateRole(declarations.Model); err != nil {
+		return Model[T]{}, err
+	}
+	if err := collectIndexes(plan, &config, typ); err != nil {
 		return Model[T]{}, err
 	}
 	schema, err := modelSchema(plan.Schema(), config)

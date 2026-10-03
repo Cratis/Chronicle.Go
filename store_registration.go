@@ -87,7 +87,7 @@ func (s *EventStore) registerEventTypes(ctx context.Context, g *generation) erro
 	for _, descriptor := range s.catalog.Descriptors() {
 		ref := descriptor.Ref()
 		request.Types = append(request.Types, &eventtypes.EventTypeRegistration{
-			Type: &eventtypes.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Schema: descriptor.Schema(),
+			Type: &eventtypes.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation), Tombstone: descriptor.IsTombstone()}, Schema: descriptor.Schema(), EventStore: descriptor.SourceStore(),
 			Generations: []*eventtypes.EventTypeGenerationDefinition{{Generation: uint32(ref.Generation), Schema: descriptor.Schema()}},
 		})
 	}
