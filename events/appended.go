@@ -12,8 +12,8 @@ import (
 )
 
 // Appended owns raw JSON and metadata returned by an event read. Reads do not
-// guess a Go type or generation. Use json.Unmarshal with the corresponding event
-// shape; original and generational content are preserved for explicit decoding.
+// guess a Go type or generation. Decode and Appended.Decode use a client catalog's
+// generation codecs; original and alternate representations remain available.
 type Appended struct {
 	// ID is the kernel's event identifier.
 	ID string

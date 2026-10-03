@@ -76,7 +76,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	frozen, err := freezeRegistry(config.registry, config.naming, config.reactorServices)
+	frozen, err := freezeRegistry(config.registry, config.naming, config.reactorServices, config.validateEventTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		if strings.TrimSpace(string(name)) == "" {
 			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
 		}
-		frozen, err := freezeRegistry(registry, config.naming, config.reactorServices)
+		frozen, err := freezeRegistry(registry, config.naming, config.reactorServices, config.validateEventTypes)
 		if err != nil {
 			return nil, err
 		}

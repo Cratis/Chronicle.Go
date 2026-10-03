@@ -15,17 +15,18 @@ import (
 
 // Descriptor is immutable event schema and serialization metadata. Its zero value is invalid.
 type Descriptor struct {
-	typ          reflect.Type
-	ref          TypeRef
-	plan         *serialization.Plan
-	tags         []Tag
-	subject      func(any) (Subject, bool)
-	sourceStore  string
-	unique       []Unique
-	removes      []string
-	tombstone    bool
-	compensation *Descriptor
-	schema       string
+	typ           reflect.Type
+	ref           TypeRef
+	plan          *serialization.Plan
+	tags          []Tag
+	subject       func(any) (Subject, bool)
+	sourceStore   string
+	unique        []Unique
+	removes       []string
+	tombstone     bool
+	compensation  *Descriptor
+	schema        string
+	historicalFor *Descriptor
 }
 
 // Ref returns the persisted identity and generation.
@@ -54,6 +55,10 @@ func (d Descriptor) Tags() []Tag { return append([]Tag(nil), d.tags...) }
 
 // Marshal serializes a value or non-nil pointer of this descriptor's type.
 func (d Descriptor) Marshal(value any) ([]byte, error) { return d.plan.Marshal(value) }
+
+// Unmarshal decodes an object using this generation's configured serialization
+// plan. target must be a non-nil pointer to the descriptor's Go type.
+func (d Descriptor) Unmarshal(data []byte, target any) error { return d.plan.Unmarshal(data, target) }
 
 // Type is a typed immutable descriptor returned by chronicle.RegisterEvent.
 type Type[T any] struct{ descriptor Descriptor }
@@ -86,7 +91,7 @@ func WithID(id TypeID) TypeOption { return func(c *typeConfig) { c.id = id } }
 // WithGeneration selects a positive schema generation (default one).
 // Like C#, clients default to disabling generation validation, allowing a current
 // generation above one without migrations. Enabling client generation validation
-// rejects such registrations until migration authoring is supported.
+// requires a complete adjacent migration chain starting at generation one.
 func WithGeneration(generation Generation) TypeOption {
 	return func(c *typeConfig) { c.generation = generation }
 }
@@ -144,23 +149,39 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 
 // Catalog is a frozen, concurrency-safe set of event descriptors. Use NewCatalog.
 type Catalog struct {
-	types   map[reflect.Type]Descriptor
-	ordered []Descriptor
+	types      map[reflect.Type]Descriptor
+	refs       map[TypeRef]Descriptor
+	current    map[TypeID]Descriptor
+	ordered    []Descriptor
+	migrations []MigrationDefinition
 }
 
-// NewCatalog validates and copies descriptors, rejecting duplicate Go types and
-// persisted IDs. Historical generations need a separate future registration API.
+// NewCatalog validates and copies descriptors, rejecting duplicate Go types,
+// (ID, generation) pairs and current IDs. Historical descriptors must reference
+// the current descriptor in this catalog; their generation must be lower.
 func NewCatalog(descriptors ...Descriptor) (*Catalog, error) {
-	c := &Catalog{types: make(map[reflect.Type]Descriptor), ordered: append([]Descriptor(nil), descriptors...)}
-	ids := make(map[TypeID]bool)
+	c := &Catalog{types: make(map[reflect.Type]Descriptor), refs: make(map[TypeRef]Descriptor), current: make(map[TypeID]Descriptor), ordered: append([]Descriptor(nil), descriptors...)}
 	for _, descriptor := range descriptors {
 		if descriptor.typ == nil {
 			return nil, fmt.Errorf("%w: empty event descriptor", faults.ErrInvalidConfiguration)
 		}
-		if _, exists := c.types[descriptor.typ]; exists || ids[descriptor.ref.ID] {
+		_, duplicateRef := c.refs[descriptor.ref]
+		_, duplicateCurrent := c.current[descriptor.ref.ID]
+		if _, exists := c.types[descriptor.typ]; exists || duplicateRef || (descriptor.historicalFor == nil && duplicateCurrent) {
 			return nil, fmt.Errorf("%w: duplicate event type %s", faults.ErrInvalidConfiguration, descriptor.ref.ID)
 		}
-		c.types[descriptor.typ], ids[descriptor.ref.ID] = descriptor, true
+		c.types[descriptor.typ], c.refs[descriptor.ref] = descriptor, descriptor
+		if descriptor.historicalFor == nil {
+			c.current[descriptor.ref.ID] = descriptor
+		}
+	}
+	for _, descriptor := range descriptors {
+		if target := descriptor.historicalFor; target != nil {
+			current, ok := c.current[descriptor.ref.ID]
+			if !ok || current.ref != target.ref || current.typ != target.typ || descriptor.ref.Generation >= current.ref.Generation {
+				return nil, fmt.Errorf("%w: historical generation requires its current event", faults.ErrInvalidConfiguration)
+			}
+		}
 	}
 	return c, nil
 }

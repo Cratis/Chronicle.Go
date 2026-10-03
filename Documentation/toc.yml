@@ -10,6 +10,8 @@
   items:
     - name: Event types
       href: events/event-types.md
+    - name: Event evolution
+      href: events/evolution.md
     - name: Appending events
       href: events/appending-events.md
     - name: Atomic batches

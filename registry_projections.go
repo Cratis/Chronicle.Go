@@ -42,8 +42,9 @@ type registrySnapshot struct {
 	reducers    []*reducers.Plan
 }
 
-func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, services reactorScopeFactory) (registrySnapshot, error) {
+func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
 	var eventTypes []events.Descriptor
+	var migrations []events.MigrationDeclaration
 	var constraintCompositions []constraintComposition
 	var models []readmodels.Descriptor
 	var declarations []projections.Declaration
@@ -55,6 +56,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 	if registry != nil {
 		registry.mu.Lock()
 		eventTypes = slices.Clone(registry.descriptors)
+		migrations = slices.Clone(registry.migrations)
 		models = slices.Clone(registry.readModels)
 		declarations = slices.Clone(registry.projections)
 		reactorDeclarations = slices.Clone(registry.reactors)
@@ -130,6 +132,10 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 		}
 	}
 	snapshot.events, err = events.NewCatalog(eventTypes...)
+	if err != nil {
+		return registrySnapshot{}, err
+	}
+	snapshot.events, err = snapshot.events.WithMigrations(migrations, validateGenerations)
 	if err != nil {
 		return registrySnapshot{}, err
 	}

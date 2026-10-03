@@ -115,8 +115,8 @@ func (c *clientConfig) BorrowConnection(transport clientoptions.BorrowedTranspor
 
 // WithEventTypeGenerationValidation enables kernel schema and migration-chain
 // validation. Like C#, validation defaults to disabled. When enabled, changed
-// schemas for existing generations are rejected, and generations above one require
-// migrations, whose authoring is not yet supported by this SDK.
+// schemas for existing generations are rejected by the kernel. NewClient requires
+// a complete adjacent migration chain for every current generation above one.
 func WithEventTypeGenerationValidation(enabled bool) ClientOption {
 	return func(c *clientConfig) { c.validateEventTypes = enabled }
 }

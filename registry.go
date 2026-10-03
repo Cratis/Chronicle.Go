@@ -20,6 +20,7 @@ import (
 type Registry struct {
 	mu                     sync.Mutex
 	descriptors            []events.Descriptor
+	migrations             []events.MigrationDeclaration
 	constraints            []constraints.Definition
 	constraintCompositions []constraintComposition
 	readModels             []readmodels.Descriptor

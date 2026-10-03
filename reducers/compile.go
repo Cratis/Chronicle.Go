@@ -152,6 +152,9 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 			}
 			for _, descriptor := range matching {
 				id := descriptor.Ref().ID
+				if selected, exists := p.descriptors[id]; exists && selected.Ref() != descriptor.Ref() {
+					return fail(method.Name, t.In(first), invalid("a reducer must select one generation per event ID; use separate reducers for different generations"))
+				}
 				if previous, exists := p.folds[id]; exists {
 					p.shadows = append(p.shadows, Shadow{descriptor.Ref(), previous.name, method.Name})
 					d.config.logger.Warn("reducer fold shadowed", "reducer", d.Identifier(), "event", id, "winner", previous.name, "hidden", method.Name)
@@ -186,7 +189,7 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 		return fail("", nil, invalid("no registered folds"))
 	}
 	for _, descriptor := range catalog.Descriptors() {
-		if _, ok := p.folds[descriptor.Ref().ID]; ok {
+		if selected, ok := p.descriptors[descriptor.Ref().ID]; ok && selected.Ref() == descriptor.Ref() {
 			p.ordered = append(p.ordered, descriptor.Ref())
 		}
 	}

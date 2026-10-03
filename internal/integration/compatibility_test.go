@@ -176,10 +176,11 @@ func TestKernelGenerationWithoutMigrationsMatchesCSharp(t *testing.T) {
 	if len(persisted) != 1 || persisted[0].Context.EventType.Generation != 2 {
 		t.Fatalf("generation two not persisted: %v", persisted)
 	}
-	strict := f.client(registry, chronicle.WithEventTypeGenerationValidation(true))
-	_, err = strict.EventStore(f.ctx, f.storeName)
-	var envelope *chronicle.EnvelopeError
-	if !errors.As(err, &envelope) {
+	strict, err := chronicle.NewClient(chronicle.WithRegistry(registry), chronicle.WithEventTypeGenerationValidation(true))
+	if strict != nil {
+		_ = strict.Close()
+	}
+	if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
 		t.Fatalf("missing migration chain accepted with validation enabled: %v", err)
 	}
 }
