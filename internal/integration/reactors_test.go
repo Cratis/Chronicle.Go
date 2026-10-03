@@ -37,7 +37,7 @@ func (r *KernelReactor) Translate(ctx context.Context, event ReactorOrderPlaced,
 	case <-ctx.Done():
 		return ReactorOrderAccepted{}, ctx.Err()
 	}
-	return ReactorOrderAccepted{event.Number}, nil
+	return ReactorOrderAccepted(event), nil
 }
 func TestKernelReactorOrderingReturnedEventsAndFailedPartition(t *testing.T) {
 	f := newKernelFixture(t)
