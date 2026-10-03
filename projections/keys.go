@@ -85,7 +85,25 @@ func (b *CompositeKeyBuilder[K, E]) add(path string, typ reflect.Type, part keyP
 		b.err = err
 		return
 	}
-	field, ok := serialization.FieldAt(plan.Fields(), path)
+	if err := plan.ValidateRole(declarations.Model); err != nil {
+		b.err = err
+		return
+	}
+	fields := plan.Fields()
+	for _, field := range fields {
+		directives, err := declarations.Parse(declarations.V1, field.Tag)
+		if err != nil {
+			b.err = err
+			return
+		}
+		for _, directive := range directives {
+			if directive.Name == "index" {
+				b.err = &DeclarationError{Artifact: reflect.TypeFor[K]().String(), GoField: field.GoField, Path: field.Path, Directive: directive.Name, Offset: directive.Offset, Message: "index directive on a composite key", Cause: invalid("unsupported composite key directive")}
+				return
+			}
+		}
+	}
+	field, ok := serialization.FieldAt(fields, path)
 	if !ok || validateTarget(field, typ) != nil || field.Scalar == serialization.NotScalar || field.Nullable {
 		b.err = invalid("composite part requires a non-nullable scalar key field")
 		return

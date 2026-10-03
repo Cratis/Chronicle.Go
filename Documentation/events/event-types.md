@@ -45,7 +45,7 @@ after client shutdown and describe configuration, not server readiness.
 
 The default ID is the simple Go type name, matching C#'s simple-name convention. Prefer an explicit `events.WithID` for cross-language events so a refactor cannot rename stored history. IDs are strings, not necessarily UUIDs; comma-containing IDs are rejected because kernel tail filters use comma-separated IDs.
 
-`events.WithGeneration(n)` selects a positive generation (default `1`). Duplicate Go types or current persisted IDs fail deterministically without changing the registry. Historical generation codecs and migration chains are not yet implemented; tombstone and compensation registration metadata are supported as described below. Each registration sends the current schema in both `Schema` and `Generations`, like C#.
+`events.WithGeneration(n)` selects a positive generation (default `1`). Duplicate Go types or current persisted IDs fail deterministically without changing the registry. Historical generation codecs and migration chains are not yet implemented; descriptor-only tombstone and compensation schema metadata are supported as described below. Each registration sends the current schema in both `Schema` and `Generations`, like C#.
 
 Like the C# client, kernel schema/generation validation is **disabled by default**, so a current generation above `1` can register without migrations. Enable `chronicle.WithEventTypeGenerationValidation(true)` to reject incompatible re-registration of an existing generation. With validation enabled, generations above `1` cannot register until migration authoring is supported. Disabling validation permits overwriting schemas: do not change a generation that already has history. A shared C#/Go event ID also requires compatible schemas, not just matching JSON property names; validation rejects differing generated schemas.
 
@@ -72,12 +72,12 @@ type AccountRegistered struct {
 - `unique(...)` declares property uniqueness; [constraint declarations](constraints.md#model-bound-constraints)
   explain grouping, composites, removal and explicit composition.
 - `subject` selects one top-level scalar field, including named scalars, UUIDs and
-  supported Fundamentals concepts. Pointers are allowed; nil means absent.
+  supported Fundamentals concepts. Pointers are allowed; nil or empty means absent.
   Multiple subject fields, collection/object subjects and nested subject tags fail.
 - Subject precedence is explicit append subject → explicit `WithSubjectResolver`
   → tagged field → append source ID. An explicit resolver returning `false`
   goes directly to the source fallback, not the tag. There is no `ID` field fallback.
-  Empty present subjects fail the existing append validation. Resolution occurs
+  Empty subjects from an explicit resolver or append override still fail validation. Resolution occurs
   once when staging, not again at commit. Inspect the compiled resolver through
   the client's catalog; registration handles precede this compilation.
 
@@ -85,7 +85,7 @@ type AccountRegistered struct {
 | --- | --- |
 | `events.WithUnique(events.Unique{...})` | Per-source event-type lifecycle uniqueness; distinct from property uniqueness |
 | `events.WithRemoveConstraints(names...)` | Additive release events for named model-bound constraints |
-| `events.WithTombstone()` | Sets `EventType.Tombstone` in the registration contract; does not erase data |
+| `events.WithTombstone()` | Records descriptor-only metadata (`IsTombstone()`); wire flag stays false like C#'s inert attribute; does not erase data |
 | `events.WithCompensationFor(eventHandle)` | Adds top-level `compensationFor` schema metadata with the target's persisted ID; no compensation execution |
 | `events.WithSourceStore(name)` | Declares source-store provenance, including the registration's `EventStore` field and existing observer inbox inference; never routes appends |
 | `events.WithTags(tags...)` | Static append labels, merged distinctly with dynamic tags. Repeated options are last-wins; inputs are copied |

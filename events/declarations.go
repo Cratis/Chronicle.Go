@@ -47,8 +47,8 @@ func WithRemoveConstraints(names ...string) TypeOption {
 	return func(c *typeConfig) { c.removes = append(c.removes, owned...) }
 }
 
-// WithTombstone marks the registration's EventType.Tombstone flag. It does not
-// erase data or change append routing; historical generation APIs are separate.
+// WithTombstone records descriptor-only metadata, matching C#'s inert attribute.
+// It does not set the wire Tombstone flag, erase data or change append routing.
 func WithTombstone() TypeOption { return func(c *typeConfig) { c.tombstone = true } }
 
 // WithCompensationFor adds the target's persisted ID as top-level compensationFor
@@ -59,7 +59,7 @@ func WithCompensationFor[T any](event Type[T]) TypeOption {
 	return func(c *typeConfig) { c.compensation = &descriptor }
 }
 
-// IsTombstone reports the explicit registration flag.
+// IsTombstone reports descriptor-only tombstone metadata, not the wire flag.
 func (d Descriptor) IsTombstone() bool { return d.tombstone }
 
 // CompensationFor returns the referenced identity and whether it was declared.
@@ -132,7 +132,9 @@ func (d Descriptor) compileDeclarations() (Descriptor, error) {
 func (d Descriptor) withCompensationSchema() (Descriptor, error) {
 	if d.compensation != nil {
 		var schema map[string]any
-		if err := json.Unmarshal([]byte(d.plan.Schema()), &schema); err != nil {
+		decoder := json.NewDecoder(strings.NewReader(d.plan.Schema()))
+		decoder.UseNumber()
+		if err := decoder.Decode(&schema); err != nil {
 			return Descriptor{}, err
 		}
 		schema["compensationFor"] = string(d.compensation.Ref().ID)
@@ -178,7 +180,8 @@ func taggedSubject(typ reflect.Type, field serialization.Field) func(any) (Subje
 		if concept {
 			v = v.MethodByName("ConceptValue").Call(nil)[0]
 		}
-		return Subject(fmt.Sprint(v.Interface())), true
+		subject := Subject(fmt.Sprint(v.Interface()))
+		return subject, subject != ""
 	}
 }
 

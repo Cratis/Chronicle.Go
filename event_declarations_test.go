@@ -190,7 +190,7 @@ func TestDescriptorMetadataRegistrationContract(t *testing.T) {
 	if err := json.Unmarshal([]byte(compensation.Schema), &schema); err != nil {
 		t.Fatal(err)
 	}
-	if !compensation.Type.Tombstone || compensation.EventStore != "origin" || schema["compensationFor"] != "stable-original" || compensation.Generations[0].Schema != compensation.Schema {
+	if compensation.Type.Tombstone || compensation.EventStore != "origin" || schema["compensationFor"] != "stable-original" || compensation.Generations[0].Schema != compensation.Schema {
 		t.Fatalf("metadata lost: %v", compensation)
 	}
 	if _, ok := schema["properties"].(map[string]any)["value"]; !ok {
