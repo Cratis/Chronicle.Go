@@ -74,3 +74,5 @@
   href: parity.md
 - name: Releases
   href: releases.md
+- name: Module policy
+  href: module-policy.md
