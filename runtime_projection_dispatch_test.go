@@ -7,10 +7,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 
 	contracts "github.com/cratis/chronicle.go/contracts/projections"
+	modelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -135,33 +137,91 @@ func TestRuntimeQueuedFullSetSupersededBeforeAndInsideAuthorization(t *testing.T
 	}
 }
 
+// flightWaitContext signals evaluation of the live flight wait's select, not
+// initial cancellation admission. Err remains the underlying context's Err.
+type flightWaitContext struct {
+	context.Context
+	waiting chan struct{}
+	once    sync.Once
+}
+
+func (c *flightWaitContext) Done() <-chan struct{} {
+	c.once.Do(func() { close(c.waiting) })
+	return c.Context.Done()
+}
+
 func TestRuntimeAddWaitsForDestructiveFlightAndCancellationDoesNotPublish(t *testing.T) {
-	registry, _ := projectionRegistry(t)
-	client, ctx := supervisionClient(t, runtimeKernel(), WithRegistry(registry))
-	store, err := client.EventStore(ctx, "store")
-	if err != nil {
-		t.Fatal(err)
-	}
-	entered, release := make(chan struct{}), make(chan struct{})
-	g := &generation{ctx: ctx, raw: definitionRaw{call: func(context.Context, any) error { close(entered); <-release; return nil }}}
-	g.transport = &generationTransport{generation: g}
-	done := make(chan error, 1)
-	go func() {
-		done <- store.definitionTransport(g, store.definitionRoot(), true).Invoke(ctx, "register", nil, &emptypb.Empty{})
-	}()
-	awaitSignal(t, ctx, entered)
-	canceled, cancel := context.WithCancel(ctx)
-	cancel()
-	_, declaration := runtimeModel(t)
-	result, err := store.RegisterProjection(canceled, declaration)
-	if result.Published || !errors.Is(err, context.Canceled) {
-		t.Fatal(result, err)
-	}
-	close(release)
-	if err := <-done; err != nil {
-		t.Fatal(err)
-	}
-	if result, err := store.RegisterProjection(ctx, declaration); err != nil || !result.Published {
-		t.Fatal(result, err)
+	for _, disposition := range []string{"cancel", "acknowledged", "unknown"} {
+		t.Run(disposition, func(t *testing.T) {
+			registry, _ := projectionRegistry(t)
+			kernel := runtimeKernel()
+			var registrations, modelRegistrations atomic.Int32
+			kernel.readModels.(*readModelKernel).register = func(context.Context, *modelcontracts.RegisterManyRequest) error {
+				modelRegistrations.Add(1)
+				return nil
+			}
+			kernel.projections.(*projectionKernel).register = func(context.Context, *contracts.RegisterRequest) error {
+				registrations.Add(1)
+				return nil
+			}
+			client, ctx := supervisionClient(t, kernel, WithRegistry(registry))
+			store, err := client.EventStore(ctx, "store")
+			if err != nil {
+				t.Fatal(err)
+			}
+			root := store.definitionRoot()
+			entered, release := make(chan struct{}), make(chan struct{})
+			releaseFlight := sync.OnceFunc(func() { close(release) })
+			t.Cleanup(releaseFlight)
+			g := &generation{ctx: ctx, raw: definitionRaw{call: func(context.Context, any) error {
+				close(entered)
+				<-release
+				if disposition == "unknown" {
+					return status.Error(codes.DeadlineExceeded, "unknown")
+				}
+				return nil
+			}}}
+			g.transport = &generationTransport{generation: g}
+			done := make(chan error, 1)
+			go func() {
+				done <- store.definitionTransport(g, root, true).Invoke(ctx, "register", nil, &emptypb.Empty{})
+			}()
+			awaitSignal(t, ctx, entered)
+			live, cancel := context.WithCancel(ctx)
+			defer cancel()
+			waiter := &flightWaitContext{Context: live, waiting: make(chan struct{})}
+			_, declaration := runtimeModel(t)
+			type completion struct {
+				result ProjectionRegistration
+				err    error
+			}
+			added := make(chan completion, 1)
+			go func() { result, err := store.RegisterProjection(waiter, declaration); added <- completion{result, err} }()
+			awaitSignal(t, ctx, waiter.waiting)
+			if store.definitionRoot() != root || registrations.Load() != 1 || modelRegistrations.Load() != 1 || kernel.registrations.Load() != 1 {
+				t.Fatal("live waiter published or dispatched while destructive flight was held")
+			}
+			if disposition == "cancel" {
+				cancel()
+				finished := <-added
+				if finished.result.Published || !errors.Is(finished.err, context.Canceled) || store.definitionRoot() != root {
+					t.Fatal(finished)
+				}
+				releaseFlight()
+			} else {
+				releaseFlight()
+				finished := <-added
+				if disposition == "unknown" {
+					if finished.result.Published || !errors.Is(finished.err, ErrDestructiveRegistrationUnknown) || store.definitionRoot() != root {
+						t.Fatal(finished)
+					}
+				} else if finished.err != nil || !finished.result.Published || !finished.result.Outcome.IsSuccess() {
+					t.Fatal(finished)
+				}
+			}
+			if err := <-done; (err != nil) != (disposition == "unknown") {
+				t.Fatal(err)
+			}
+		})
 	}
 }
