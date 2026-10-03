@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cratis/chronicle.go/internal/connection"
+	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
 	contextmetadata "github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
@@ -63,6 +64,9 @@ func (t *generationTransport) Invoke(ctx context.Context, method string, args, r
 		err = t.generation.ctx.Err()
 	}
 	if err != nil {
+		return &faults.BeforeDispatch{Cause: err}
+	}
+	if err = decision.ValidateDispatch(ctx); err != nil {
 		return &faults.BeforeDispatch{Cause: err}
 	}
 	err = t.generation.raw.Invoke(ctx, method, args, reply, options...)

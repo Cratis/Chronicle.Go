@@ -48,16 +48,17 @@ const (
 // It has no completion methods and must not be copied. Share this same pointer
 // with nested participants. It borrows its sequence and never owns the client.
 type UnitOfWork struct {
-	mu          sync.Mutex
-	sequence    *eventsequences.Sequence
-	correlation metadata.CorrelationID
-	origin      eventsequences.Origin
-	pending     *eventsequences.PreparedBatch
-	hasWork     bool
-	state       State
-	result      eventsequences.BatchResult
-	err         error
-	onCompleted func(*UnitOfWork)
+	mu                sync.Mutex
+	sequence          *eventsequences.Sequence
+	correlation       metadata.CorrelationID
+	origin            eventsequences.Origin
+	pending           *eventsequences.PreparedBatch
+	hasWork           bool
+	state             State
+	result            eventsequences.BatchResult
+	err               error
+	onCompleted       func(*UnitOfWork)
+	decisionConflicts map[string][]DecisionConflict
 }
 
 // Owner is the capability to complete a shared UnitOfWork exactly once. Keep it

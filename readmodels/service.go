@@ -14,6 +14,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/compliance"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
@@ -31,6 +32,7 @@ type Service struct {
 	compliance       compliance.ComplianceClient
 	passive          PassiveReader
 	reductionChanges *ReductionChanges
+	decisions        decision.Provider
 }
 
 // New constructs a service without I/O. The caller owns the channel and any
@@ -40,6 +42,7 @@ func New(store metadata.StoreName, namespace metadata.Namespace, catalog *Catalo
 		return nil, invalid("store, namespace, catalog and transport required")
 	}
 	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), materialized: contracts.NewMaterializedReadModelsClient(conn), compliance: compliance.NewComplianceClient(conn)}
+	service.decisions, _ = conn.(decision.Provider)
 	for _, option := range options {
 		if option == nil {
 			return nil, invalid("nil service option")

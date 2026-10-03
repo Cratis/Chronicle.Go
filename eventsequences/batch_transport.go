@@ -55,20 +55,25 @@ func (s *Sequence) dispatchBatch(ctx context.Context, batch preparedBatch) (Batc
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
 	}
+	response, err := sendBatch(ctx, batch, s.service)
+	return s.finishBatch(OriginFrom(ctx), batch, response, err)
+}
+
+func sendBatch(ctx context.Context, batch preparedBatch, service sequences.EventSequencesClient) (*sequences.CommandResult_AppendManyResponse, error) {
 	request := batch.request
 	ctx = metadata.WithCorrelation(ctx, wire.Correlation(request.CorrelationId))
 	var response *sequences.CommandResult_AppendManyResponse
 	var err error
 	if !batch.hasNamedTags() {
-		response, err = s.service.AppendManyForEventSources(ctx, request)
+		response, err = service.AppendManyForEventSources(ctx, request)
 	} else {
 		named := &sequences.AppendManyForEventSourcesWithNamedTagsRequest{EventStore: request.EventStore, Namespace: request.Namespace, EventSequenceId: request.EventSequenceId, CorrelationId: request.CorrelationId, Tags: request.Tags, Causation: request.Causation, CausedBy: request.CausedBy, ConcurrencyScopes: request.ConcurrencyScopes}
 		for i, event := range request.Events {
 			named.Events = append(named.Events, &sequences.EventForEventSourceIdWithNamedTags{EventSourceId: event.EventSourceId, EventSourceType: event.EventSourceType, EventStreamType: event.EventStreamType, EventStreamId: event.EventStreamId, EventType: event.EventType, Content: event.Content, Tags: event.Tags, NamedTags: batch.named[i], Occurred: event.Occurred, Subject: event.Subject, Causation: event.Causation})
 		}
-		response, err = s.service.AppendManyForEventSourcesWithNamedTags(ctx, named)
+		response, err = service.AppendManyForEventSourcesWithNamedTags(ctx, named)
 	}
-	return s.finishBatch(OriginFrom(ctx), batch, response, err)
+	return response, err
 }
 
 func (b preparedBatch) hasNamedTags() bool {
