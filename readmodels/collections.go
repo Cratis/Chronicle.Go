@@ -180,11 +180,12 @@ func (r *Reader[T]) GetAll(ctx context.Context, count *events.Count) (Collection
 	return result, nil
 }
 
-// These routes return plaintext: materialized stores release using model lineage;
-// projection replay releases the resulting models; history releases contributing
-// events before projection; local reducers fold already released sequence reads.
-// A second Compliance.Release can decrypt plaintext and corrupt it. Validate the
-// protected shape without another RPC, then normalize the root identity only.
+// Only admitted routes reach this boundary: materialized stores release using
+// persisted lineage; local reducers fold released events. Protected projection
+// replay/history is refused before I/O because replay does not preserve lineage.
+// Shape validation is not proof of decryption: strings accept ciphertext too.
+// A second Compliance.Release can corrupt legitimate plaintext. Validate the
+// final representation without another RPC, then normalize the root identity.
 func releasedDocument(ctx context.Context, d Descriptor, data json.RawMessage) (json.RawMessage, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err

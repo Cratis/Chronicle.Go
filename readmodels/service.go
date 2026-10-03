@@ -78,8 +78,9 @@ type Instance[T any] struct {
 // Get reads raw JSON by registered model identity and key. JSON null means absent;
 // an empty/malformed/non-object response fails with ErrProtocol. Raw JSON is owned
 // by the caller and retains kernel metadata except the root ID alias, which is
-// normalized to the model's serialized property name. Protected values pass a
-// fail-closed release verification before delivery, including session reads.
+// normalized to the model's serialized property name. Materialized reads are
+// server-released and validated without another decrypt. Classified projection
+// immediate/session reads fail with ErrUnsupported before RPC.
 func (s *Service) Get(ctx context.Context, model Identifier, key Key) (Instance[json.RawMessage], error) {
 	d, ok := s.catalog.LookupIdentifier(model)
 	if !ok {
@@ -87,7 +88,15 @@ func (s *Service) Get(ctx context.Context, model Identifier, key Key) (Instance[
 	}
 	return s.get(ctx, d, key, "")
 }
-func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string) (Instance[json.RawMessage], error) {
+func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string) (result Instance[json.RawMessage], err error) {
+	defer func() {
+		if err == nil {
+			err = ctx.Err()
+		}
+		if err != nil {
+			result, err = Instance[json.RawMessage]{}, readFailure(err)
+		}
+	}()
 	if err := ctx.Err(); err != nil {
 		return Instance[json.RawMessage]{}, err
 	}
@@ -117,15 +126,18 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 		}
 		return result, nil
 	}
-	result, err := s.getInstance(ctx, d, key, session)
+	if d.Sink().Type == NoSink || session != "" {
+		if err := projectionReleaseAdmission(d); err != nil {
+			return Instance[json.RawMessage]{}, err
+		}
+	}
+	result, err = s.getInstance(ctx, d, key, session)
 	if err != nil || !result.Exists {
 		return result, err
 	}
-	data, err := s.Release(ctx, d.Identifier(), result.Value)
-	if err != nil {
-		return Instance[json.RawMessage]{}, err
-	}
-	data, err = normalizeID(data, d)
+	// Pinned kernel materialized/keyed handlers own release. Never send their
+	// plaintext through Compliance.Release again (it can resemble ciphertext).
+	data, err := releasedDocument(ctx, d, result.Value)
 	if err != nil {
 		return Instance[json.RawMessage]{}, err
 	}
@@ -133,8 +145,8 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 	return result, nil
 }
 
-// getInstance reads and checks raw protocol shape only. Its caller must release
-// protected values and validate them before returning any document to a caller.
+// getInstance reads and checks raw protocol shape only. Its caller must admit
+// the release route and validate the final representation before publication.
 func (s *Service) getInstance(ctx context.Context, d Descriptor, key Key, session string) (Instance[json.RawMessage], error) {
 	response, err := s.client.GetInstanceByKey(ctx, &contracts.GetInstanceByKeyRequest{EventStore: string(s.store), Namespace: string(s.namespace), ReadModelIdentifier: string(d.Identifier()), EventSequenceId: string(d.EventSequence()), ReadModelKey: string(key), SessionId: session})
 	if err != nil {
@@ -283,5 +295,4 @@ func normalizeID(data []byte, d Descriptor) ([]byte, error) {
 	return data, nil
 }
 
-func validDocument(data []byte) bool { return len(data) > 0 && data[0] == '{' && json.Valid(data) }
-func notRegistered() error           { return fmt.Errorf("%w: read-model declaration", faults.ErrNotRegistered) }
+func notRegistered() error { return fmt.Errorf("%w: read-model declaration", faults.ErrNotRegistered) }

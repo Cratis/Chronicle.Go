@@ -39,7 +39,8 @@ type Snapshot[T any] struct {
 // GetSnapshots reads correlation-grouped projection history for a nonblank key.
 // Reducers fail with ErrUnsupported before any RPC: kernel 19.29.4 returns an
 // uninformative empty history for every non-projection. Replay fidelity admission
-// also refuses unknown/defaulted/relationship producers. Success returns a non-nil
+// also refuses classified models and unknown/defaulted/relationship/mixed-ALL
+// producers. Success returns a non-nil
 // slice. Any error or cancellation discards all results. No sessions are created.
 func (s *Service) GetSnapshots(ctx context.Context, model Identifier, key Key) ([]Snapshot[json.RawMessage], error) {
 	d, ok := s.catalog.LookupIdentifier(model)
@@ -107,7 +108,9 @@ func (s *Service) getSnapshots(ctx context.Context, d Descriptor, key Key) (resu
 				// The kernel released with this event generation's schema before
 				// projecting. Validate its plaintext shape, never decrypt it again
 				// with either the event schema or the read-model schema.
-				if err := descriptor.Unmarshal(contributions[i].Content, reflect.New(descriptor.GoType()).Interface()); err != nil {
+				if err := readCodec(func() error {
+					return descriptor.Unmarshal(contributions[i].Content, reflect.New(descriptor.GoType()).Interface())
+				}); err != nil {
 					return nil, &ReleaseError{Cause: err}
 				}
 			}

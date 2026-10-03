@@ -91,17 +91,8 @@ func TestTypedReadsUseFrozenNamingPlan(t *testing.T) {
 			})
 			t.Run("session", func(t *testing.T) {
 				session, err := reader.NewSession("person")
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer func() {
-					if err := session.Close(ctx); err != nil {
-						t.Error(err)
-					}
-				}()
-				got, err := session.Get(ctx)
-				if err != nil || !got.Exists || !reflect.DeepEqual(got.Value, want) {
-					t.Fatalf("session = %+v, %v", got, err)
+				if session != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+					t.Fatal("protected session admitted", err)
 				}
 			})
 			for _, typ := range []reflect.Type{reflect.TypeFor[plannedTypedModel](), reflect.TypeFor[*plannedTypedModel]()} {

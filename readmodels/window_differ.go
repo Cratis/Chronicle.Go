@@ -12,6 +12,7 @@ import (
 
 // Unmarshal decodes a present model document into a pointer to its registered Go
 // type, normalizing declared collections like Reader.Get. The result is owned.
+// Decoder panics return CodecPanicError without retaining the panic value.
 // Runtime adapters can use this with a catalog; ordinary callers should use Reader.
 func (d Descriptor) Unmarshal(data json.RawMessage) (any, error) {
 	if d.GoType() == nil {
@@ -25,7 +26,7 @@ func (d Descriptor) Unmarshal(data json.RawMessage) (any, error) {
 		return nil, err
 	}
 	value := reflect.New(d.GoType())
-	if err := d.definition.plan.Unmarshal(data, value.Interface()); err != nil {
+	if err := readCodec(func() error { return d.definition.plan.Unmarshal(data, value.Interface()) }); err != nil {
 		return nil, err
 	}
 	normalizeCollections(value.Elem())

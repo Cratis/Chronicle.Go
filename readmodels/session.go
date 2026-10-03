@@ -29,7 +29,8 @@ type Session[T any] struct {
 
 // NewSession creates a lazy hydration session with an internally generated UUID.
 // The first Get hydrates; each Get uses that same session. Reducers and models
-// without a declared projection fail with ErrUnsupported. Call Close even after
+// without a declared projection fail with ErrUnsupported, as do classified models
+// whose replay release is not reliable on the pinned kernel. Call Close even after
 // failed Get, because the kernel may already have allocated hydration state.
 func (r *Reader[T]) NewSession(key Key) (*Session[T], error) {
 	d, err := r.descriptor()
@@ -39,6 +40,9 @@ func (r *Reader[T]) NewSession(key Key) (*Session[T], error) {
 	kind, producer := d.Observer()
 	if kind != Projection || strings.TrimSpace(producer) == "" {
 		return nil, fmt.Errorf("%w: sessions require a declared projection", faults.ErrUnsupported)
+	}
+	if err := projectionReleaseAdmission(d); err != nil {
+		return nil, err
 	}
 	if strings.TrimSpace(string(key)) == "" || key == "*" {
 		return nil, invalid("session requires a concrete nonblank key")

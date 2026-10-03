@@ -20,7 +20,9 @@ func (d Descriptor) KeyProperty() string { return idProperty(d) }
 // through the kernel projection. This does not wait for or prove sink/observer
 // catch-up. Counts above math.MaxInt32 are invalid; zero returns an empty non-nil
 // result without an RPC.
-// Reducers are explicitly unsupported here. Returned JSON is owned and ID aliases
+// Reducers and classified models are explicitly unsupported here. Replay cannot
+// reliably release protected model values on the pinned kernel. Returned JSON is
+// owned and ID aliases
 // are normalized by the same path as Get. No local projection engine is used.
 func (s *Service) ReplayProjection(ctx context.Context, model Identifier, eventCount uint64) ([]json.RawMessage, error) {
 	d, ok := s.catalog.LookupIdentifier(model)
@@ -39,6 +41,9 @@ func (s *Service) ReplayProjection(ctx context.Context, model Identifier, eventC
 	}
 	if eventCount == 0 {
 		return []json.RawMessage{}, nil
+	}
+	if err := projectionReleaseAdmission(d); err != nil {
+		return nil, err
 	}
 	// Existing adapters may own producer admission themselves. Reject a known
 	// unsupported shape, but preserve legacy admission for unknown producers.

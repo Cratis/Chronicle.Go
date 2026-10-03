@@ -5,6 +5,7 @@ package readmodels
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/cratis/chronicle.go/internal/faults"
 )
@@ -27,6 +28,10 @@ func decodeDecision[T any](raw Instance[json.RawMessage], descriptor Descriptor)
 		if recover() != nil {
 			instance = Instance[T]{}
 			err = &DecisionCodecPanicError{}
+		}
+		var codecPanic *CodecPanicError
+		if errors.As(err, &codecPanic) {
+			instance, err = Instance[T]{}, &DecisionCodecPanicError{}
 		}
 	}()
 	if raw.Exists {
