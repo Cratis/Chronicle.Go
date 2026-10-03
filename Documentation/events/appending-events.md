@@ -5,6 +5,40 @@ description: Inspect append outcomes and select explicit, optimistic or protecte
 
 Use `store.EventLog().Append(ctx, sourceID, event, options...)` to persist one registered fact. A sequence position is unsigned and sequence-wide, not a source revision; the first position is zero. `EventSequence(id)` returns the cached handle for that store/namespace/sequence and a construction error for a blank ID. The event log is the same sequence implementation.
 
+## Work with sequence positions locally
+
+Use `events.SequenceNumber`'s pure `Next()`, `Add(delta uint64)` and
+`Subtract(delta uint64)` methods for local arithmetic. Each returns
+`(events.SequenceNumber, error)` without making an RPC. `events.First` is zero;
+`events.Unavailable`, `events.Max` and `events.BeforeFirst` are reserved,
+non-actual values. Despite its name, `Max` is not the largest actual position:
+that is `BeforeFirst - 1`.
+
+`IsActualValue()`, `IsUnavailable()` and `IsBeforeFirst()` identify these values.
+All three sentinels remain unchanged with a nil error when used as the receiver,
+even with the largest uint64 amount. In particular, `BeforeFirst.Next()` returns
+`BeforeFirst`, not `First`.
+
+For actual positions, overflow, underflow or crossing into a reserved value
+returns `Unavailable` and `events.ErrSequenceNumberRange`; inspect it with
+`errors.Is` before using the result. Zero remains a valid successful position,
+not an arithmetic failure default. Unlike C#'s unchecked operators and signed
+`int` overloads, Go's helpers accept only unsigned amounts and reject range
+errors. Reject negative signed input **before** converting it to uint64; C#'s
+negative-int unchecked wrapping is not replicated. Raw Go arithmetic does not
+provide these guarantees.
+
+[ExampleSequenceNumber_Next](../../events/example_sequence_number_test.go)
+shows the complete local workflow and error inspection without a server.
+`sequence.Next(ctx)` is different: it queries the server tail and returns a
+candidate (zero when empty), which a concurrent writer may immediately consume.
+
+`BeforeFirst` is local-only: do not send its numeric value as a concurrency
+expectation. Use `eventsequences.NoMatchingEvent()` instead; protected absence
+uses `Unavailable` plus the dedicated wire flag. These numeric helper and JSON
+contracts do not imply full uint64 BSON persistence support; see
+[parity and limitations](../parity.md).
+
 ## Inspect both errors and results
 
 `Append` returns `(eventsequences.AppendResult, error)`. Always inspect the operation error before calling `result.Err()`:

@@ -25,7 +25,9 @@ type StreamID string
 // SequenceID identifies a sequence within a store namespace.
 type SequenceID string
 
-// SequenceNumber is a sequence-wide unsigned position, beginning at zero.
+// SequenceNumber is a sequence-wide unsigned position, beginning at First (zero).
+// Unavailable, Max and BeforeFirst are reserved, non-actual values. Use its checked
+// methods rather than raw arithmetic to preserve sentinels and reject range errors.
 type SequenceNumber uint64
 
 // Subject is the compliance subject, not the causing actor.
@@ -43,8 +45,15 @@ const (
 	AllStreamTypes StreamType = "All"
 	// DefaultStreamID is the default stream; it is not the event source ID.
 	DefaultStreamID StreamID = "Default"
+	// First is the first actual sequence position and the zero value.
+	First SequenceNumber = 0
 	// Unavailable is the wire sentinel for an absent tail or unchecked expectation.
 	Unavailable SequenceNumber = ^SequenceNumber(0)
+	// Max is a reserved system value, not the largest actual position.
+	Max SequenceNumber = Unavailable - 1
+	// BeforeFirst represents a local expectation of no matching event. It is not
+	// a wire position: use eventsequences.NoMatchingEvent for protected absence.
+	BeforeFirst SequenceNumber = Unavailable - 2
 )
 
 // TypeRef identifies one exact persisted event generation.
