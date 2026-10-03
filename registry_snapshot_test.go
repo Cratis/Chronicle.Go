@@ -78,7 +78,7 @@ func TestCompileRegistryPreservesCapturedDeclarationsAndModelIdentity(t *testing
 // Both the earliest composition callback and the later seeder callback must see
 // all selected stores already captured. New declarations belong to the next client.
 func TestClientCapturesAllRegistriesBeforeApplicationPreparation(t *testing.T) {
-	for _, phase := range []string{"constraint composition", "seeder", "event classifier", "model classifier", "service catalog", "scope open", "constructor", "definition", "cleanup"} {
+	for _, phase := range []string{"constraint composition", "seeder", "service catalog", "scope open", "constructor", "definition", "cleanup"} {
 		t.Run(phase, func(t *testing.T) {
 			defaults := NewRegistry()
 			stores := []*Registry{catalogRegistry(t), catalogRegistry(t)}
@@ -139,22 +139,6 @@ func TestClientCapturesAllRegistriesBeforeApplicationPreparation(t *testing.T) {
 			}
 			var options []ClientOption
 			switch phase {
-			case "event classifier", "model classifier":
-				armed := false
-				classifier := compliance.Using(func(compliance.Target) (compliance.Classification, error) {
-					if armed {
-						mutateOnce()
-					}
-					return compliance.Classification{}, mutationErr
-				})
-				if phase == "event classifier" {
-					if _, err := RegisterEvent[catalogEvent](defaults, events.WithProtection(classifier)); err != nil {
-						t.Fatal(err)
-					}
-				} else if _, err := RegisterReadModel[catalogModel](defaults, readmodels.WithProtection(classifier)); err != nil {
-					t.Fatal(err)
-				}
-				armed = true
 			case "constraint composition":
 				declareEvent[DeclaredEmail](t, defaults)
 				if err := defaults.ConfigureDeclaredConstraint("email", func(*constraints.Builder) { mutationErr = mutate() }); err != nil {
@@ -236,6 +220,46 @@ func TestClientCapturesAllRegistriesBeforeApplicationPreparation(t *testing.T) {
 			}
 			if capturedSeeds != 2 || lateSeeds != 0 {
 				t.Fatal("rejected future snapshot executed preparation")
+			}
+		})
+	}
+}
+
+func TestClientUsesClassificationsAlreadyFrozenAtDeclaration(t *testing.T) {
+	for _, family := range []string{"event", "model"} {
+		t.Run(family, func(t *testing.T) {
+			registry := NewRegistry()
+			armed, calls := false, 0
+			classifier := compliance.Using(func(compliance.Target) (compliance.Classification, error) {
+				calls++
+				if armed {
+					t.Error("client preparation reevaluated a declaration classifier")
+				}
+				return compliance.Classification{}, nil
+			})
+			if family == "event" {
+				if _, err := RegisterEvent[catalogEvent](registry, events.WithProtection(classifier)); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := RegisterReadModel[catalogModel](registry, readmodels.WithProtection(classifier)); err != nil {
+				t.Fatal(err)
+			}
+			registered := calls
+			if registered == 0 {
+				t.Fatal("classification witness did not run")
+			}
+			armed = true
+			client, err := NewClient(WithRegistry(registry), WithRegistryForStore("shared", registry), WithSkipKeepAlive(), WithNamingPolicy(serialization.CamelCase))
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := client.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			if _, err := client.Artifacts("shared"); err != nil || calls != registered {
+				t.Fatal("frozen classifiers changed during capture/naming/store binding", err)
 			}
 		})
 	}
