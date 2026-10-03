@@ -112,6 +112,10 @@ Collections and snapshots are partial kernel replay capabilities:
   empty initial state and source-ID root keys. Nonempty defaults, custom keys,
   joins, joined removal, children and nested projections are refused. The SDK
   neither evaluates a local projection nor overlays defaults onto replay results.
+- Mixed ALL subscriptions with explicit event mappings are refused before RPC:
+  kernel 19.29.4 filters replay to the explicit IDs, omitting other events handled
+  live. Pure ALL with an empty event-type list is supported for the same simple
+  source-ID shape. See [Chronicle#4562](https://github.com/Cratis/Chronicle/issues/4562).
 - Catalog-only remote projections remain readable from their materialized sink,
   but replay/history fails without producer fidelity evidence. Low-level adapter
   constructors can supply `WithProjectionReplayValidator`; the adapter owns that
@@ -119,23 +123,50 @@ Collections and snapshots are partial kernel replay capabilities:
 
 ## Protection, failure and lifetime
 
-The pinned kernel owns release for materialized collections and projection
-collection replay. Snapshot history releases contributing events **before**
-projection. Local reducers fold already released sequence history into plaintext.
-These routes validate documents/protected model shapes and decode them without a
-second compliance RPC. Store services also validate known protected contribution
-generations through their event codecs; low-level adapters supply
-`WithSnapshotEventCatalog` for that check. Validation checks the declared shape,
-not a heuristic that guesses ciphertext from string contents. Calling `Release` again on plaintext is not safe for every
-provider. Use `Service.Release` for unreleased documents fetched directly from a
-sink; it retains schema/subject-lineage grouping and fail-closed behavior.
+Release ownership is route-specific in kernel **19.29.4**, not a general promise
+that every returned string is plaintext:
+
+| Route | Protected-model policy |
+| --- | --- |
+| Materialized collection or keyed Get | Kernel releases using persisted subject lineage; SDK validates without another release RPC |
+| Local reducer fold | Fold already released event history, then validate the result |
+| Bounded/passive projection collection or legacy `ReplayProjection` | `ErrUnsupported` before RPC |
+| Projection snapshot history | `ErrUnsupported` before RPC when the model is classified |
+| Immediate/passive projection Get or hydration session | `ErrUnsupported` before RPC when the model is classified |
+| Explicit `Service.Release` | Accepts **unreleased** sink documents; releases by schema/subject-lineage groups |
+
+The refusal covers PII and subject, namespace and global encryption, including
+nested/reference schemas and provider classifications frozen during registration.
+Zero-count reads still return empty without I/O. Materialized reads remain
+available; renaming `Id` to `id` is not a safe replay workaround.
+
+Collection replay cannot infer a subject from default `Id`, and even lowercase
+`id` cannot recover per-event lineage. Immediate/session replay substitutes the
+source key for the event subject. A protected string can contain ciphertext and
+still pass shape validation. These defects are tracked in
+[Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561); the SDK does not
+repair them with a ciphertext heuristic or an unconditional second decryption.
+
+Snapshot contributions have a separate release owner: the kernel releases each
+event with its generation's schema and event subject **before** projecting.
+Unclassified model history can therefore return protected event contributions.
+Store services validate known protected contribution generations through their
+event codecs; low-level adapters supply `WithSnapshotEventCatalog` for that check.
+Classified-model history remains conservatively unsupported rather than claiming
+a general model-release guarantee. Ordinary unknown event fields remain raw.
+Never call `Release` on server-released results: legitimate plaintext can resemble
+a cipher block and a second release can corrupt it.
 
 All authorization/validation/exception envelopes are checked. A late RPC, schema,
 codec, reducer, cleanup or cancellation error discards the complete result,
 including progress and contribution metadata. Read-error messages omit payloads;
 underlying causes remain inspectable with `errors.Is`/`errors.As` and can themselves
-contain sensitive diagnostics. Application codecs execute outside locks and
-counted transport leases, so they can close their client without self-deadlock.
+contain sensitive diagnostics. Duplicate JSON property names are rejected
+recursively, including in unknown fields and arrays, before validation or raw/typed
+publication. Ordinary unknown properties are preserved. Application decoder panics
+become payload-free `CodecPanicError` failures without retaining the panic value;
+ordinary decoder causes remain inspectable. Codecs run outside counted transport
+leases, so they can close their client without self-deadlock.
 
 These reads allocate no hydration sessions. Counts and snapshot metadata prove
 neither observer readiness nor catch-up, durable replay completion, authorization
