@@ -13,9 +13,12 @@ import (
 )
 
 // ProtectionRoots returns protected root properties and whether each requires a
-// subject. It follows local references and collection/composition schemas without
-// looping. Unknown metadata types still count as protection. Malformed metadata,
-// unresolved references and ambiguous JSON fail with a payload-free error.
+// subject. It follows local references and collection/composition/dependency
+// schemas without looping. Boolean subschemas are unclassified; instance-valued
+// default, enum, const and examples are not inspected as schemas. Unknown metadata
+// types still count as protection. Malformed metadata, unresolved references,
+// ambiguous JSON and protection-bearing unknown extensions fail with a payload-free
+// error. Definitions are validated; protection applies through references.
 func ProtectionRoots(schema string) (map[string]bool, error) {
 	if jsonstructure.Validate([]byte(schema)) != nil {
 		return nil, faults.ErrInvalidConfiguration
@@ -65,6 +68,9 @@ func (i *protectionInspector) walk(value any, active map[string]bool, depth int)
 	if depth > jsonstructure.MaxDepth || i.visits > 100_000 {
 		return false, false, faults.ErrInvalidConfiguration
 	}
+	if _, boolean := value.(bool); boolean {
+		return false, false, nil
+	}
 	node, ok := value.(map[string]any)
 	if !ok {
 		return false, false, faults.ErrInvalidConfiguration
@@ -109,7 +115,45 @@ func (i *protectionInspector) walk(value any, active map[string]bool, depth int)
 			}
 		}
 	}
-	for _, keyword := range []string{"items", "additionalProperties", "additionalItems", "contains", "not", "if", "then", "else"} {
+	// Definitions store schemas, but do not apply them to the current instance.
+	// Validate even unused definitions; only a reference propagates protection.
+	if value, exists := node["definitions"]; exists {
+		definitions, ok := value.(map[string]any)
+		if !ok {
+			return false, false, faults.ErrInvalidConfiguration
+		}
+		for _, definition := range definitions {
+			if _, _, err := i.walk(definition, active, depth+1); err != nil {
+				return false, false, err
+			}
+		}
+	}
+	if value, exists := node["dependencies"]; exists {
+		dependencies, ok := value.(map[string]any)
+		if !ok {
+			return false, false, faults.ErrInvalidConfiguration
+		}
+		for name, dependency := range dependencies {
+			if strings.TrimSpace(name) == "" {
+				return false, false, faults.ErrInvalidConfiguration
+			}
+			if names, propertyDependency := dependency.([]any); propertyDependency {
+				seen := make(map[string]bool, len(names))
+				for _, value := range names {
+					name, ok := value.(string)
+					if !ok || seen[name] {
+						return false, false, faults.ErrInvalidConfiguration
+					}
+					seen[name] = true
+				}
+				continue
+			}
+			if err := visit(dependency); err != nil {
+				return false, false, err
+			}
+		}
+	}
+	for _, keyword := range []string{"items", "additionalProperties", "additionalItems", "propertyNames", "contains", "not", "if", "then", "else"} {
 		if child, exists := node[keyword]; exists {
 			if _, boolean := child.(bool); boolean {
 				continue
@@ -132,7 +176,51 @@ func (i *protectionInspector) walk(value any, active map[string]bool, depth int)
 			}
 		}
 	}
+	// Unknown extensions are not schema edges we can interpret. Refuse plausible
+	// protection in them rather than silently declaring the document plain.
+	// Instance-valued keywords are deliberately excluded: a default/enum value
+	// may legitimately have fields named security, compliance or $ref.
+	for keyword, value := range node {
+		switch keyword {
+		case "$ref", "properties", "patternProperties", "definitions", "dependencies",
+			"items", "additionalProperties", "additionalItems", "propertyNames", "contains",
+			"not", "if", "then", "else", "allOf", "anyOf", "oneOf", "security", "compliance",
+			"default", "enum", "const", "examples":
+			continue
+		}
+		if err := i.checkUnknown(value, depth+1); err != nil {
+			return false, false, err
+		}
+	}
 	return protected, subject, nil
+}
+
+// checkUnknown does not classify instance data as a schema. It rejects ambiguous
+// extension containers containing metadata or references, with the same budget
+// as the recognized schema walk and without exposing their contents.
+func (i *protectionInspector) checkUnknown(value any, depth int) error {
+	i.visits++
+	if depth > jsonstructure.MaxDepth || i.visits > 100_000 {
+		return faults.ErrInvalidConfiguration
+	}
+	switch value := value.(type) {
+	case map[string]any:
+		for name, child := range value {
+			if name == "security" || name == "compliance" || name == "$ref" {
+				return faults.ErrInvalidConfiguration
+			}
+			if err := i.checkUnknown(child, depth+1); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for _, child := range value {
+			if err := i.checkUnknown(child, depth+1); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func schemaClassification(node map[string]any) (protected, subject bool, err error) {
@@ -185,8 +273,10 @@ func (i protectionInspector) reference(ref string) (any, error) {
 			return nil, faults.ErrInvalidConfiguration
 		}
 	}
-	if _, ok := value.(map[string]any); !ok {
+	switch value.(type) {
+	case map[string]any, bool:
+		return value, nil
+	default:
 		return nil, faults.ErrInvalidConfiguration
 	}
-	return value, nil
 }
