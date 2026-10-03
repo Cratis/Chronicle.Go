@@ -67,6 +67,10 @@ func Global[M any](options ...Option) (Declaration, error) {
 // rather than a separately registered projection/read model.
 func (d Declaration) IsGlobal() bool { return d.data != nil && d.data.globalFor != nil }
 
+// IsVariant reports whether the declaration belongs to a VariantOf group, even
+// when it is the only declared member. The zero declaration is not a variant.
+func (d Declaration) IsVariant() bool { return d.data != nil && d.data.variant != nil }
+
 // GlobalHandlerPropertyNotOnVariant identifies a shared mapping whose serialized
 // target is absent on a variant. It is wrapped in a DeclarationError.
 type GlobalHandlerPropertyNotOnVariant struct {
