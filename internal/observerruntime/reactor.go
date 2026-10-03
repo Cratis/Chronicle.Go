@@ -20,6 +20,7 @@ import (
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/reactors"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protowire"
 )
 
 // Reactor owns a single duplex stream. Run has one receiver and one sender with
@@ -43,6 +44,12 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 		ReactorId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()),
 		IsReplayable: plan.IsReplayable(), Tags: plan.Tags(),
 		Filters: &contracts.ObserverFilters{FilterTags: plan.FilterTags(), EventSourceType: string(plan.EventSourceType()), EventStreamType: string(plan.EventStreamType())},
+	}
+	// protobuf-net initializes omitted field 4 to true. Preserve reactor-wide
+	// OnceOnly by emitting an explicit false on this fresh registration only;
+	// generated proto3 bool encoding would otherwise omit it.
+	if !definition.IsReplayable {
+		definition.ProtoReflect().SetUnknown(protowire.AppendVarint(protowire.AppendTag(nil, 4, protowire.VarintType), 0))
 	}
 	for _, ref := range plan.EventTypes() {
 		definition.EventTypes = append(definition.EventTypes, &contracts.EventTypeWithKeyExpression{EventType: &contracts.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Key: "$eventSourceId"})
