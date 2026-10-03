@@ -49,9 +49,9 @@ func (h *ReductionChanges) BindGeneration(ctx context.Context) {
 	h.generation = ctx
 }
 
-// Publish reports a successful local fold. Nil means removed. Documents are
-// snapshotted; the source never waits for slow watchers. Each overloaded watcher
-// terminates independently and no failure is attributed to the durable reducer.
+// Publish reports a successful local fold in its final plaintext representation,
+// not an encrypted sink document. Nil means removed. Documents are snapshotted;
+// the source never waits for slow watchers. Each overloaded watcher terminates independently and no failure is attributed to the durable reducer.
 // generation must be the exact context passed to BindGeneration; late folds
 // from retired generations are ignored. Notifications do not prove that the
 // kernel persisted the returned fold yet.
@@ -164,11 +164,10 @@ func watchReductions[T any](ctx context.Context, s *Service, d Descriptor, c wat
 				change.Type = Removed
 				return change, len(message.key), false, nil
 			}
-			released, err := s.Release(ctx, d.Identifier(), message.value)
-			if err != nil {
-				return Change[T]{}, 0, false, err
-			}
-			data, err := normalizeID(released, d)
+			// The observer runtime publishes the successfully serialized fold
+			// before the kernel persists it. Watch has already refused classified
+			// models: this payload carries neither lineage nor an erasure fence.
+			data, err := releasedDocument(ctx, d, message.value)
 			if err == nil {
 				change.Value, err = decode(data)
 			}

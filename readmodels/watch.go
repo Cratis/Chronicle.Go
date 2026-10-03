@@ -51,10 +51,12 @@ type Change[T any] struct {
 // barrier is NOT a current model snapshot. Changes are ordered as received; an
 // interruption is terminal, never resumed. The context owns the full lifetime.
 // Watches cannot join hydration sessions: the wire has no session selector.
-// Protected values pass through fail-closed release before delivery, even when
-// already released by the kernel (19.29.4 PII release is idempotent). For reducers, Watch attaches to this client's local fold
-// notifications instead (local readiness, no server Subscribed or sink-write
-// guarantee). Local changes are Modified/Removed; reactors infer first-seen Added.
+// Classified models fail with ErrUnsupported before opening a stream: the pinned
+// kernel cannot reliably release projection changes, and local reducer changes
+// have no delivery-time erasure fence. For unclassified reducers, Watch attaches
+// to this client's plaintext fold notifications (local readiness, no server
+// Subscribed or sink-write guarantee). Local changes are Modified/Removed;
+// reactors infer first-seen Added.
 func (s *Service) Watch(ctx context.Context, model Identifier, options ...WatchOption) (*Subscription[Change[json.RawMessage]], error) {
 	d, ok := s.catalog.LookupIdentifier(model)
 	if !ok {
@@ -77,6 +79,12 @@ func watch[T any](ctx context.Context, s *Service, d Descriptor, decode func(jso
 	c, err := watchOptions(options)
 	if err != nil {
 		return nil, err
+	}
+	// Watch replies cannot establish reliable protected-value provenance. Do not
+	// try another decrypt: legitimate plaintext can resemble ciphertext. This
+	// also refuses local folds before attaching either bounded delivery queue.
+	if len(d.definition.protected) != 0 {
+		return nil, fmt.Errorf("%w: classified watch release ownership unavailable", faults.ErrUnsupported)
 	}
 	kind, id := d.Observer()
 	if kind == Reducer && id != "" {
@@ -137,10 +145,7 @@ func watch[T any](ctx context.Context, s *Service, d Descriptor, decode func(jso
 				if !validDocument(data) {
 					return Change[T]{}, 0, false, protocol("invalid changeset document")
 				}
-				data, err = s.Release(ctx, d.Identifier(), data)
-				if err == nil {
-					data, err = normalizeID(data, d)
-				}
+				data, err = releasedDocument(ctx, d, data)
 				if err == nil {
 					change.Value, err = decode(data)
 				}
