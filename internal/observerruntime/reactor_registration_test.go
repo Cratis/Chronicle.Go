@@ -21,19 +21,19 @@ type RegisteredEvent struct{ Value string }
 
 type registrationConnection struct {
 	grpc.ClientConnInterface
-	stream *registrationStream
+	stream *operationsRegistrationStream
 }
 
 func (c registrationConnection) NewStream(context.Context, *grpc.StreamDesc, string, ...grpc.CallOption) (grpc.ClientStream, error) {
 	return c.stream, nil
 }
 
-type registrationStream struct {
+type operationsRegistrationStream struct {
 	grpc.ClientStream
 	definition []byte
 }
 
-func (s *registrationStream) SendMsg(value any) error {
+func (s *operationsRegistrationStream) SendMsg(value any) error {
 	var err error
 	s.definition, err = proto.Marshal(value.(*contracts.ReactorMessage).Content.Value0.Reactor)
 	return err
@@ -66,7 +66,7 @@ func TestReactorOnceOnlyEmitsExplicitFalseForCSharpDefault(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			stream := &registrationStream{}
+			stream := &operationsRegistrationStream{}
 			if _, err := observerruntime.Open(t.Context(), registrationConnection{stream: stream}, "connection", "store", "tenant", plan, nil); err != nil {
 				t.Fatal(err)
 			}
