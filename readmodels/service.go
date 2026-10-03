@@ -17,6 +17,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/jsonstructure"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
@@ -223,44 +224,14 @@ func decode[T any](raw Instance[json.RawMessage], d Descriptor) (Instance[T], er
 	result.Value = *value.(*T)
 	return result, nil
 }
-func normalizeCollections(value reflect.Value) {
-	switch value.Kind() {
-	case reflect.Struct:
-		for i := 0; i < value.NumField(); i++ {
-			f := value.Type().Field(i)
-			if f.IsExported() && strings.Split(f.Tag.Get("json"), ",")[0] != "-" {
-				normalizeCollections(value.Field(i))
-			}
-		}
-	case reflect.Pointer:
-		if !value.IsNil() {
-			normalizeCollections(value.Elem())
-		}
-	case reflect.Slice:
-		if value.IsNil() {
-			value.Set(reflect.MakeSlice(value.Type(), 0, 0))
-		}
-		for i := 0; i < value.Len(); i++ {
-			normalizeCollections(value.Index(i))
-		}
-	case reflect.Array:
-		for i := 0; i < value.Len(); i++ {
-			normalizeCollections(value.Index(i))
-		}
-	case reflect.Map:
-		iterator := value.MapRange()
-		for iterator.Next() {
-			entry := reflect.New(value.Type().Elem()).Elem()
-			entry.Set(iterator.Value())
-			normalizeCollections(entry)
-			value.SetMapIndex(iterator.Key(), entry)
-		}
-	}
-}
 
 // normalizeID reconciles the MongoDB key alias without changing nested fields or
 // overriding a document's declared ID. Leave unchanged documents byte-for-byte.
 func normalizeID(data []byte, d Descriptor) ([]byte, error) {
+	// ID alias rewriting must not discard evidence before plan validation.
+	if err := jsonstructure.Validate(data); err != nil {
+		return nil, err
+	}
 	name := idProperty(d)
 	if name == "" {
 		return data, nil

@@ -28,6 +28,8 @@
       href: events/unit-of-work.md
 - name: Serialization
   href: serialization.md
+- name: Derived codecs
+  href: derived-codecs.md
 - name: Compliance and confidentiality
   href: compliance.md
 - name: Read models

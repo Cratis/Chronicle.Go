@@ -29,7 +29,6 @@ func (d Descriptor) Unmarshal(data json.RawMessage) (any, error) {
 	if err := readCodec(func() error { return d.definition.plan.Unmarshal(data, value.Interface()) }); err != nil {
 		return nil, err
 	}
-	normalizeCollections(value.Elem())
 	return value.Interface(), nil
 }
 

@@ -25,18 +25,23 @@ import (
 func (p *Plan) ProtectedSchema(options ...compliance.Declaration) (string, error) {
 	if len(options) == 0 {
 		classified := false
-		for _, f := range p.Fields() {
-			directives, err := declarations.Parse(declarations.V1, f.Tag)
-			if err != nil {
-				return "", err
-			}
-			for _, directive := range directives {
-				if directive.Name == "pii" || directive.Name == "encrypted" || directive.Name == "compliance-details" {
-					classified = true
+		if err := p.visitAll(func(n *node) error {
+			for _, f := range n.fields {
+				directives, err := declarations.Parse(declarations.V1, f.tag)
+				if err != nil {
+					return err
+				}
+				for _, directive := range directives {
+					if directive.Name == "pii" || directive.Name == "encrypted" || directive.Name == "compliance-details" {
+						classified = true
+					}
 				}
 			}
+			return nil
+		}); err != nil {
+			return "", err
 		}
-		if !classified {
+		if !classified && len(p.families) == 0 {
 			return p.Schema(), nil
 		}
 	}
@@ -66,6 +71,16 @@ func (p *Plan) ProtectedSchema(options ...compliance.Declaration) (string, error
 			return "", err
 		}
 	}
+	// Unused families have no document-property address. Audit their type, tag
+	// and provider classifications without applying unrelated root path overrides.
+	paths := c.paths
+	c.paths = nil
+	for _, family := range p.families {
+		if _, err := c.walk(family, compliance.Classification{}, compliance.Classification{}, ""); err != nil {
+			return "", err
+		}
+	}
+	c.paths = paths
 	schema, err := c.walk(p.root, compliance.Classification{}, compliance.Classification{}, "")
 	if err != nil {
 		var declaration *declarations.DeclarationError
@@ -74,11 +89,15 @@ func (p *Plan) ProtectedSchema(options ...compliance.Declaration) (string, error
 		}
 		return "", err
 	}
+	if c.classified && hasFamily(p.root, map[*node]bool{}) {
+		return "", protectionError("active protection cannot traverse an open derived family")
+	}
 	for typ := range c.types {
 		if !c.usedTypes[typ] {
 			return "", protectionError("classified type is not reachable from the declaration")
 		}
 	}
+	c.definitions = reachableDefinitions(schema, c.definitions)
 	if len(c.definitions) > 0 {
 		schema = maps.Clone(schema)
 		schema["definitions"] = c.definitions
@@ -105,6 +124,7 @@ type protectionCompiler struct {
 	providers   []compliance.Provider
 	active      map[protectionKey]map[string]any
 	definitions map[string]any
+	classified  bool
 }
 
 func (c *protectionCompiler) typeMetadata(typ reflect.Type) (compliance.Classification, error) {
@@ -112,7 +132,7 @@ func (c *protectionCompiler) typeMetadata(typ reflect.Type) (compliance.Classifi
 	c.usedTypes[typ] = true
 	result := c.types[typ]
 	for _, provider := range c.providers {
-		provided, err := provider(compliance.Target{Type: typ})
+		provided, err := invoke(func() (compliance.Classification, error) { return provider(compliance.Target{Type: typ}) })
 		if err != nil {
 			return result, providerFailure(err)
 		}
@@ -140,6 +160,9 @@ func (c *protectionCompiler) walk(n *node, inherited, member compliance.Classifi
 	if err != nil {
 		return nil, err
 	}
+	if metadata != (compliance.Classification{}) {
+		c.classified = true
+	}
 	if (metadata.PII || metadata.Encrypted) && containsSourceIdentity(n, map[*node]bool{}) {
 		return nil, protectionError("event-source identity cannot be protected")
 	}
@@ -162,6 +185,24 @@ func (c *protectionCompiler) walk(n *node, inherited, member compliance.Classifi
 	delete(result, "definitions")
 	c.active[key] = result
 	defer delete(c.active, key)
+	if n.family {
+		if metadata != (compliance.Classification{}) {
+			return nil, protectionError("classified derived families are not supported")
+		}
+		for _, derivative := range n.derivatives {
+			classifiedBefore := c.classified
+			c.classified = false
+			_, err := c.walk(derivative.node, compliance.Classification{}, compliance.Classification{}, path)
+			if err != nil {
+				return nil, err
+			}
+			if c.classified {
+				return nil, protectionError("classified derived variants are not supported")
+			}
+			c.classified = classifiedBefore
+		}
+		return result, nil
+	}
 	if n.typ.Kind() == reflect.Pointer {
 		item, err := c.walk(n.item, inherited, member, path)
 		if err != nil {
@@ -222,7 +263,9 @@ func (c *protectionCompiler) walk(n *node, inherited, member compliance.Classifi
 				}
 			}
 			for _, provider := range c.providers {
-				provided, err := provider(compliance.Target{Type: f.value.typ, DeclaringType: declaringType, Field: n.typ.FieldByIndex(f.index).Name})
+				provided, err := invoke(func() (compliance.Classification, error) {
+					return provider(compliance.Target{Type: f.value.typ, DeclaringType: declaringType, Field: n.typ.FieldByIndex(f.index).Name})
+				})
 				if err != nil {
 					return nil, providerFailure(err)
 				}
@@ -357,6 +400,11 @@ func containsSourceIdentity(n *node, active map[*node]bool) bool {
 	}
 	if n.item != nil && containsSourceIdentity(n.item, active) {
 		return true
+	}
+	for _, derivative := range n.derivatives {
+		if containsSourceIdentity(derivative.node, active) {
+			return true
+		}
 	}
 	for _, f := range n.fields {
 		if containsSourceIdentity(f.value, active) {

@@ -17,7 +17,7 @@ func (d Descriptor) WithNamingPolicy(policy serialization.NamingPolicy) (Descrip
 	if d.definition == nil {
 		return Descriptor{}, invalid("model required")
 	}
-	plan, err := serialization.CompileReadModel(d.GoType(), policy)
+	plan, err := d.definition.plan.WithNamingPolicy(policy)
 	if err != nil {
 		return Descriptor{}, err
 	}

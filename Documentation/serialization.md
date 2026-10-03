@@ -7,6 +7,11 @@ Chronicle.Go compiles property names, schemas and JSON from one immutable plan.
 The default now preserves Go field spelling, matching the C# client's
 `DefaultNamingPolicy`. This changes untagged fields from earlier Go versions.
 
+For explicitly registered interface implementations, see
+[unprotected derived codecs](derived-codecs.md). Their immediate property names
+have a C# camelCase exception, while nested ordinary objects retain the policy
+below.
+
 ## Property naming reference
 
 Select one policy per client with `chronicle.WithNamingPolicy(policy)`.

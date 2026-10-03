@@ -5,8 +5,10 @@ package readmodels
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // DecisionCodecPanicError means an application model decoder panicked during a
@@ -28,16 +30,21 @@ func decodeDecision[T any](raw Instance[json.RawMessage], descriptor Descriptor)
 			instance = Instance[T]{}
 			err = &DecisionCodecPanicError{}
 		}
-		// Only inspect our own wrappers: traversing arbitrary causes here can
-		// invoke an application's As/Unwrap methods after the recovery boundary.
-		codecError := err
-		if release, ok := err.(*ReleaseError); ok {
-			codecError = release.Cause
-		}
-		if _, ok := codecError.(*CodecPanicError); ok {
-			instance, err = Instance[T]{}, &DecisionCodecPanicError{}
-		}
 	}()
+	instance, err = decodeDecisionDocument[T](raw, descriptor)
+	// As/Unwrap are application callbacks too. Traverse ordinary causes only
+	// under the recovery boundary, never from its deferred handler. Keep safe
+	// ordinary error identities intact; discard every panic value and cause.
+	var codecPanic *CodecPanicError
+	var callbackPanic *serialization.CallbackPanicError
+	if errors.As(err, &codecPanic) || errors.As(err, &callbackPanic) {
+		return Instance[T]{}, &DecisionCodecPanicError{}
+	}
+	return instance, err
+}
+
+func decodeDecisionDocument[T any](raw Instance[json.RawMessage], descriptor Descriptor) (Instance[T], error) {
+	var err error
 	if raw.Exists {
 		if err = validateReleasedDocument(descriptor, raw.Value); err != nil {
 			return Instance[T]{}, err

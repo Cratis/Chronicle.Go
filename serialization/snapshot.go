@@ -10,6 +10,7 @@ import (
 
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/jsonstructure"
 )
 
 // Marshal serializes a value of the field's exact declared type through its codec.
@@ -17,6 +18,14 @@ import (
 // does not apply encryption. The caller must not mutate value during the call.
 func (f Field) Marshal(value any) ([]byte, error) {
 	v := reflect.ValueOf(value)
+	if value == nil && f.Type != nil && f.Type.Kind() == reflect.Interface {
+		v = reflect.New(f.Type).Elem()
+	}
+	if f.Type != nil && f.Type.Kind() == reflect.Interface && v.IsValid() && v.Type().AssignableTo(f.Type) {
+		wrapped := reflect.New(f.Type).Elem()
+		wrapped.Set(v)
+		v = wrapped
+	}
 	if f.plan == nil || !v.IsValid() || v.Type() != f.Type {
 		return nil, unsupported(f.Type, "value does not match field codec")
 	}
@@ -38,6 +47,9 @@ func (f Field) Marshal(value any) ([]byte, error) {
 func (p *Plan) RebindJSON(data []byte, next *Plan) ([]byte, error) {
 	if p == nil || next == nil || p.typ != next.typ {
 		return nil, unsupported(nil, "matching snapshot plans required")
+	}
+	if err := jsonstructure.Validate(data); err != nil {
+		return nil, &UnmarshalError{cause: err}
 	}
 	bound, err := rebindJSON(data, p.root, next.root, 0)
 	if err != nil {
@@ -62,6 +74,48 @@ func rebindJSON(data json.RawMessage, before, after *node, depth int) (json.RawM
 	}
 	if string(data) == "null" || before.scalar || before.concept != nil {
 		return data, nil
+	}
+	if before.family {
+		id, err := discriminator(data)
+		if err != nil {
+			return nil, &UnmarshalError{cause: err}
+		}
+		var source, target *node
+		for _, d := range before.derivatives {
+			if d.registration.id == id {
+				source = d.node
+			}
+		}
+		for _, d := range after.derivatives {
+			if d.registration.id == id {
+				target = d.node
+			}
+		}
+		if source == nil || target == nil || source.typ != target.typ {
+			return nil, unsupported(before.typ, "snapshot derivative representation changed")
+		}
+		var object map[string]json.RawMessage
+		if err := json.Unmarshal(data, &object); err != nil {
+			return nil, err
+		}
+		discriminatorJSON := object[derivedTypeID]
+		delete(object, derivedTypeID)
+		plain, err := json.Marshal(object)
+		if err != nil {
+			return nil, err
+		}
+		rebound, err := rebindJSON(plain, source, target, depth+1)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(rebound, &object); err != nil {
+			return nil, err
+		}
+		object[derivedTypeID] = discriminatorJSON
+		return json.Marshal(object)
+	}
+	if before.typ != after.typ || before.family != after.family {
+		return nil, unsupported(before.typ, "snapshot representation changed")
 	}
 	switch before.typ.Kind() {
 	case reflect.Pointer:

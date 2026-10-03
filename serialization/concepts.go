@@ -39,19 +39,19 @@ func compileConcept(n *node, representation concepts.Representation, state *comp
 
 func (n *node) encodeConcept(value reflect.Value, dictionary bool) (any, error) {
 	// Call the declared codec exactly once, not ConceptValue on a fabricated value.
-	data, err := json.Marshal(value.Interface())
+	data, err := invoke(func() ([]byte, error) { return json.Marshal(value.Interface()) })
 	if err != nil {
 		return nil, fmt.Errorf("%w: concept codec: %w", faults.ErrUnsupported, err)
 	}
 	if err := concepts.CheckJSON(*n.concept, data); err != nil {
-		return nil, fmt.Errorf("%w: concept JSON: %w", faults.ErrUnsupported, err)
+		return nil, &CallbackError{cause: err}
 	}
 	// Validate the actual wire integer rather than the concept's implementation
 	// kind (a struct may wrap uint64; TimeSpan is int64 but writes a string).
 	if n.schema["type"] == "integer" {
 		underlying := reflect.New(n.concept.Type)
 		if err := json.Unmarshal(data, underlying.Interface()); err != nil {
-			return nil, fmt.Errorf("%w: concept integer: %w", faults.ErrUnsupported, err)
+			return nil, &CallbackError{cause: err}
 		}
 		if err := n.checkInteger(underlying.Elem(), dictionary); err != nil {
 			return nil, err

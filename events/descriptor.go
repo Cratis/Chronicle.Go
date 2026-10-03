@@ -4,6 +4,7 @@
 package events
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -75,6 +76,7 @@ func (t Type[T]) Ref() TypeRef { return t.descriptor.Ref() }
 // nil options and invalid final values fail declaration. Tag inputs are copied.
 type TypeOption func(*typeConfig)
 type typeConfig struct {
+	codecs       *serialization.Codecs
 	id           TypeID
 	generation   Generation
 	tags         []Tag
@@ -86,6 +88,16 @@ type typeConfig struct {
 	tombstone    bool
 	compensation *Descriptor
 	protection   []compliance.Declaration
+}
+
+// WithCodecs selects an immutable, explicit derived codec set. The last option
+// wins; nil clears it. No global discovery or registration callbacks are used.
+func WithCodecs(codecs *serialization.Codecs) TypeOption {
+	if codecs != nil {
+		owned := *codecs
+		codecs = &owned
+	}
+	return func(c *typeConfig) { c.codecs = codecs }
 }
 
 // WithID overrides the default simple Go type name; use a stable ID across languages.
@@ -134,8 +146,12 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 	if config.subjectType != nil && (config.subjectType != typ || config.subject == nil) {
 		return Type[T]{}, fmt.Errorf("%w: subject resolver must be non-nil and match the declared event type", faults.ErrInvalidConfiguration)
 	}
-	plan, err := serialization.Compile(typ)
+	plan, err := serialization.CompileWith(typ, serialization.Config{Codecs: config.codecs})
 	if err != nil {
+		var declaration *serialization.CodecError
+		if errors.As(err, &declaration) {
+			declaration.Role = "event"
+		}
 		return Type[T]{}, err
 	}
 	if err := plan.ValidateRole(declarations.Event); err != nil {
@@ -143,7 +159,10 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 	}
 	descriptor := Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...), subject: config.subject, sourceStore: config.sourceStore,
 		unique: config.unique, removes: config.removes, tombstone: config.tombstone, compensation: config.compensation}
-	descriptor.protection = append([]compliance.Declaration(nil), config.protection...)
+	descriptor.protection, err = plan.FreezeProtection(config.protection...)
+	if err != nil {
+		return Type[T]{}, err
+	}
 	descriptor, err = descriptor.withCompensationSchema()
 	if err != nil {
 		return Type[T]{}, err

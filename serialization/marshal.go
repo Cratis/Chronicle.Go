@@ -51,11 +51,11 @@ func (n *node) checkInteger(value reflect.Value, dictionary bool) error {
 		switch value.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			if v := value.Int(); v < -(1<<53) || v > 1<<53 {
-				return unsupported(n.typ, "dictionary integers must be between -2^53 and 2^53")
+				return unsupported(n.typ, "open-schema integers must be between -2^53 and 2^53")
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			if value.Uint() > 1<<53 {
-				return unsupported(n.typ, "dictionary integers must be at most 2^53")
+				return unsupported(n.typ, "open-schema integers must be at most 2^53")
 			}
 		}
 	}
@@ -89,6 +89,30 @@ func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, 
 			defer delete(state.active, visit)
 		}
 	}
+	if n.family {
+		if value.IsNil() {
+			return nil, nil
+		}
+		concrete := value.Elem()
+		if concrete.Kind() == reflect.Pointer && concrete.IsNil() {
+			return nil, unsupported(n.typ, "typed-nil derivative")
+		}
+		for _, derivative := range n.derivatives {
+			if derivative.registration.concrete != concrete.Type() {
+				continue
+			}
+			encoded, err := derivative.node.encode(concrete, true, state, depth+1)
+			if err != nil {
+				return nil, err
+			}
+			object, ok := encoded.(orderedObject)
+			if !ok {
+				return nil, unsupported(n.typ, "derivative must encode an object")
+			}
+			return append(object, objectProperty{name: derivedTypeID, value: derivative.registration.id}), nil
+		}
+		return nil, unsupported(n.typ, "unregistered dynamic derivative")
+	}
 	if n.concept != nil {
 		return n.encodeConcept(value, dictionary)
 	}
@@ -111,8 +135,23 @@ func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, 
 			if err != nil {
 				return nil, err
 			}
-			if !v.IsValid() || (field.omitEmpty && empty(v)) || (field.omitZero && field.isZero(v)) {
+			if !v.IsValid() {
 				continue
+			}
+			if err := field.value.validateFamilyValue(v); err != nil {
+				return nil, fmt.Errorf("property %s: %w", field.name, err)
+			}
+			if field.omitEmpty && empty(v) {
+				continue
+			}
+			if field.omitZero {
+				zero, err := invoke(func() (bool, error) { return field.isZero(v), nil })
+				if err != nil {
+					return nil, err
+				}
+				if zero {
+					continue
+				}
 			}
 			encoded, err := field.value.encode(v, dictionary, state, depth+1)
 			if err != nil {
@@ -168,6 +207,8 @@ type zeroer interface{ IsZero() bool }
 func zeroFunc(typ reflect.Type) func(reflect.Value) bool {
 	contract := reflect.TypeFor[zeroer]()
 	switch {
+	case typ.Kind() == reflect.Interface && typ.Implements(contract):
+		return func(v reflect.Value) bool { return v.IsNil() || v.Interface().(zeroer).IsZero() }
 	case typ.Kind() == reflect.Pointer && typ.Implements(contract):
 		return func(v reflect.Value) bool { return v.IsNil() || v.Interface().(zeroer).IsZero() }
 	case typ.Implements(contract):
