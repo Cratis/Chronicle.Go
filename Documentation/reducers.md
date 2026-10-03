@@ -136,7 +136,9 @@ wins over its constructor; nil requests service/default activation. Optional
 is reported during activation. Close the Chronicle client before its borrowed
 provider. See [service ownership](reactors.md#dependency-injection-is-opt-in).
 
-Each reduce operation gets one scope and artifact, under `identities.System()`.
+Each reduce operation gets one scope and artifact. Kernel-driven operations use
+`identities.System()`; passive local reads retain the caller's identity during
+construction and folds, matching C#'s direct invoker path.
 `reducers.BatchFromContext` exposes store/namespace/sequence/reducer coordinates
 before construction; event context is a method argument, not first-event state
 captured by the constructor. Scope-resolved artifacts belong to the provider;

@@ -368,10 +368,10 @@ then conventions and optional DI. Contracts and kernel evidence target 19.29.4.
 | Nullable current and value adaptation / `Reducers/Validators/ReducerMethodCurrentReadModelMustBeNullable` | **Go-specific**: nullable `*M` is recommended; value `M` is also accepted with zero on absence | `TestValueCurrentUsesZeroForAbsence`. Unlike C#'s nullable-current validator, Go permits the requested value alternative; use `*M` to distinguish absence from present zero |
 | Event families and precedence / `Events/EventTypeExtensions`, `Observation/HandlerMethodPrecedence` | **Implemented** for current-catalog event interfaces, richest signature then ordinal name, shadow diagnostics | `TestDiscoveryPrecedenceFamiliesAndCatalogIsolation`. Shared discovery code with reactors; no global type-only cache. Explicit duplicate handlers fail rather than override; Go context contributes to arity |
 | Typed callbacks and frozen fold plan / `Reducers/ReducerInvoker` | **Implemented**: `RegisterReducerHandlers`, `reducers.On[E,M]`; callbacks and discovery share validation/invocation | `TestExplicitAndDiscoveredFoldsSharePlanAndResults`, `TestReducerDiscoveryValidatesAtNewClientWithoutConstruction`. Equivalent semantic signatures have equal fingerprints; callbacks retain caller-owned captures |
-| Startup validation / `Reducers/ReducerInvoker`, `ReducerTypeExtensions` | **Go-specific** atomic typed `DeclarationError` at `NewClient` before I/O or constructors | `TestInvalidFoldSignaturesAreTypedStartupErrors`, `TestReducerProducerAndIdentityConflictsFailAtomically`. Clearly fold-shaped unknown event methods fail instead of disappearing |
+| Startup validation / `Reducers/ReducerInvoker`, `ReducerTypeExtensions` | **Go-specific** atomic typed `DeclarationError` at `NewClient` before I/O or constructors | `TestInvalidFoldSignaturesAreTypedStartupErrors`, `TestReducerProducerAndIdentityConflictsFailAtomically`. Clearly fold-shaped unknown event methods fail instead of disappearing; a no-sink reducer model must have a matching registered plan |
 | Sequential fold, initial state, deletion and recreate / `ReducerInvoker.cs:62–142` | **Implemented**: one scope, serial folds, nil deletion distinct from present zero | `TestNilDeleteRecreateAndPresentZero`, `TestReducerRuntimeFoldOrderDeletionGenerationAndCleanupBeforeAck`, `TestKernelReducerMaterializationDeletionAndFailedPartition` |
 | Failure and last-success position / `ReducerInvoker.cs:116–142`, `Reducers.cs:534–578` | **Implemented**: stop at first error/panic, failed result never contains partial state | `TestFirstFailureStopsAndDiscardsMutatedPartialState`, `TestReducerRuntimeFailureNeverReportsPartialState`, kernel failed-partition test. Go does not synthesize .NET exception stack traces. Kernel owns recovery; no effect retry is added |
-| Per-operation activation and system identity / `Reducers.cs:534–539`, `ClientArtifactsActivator` | **Implemented**: shared artifact leases/scopes with reactors, system identity before construction and every fold | `TestIdentityIsSystemForConstructorsAndFolds`, `TestReducerRuntimeFoldOrderDeletionGenerationAndCleanupBeforeAck`, `TestReducerRegisteredServiceWinsAndIsDisposedOnlyByScope`. No arbitrary fold parameter injection; shared optional `services.WithServices` adapter remains borrowed |
+| Per-operation activation and identity / `Reducers.cs:261–286,534–539`, `ClientArtifactsActivator` | **Implemented**: shared artifact leases/scopes with reactors; kernel-driven operations use system identity before construction and every fold, passive reads retain caller identity | `TestIdentityIsSystemForConstructorsAndFolds`, `TestPassiveReducerReadPreservesCallerIdentityForConstructionAndFold`, `TestReducerRuntimeFoldOrderDeletionGenerationAndCleanupBeforeAck`, `TestReducerRegisteredServiceWinsAndIsDisposedOnlyByScope`. No arbitrary fold parameter injection; shared optional `services.WithServices` adapter remains borrowed |
 | Cleanup ownership / `ActivatedArtifact`, `ReducerInvoker` | **Go-specific**: constructor values close before scope; cleanup errors fail operation, unavailable progress | `TestReducerActivationFailureReleasesPartialArtifactAndScope`, `TestReducerLeaseGuardsUseAfterCloseAndRetainsCleanupFailure`, `TestReducerRuntimeFailureNeverReportsPartialState`. C# logs/swallows disposal failure. Partial resources are released; scope-owned artifacts are not disposed twice |
 | Active/materialized and inactive modes / `Reducers.ShouldReducerBeActive`, `ReadModels.ReadModels` | **Implemented**: active by default; `WithActive(false)` preserves sink and does not select local reads | `TestReducerPassiveAndInactiveBinding`, `TestKernelReducerMaterializationDeletionAndFailedPartition`. Model binding preserves configured sink/sequence and rejects incompatible producers |
 | Passive source reads / `ReadModels.cs:187–220`, `Reducers.GetInstanceById` | **Implemented**: `reducers.Passive` or `readmodels.Passive` selects local `Reader.Get`, no sink, absence/deletion and fold errors preserved | `TestKernelPassiveReducerReadsFoldLocallyWithAbsenceDeletionAndFailure`. Uses 19.29.4 source/type history and the same fold plan, then existing protected-value release. Like C#, passive history reads do not apply active observer tag/source/stream filters. Unlike C# root-provider passive activation, Go uses one scope per local read |
@@ -386,6 +386,24 @@ then conventions and optional DI. Contracts and kernel evidence target 19.29.4.
 | Snapshots and bounded historical folds / `Reducers.GetSnapshotsById`, `ReadModels.GetInstances` | **Not implemented** | Reserved for #33/#19; one-shot passive Get does not claim historical sessions or protected decision semantics |
 | Local watch notifications / `ReducerHandler.OnNext`, `IReducerObservers` | **Not implemented** | No notification surface or no-op success; reducer sessions remain explicitly unsupported |
 | Definition preparation and automatic client/store DI facades / #21/#22 | **Not implemented** beyond shared observer activation | Runtime reducer factories are implemented. Non-observer definition activation and automatic borrowed facade bindings remain separate work |
+
+### Shared reducer recovery defect
+
+Go preserves C#'s failed-batch response: last successful observation with no state.
+At Chronicle revision `2e31b0dfba489159b3db323238f16d0f277056b4`,
+`Source/Kernel/Core/Observation/Reducers/ReducerPipeline.cs:59–75` reloads the
+sink state and writes nothing on failure. `Observer.Handling.cs:166–205` advances
+observation progress and records a live failure at the last successful event.
+`Observer.Failing.cs:223–229` and `Jobs/RetryFailedPartition.cs:89–104` restart
+recovery there, inclusively (`Storage.MongoDB/EventSequences/EventSequenceStorage.cs:920–926`).
+They do not rebuild from the beginning of the failed batch or event history.
+Consequently, successful prefix folds before that restart position are lost.
+A failed recovery step additionally checkpoints success and records its next
+failed event (`Jobs/HandleEventsForPartition.cs:182–190,236–272`), again without
+persisting the prefix. This upstream defect is tracked in
+[Chronicle #4540](https://github.com/Cratis/Chronicle/issues/4540); Go does not
+change the failure wire contract independently. This conclusion is based on
+source inspection, not a live-kernel recovery test.
 
 ## Next slices
 

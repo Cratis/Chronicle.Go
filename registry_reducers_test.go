@@ -59,7 +59,7 @@ func TestReducerDiscoveryValidatesAtNewClientWithoutConstruction(t *testing.T) {
 	}
 }
 func TestReducerProducerAndIdentityConflictsFailAtomically(t *testing.T) {
-	for _, mode := range []string{"foreign model", "projection model", "reactor identity", "invalid fold", "sequence", "explicit projection", "duplicate model"} {
+	for _, mode := range []string{"foreign model", "projection model", "reactor identity", "invalid fold", "sequence", "explicit projection", "duplicate model", "unregistered passive reducer"} {
 		t.Run(mode, func(t *testing.T) {
 			registry := NewRegistry()
 			ev, err := RegisterEvent[FoldChanged](registry)
@@ -72,6 +72,9 @@ func TestReducerProducerAndIdentityConflictsFailAtomically(t *testing.T) {
 			}
 			if mode == "explicit projection" {
 				options = append(options, readmodels.WithObserver(readmodels.Projection, ""))
+			}
+			if mode == "unregistered passive reducer" {
+				options = append(options, readmodels.WithObserver(readmodels.Reducer, "fold"), readmodels.WithSink(readmodels.Sink{Type: readmodels.NoSink}))
 			}
 			model, err := RegisterReadModel[FoldTotal](registry, options...)
 			if err != nil {
@@ -95,7 +98,7 @@ func TestReducerProducerAndIdentityConflictsFailAtomically(t *testing.T) {
 			}
 			if mode == "invalid fold" {
 				err = RegisterReducer[WrongFold](registry, model, nil, reducers.WithID("fold"))
-			} else {
+			} else if mode != "unregistered passive reducer" {
 				err = RegisterReducer[*FrozenFold](registry, model, nil, reducers.WithID("fold"))
 			}
 			if err != nil {

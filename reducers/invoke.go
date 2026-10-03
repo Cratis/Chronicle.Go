@@ -44,6 +44,17 @@ type Batch struct {
 }
 type batchKey struct{}
 
+// ReduceOption configures identity ownership for one reduce operation.
+type ReduceOption func(*reduceConfig)
+
+type reduceConfig struct{ preserveIdentity bool }
+
+// WithCallerIdentity preserves the caller's identity during activation and folds,
+// as required for passive local reads. Kernel-driven operations use System by default.
+func WithCallerIdentity() ReduceOption {
+	return func(c *reduceConfig) { c.preserveIdentity = true }
+}
+
 // WithBatch installs operation coordinates before activation.
 func WithBatch(ctx context.Context, batch Batch) context.Context {
 	return context.WithValue(ctx, batchKey{}, batch)
@@ -58,16 +69,23 @@ func BatchFromContext(ctx context.Context) (Batch, bool) {
 // Lease owns the same scope/constructor resource machinery as reactors. Invoke is
 // serial; it must finish before Close. A lease is acquired only through Activate.
 type Lease struct {
-	plan      *Plan
-	resources *artifacts.Lease
-	instance  any
+	plan             *Plan
+	resources        *artifacts.Lease
+	instance         any
+	preserveIdentity bool
 }
 
 // Activate creates exactly one scope and artifact, under system identity. Failed
 // activation cleans up partial resources, preserving errors and ownership.
 func (p *Plan) Activate(ctx context.Context) (lease *Lease, err error) {
-	l := &Lease{plan: p}
-	ctx = metadata.WithIdentity(ctx, identities.System())
+	return p.activate(ctx, false)
+}
+
+func (p *Plan) activate(ctx context.Context, preserveIdentity bool) (lease *Lease, err error) {
+	l := &Lease{plan: p, preserveIdentity: preserveIdentity}
+	if !preserveIdentity {
+		ctx = metadata.WithIdentity(ctx, identities.System())
+	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			err = fmt.Errorf("reducer activation panic: %v", recovered)
@@ -152,7 +170,10 @@ func (l *Lease) Invoke(ctx context.Context, event Event, current any) (state any
 		args = append(args, reflect.ValueOf(l.instance))
 	}
 	if f.context {
-		args = append(args, reflect.ValueOf(metadata.WithIdentity(ctx, identities.System())))
+		if !l.preserveIdentity {
+			ctx = metadata.WithIdentity(ctx, identities.System())
+		}
+		args = append(args, reflect.ValueOf(ctx))
 	}
 	args = append(args, eventValue, value)
 	if f.eventContext {
@@ -176,11 +197,20 @@ func (l *Lease) Invoke(ctx context.Context, event Event, current any) (state any
 
 // Reduce folds sequentially in one scope, stopping at the first failure. The
 // entire operation fails on decoding/cancellation/activation/cleanup errors and
-// never returns partial State. Input order must be strictly increasing.
-func (p *Plan) Reduce(ctx context.Context, batch []Event, initial any) (result Result) {
+// never returns partial State. Input order must be strictly increasing. System
+// identity is used unless WithCallerIdentity is supplied. Nil options are ignored.
+func (p *Plan) Reduce(ctx context.Context, batch []Event, initial any, options ...ReduceOption) (result Result) {
 	result.LastSuccessful = events.Unavailable
-	ctx = metadata.WithIdentity(ctx, identities.System())
-	lease, err := p.Activate(ctx)
+	config := reduceConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	if !config.preserveIdentity {
+		ctx = metadata.WithIdentity(ctx, identities.System())
+	}
+	lease, err := p.activate(ctx, config.preserveIdentity)
 	if err != nil {
 		result.Err = err
 		return result

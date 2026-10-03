@@ -79,6 +79,18 @@ func compileReducers(snapshot *registrySnapshot, declarations []reducers.Declara
 		}
 	}
 	for _, model := range models {
+		if kind, id := model.Observer(); kind == readmodels.Reducer && model.Sink().Type == readmodels.NoSink {
+			registered := false
+			for _, plan := range snapshot.reducers {
+				if string(plan.Identifier()) == id && plan.Model().Identifier() == model.Identifier() {
+					registered = true
+					break
+				}
+			}
+			if !registered {
+				return &reducers.DeclarationError{Reducer: reducers.ID(id), Cause: fmt.Errorf("%w: passive model requires a registered reducer", ErrInvalidConfiguration)}
+			}
+		}
 		if err := model.ValidateProducer(); err != nil {
 			return err
 		}

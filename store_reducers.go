@@ -92,7 +92,7 @@ func (s *EventStore) readPassiveReducer(ctx context.Context, model readmodels.De
 		return 0
 	})
 	ctx = reducers.WithBatch(ctx, reducers.Batch{Reducer: plan.Identifier(), Store: s.name, Namespace: s.namespace, Sequence: plan.EventSequence()})
-	result := plan.Reduce(ctx, batch, nil)
+	result := plan.Reduce(ctx, batch, nil, reducers.WithCallerIdentity())
 	if result.Err != nil {
 		return empty, result.Err
 	}
