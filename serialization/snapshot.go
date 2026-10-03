@@ -6,6 +6,10 @@ package serialization
 import (
 	"encoding/json"
 	"reflect"
+	"slices"
+
+	"github.com/cratis/chronicle.go/declarations"
+	"github.com/cratis/chronicle.go/internal/faults"
 )
 
 // Marshal serializes a value of the field's exact declared type through its codec.
@@ -42,6 +46,10 @@ func (p *Plan) RebindJSON(data []byte, next *Plan) ([]byte, error) {
 	return escapeJSONStrings(bound)
 }
 
+func snapshotFieldError(typ reflect.Type, f field) error {
+	return &declarations.DeclarationError{Artifact: typ.String(), GoField: f.goName, Path: f.name, Offset: -1, Message: "snapshot field has no unique matching plan field", Cause: faults.ErrInvalidConfiguration}
+}
+
 func rebindJSON(data json.RawMessage, before, after *node, depth int) (json.RawMessage, error) {
 	if depth > 256 {
 		return nil, unsupported(before.typ, "JSON nesting exceeds 256 levels")
@@ -64,17 +72,33 @@ func rebindJSON(data json.RawMessage, before, after *node, depth int) (json.RawM
 			return nil, unsupported(before.typ, "snapshot requires an object")
 		}
 		result := make(map[string]json.RawMessage, len(object))
-		for i, field := range before.fields {
-			value, exists := object[field.name]
+		for _, original := range before.fields {
+			value, exists := object[original.name]
 			if !exists {
 				continue
 			}
-			delete(object, field.name)
-			value, err := rebindJSON(value, field.value, after.fields[i].value, depth+1)
+			delete(object, original.name)
+			// Naming can change embedded-field promotion, including which fields
+			// survive. Match the declared Go field, never position or JSON name.
+			var target *field
+			for i := range after.fields {
+				candidate := &after.fields[i]
+				if !slices.Equal(original.index, candidate.index) || original.value.typ != candidate.value.typ {
+					continue
+				}
+				if target != nil {
+					return nil, snapshotFieldError(before.typ, original)
+				}
+				target = candidate
+			}
+			if target == nil {
+				return nil, snapshotFieldError(before.typ, original)
+			}
+			value, err := rebindJSON(value, original.value, target.value, depth+1)
 			if err != nil {
 				return nil, err
 			}
-			result[after.fields[i].name] = value
+			result[target.name] = value
 		}
 		if len(object) != 0 {
 			return nil, unsupported(before.typ, "unknown snapshot property")
