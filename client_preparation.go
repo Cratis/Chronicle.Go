@@ -173,7 +173,7 @@ func (p *ClientPreparation) Prepare(ctx context.Context, scopes reactors.ScopeFa
 	stop := context.AfterFunc(c.life, cancel)
 	defer stop()
 	defer cancel()
-	var compiled map[*registryDeclarations]registrySnapshot
+	var compiled map[*registryDeclarations]*registryPreparationOutput
 	runtimeServices := clientIdentityServices(scopes, c)
 	err := artifacts.Protect("client", "prepare", func() error {
 		if err := preparationCtx.Err(); err != nil {
@@ -205,12 +205,16 @@ func (p *ClientPreparation) Prepare(ctx context.Context, scopes reactors.ScopeFa
 		diagnostics.Log(preparationCtx, c.config.logger, slog.LevelError, "client preparation failed", "client", "prepare", err)
 		return nil, err
 	}
-	frozen := compiled[p.defaults]
+	c.registryOutput = compiled[p.defaults]
+	c.storeRegistryOutputs = make(map[StoreName]*registryPreparationOutput, len(p.names))
+	frozen := c.registryOutput.compose()
 	c.catalog, c.constraints, c.readModelCatalog = frozen.events, frozen.constraints, frozen.models
 	c.projections, c.seeds = frozen.projections, frozen.seeds
 	c.reactors.defaults, c.reducers.defaults, c.readModelReactors.defaults = frozen.reactors, frozen.reducers, frozen.readModelReactors
 	for _, name := range p.names {
-		frozen := compiled[p.stores[name]]
+		output := compiled[p.stores[name]]
+		c.storeRegistryOutputs[name] = output
+		frozen := output.compose()
 		c.catalogs[name], c.storeConstraints[name] = frozen.events, frozen.constraints
 		c.readModelCatalogs[name], c.storeProjections[name] = frozen.models, frozen.projections
 		c.reactors.stores[name], c.reducers.stores[name] = frozen.reactors, frozen.reducers
@@ -222,7 +226,7 @@ func (p *ClientPreparation) Prepare(ctx context.Context, scopes reactors.ScopeFa
 	return c, nil
 }
 
-func (p *ClientPreparation) compile(ctx context.Context, scopes, runtimeServices reactors.ScopeFactory) (map[*registryDeclarations]registrySnapshot, error) {
+func (p *ClientPreparation) compile(ctx context.Context, scopes, runtimeServices reactors.ScopeFactory) (map[*registryDeclarations]*registryPreparationOutput, error) {
 	plans := make(map[*registryDeclarations]registryFactoryPlans)
 	// All metadata and visible constructor dependencies precede the first scope.
 	for _, declarations := range p.selected {
@@ -246,9 +250,9 @@ func (p *ClientPreparation) compile(ctx context.Context, scopes, runtimeServices
 		}
 		schemas[declarations] = prepared
 	}
-	compiled := make(map[*registryDeclarations]registrySnapshot)
+	compiled := make(map[*registryDeclarations]*registryPreparationOutput)
 	for _, declarations := range p.selected {
-		frozen, err := compilePreparedRegistry(ctx, declarations, schemas[declarations], runtimeServices, p.client.config.validateEventTypes, plans[declarations])
+		frozen, err := prepareRegistryOutput(ctx, declarations, schemas[declarations], runtimeServices, p.client.config.validateEventTypes, plans[declarations])
 		if err != nil {
 			return nil, err
 		}

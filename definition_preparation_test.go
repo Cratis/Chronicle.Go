@@ -17,6 +17,7 @@ import (
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/seeding"
 )
 
 type preparationFactory struct {
@@ -390,6 +391,52 @@ func TestWithProjectionRemovesFactoryProducerWithoutInvokingIt(t *testing.T) {
 	defer func() { _ = client.Close() }()
 	if len(registry.projectionFactories) != 1 || len(replaced.projectionFactories) != 0 || client.projections[0].Identifier() != "replacement" {
 		t.Fatal("incorrect producer replacement")
+	}
+}
+
+func TestFailedPreparationNeverRetainsPartialOutputs(t *testing.T) {
+	for _, phase := range []string{"composition panic", "seeder panic", "cleanup error"} {
+		t.Run(phase, func(t *testing.T) {
+			first, later := catalogRegistry(t), NewRegistry()
+			failure := errors.New("sensitive preparation failure")
+			calls, closed := 0, 0
+			if phase == "composition panic" {
+				declareEvent[DeclaredEmail](t, later)
+				if err := later.ConfigureDeclaredConstraint("email", func(*constraints.Builder) { calls++; panic(failure) }); err != nil {
+					t.Fatal(err)
+				}
+			} else if phase == "seeder panic" {
+				if err := RegisterSeederFunc(later, func(*seeding.Builder) error { calls++; panic(failure) }); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := RegisterSeederFactory[*clientDependentSeeder](later, func() *clientDependentSeeder { calls++; return &clientDependentSeeder{} }); err != nil {
+				t.Fatal(err)
+			}
+			services := preparationFactory{
+				contains: func(reflect.Type) bool { return false },
+				open: func(context.Context) (reactors.Scope, error) {
+					return &preparationScope{close: func(context.Context) error { closed++; return failure }}, nil
+				},
+			}
+			p := captureForTest(t, WithRegistry(first), WithRegistryForStore("later", later), WithServices(services))
+			client, err := p.Prepare(t.Context(), nil)
+			if client != nil || err == nil || calls != 1 || p.Client().registryOutput != nil || len(p.Client().storeRegistryOutputs) != 0 || p.Client().catalog != nil {
+				t.Fatal("failure retained a partially prepared output", client, err, calls)
+			}
+			if phase == "cleanup error" {
+				if !errors.Is(err, failure) || closed != 1 {
+					t.Fatal("cleanup failure identity lost", err, closed)
+				}
+			} else {
+				if !errors.Is(err, ErrInvalidConfiguration) || closed != 0 {
+					t.Fatal("panic category or ownership changed", err, closed)
+				}
+				assertDiscardedPreparationPanic(t, err, failure)
+			}
+			if _, again := p.Prepare(t.Context(), nil); again != err || calls != 1 {
+				t.Fatal("failed preparation was recomposed or retried", again)
+			}
+		})
 	}
 }
 

@@ -54,6 +54,10 @@ func TestCapturedPreparationPreservesCodecProtectionAndOriginalModelHandle(t *te
 		t.Fatal(err)
 	}
 	for _, store := range []StoreName{"default", "same"} {
+		view := client.registryOutput.compose()
+		if view.projections[0] != client.projections[0] || client.registryOutput != client.storeRegistryOutputs["same"] {
+			t.Fatal("publication did not retain the accepted codec definition")
+		}
 		artifacts, err := client.Artifacts(store)
 		if err != nil {
 			t.Fatal(err)

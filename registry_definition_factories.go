@@ -212,11 +212,21 @@ func compileDefinitionFactory(family string, declaration definitionFactory, serv
 	return constructor, err
 }
 
-func prepareDefinitionFactories(ctx context.Context, captured *registryDeclarations, plans registryFactoryPlans) (*registryDeclarations, error) {
-	result := *captured
-	result.projections = slices.Clone(captured.projections)
-	result.constraints = slices.Clone(captured.constraints)
-	result.migrations = slices.Clone(captured.migrations)
+// registryFactoryOutput contains only accepted authoring values, not the
+// constructors, definition callbacks or temporary scopes that produced them.
+// Projection graph compilation and constraint composition still follow this step.
+type registryFactoryOutput struct {
+	projections []projections.Declaration
+	constraints []constraints.Definition
+	migrations  []events.MigrationDeclaration
+}
+
+func prepareDefinitionFactories(ctx context.Context, captured *registryDeclarations, plans registryFactoryPlans) (*registryFactoryOutput, error) {
+	result := registryFactoryOutput{
+		projections: slices.Clone(captured.projections),
+		constraints: slices.Clone(captured.constraints),
+		migrations:  slices.Clone(captured.migrations),
+	}
 	for i, declaration := range captured.projectionFactories {
 		err := artifacts.Prepare(ctx, "projection", plans.services, plans.projections[i], plans.check, func(value any) error {
 			output, err := declaration.define(ctx, value)

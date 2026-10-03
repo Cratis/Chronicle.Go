@@ -101,6 +101,11 @@ func TestCaptureSinkDefaultsFreezeOptionsRegistriesCodecsAndFactoryModels(t *tes
 			t.Fatal("preparation identity", client, err)
 		}
 		for _, store := range []StoreName{"default", "shared"} {
+			view := client.registryOutput.compose()
+			preparedModel, _ := view.models.LookupIdentifier(model.Identifier())
+			if preparedModel.Sink().Type != kind || client.registryOutput != client.storeRegistryOutputs["shared"] {
+				t.Fatal("output composition lost the captured default")
+			}
 			artifacts, err := client.Artifacts(store)
 			if err != nil {
 				t.Fatal(err)
