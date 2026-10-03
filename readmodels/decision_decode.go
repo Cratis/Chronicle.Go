@@ -26,13 +26,24 @@ func (*DecisionCodecPanicError) Unwrap() error { return faults.ErrProtocol }
 // release and before final cancellation/generation/epoch checks and issuance.
 func decodeDecision[T any](raw Instance[json.RawMessage], descriptor Descriptor) (instance Instance[T], err error) {
 	defer func() {
-		panicked := recover() != nil
-		var callbackPanic *serialization.CallbackPanicError
-		if panicked || errors.As(err, &callbackPanic) {
+		if recover() != nil {
 			instance = Instance[T]{}
 			err = &DecisionCodecPanicError{}
 		}
 	}()
+	instance, err = decodeDecisionDocument[T](raw, descriptor)
+	// As/Unwrap are application callbacks too. Traverse ordinary causes only
+	// under the recovery boundary, never from its deferred handler. Keep safe
+	// ordinary error identities intact; discard every panic value and cause.
+	var callbackPanic *serialization.CallbackPanicError
+	if errors.As(err, &callbackPanic) {
+		return Instance[T]{}, &DecisionCodecPanicError{}
+	}
+	return instance, err
+}
+
+func decodeDecisionDocument[T any](raw Instance[json.RawMessage], descriptor Descriptor) (Instance[T], error) {
+	var err error
 	if raw.Exists {
 		if err = validateReleasedDocument(descriptor, raw.Value); err != nil {
 			return Instance[T]{}, err
