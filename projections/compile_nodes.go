@@ -149,7 +149,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			p := Provenance{FrontEnd: "model-bound", GoField: field.GoField, Path: field.Path, Directive: directive.Name, Offset: directive.Offset}
 			fail := func(err error) (*nodeDefinition, error) { return nil, declarationFailure(c.result.id, p, err) }
 			switch directive.Name {
-			case "children", "nested":
+			case "children", "nested", "index":
 				continue
 			case "key":
 				if n.keyField != "" || field.Scalar == serialization.NotScalar || field.Nullable {
@@ -228,7 +228,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 		// its descendants require an explicit node boundary, never flattened tags.
 		if !structural && n.children[field.Path] == nil && n.nested[field.Path] == nil {
 			for _, f := range fields {
-				if strings.HasPrefix(f.Path, field.Path+".") && f.Tag != "" {
+				if strings.HasPrefix(f.Path, field.Path+".") && hasProjectionDirective(f.Tag) {
 					return nil, declarationFailure(c.result.id, Provenance{GoField: f.GoField, Path: f.Path, Offset: 0}, invalid("nested declarations require children or nested"))
 				}
 			}

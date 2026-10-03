@@ -31,7 +31,7 @@ func keyExpression(v Value) bool {
 	case "context":
 		return len(v.Args) == 1 && v.Args[0].Name == "" && v.Args[0].Value.Kind == Name && Path(v.Args[0].Value.Text)
 	case "value":
-		return len(v.Args) == 1 && v.Args[0].Name == "" && v.Args[0].Value.Kind != Name && v.Args[0].Value.Kind != Call && v.Args[0].Value.Kind != Null
+		return len(v.Args) == 1 && v.Args[0].Name == "" && v.Args[0].Value.Kind != Name && v.Args[0].Value.Kind != Call && v.Args[0].Value.Kind != List && v.Args[0].Value.Kind != Null
 	case "composite":
 		if len(v.Args) == 0 {
 			return false

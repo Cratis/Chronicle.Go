@@ -18,15 +18,16 @@ import (
 // usable. Registration and snapshots are concurrency-safe. NewClient takes a frozen
 // snapshot; adding declarations afterwards does not mutate existing clients.
 type Registry struct {
-	mu                 sync.Mutex
-	descriptors        []events.Descriptor
-	constraints        []constraints.Definition
-	readModels         []readmodels.Descriptor
-	projections        []projections.Declaration
-	reactors           []reactorDeclaration
-	reducers           []reducers.Declaration
-	reactorMiddlewares []any
-	reactorSideEffects []reactorSideEffectHandler
+	mu                     sync.Mutex
+	descriptors            []events.Descriptor
+	constraints            []constraints.Definition
+	constraintCompositions []constraintComposition
+	readModels             []readmodels.Descriptor
+	projections            []projections.Declaration
+	reactors               []reactorDeclaration
+	reducers               []reducers.Declaration
+	reactorMiddlewares     []any
+	reactorSideEffects     []reactorSideEffectHandler
 }
 
 // NewRegistry returns an empty registry; there is no global discovery or init hook.

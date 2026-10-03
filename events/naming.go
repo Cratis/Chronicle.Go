@@ -13,5 +13,5 @@ func (d Descriptor) WithNamingPolicy(policy serialization.NamingPolicy) (Descrip
 		return Descriptor{}, err
 	}
 	d.plan = plan
-	return d, nil
+	return d.compileDeclarations()
 }
