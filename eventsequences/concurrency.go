@@ -5,11 +5,14 @@ package eventsequences
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/faults"
 )
 
-// ConcurrencyScopeStrategy replaces automatic source-and-route scope selection.
+// ConcurrencyScopeStrategy replaces automatic source-and-route scope selection
+// and is also used by ResolveScope for explicitly selected filters.
 // GetScope may use sequence.Tail with the caller's context, or return a Resolve
 // expectation to defer the one matching tail read to dispatch. Returned scopes
 // are validated like explicit scopes. Implementations must support concurrent
@@ -37,12 +40,50 @@ type ConcurrencyPolicyProvider interface {
 	ConcurrencyPolicy() ConcurrencyPolicy
 }
 
-func (s *Sequence) automaticScope(ctx context.Context, source events.SourceID, route Route) (Scope, error) {
-	scope := defaultScope(source, route)
-	if s.concurrency.Strategy == nil {
-		return scope, nil
+// ResolveScope applies the configured custom or default concurrency strategy to
+// filter and resolves any returned Resolve expectation using its matching tail.
+// It honors CheckFirstAppendIntoAScope: an empty tail becomes NoMatchingEvent when
+// enabled, otherwise a resolved unchecked expectation retaining the filter.
+// Explicit strategy expectations win. The returned scope can be staged or passed
+// to WithScope/WithScopes without another strategy invocation or tail read.
+//
+// Supply normalized dimensions (nil means no narrowing); no append-route defaults
+// are added. Empty optional dimensions are non-narrowing. Inputs and returned
+// filter collections are copied; do not mutate inputs during the call. The method
+// is safe for concurrent use, honors ctx, never appends and never retries. It does
+// not protect an earlier history read; use ReadHistory for that. Invalid filters
+// or strategy scopes return ErrInvalidConfiguration; strategy/RPC errors retain
+// their identities. The Sequence must have been constructed with New.
+func (s *Sequence) ResolveScope(ctx context.Context, filter ScopeFilter) (Scope, error) {
+	if err := ctx.Err(); err != nil {
+		return Scope{}, err
 	}
-	return s.concurrency.Strategy.GetScope(ctx, s, cloneScope(scope).Filter)
+	if s == nil || s.service == nil {
+		return Scope{}, faults.ErrInvalidConfiguration
+	}
+	scope := cloneScope(Scope{Filter: filter})
+	scope.Filter.SourceType = scopeDimension(scope.Filter.SourceType)
+	scope.Filter.StreamType = scopeDimension(scope.Filter.StreamType)
+	scope.Filter.StreamID = scopeDimension(scope.Filter.StreamID)
+	source := events.SourceID(stringValue(scope.Filter.SourceID))
+	if scope.Filter.SourceID != nil && strings.TrimSpace(string(source)) == "" {
+		return Scope{}, faults.ErrInvalidConfiguration
+	}
+	if _, err := scopeContract(source, scope); err != nil {
+		return Scope{}, err
+	}
+	if s.concurrency.Strategy != nil {
+		var err error
+		scope, err = s.concurrency.Strategy.GetScope(ctx, s, scope.Filter)
+		if err != nil {
+			return Scope{}, err
+		}
+	}
+	return s.resolveExpectation(ctx, source, scope)
+}
+
+func (s *Sequence) automaticScope(ctx context.Context, source events.SourceID, route Route) (Scope, error) {
+	return s.ResolveScope(ctx, defaultScope(source, route).Filter)
 }
 
 func (s *Sequence) automaticBatchScopes(ctx context.Context, entries []Entry, explicit []LabeledScope) ([]LabeledScope, error) {
@@ -50,11 +91,8 @@ func (s *Sequence) automaticBatchScopes(ctx context.Context, entries []Entry, ex
 	if err != nil {
 		return nil, err
 	}
-	if s.concurrency.Strategy == nil {
-		return scopes, nil
-	}
 	for i := len(explicit); i < len(scopes); i++ {
-		scope, err := s.concurrency.Strategy.GetScope(ctx, s, cloneScope(scopes[i].Scope).Filter)
+		scope, err := s.ResolveScope(ctx, scopes[i].Scope.Filter)
 		if err != nil {
 			return nil, err
 		}

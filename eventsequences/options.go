@@ -22,6 +22,8 @@ type Route struct {
 
 // Expectation is a tagged concurrency expectation. The zero value means Resolve,
 // not Exact(0). Reserved numeric positions are rejected before dispatch.
+// ResolveScope may return a resolved unchecked expectation for an empty tail;
+// retain it unchanged to avoid a second tail read at dispatch.
 type Expectation struct {
 	kind     uint8
 	position events.SequenceNumber

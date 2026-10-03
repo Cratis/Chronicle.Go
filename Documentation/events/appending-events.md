@@ -48,6 +48,25 @@ Check `err` and `result.Err()` as above. A competing append is rejected rather t
 
 Reserved sequence sentinels are invalid exact positions. Protected absence sends both the unavailable number and its dedicated wire flag. If a kernel commits while reporting that a requested check did not run, Append returns the committed result **and** `ErrUnsupported`. This is not safe to retry and is not advertised as protected success.
 
+## Resolve configured policy for selected dimensions
+
+When a command chooses concurrency dimensions, call
+`sequence.ResolveScope(ctx, filter)` for each target source separately. It uses
+`WithDefaultConcurrencyStrategy` (or the default optimistic strategy), honors
+`WithCheckFirstAppendIntoAScope`, and returns an owned, resolved `Scope`. Supply
+normalized dimensions: nil does not narrow, and this method adds no append-route
+defaults. Custom strategies receive that selected filter.
+
+Pass the result to `WithScope`, `WithScopes` or `transactions.UnitOfWork.Stage`.
+Neither staging nor dispatch rereads that resolved tail or invokes the strategy
+again. With first-append protection enabled, an empty matching tail becomes
+`NoMatchingEvent`; otherwise it stays unchecked but resolved, retaining its filter.
+The method never appends or retries. It protects the interval after resolution,
+not state read earlier; use `ReadHistory` for earlier loaded state.
+
+`ExampleSequence_ResolveScope` is an executable example of resolving and staging
+an independent check without appending.
+
 ## Routing and audit metadata
 
 Use `WithRoute`, `WithOccurred`, `WithSubject`, `WithTags`, `WithNamedTags` and `WithCorrelation` for per-append options. Source type defaults to `Default`, stream type to `All`, stream ID to `Default`; the stream ID is not inferred from the source. Subject defaults to the source ID. Occurrence defaults to kernel append time; supplied times retain their offset and truncate sub-100ns precision on the wire. The pinned MongoDB kernel persists these times at millisecond precision.
