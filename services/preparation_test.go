@@ -163,9 +163,16 @@ func TestPartialScopeCleanupPanicDoesNotHideOpenFailureOrPublishClient(t *testin
 	assertSafeProviderDiagnostics(t, err)
 }
 
-func TestPartialScopeIsClosedWhenOpenErrorInspectionPanics(t *testing.T) {
-	for _, openErr := range []error{panickingUnwrap{}, &di.Error{Operation: "new-scope", Kind: di.ErrCallbackPanicked, Panic: "secret panic payload"}} {
-		t.Run("partial open", func(t *testing.T) {
+func TestPartialScopeIsClosedWhenOpenErrorIsOpaqueOrPanicked(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		err      error
+		category error
+	}{
+		{"opaque inspection", panickingUnwrap{}, errUnsafeDiagnostic},
+		{"provider panic", &di.Error{Operation: "new-scope", Kind: di.ErrCallbackPanicked, Panic: "secret panic payload"}, di.ErrCallbackPanicked},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
 			scope := &partialScope{}
 			registry := chronicle.NewRegistry()
 			model, err := chronicle.RegisterReadModel[preparedModel](registry)
@@ -181,8 +188,8 @@ func TestPartialScopeIsClosedWhenOpenErrorInspectionPanics(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			client, err := chronicle.NewClient(chronicle.WithRegistry(registry), WithServices(partialScopeFactory{scope, openErr}))
-			if client != nil || scope.closed != 1 || !errors.Is(err, di.ErrCallbackPanicked) {
+			client, err := chronicle.NewClient(chronicle.WithRegistry(registry), WithServices(partialScopeFactory{scope, tc.err}))
+			if client != nil || scope.closed != 1 || !errors.Is(err, tc.category) {
 				t.Fatal("partial scope leaked or failure lost", err)
 			}
 			assertSafeProviderDiagnostics(t, err)
