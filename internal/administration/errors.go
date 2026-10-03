@@ -18,11 +18,12 @@ type OutcomeUnknownError struct {
 	// Operation identifies the attempted administration action.
 	Operation string
 	// Cause is the original failure, not evidence that the server rolled back.
+	// It may contain sensitive diagnostics; Error omits it. Inspect deliberately.
 	Cause error
 }
 
 func (e *OutcomeUnknownError) Error() string {
-	return fmt.Sprintf("chronicle: %s outcome unknown: %v", e.Operation, e.Cause)
+	return fmt.Sprintf("chronicle: %s outcome unknown", e.Operation)
 }
 func (e *OutcomeUnknownError) Unwrap() error { return e.Cause }
 
