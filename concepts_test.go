@@ -62,7 +62,7 @@ func TestFundamentalsEventRegistrationSchemaAndJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"Author":"00112233-4455-6677-8899-aabbccddeeff","Date":"2026-01-02","Duration":"1.02:03:04.1234567","ID":"00112233-4455-6677-8899-aabbccddeeff","Name":"Ada","Names":["Grace"],"Number":42,"Numbers":{"n":7},"Optional":"00112233-4455-6677-8899-aabbccddeeff","Time":"03:04:05.1234567"}`
+	want := `{"ID":"00112233-4455-6677-8899-aabbccddeeff","Author":"00112233-4455-6677-8899-aabbccddeeff","Name":"Ada","Number":42,"Date":"2026-01-02","Time":"03:04:05.1234567","Duration":"1.02:03:04.1234567","Optional":"00112233-4455-6677-8899-aabbccddeeff","Names":["Grace"],"Numbers":{"n":7}}`
 	if string(data) != want {
 		t.Fatalf("got %s\nwant %s", data, want)
 	}

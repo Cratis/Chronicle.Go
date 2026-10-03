@@ -89,7 +89,7 @@ func collectFields(n *node, path, goPath string, index []int, collection bool, r
 			fieldPath = path + "." + f.name
 			fieldName = goPath + "." + f.goName
 		}
-		indices := append(append([]int(nil), index...), f.index)
+		indices := append(append([]int(nil), index...), f.index...)
 		scalar, format := classify(f.value)
 		*result = append(*result, Field{GoField: fieldName, Index: indices, Name: f.name, Path: fieldPath, Type: f.value.typ, Nullable: f.value.typ.Kind() == reflect.Pointer, Scalar: scalar, Format: format, Collection: collection, Tag: f.tag, plan: f.value})
 		collectFields(f.value, fieldPath, fieldName, indices, collection, result, active)

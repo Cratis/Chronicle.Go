@@ -68,7 +68,7 @@ func TestNullableScalars(t *testing.T) {
 	}
 	flag, count, when, id := false, int64(0), time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC), uuid.MustParse("00112233-4455-6677-8899-aabbccddeeff")
 	data, err = plan.Marshal(nullable{Flag: &flag, Count: &count, When: &when, ID: &id})
-	if err != nil || string(data) != `{"Count":0,"Flag":false,"ID":"00112233-4455-6677-8899-aabbccddeeff","Value":0,"When":"2026-01-02T03:04:05Z"}` {
+	if err != nil || string(data) != `{"Flag":false,"Count":0,"When":"2026-01-02T03:04:05Z","ID":"00112233-4455-6677-8899-aabbccddeeff","Value":0}` {
 		t.Fatalf("present = %s, %v", data, err)
 	}
 }

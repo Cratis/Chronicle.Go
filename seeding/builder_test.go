@@ -16,7 +16,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type ProductAdded struct{ Name string }
+type ProductAdded struct {
+	Name string
+	Age  int
+}
 type PriceChanged struct{ Price float64 }
 
 func catalog(t *testing.T) *events.Catalog {
@@ -40,10 +43,10 @@ func TestSeedRequestMatchesHandDerivedCSharpGolden(t *testing.T) {
 	// Hand-derived from EventSeeding.cs Register at Chronicle 2e31b0d.
 	// This is a C#-derived payload fixture, not output captured from executing .NET.
 	definition, err := seeding.Prepare(catalog(t), seeding.Func(func(b *seeding.Builder) error {
-		seeding.For(b, "p1", ProductAdded{Name: "Book"})
+		seeding.For(b, "p1", ProductAdded{Name: "Booké<>&'+", Age: 37})
 		b.ForEventSource("p1", PriceChanged{Price: 12})
-		seeding.For(b.ForNamespace("red"), "p2", ProductAdded{Name: "Red"})
-		seeding.For(b, "p2", ProductAdded{Name: "Global"})
+		seeding.For(b.ForNamespace("red"), "p2", ProductAdded{Name: "Red", Age: 12})
+		seeding.For(b, "p2", ProductAdded{Name: "Global", Age: 9})
 		b.ForNamespace("default").ForEventSource("p1", PriceChanged{Price: 9})
 		b.ForNamespace("red").ForEventSource("p2", PriceChanged{Price: 8})
 		return nil
@@ -81,7 +84,7 @@ func TestSeedSnapshotAndRepeatedFacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	entries := definition.Contract("store").GlobalByEventSource[0].Entries
-	if len(entries) != 2 || entries[0].Content != `{"Name":"original"}` || entries[0].EventSourceId != " padded " {
+	if len(entries) != 2 || entries[0].Content != `{"Name":"original","Age":0}` || entries[0].EventSourceId != " padded " {
 		t.Fatal(entries)
 	}
 }

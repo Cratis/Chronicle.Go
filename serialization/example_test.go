@@ -28,7 +28,7 @@ func ExampleNamingPolicy() {
 		fmt.Println(string(data))
 	}
 	// Output:
-	// {"Id":"1","Person":"Ada","URLValue":"/docs"}
-	// {"Id":"1","URLValue":"/docs","person":"Ada"}
-	// {"Id":"1","person":"Ada","urlValue":"/docs"}
+	// {"URLValue":"/docs","Person":"Ada","Id":"1"}
+	// {"URLValue":"/docs","person":"Ada","Id":"1"}
+	// {"urlValue":"/docs","person":"Ada","Id":"1"}
 }

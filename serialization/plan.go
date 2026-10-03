@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/fundamentals.go/concepts"
 	"github.com/google/uuid"
@@ -42,7 +41,7 @@ type node struct {
 	readModelRoot bool
 }
 type field struct {
-	index               int
+	index               []int
 	name                string
 	goName, tag         string
 	value               *node
@@ -51,8 +50,9 @@ type field struct {
 }
 
 // Compile validates a struct shape before registration. Recursive types use schema
-// references. Embedded fields, custom marshalers, interface values and unsupported chronicle directives
-// are rejected rather than generating a schema that disagrees with serialization.
+// references. Embedded fields follow encoding/json promotion and declaration order.
+// Custom marshalers, interface values and unsupported chronicle directives are
+// rejected rather than generating a schema that disagrees with serialization.
 // Recognized directives are metadata; artifact registries must also ValidateRole.
 // Naming defaults to PreservePropertyNames; the last optional policy wins.
 func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
@@ -231,39 +231,18 @@ func schemaTypeName(name string) string {
 func (n *node) compileFields(state *compileState, policy NamingPolicy, readModelRoot bool) error {
 	properties := make(map[string]any)
 	required := []string{}
-	for i := 0; i < n.typ.NumField(); i++ {
-		f := n.typ.Field(i)
-		tag := f.Tag.Get("chronicle")
-		tags := strings.Split(f.Tag.Get("json"), ",")
-		if !f.IsExported() || tags[0] == "-" {
-			if tag != "" {
-				return &declarations.DeclarationError{Artifact: n.typ.String(), GoField: f.Name, Offset: 0, Message: "declaration on an ignored field", Cause: faults.ErrInvalidConfiguration}
-			}
-			continue
-		}
-		if f.Anonymous {
-			return unsupported(n.typ, "embedded fields require an explicit nested property")
-		}
-		name := tags[0]
-		if name == "" {
-			goName := f.Name
-			if _, tagged := f.Tag.Lookup("json"); readModelRoot && goName == "ID" && !tagged {
-				goName = "Id"
-			}
-			name = policy.name(goName)
-		}
-		if _, exists := properties[name]; exists {
-			return fmt.Errorf("%w: %s: duplicate JSON property: %s", faults.ErrInvalidConfiguration, n.typ, name)
-		}
-		if err := validateTag(tag, declarations.Any, n.typ.String(), f.Name, name); err != nil {
-			return err
-		}
+	fields, err := serializedFields(n.typ, policy, readModelRoot)
+	if err != nil {
+		return err
+	}
+	for _, candidate := range fields {
+		f, name := candidate.field, candidate.name
 		value, err := compile(f.Type, state, policy, false)
 		if err != nil {
 			return err
 		}
-		entry := field{index: i, name: name, goName: f.Name, tag: tag, value: value}
-		for _, option := range tags[1:] {
+		entry := field{index: candidate.index, name: name, goName: candidate.goName, tag: f.Tag.Get("chronicle"), value: value}
+		for _, option := range strings.Split(f.Tag.Get("json"), ",")[1:] {
 			switch option {
 			case "omitempty":
 				entry.omitEmpty = true
@@ -274,7 +253,7 @@ func (n *node) compileFields(state *compileState, policy NamingPolicy, readModel
 			}
 		}
 		properties[name] = value.schema
-		if !entry.omitEmpty && !entry.omitZero && f.Type.Kind() != reflect.Pointer && f.Type.Kind() != reflect.Map && f.Type.Kind() != reflect.Slice {
+		if !candidate.optional && !entry.omitEmpty && !entry.omitZero && f.Type.Kind() != reflect.Pointer && f.Type.Kind() != reflect.Map && f.Type.Kind() != reflect.Slice {
 			required = append(required, name)
 		}
 		n.fields = append(n.fields, entry)

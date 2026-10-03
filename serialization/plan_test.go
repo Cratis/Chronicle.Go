@@ -39,7 +39,7 @@ func TestSchemaAndSerializationShareNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"Amount":9223372036854775807,"Enabled":false,"Nested":{"FullName":"Ada"},"URLValue":"https://example.test","Values":[],"When":"2026-01-02T03:04:05Z","id":"00112233-4455-6677-8899-aabbccddeeff"}`
+	want := `{"URLValue":"https://example.test","id":"00112233-4455-6677-8899-aabbccddeeff","Amount":9223372036854775807,"Enabled":false,"When":"2026-01-02T03:04:05Z","Nested":{"FullName":"Ada"},"Values":[]}`
 	if string(data) != want {
 		t.Fatalf("JSON = %s\nwant = %s", data, want)
 	}

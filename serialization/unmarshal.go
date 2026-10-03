@@ -82,7 +82,11 @@ func (n *node) decode(data []byte, value reflect.Value, depth int) error {
 				}
 			}
 			if ok {
-				if err := field.value.decode(raw, value.Field(field.index), depth+1); err != nil {
+				target, err := fieldValue(value, field.index, true)
+				if err != nil {
+					return err
+				}
+				if err := field.value.decode(raw, target, depth+1); err != nil {
 					return err
 				}
 			}

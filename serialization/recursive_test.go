@@ -41,7 +41,7 @@ func TestRecursiveSchemaCodecAndSiblingTraversal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(data) != `{"Left":{"children":[{"name":"two"}],"name":"one","next":{"name":"shared"}},"Right":{"name":"","next":{"name":"shared"}}}` {
+	if string(data) != `{"Left":{"name":"one","children":[{"name":"two"}],"next":{"name":"shared"}},"Right":{"name":"","next":{"name":"shared"}}}` {
 		t.Fatalf("payload: %s", data)
 	}
 	for _, path := range []string{"Left.name", "Right.name"} {
@@ -111,7 +111,7 @@ func TestGenericRecursiveSchemaReferencesUseSafeNames(t *testing.T) {
 	}
 	value := genericRecursiveTree[recursiveTree]{Value: recursiveTree{Name: "root"}, Children: []genericRecursiveTree[recursiveTree]{{Value: recursiveTree{Name: "child"}}}}
 	data, err := plan.Marshal(value)
-	if err != nil || string(data) != `{"children":[{"value":{"name":"child"}}],"value":{"name":"root"}}` {
+	if err != nil || string(data) != `{"value":{"name":"root"},"children":[{"value":{"name":"child"}}]}` {
 		t.Fatalf("generic recursive payload: %s %v", data, err)
 	}
 }
@@ -126,7 +126,7 @@ func TestRecursiveReadModelKeepsRootIDTranslationLocal(t *testing.T) {
 		t.Fatal(err)
 	}
 	data, err := plan.Marshal(Model{ID: "root", Children: []Model{{ID: "child", Children: []Model{{ID: "grandchild"}}}}})
-	if err != nil || string(data) != `{"Children":[{"Children":[{"ID":"grandchild"}],"ID":"child"}],"Id":"root"}` {
+	if err != nil || string(data) != `{"Id":"root","Children":[{"ID":"child","Children":[{"ID":"grandchild"}]}]}` {
 		t.Fatalf("root naming: %s %v", data, err)
 	}
 }

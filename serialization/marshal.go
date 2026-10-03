@@ -13,7 +13,10 @@ import (
 // properties are omitted, while false and zero are preserved unless explicitly
 // tagged omitempty/omitzero. Integers nested under maps outside -2^53 through
 // 2^53, and unsigned values above MaxInt64, return ErrUnsupported before dispatch.
-// The caller must not mutate value during this call.
+// Object fields use declaration order (promoted fields use encoding/json order),
+// and strings use System.Text.Json's default escaping. Map keys are sorted, not
+// insertion-ordered like C# dictionaries. The caller must not mutate value during
+// this call.
 func (p *Plan) Marshal(value any) ([]byte, error) {
 	v := reflect.ValueOf(value)
 	if v.IsValid() && v.Kind() == reflect.Pointer {
@@ -29,7 +32,11 @@ func (p *Plan) Marshal(value any) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(encoded)
+	data, err := json.Marshal(encoded)
+	if err != nil {
+		return nil, err
+	}
+	return escapeJSONStrings(data)
 }
 
 func (n *node) checkInteger(value reflect.Value, dictionary bool) error {
@@ -98,10 +105,13 @@ func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, 
 		}
 		return n.item.encode(value.Elem(), dictionary, state, depth+1)
 	case reflect.Struct:
-		result := make(map[string]any, len(n.fields))
+		result := make(orderedObject, 0, len(n.fields))
 		for _, field := range n.fields {
-			v := value.Field(field.index)
-			if (field.omitEmpty && empty(v)) || (field.omitZero && field.isZero(v)) {
+			v, err := fieldValue(value, field.index, false)
+			if err != nil {
+				return nil, err
+			}
+			if !v.IsValid() || (field.omitEmpty && empty(v)) || (field.omitZero && field.isZero(v)) {
 				continue
 			}
 			encoded, err := field.value.encode(v, dictionary, state, depth+1)
@@ -109,7 +119,7 @@ func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, 
 				return nil, fmt.Errorf("property %s: %w", field.name, err)
 			}
 			if encoded != nil {
-				result[field.name] = encoded
+				result = append(result, objectProperty{name: field.name, value: encoded})
 			}
 		}
 		return result, nil
