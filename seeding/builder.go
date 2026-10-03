@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/contracts/seeding"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
@@ -80,6 +81,10 @@ func For[E any](builder *Builder, source events.SourceID, values ...E) *Builder 
 		builder.fail(fmt.Errorf("%w: blank seed source", faults.ErrInvalidConfiguration))
 		return builder
 	}
+	if err := compliance.ValidateSubject(string(source)); err != nil {
+		builder.fail(err)
+		return builder
+	}
 	for _, value := range values {
 		builder.ForEventSource(source, value)
 	}
@@ -107,6 +112,11 @@ func (b *Builder) ForEventSource(source events.SourceID, values ...any) *Builder
 	}
 	if strings.TrimSpace(string(source)) == "" {
 		b.fail(fmt.Errorf("%w: blank seed source", faults.ErrInvalidConfiguration))
+		return b
+	}
+	// The seed wire has no separate subject; the kernel uses the source ID.
+	if err := compliance.ValidateSubject(string(source)); err != nil {
+		b.fail(err)
 		return b
 	}
 	for _, value := range values {

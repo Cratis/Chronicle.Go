@@ -318,11 +318,14 @@ func Validate(role Role, directives []Directive) error {
 			}
 			return &DeclarationError{Directive: d.Name, Offset: d.Offset, Message: message, Cause: cause}
 		}
-		if d.Name == "pii" || d.Name == "encrypted" {
-			return failure("security declarations require the compliance implementation", true)
+		if d.Name == "pii" || d.Name == "encrypted" || d.Name == "compliance-details" {
+			if !protectionDeclaration(d) {
+				return failure("invalid classification arguments", false)
+			}
+			continue
 		}
 		if d.Name == "unique" || d.Name == "subject" {
-			if role != Event && role != Any {
+			if role != Event && role != Any && d.Name != "subject" {
 				return failure("event directive on a non-event artifact", true)
 			}
 			if !eventDeclaration(d) {

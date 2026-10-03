@@ -217,10 +217,10 @@ type IgnoredDeclaration struct {
 	Secret string `json:"-" chronicle:"subject"`
 }
 type PIIEvent struct {
-	Secret string `chronicle:"pii"`
+	Secret events.SourceID `chronicle:"pii"`
 }
 type EncryptedEvent struct {
-	Secret string `chronicle:"encrypted(scope=subject)"`
+	Secret events.SourceID `chronicle:"encrypted(scope=subject)"`
 }
 
 func TestSecurityAndIgnoredEventTagsFailClosed(t *testing.T) {

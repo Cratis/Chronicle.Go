@@ -61,6 +61,9 @@ func (k *watchKernel) GetInstances(ctx context.Context, r *contracts.GetInstance
 }
 
 func (k *watchKernel) Release(ctx context.Context, r *compliance.ReleaseRequest) (*compliance.ReleaseResponse, error) {
+	if err := validateReleaseRequest(r); err != nil {
+		return nil, err
+	}
 	return k.release(ctx, r)
 }
 

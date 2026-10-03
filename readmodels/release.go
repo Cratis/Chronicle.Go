@@ -8,7 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -41,10 +41,10 @@ func (e *ReleaseError) Unwrap() []error { return []error{ErrRelease, e.Cause} }
 // schema. Top-level properties are released in groups selected by __subjects,
 // falling back to the resolved default subject. Persisted lineage is preserved. Missing
 // subjects, kernel release errors and invalid replies fail closed. Unprotected
-// documents are copied without a release RPC. Get's kernel path already performs
-// release. Watches/windows additionally verify release before delivery, matching
-// C# materialized reads: 19.29.4's supported string PII handler passes plaintext
-// through unchanged. Release failure never falls back to the original document.
+// documents are copied without a release RPC. Every read path verifies release
+// before delivery: the kernel handlers pass already released values unchanged.
+// Namespace/global confidentiality does not require a subject. Subject-dependent
+// values without an owner fail closed, even in mixed-scope models.
 func (s *Service) Release(ctx context.Context, model Identifier, document json.RawMessage) (json.RawMessage, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 	if !validDocument(bytes.TrimSpace(document)) {
 		return nil, invalid("release requires a JSON object")
 	}
-	if len(d.definition.config.pii) == 0 {
+	if len(d.definition.protected) == 0 {
 		return append(json.RawMessage(nil), document...), nil
 	}
 	var fields map[string]json.RawMessage
@@ -66,7 +66,11 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 	subject := ""
 	// Stored lineage is authoritative for raw documents; a typed instance normally
 	// resolves the explicitly selected property, then the Go ID property.
-	for _, name := range []string{"__subject", d.definition.config.subject, idProperty(d), "_id", "id", "Id", "ID"} {
+	subjectProperties := []string{"__subject", d.definition.config.subject}
+	if id := releaseIDProperty(d); id != "" {
+		subjectProperties = append(subjectProperties, id, "_id", "id", "Id", "ID")
+	}
+	for _, name := range subjectProperties {
 		if name == "" {
 			continue
 		}
@@ -75,23 +79,29 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 			break
 		}
 	}
-	if subject == "" {
-		return nil, &ReleaseError{Cause: invalid("protected model requires a subject")}
-	}
 	var subjects map[string]string
 	if lineage, ok := fields["__subjects"]; ok {
 		if err := json.Unmarshal(lineage, &subjects); err != nil {
 			return nil, &ReleaseError{Cause: faults.ErrProtocol}
 		}
 	}
+	declared := make(map[string]bool)
+	for _, field := range serialization.RootFields(d.definition.plan.Fields()) {
+		declared[field.Name] = true
+	}
 	groups := make(map[string]map[string]json.RawMessage)
 	for name, value := range fields {
+		// The kernel rejects undeclared fields. Keep sink bookkeeping and
+		// lineage locally, but never send them through the schema walk.
+		if !declared[name] {
+			continue
+		}
 		propertySubject, ok := subjects[name]
 		if !ok {
 			propertySubject = subject
 		}
-		if propertySubject == "" {
-			return nil, &ReleaseError{Cause: invalid("protected model requires a subject")}
+		if propertySubject == "" && (d.definition.protected[name] || ok) {
+			return nil, &ReleaseError{Cause: invalid("protected value requires a subject")}
 		}
 		if groups[propertySubject] == nil {
 			groups[propertySubject] = make(map[string]json.RawMessage)
@@ -115,8 +125,7 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 		// Never merge a partial reply over retained ciphertext. Unprotected
 		// bookkeeping may be omitted, but each protected root that was sent
 		// must be replaced by the release response.
-		for _, path := range d.definition.config.pii {
-			root := strings.Split(path, ".")[0]
+		for root := range d.definition.protected {
 			if _, sent := groups[group][root]; sent {
 				if _, returned := released[root]; !returned {
 					return nil, &ReleaseError{Cause: faults.ErrProtocol}
@@ -124,8 +133,26 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 			}
 		}
 		for name, value := range released {
-			fields[name] = value
+			// A group cannot overwrite another owner's values or stored lineage.
+			if _, sent := groups[group][name]; sent && name != "__subject" && name != "__subjects" {
+				fields[name] = value
+			}
 		}
+	}
+	// Validate only classified roots against the declared codec. Raw documents
+	// may contain sink bookkeeping and differently represented unprotected IDs.
+	protected := make(map[string]json.RawMessage, len(d.definition.protected))
+	for name := range d.definition.protected {
+		if value, ok := fields[name]; ok {
+			protected[name] = value
+		}
+	}
+	protectedJSON, err := json.Marshal(protected)
+	if err != nil {
+		return nil, &ReleaseError{Cause: faults.ErrProtocol}
+	}
+	if err := d.definition.plan.Unmarshal(protectedJSON, reflect.New(d.GoType()).Interface()); err != nil {
+		return nil, &ReleaseError{Cause: err}
 	}
 	result, err := json.Marshal(fields)
 	if err != nil {
@@ -146,6 +173,11 @@ func releaseSubject(raw json.RawMessage) string {
 		return value
 	case json.Number:
 		return value.String()
+	case bool:
+		if value {
+			return "True"
+		}
+		return "False"
 	default:
 		return ""
 	}
@@ -158,6 +190,9 @@ func (s *Service) releaseSlice(ctx context.Context, d Descriptor, subject string
 	}
 	if response == nil || response.HasError || response.Error != "" || !validDocument(bytes.TrimSpace([]byte(response.Payload))) {
 		return nil, &ReleaseError{Cause: faults.ErrProtocol}
+	}
+	if err := validateReleased(d.Schema(), payload, []byte(response.Payload)); err != nil {
+		return nil, &ReleaseError{Cause: err}
 	}
 	var released map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(response.Payload), &released); err != nil {
@@ -193,12 +228,12 @@ func (r *Reader[T]) Release(ctx context.Context, value T) (T, error) {
 	if err := ctx.Err(); err != nil {
 		return zero, err
 	}
-	if len(d.definition.config.pii) == 0 {
+	if len(d.definition.protected) == 0 {
 		return value, nil
 	}
 	data, err := d.Marshal(value)
 	if err != nil {
-		return zero, fmt.Errorf("release serialization: %w", err)
+		return zero, &ReleaseError{Cause: err}
 	}
 	released, err := r.service.Release(ctx, d.Identifier(), data)
 	if err != nil {

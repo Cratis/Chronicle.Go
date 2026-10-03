@@ -6,6 +6,7 @@ package readmodels
 import (
 	"slices"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -36,7 +37,22 @@ func (d Descriptor) WithNamingPolicy(policy serialization.NamingPolicy) (Descrip
 	if err != nil {
 		return Descriptor{}, err
 	}
-	copy.schema, err = modelSchema(plan.Schema(), copy.config)
+	copy.config.protection = slices.Clone(copy.config.protection)
+	for i, declaration := range copy.config.protection {
+		if declaration.Path() == "" {
+			continue
+		}
+		path, err := serialization.RebindPath(declaration.Path(), d.Fields(), plan.Fields())
+		if err != nil {
+			return Descriptor{}, err
+		}
+		copy.config.protection[i] = compliance.Property(path, declaration.Metadata())
+	}
+	copy.schema, err = modelSchema(plan, copy.config)
+	if err != nil {
+		return Descriptor{}, err
+	}
+	copy.protected, err = serialization.ProtectionRoots(copy.schema)
 	if err != nil {
 		return Descriptor{}, err
 	}

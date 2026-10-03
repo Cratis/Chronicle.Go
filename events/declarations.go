@@ -10,10 +10,19 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/serialization"
 )
+
+// WithProtection adds type or property classifications and metadata providers.
+// Declarations are copied; duplicates and conflicts fail registration. Field tags
+// need no option. PII is erasable; confidentiality is a separate schema category.
+func WithProtection(declarations ...compliance.Declaration) TypeOption {
+	owned := slices.Clone(declarations)
+	return func(c *typeConfig) { c.protection = append(c.protection, owned...) }
+}
 
 // DeclarationError locates invalid event metadata. Error text redacts literals.
 type DeclarationError = declarations.DeclarationError
@@ -109,6 +118,9 @@ func (d Descriptor) compileDeclarations() (Descriptor, error) {
 				return Descriptor{}, d.declarationError(field, directive, "duplicate field declaration")
 			}
 			seen[directive.Name] = true
+			if directive.Name == "pii" || directive.Name == "encrypted" || directive.Name == "compliance-details" {
+				continue
+			}
 			if len(field.Index) != 1 || field.Collection {
 				return Descriptor{}, d.declarationError(field, directive, "event declarations require a top-level field")
 			}
@@ -130,9 +142,14 @@ func (d Descriptor) compileDeclarations() (Descriptor, error) {
 }
 
 func (d Descriptor) withCompensationSchema() (Descriptor, error) {
+	var err error
+	d.schema, err = d.plan.ProtectedSchema(d.protection...)
+	if err != nil {
+		return Descriptor{}, err
+	}
 	if d.compensation != nil {
 		var schema map[string]any
-		decoder := json.NewDecoder(strings.NewReader(d.plan.Schema()))
+		decoder := json.NewDecoder(strings.NewReader(d.schema))
 		decoder.UseNumber()
 		if err := decoder.Decode(&schema); err != nil {
 			return Descriptor{}, err
@@ -181,6 +198,12 @@ func taggedSubject(typ reflect.Type, field serialization.Field) func(any) (Subje
 			v = v.MethodByName("ConceptValue").Call(nil)[0]
 		}
 		subject := Subject(fmt.Sprint(v.Interface()))
+		if v.Kind() == reflect.Bool {
+			subject = "False"
+			if v.Bool() {
+				subject = "True"
+			}
+		}
 		return subject, subject != ""
 	}
 }

@@ -149,7 +149,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			p := Provenance{FrontEnd: "model-bound", GoField: field.GoField, Path: field.Path, Directive: directive.Name, Offset: directive.Offset}
 			fail := func(err error) (*nodeDefinition, error) { return nil, declarationFailure(c.result.id, p, err) }
 			switch directive.Name {
-			case "children", "nested", "index":
+			case "children", "nested", "index", "subject", "pii", "compliance-details", "encrypted":
 				continue
 			case "key":
 				if n.keyField != "" || field.Scalar == serialization.NotScalar || field.Nullable {

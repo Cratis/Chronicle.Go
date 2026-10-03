@@ -7,7 +7,7 @@ Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the 
 
 ## Registration reference
 
-`RegisterReadModel[T](registry, options...)` returns `(readmodels.Model[T], error)`. `T` must be a named, non-pointer struct supported by the shared [serialization contract](../events/event-types.md). Unsupported shapes and protection tags fail before network I/O.
+`RegisterReadModel[T](registry, options...)` returns `(readmodels.Model[T], error)`. `T` must be a named, non-pointer struct supported by the shared [serialization contract](../events/event-types.md). Unsupported shapes and conflicting protection tags fail before network I/O.
 
 | Option | Default and contract |
 | --- | --- |
@@ -19,8 +19,9 @@ Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the 
 | `WithObserver(kind, id)` | `Projection`, empty producer ID. Associates a producer; does not register it |
 | `WithEventSequence(sequence)` | `event-log`; used for immediate reads and session cleanup |
 | `WithIndexes(paths...)` | None. Serialized dot paths can traverse nested objects and collection items |
-| `WithPII(paths...)` | None. Marks scalar string properties with kernel PII metadata; other protection shapes remain unsupported |
-| `WithSubjectProperty(path)` | No explicit subject property. Selects a top-level string property for release, falling back to the Go `ID` field |
+| `WithPII(paths...)` | None. Marks properties with kernel PII metadata, including composite leaves and coarse collections |
+| `WithProtection(declarations...)` | None. Type/property PII or distinct subject/namespace/global confidentiality classifications and providers |
+| `WithSubjectProperty(path)` | No explicit subject property. Selects a top-level scalar property for release, falling back to the Go `ID` field; `subject` tags use the same resolver |
 
 Use `chronicle:"index"` on a model field for the model-bound equivalent of
 `WithIndexes`. Tag paths and explicit paths accumulate into the same metadata;
@@ -30,7 +31,7 @@ collection items are traversed using serialization-plan names. Traversal stops
 recursive cycles per path, so two properties of the same nested type both retain
 their indexes. Index tags neither subscribe to events nor create a projection.
 
-Scalar options are last-wins. Collections are copied; duplicate index/PII paths, unknown paths, zero generations and blank required names fail. PII cannot protect the model key or subject. No public API requires a UUID dependency or a concept/date wrapper.
+Scalar options are last-wins. Collections are copied; duplicate index/PII paths, unknown paths, zero generations and blank required names fail. Neither PII nor confidentiality can protect an `events.SourceID` value, including through type or nested metadata. No public API requires a UUID dependency or a concept/date wrapper.
 
 `WithRegistry` freezes declarations at `NewClient` time. `WithRegistryForStore` replaces the entire catalog for that store. Later registry changes do not alter existing clients. Duplicate Go model types or identifiers fail atomically.
 
@@ -134,13 +135,13 @@ Sessions own no background goroutine. Reads and cleanup serialize with cancellat
 
 ## Release externally loaded documents
 
-The kernel releases protected values on its own `GetInstanceByKey` path; ordinary `Get` does not repeat that RPC. Watches and materialized windows additionally verify release before delivery using the idempotent string-PII handler. For ciphertext loaded directly from a sink, use `reader.Release(ctx, value)` or `store.ReadModels().Release(ctx, model.Identifier(), rawDocument)`.
+All model reads verify release before delivery, including one-shot reads, sessions, projection replay, watches and materialized windows. Kernel handlers pass already released values through. For ciphertext loaded directly from a sink, use `reader.Release(ctx, value)`, `reader.ReleaseMany(ctx, values)` or `store.ReadModels().Release(ctx, model.Identifier(), rawDocument)`.
 
 Release uses the model schema and namespace. Raw documents preserve `__subject` and `__subjects` lineage; a stored `__subject` takes precedence, followed by the configured subject property and then the Go `ID` field's serialized name. Without protection metadata, typed values pass through and raw documents are copied without an RPC.
 
-Unlike C#'s best-effort release, Go returns `ErrRelease` and no model when a protected document has no subject, the release RPC fails, the kernel reports a release error, or the response is malformed. Inspect `*readmodels.ReleaseError` with `errors.As`; context and unsupported-operation identities survive wrapping. Error text omits payloads and subjects.
+Unlike C#'s best-effort release, Go returns `ErrRelease` and no model when a present subject-protected value has no owner, the release RPC fails, the kernel reports a release error, or the response is malformed. Inspect `*readmodels.ReleaseError` with `errors.As`; context and unsupported-operation identities survive wrapping. Error text omits payloads and subjects.
 
-This is a bounded PII-string release surface, not the full compliance SDK. Type/container-wide PII, encrypted classifications, custom codecs, key erasure and reauthorization are not implemented. Unsupported `chronicle` field tags fail rather than silently publishing plaintext. Kernel release remains authoritative for cryptographic correctness and erased-value behavior.
+Namespace/global confidentiality can release without a subject. See [compliance and confidentiality](../compliance.md) for field/type classifications, erasure, reauthorization and pinned-kernel limitations. Unsupported codecs and conflicting declarations fail rather than silently publishing plaintext. Kernel release remains authoritative for cryptographic correctness and erased-value behavior.
 
 ## Run the example
 

@@ -53,7 +53,11 @@ func (s *Service) ReplayProjection(ctx context.Context, model Identifier, eventC
 		if !validDocument([]byte(instance)) {
 			return nil, faults.ErrProtocol
 		}
-		result[i], err = normalizeID([]byte(instance), d)
+		released, err := s.Release(ctx, model, json.RawMessage(instance))
+		if err != nil {
+			return nil, err
+		}
+		result[i], err = normalizeID(released, d)
 		if err != nil {
 			return nil, err
 		}

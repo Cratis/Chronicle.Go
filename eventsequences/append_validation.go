@@ -8,13 +8,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
 )
 
 func validateAppendMetadata(subject *events.Subject, occurred *time.Time, named []events.NamedTag) error {
-	if subject != nil && *subject == "" {
-		return fmt.Errorf("%w: empty compliance subject", faults.ErrInvalidConfiguration)
+	if subject != nil {
+		if err := compliance.ValidateSubject(string(*subject)); err != nil {
+			return err
+		}
 	}
 	for _, tag := range named {
 		if strings.TrimSpace(tag.Name) == "" {

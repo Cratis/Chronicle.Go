@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/serialization"
@@ -27,6 +28,7 @@ type Descriptor struct {
 	compensation  *Descriptor
 	schema        string
 	historicalFor *Descriptor
+	protection    []compliance.Declaration
 }
 
 // Ref returns the persisted identity and generation.
@@ -83,6 +85,7 @@ type typeConfig struct {
 	removes      []string
 	tombstone    bool
 	compensation *Descriptor
+	protection   []compliance.Declaration
 }
 
 // WithID overrides the default simple Go type name; use a stable ID across languages.
@@ -140,6 +143,7 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 	}
 	descriptor := Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...), subject: config.subject, sourceStore: config.sourceStore,
 		unique: config.unique, removes: config.removes, tombstone: config.tombstone, compensation: config.compensation}
+	descriptor.protection = append([]compliance.Declaration(nil), config.protection...)
 	descriptor, err = descriptor.withCompensationSchema()
 	if err != nil {
 		return Type[T]{}, err

@@ -60,7 +60,7 @@ func TestReadModelInvalidDeclarationsFailClosed(t *testing.T) {
 		{"nil", nil, chronicle.ErrInvalidConfiguration}, {"blank identity", readmodels.WithIdentifier(" "), chronicle.ErrInvalidConfiguration},
 		{"generation zero", readmodels.WithGeneration(0), chronicle.ErrInvalidConfiguration}, {"blank container", readmodels.WithContainerName(""), chronicle.ErrInvalidConfiguration},
 		{"unknown index", readmodels.WithIndexes("missing"), chronicle.ErrInvalidConfiguration}, {"duplicate index", readmodels.WithIndexes("name", "name"), chronicle.ErrInvalidConfiguration},
-		{"nonstring PII", readmodels.WithPII("count"), chronicle.ErrUnsupported}, {"key PII", readmodels.WithPII("id"), chronicle.ErrInvalidConfiguration},
+		{"unknown PII", readmodels.WithPII("missing"), chronicle.ErrInvalidConfiguration}, {"duplicate PII", readmodels.WithPII("name", "name"), chronicle.ErrInvalidConfiguration},
 		{"unknown sink", readmodels.WithSink(readmodels.Sink{Type: "future"}), chronicle.ErrUnsupported}, {"invalid sink UUID", readmodels.WithSink(readmodels.Sink{Type: readmodels.MongoDB, ConfigurationID: "not-uuid"}), chronicle.ErrInvalidConfiguration},
 		{"unknown observer", readmodels.WithObserver(0, ""), chronicle.ErrInvalidConfiguration},
 	} {
@@ -83,9 +83,9 @@ func TestReadModelInvalidDeclarationsFailClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	type Protected struct {
-		Value string `chronicle:"encrypted"`
+		Value string `chronicle:"pii;encrypted"`
 	}
-	if _, err := readmodels.Define[Protected](); !errors.Is(err, chronicle.ErrUnsupported) {
+	if _, err := readmodels.Define[Protected](); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
 		t.Fatal(err)
 	}
 }

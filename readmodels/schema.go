@@ -5,13 +5,21 @@ package readmodels
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
-	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/compliance"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
-func modelSchema(schema string, config modelConfig) (string, error) {
+func modelSchema(plan *serialization.Plan, config modelConfig) (string, error) {
+	options := append([]compliance.Declaration(nil), config.protection...)
+	for _, path := range config.pii {
+		options = append(options, compliance.Property(path, compliance.Classification{PII: true}))
+	}
+	schema, err := plan.ProtectedSchema(options...)
+	if err != nil {
+		return "", err
+	}
 	var root map[string]any
 	if err := json.Unmarshal([]byte(schema), &root); err != nil {
 		return "", err
@@ -31,32 +39,14 @@ func modelSchema(schema string, config modelConfig) (string, error) {
 			}
 		}
 	}
-	for _, path := range config.pii {
-		property := schemaProperty(root, path)
-		if property["type"] != "string" || property["format"] != nil {
-			return "", fmt.Errorf("%w: PII currently requires a scalar string property", faults.ErrUnsupported)
-		}
-		if path == config.subject || strings.EqualFold(path, "id") {
-			return "", invalid("PII cannot protect the model key or subject")
-		}
-		property["compliance"] = []any{map[string]any{"metadataType": "PII", "details": ""}}
-	}
 	if config.subject != "" {
-		property := schemaProperty(root, config.subject)
-		if strings.Contains(config.subject, ".") || property == nil || !stringProperty(property) {
-			return "", invalid("subject must name a top-level string property")
+		field, ok := serialization.FieldAt(plan.Fields(), config.subject)
+		if strings.Contains(config.subject, ".") || !ok || field.Scalar == serialization.NotScalar {
+			return "", invalid("subject must name a top-level scalar property")
 		}
 	}
 	data, err := json.Marshal(root)
 	return string(data), err
-}
-
-func stringProperty(property map[string]any) bool {
-	if property["type"] == "string" {
-		return true
-	}
-	kinds, ok := property["type"].([]any)
-	return ok && len(kinds) == 2 && kinds[0] == "string" && kinds[1] == "null"
 }
 
 func schemaProperty(root map[string]any, path string) map[string]any {

@@ -26,6 +26,8 @@
       href: events/unit-of-work.md
 - name: Serialization
   href: serialization.md
+- name: Compliance and confidentiality
+  href: compliance.md
 - name: Read models
   href: read-models/index.md
 - name: Read-model reactors

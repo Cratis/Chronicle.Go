@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
@@ -63,11 +64,12 @@ const (
 // Descriptor is immutable model metadata. Its zero value is invalid.
 type Descriptor struct{ definition *definition }
 type definition struct {
-	typ    reflect.Type
-	plan   *serialization.Plan
-	origin *serialization.Plan
-	config modelConfig
-	schema string
+	typ       reflect.Type
+	plan      *serialization.Plan
+	origin    *serialization.Plan
+	config    modelConfig
+	schema    string
+	protected map[string]bool
 }
 
 // Identifier returns the stable persisted identity.
@@ -139,6 +141,7 @@ type modelConfig struct {
 	sequenceExplicit   bool
 	indexes            []string
 	pii                []string
+	protection         []compliance.Declaration
 	subject            string
 }
 
@@ -183,17 +186,24 @@ func WithIndexes(paths ...string) ModelOption {
 	return func(c *modelConfig) { c.indexes = append(c.indexes, copy...) }
 }
 
-// WithPII marks scalar string properties as personal data in the model schema.
+// WithPII marks properties as personal data in the model schema.
 // Paths use serialized names and accumulate across calls. Duplicate paths within or
 // across calls fail declaration with ErrInvalidConfiguration.
-// Container/type-wide PII and encryption classifications
-// remain unsupported; the shared serializer rejects unsupported chronicle tags.
+// Composite values propagate to leaves; explicitly classified collections retain
+// their container classification. Tags and WithProtection use the same pipeline.
 func WithPII(paths ...string) ModelOption {
 	copy := append([]string(nil), paths...)
 	return func(c *modelConfig) { c.pii = append(c.pii, copy...) }
 }
 
-// WithSubjectProperty selects a top-level serialized string property for Release.
+// WithProtection adds copied type/property classifications and providers. Tags
+// need no option. Invalid or conflicting metadata fails before any connection I/O.
+func WithProtection(declarations ...compliance.Declaration) ModelOption {
+	owned := append([]compliance.Declaration(nil), declarations...)
+	return func(c *modelConfig) { c.protection = append(c.protection, owned...) }
+}
+
+// WithSubjectProperty selects a top-level serialized scalar property for Release.
 // Empty/unset values fall back to the model's ID field, as in C#.
 func WithSubjectProperty(path string) ModelOption { return func(c *modelConfig) { c.subject = path } }
 
@@ -247,16 +257,18 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 	if err := collectIndexes(plan, &config, typ); err != nil {
 		return Model[T]{}, err
 	}
-	schema, err := modelSchema(plan.Schema(), config)
+	if err := collectSubject(plan, &config); err != nil {
+		return Model[T]{}, err
+	}
+	schema, err := modelSchema(plan, config)
 	if err != nil {
 		return Model[T]{}, err
 	}
-	descriptor := Descriptor{definition: &definition{typ: typ, plan: plan, origin: plan, config: config, schema: schema}}
-	for _, path := range config.pii {
-		if path == idProperty(descriptor) {
-			return Model[T]{}, invalid("PII cannot protect the model key")
-		}
+	protected, err := serialization.ProtectionRoots(schema)
+	if err != nil {
+		return Model[T]{}, err
 	}
+	descriptor := Descriptor{definition: &definition{typ: typ, plan: plan, origin: plan, config: config, schema: schema, protected: protected}}
 	return Model[T]{descriptor: descriptor}, nil
 }
 
