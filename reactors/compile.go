@@ -65,6 +65,9 @@ type Shadow struct {
 // Shadows returns a detached list of hidden handler methods.
 func (p *Plan) Shadows() []Shadow { return slices.Clone(p.shadows) }
 
+// GoType returns the registered artifact type, or nil for explicit callbacks.
+func (p *Plan) GoType() reflect.Type { return p.declaration.GoType() }
+
 // Identifier returns the observer identity.
 func (p *Plan) Identifier() ID { return p.declaration.Identifier() }
 

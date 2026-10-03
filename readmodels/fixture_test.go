@@ -24,6 +24,11 @@ type modelKernel struct {
 	get       func(context.Context, *contracts.GetInstanceByKeyRequest) (*contracts.GetInstanceByKeyResponse, error)
 	release   func(context.Context, *compliance.ReleaseRequest) (*compliance.ReleaseResponse, error)
 	dehydrate func(context.Context, *contracts.DehydrateSessionRequest) (*emptypb.Empty, error)
+	replay    func(context.Context, *contracts.GetAllInstancesRequest) (*contracts.GetAllInstancesResponse, error)
+}
+
+func (k *modelKernel) GetAllInstances(ctx context.Context, r *contracts.GetAllInstancesRequest) (*contracts.GetAllInstancesResponse, error) {
+	return k.replay(ctx, r)
 }
 
 func (k *modelKernel) GetInstanceByKey(ctx context.Context, r *contracts.GetInstanceByKeyRequest) (*contracts.GetInstanceByKeyResponse, error) {
