@@ -44,13 +44,14 @@ type Target struct {
 // Catalog is a frozen store-publication snapshot. A future runtime publication
 // must invalidate the old epoch before replacing it.
 type Catalog struct {
-	Projections []*projections.ProjectionDefinition
-	Events      *events.Catalog
-	Epoch       atomic.Uint64
+	Projections   []*projections.ProjectionDefinition
+	Events        *events.Catalog
+	Epoch         *atomic.Uint64
+	ExpectedEpoch uint64
 }
 
 func NewCatalog(definitions []*projections.ProjectionDefinition, eventTypes *events.Catalog) *Catalog {
-	catalog := &Catalog{Events: eventTypes}
+	catalog := &Catalog{Events: eventTypes, Epoch: &atomic.Uint64{}, ExpectedEpoch: 1}
 	catalog.Epoch.Store(1)
 	for _, definition := range definitions {
 		catalog.Projections = append(catalog.Projections, proto.CloneOf(definition))
@@ -103,6 +104,9 @@ type redemption struct {
 func (t Token) IsZero() bool { return t.state == nil }
 
 func Issue(e Evidence) Token {
+	if validate(e) != nil {
+		return Token{}
+	}
 	e.Types = slices.Clone(e.Types)
 	return Token{state: &redemption{evidence: e}}
 }
@@ -111,7 +115,7 @@ func validate(e Evidence) error {
 	if e.Target.Client == nil || e.Target.Sequence != string(events.EventLog) || e.Model == "" || e.Key == "" || len(e.Types) == 0 || e.Catalog == nil || e.Check == nil {
 		return ErrInvalid
 	}
-	if e.Epoch != e.Catalog.Epoch.Load() || e.Check() != nil {
+	if e.Epoch != e.Catalog.ExpectedEpoch || e.Epoch != e.Catalog.Epoch.Load() || e.Check() != nil {
 		return ErrStale
 	}
 	return nil

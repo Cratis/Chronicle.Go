@@ -197,7 +197,7 @@ func TestReadinessRetriesGenerationLostBeforeAdmission(t *testing.T) {
 				client.connectionError = connection.ErrStale
 				var err error
 				if waitForStore {
-					store := &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}
+					store := testDefinitionStore(t, &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog})
 					_, err = store.WaitForRegistration(t.Context())
 				} else {
 					err = client.Ready(t.Context())
@@ -227,9 +227,9 @@ func TestReadinessRetriesGenerationLostDuringRegistration(t *testing.T) {
 				if err := client.Connect(t.Context()); err != nil {
 					t.Fatal(err)
 				}
+				store := testDefinitionStore(t, &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog})
 				client.mu.Lock()
 				old = client.current
-				store := &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}
 				client.stores[storeKey{"store", DefaultNamespace}] = store
 				client.mu.Unlock()
 				var err error
@@ -300,8 +300,8 @@ func TestLiveRegistrationJoinerThroughSharedStageAndInvoke(t *testing.T) {
 		}
 		starterCtx, cancel := context.WithCancel(t.Context())
 		defer cancel()
-		store := &EventStore{client: client, name: "store", namespace: "one", catalog: client.catalog}
-		other := &EventStore{client: client, name: "store", namespace: "two", catalog: client.catalog}
+		store := testDefinitionStore(t, &EventStore{client: client, name: "store", namespace: "one", catalog: client.catalog})
+		other := testDefinitionStore(t, &EventStore{client: client, name: "store", namespace: "two", catalog: client.catalog})
 		starter, sameNamespace, otherNamespace := make(chan error, 1), make(chan error, 1), make(chan error, 1)
 		invoke := func(ctx context.Context, store *EventStore) error {
 			return (&clientTransport{client: client, store: store}).Invoke(ctx, "/read", nil, nil)

@@ -175,7 +175,7 @@ func TestSkipKeepAliveCloseCancelsAndJoinsRegistrationReplay(t *testing.T) {
 			}
 			return nil
 		})
-		client.stores[storeKey{"store", DefaultNamespace}] = &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}
+		client.stores[storeKey{"store", DefaultNamespace}] = testDefinitionStore(t, &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog})
 		if err := client.Connect(t.Context()); err != nil {
 			t.Fatal(err)
 		}
@@ -210,7 +210,7 @@ func TestSkipKeepAliveProbesRegistersAndSurvivesSilence(t *testing.T) {
 			return nil
 		}, WithTokenSource(&invalidatingSource{}), func(c *clientConfig) { c.noAuth = false })
 		// Replay owns a cached store even without a stream or watchdog.
-		store := &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}
+		store := testDefinitionStore(t, &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog})
 		client.stores[storeKey{"store", DefaultNamespace}] = store
 		ctx, cancel := context.WithCancel(t.Context())
 		if err := client.Connect(ctx); err != nil {

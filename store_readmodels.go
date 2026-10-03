@@ -14,13 +14,23 @@ import (
 
 // ReadModels returns a namespace-bound service and its immutable model catalog.
 // Reads retain the store's registration barrier across connection generations.
-func (s *EventStore) ReadModels() *readmodels.Service { return s.readModels }
+func (s *EventStore) ReadModels() *readmodels.Service {
+	s.client.mu.Lock()
+	defer s.client.mu.Unlock()
+	if s.latestReaders != nil {
+		return s.latestReaders
+	}
+	return s.readModels
+}
 
 func (s *EventStore) initializeReadModels() error {
 	snapshot, err := s.client.selectedStoreSnapshot(s.name)
 	if err != nil {
 		return err
 	}
+	s.client.mu.Lock()
+	s.definitions = s.client.definitions[s.name]
+	s.client.mu.Unlock()
 	return s.initializeReadModelsFromSnapshot(snapshot)
 }
 
@@ -34,17 +44,24 @@ func (s *EventStore) initializeReadModelsFromSnapshot(snapshot registrySnapshot)
 	if err != nil {
 		return err
 	}
-	service, err := readmodels.New(s.name, s.namespace, snapshot.models, &clientTransport{client: s.client, store: s}, readmodels.WithReleasedPassiveReader(s.readPassiveReducer), readmodels.WithReducerCollectionReader(s.readReducerCollection), readmodels.WithProjectionReplayValidator(replayValidator), readmodels.WithSnapshotEventCatalog(snapshot.events), readmodels.WithReductionChanges(&s.readModelChanges))
+	service, err := readmodels.New(s.name, s.namespace, snapshot.models, &clientTransport{client: s.client, store: s, decisionSnapshot: s.decisionCatalog}, readmodels.WithReleasedPassiveReader(s.readPassiveReducer), readmodels.WithReducerCollectionReader(s.readReducerCollection), readmodels.WithProjectionReplayValidator(replayValidator), readmodels.WithSnapshotEventCatalog(snapshot.events), readmodels.WithReductionChanges(&s.readModelChanges))
 	if err != nil {
 		return err
 	}
-	s.readModels = service
+	s.readModels, s.latestReaders = service, service
+	if s.definitions != nil {
+		s.readerRoot = s.definitions.root
+	}
 	return nil
 }
-func (s *EventStore) registerReadModels(ctx context.Context, g *generation) error {
-	return s.sharedStage(ctx, g, "read-models", func(ctx context.Context) error {
+func (s *EventStore) registerReadModels(ctx context.Context, g *generation, root *definitionRoot, full bool) error {
+	return s.definitionStage(ctx, g, root, "read-models", full, func(ctx context.Context) error {
 		request := &contracts.RegisterManyRequest{EventStore: string(s.name), Owner: contracts.ReadModelOwner_Client, Source: contracts.ReadModelSource_Code}
-		for _, d := range s.readModels.Catalog().Descriptors() {
+		models := root.snapshot.models.Descriptors()
+		if !full {
+			models = []readmodels.Descriptor{root.delta.Model()}
+		}
+		for _, d := range models {
 			sink := d.Sink()
 			// Admission already validated canonical UUID text, without exporting a UUID dependency.
 			configuration, _ := metadata.ParseCorrelationID(sink.ConfigurationID)
@@ -55,7 +72,7 @@ func (s *EventStore) registerReadModels(ctx context.Context, g *generation) erro
 			}
 			request.ReadModels = append(request.ReadModels, definition)
 		}
-		result, err := contracts.NewReadModelsClient(g.transport).RegisterMany(ctx, request)
+		result, err := contracts.NewReadModelsClient(s.definitionTransport(g, root, false)).RegisterMany(ctx, request)
 		if err != nil {
 			return wire.RPCError(err)
 		}

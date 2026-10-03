@@ -95,6 +95,7 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 		}
 		return nil
 	}
+	ctx = decision.WithDispatchValidation(ctx, check)
 	for attempt := range 3 {
 		if err = check(); err != nil {
 			return DecisionRead[T]{}, err
@@ -154,6 +155,9 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 		}
 		token := decision.Issue(decision.Evidence{Target: service.decisions.DecisionTarget(events.EventLog), Model: string(admitted.descriptor.Identifier()), Key: string(key), Types: admitted.types, Boundary: boundary,
 			Catalog: admitted.catalog, Epoch: admitted.epoch, Generation: lease.Generation, Check: lease.Check})
+		if token.IsZero() {
+			return DecisionRead[T]{}, decision.ErrStale
+		}
 		return DecisionRead[T]{Instance: instance, Token: token}, nil
 	}
 	return DecisionRead[T]{}, faults.ErrProtocol

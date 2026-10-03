@@ -16,7 +16,8 @@ import (
 	"github.com/cratis/chronicle.go/internal/wire"
 )
 
-func (s *EventStore) registerStages(ctx context.Context, g *generation) ([]ArtifactRegistration, error) {
+func (s *EventStore) registerStages(ctx context.Context, g *generation, root *definitionRoot) ([]ArtifactRegistration, error) {
+	full := s.cumulativeRegistration(g, root)
 	var artifacts []ArtifactRegistration
 	stages := []struct {
 		name string
@@ -44,11 +45,11 @@ func (s *EventStore) registerStages(ctx context.Context, g *generation) ([]Artif
 	}
 	// C# EventStore.RegisterAllArtifacts registers event types and read models
 	// first, then constraints and observers.
-	if s.readModels != nil && len(s.readModels.Catalog().Descriptors()) > 0 {
+	if len(root.snapshot.models.Descriptors()) > 0 {
 		stages = append(stages, struct {
 			name string
 			run  func(context.Context) error
-		}{"read-models", func(ctx context.Context) error { return s.registerReadModels(ctx, g) }})
+		}{"read-models", func(ctx context.Context) error { return s.registerReadModels(ctx, g, root, full) }})
 	}
 	stages = append(stages, struct {
 		name string
@@ -56,11 +57,11 @@ func (s *EventStore) registerStages(ctx context.Context, g *generation) ([]Artif
 	}{"constraints", func(ctx context.Context) error {
 		return s.sharedStage(ctx, g, "constraints", func(ctx context.Context) error { return s.registerConstraints(ctx, g) })
 	}})
-	if len(s.projectionDefinitions()) > 0 {
+	if len(root.snapshot.projections) > 0 {
 		stages = append(stages, struct {
 			name string
 			run  func(context.Context) error
-		}{"projections", func(ctx context.Context) error { return s.registerProjections(ctx, g) }})
+		}{"projections", func(ctx context.Context) error { return s.registerProjections(ctx, g, root, full) }})
 	}
 	for _, stage := range stages {
 		if err := ctx.Err(); err != nil {

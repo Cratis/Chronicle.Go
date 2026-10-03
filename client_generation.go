@@ -24,6 +24,7 @@ import (
 )
 
 type generation struct {
+	client        *Client
 	number        uint64
 	decisions     bool
 	ctx           context.Context
@@ -57,7 +58,7 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 	if err != nil {
 		return nil, err
 	}
-	g := &generation{raw: c.config.borrowed, tokens: c.config.tokenSource}
+	g := &generation{client: c, raw: c.config.borrowed, tokens: c.config.tokenSource}
 	g.ctx, g.cancel = context.WithCancel(c.life)
 	c.nextGeneration++
 	g.number = c.nextGeneration

@@ -201,7 +201,9 @@ func terminalConnectionError(err error) bool {
 }
 
 func (c *Client) retire(g *generation) {
+	c.mu.Lock()
 	g.cancel()
+	c.mu.Unlock()
 	if g.stream != nil {
 		drainStream(g.stream)
 	}

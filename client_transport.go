@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"google.golang.org/grpc"
 )
@@ -48,25 +49,41 @@ func (c *Client) acquire(ctx context.Context) (*generation, context.Context, fun
 }
 
 type clientTransport struct {
-	client *Client
-	store  *EventStore
+	client           *Client
+	store            *EventStore
+	decisionSnapshot *decision.Catalog
 }
 
 func (t *clientTransport) AppendOriginResolver() eventsequences.AppendOriginResolver {
 	return t.client.config.appendOriginResolver
 }
 
+func (t *clientTransport) acquire(ctx context.Context) (*generation, context.Context, func(), error) {
+	if t.store == nil {
+		return t.client.acquire(ctx)
+	}
+	for {
+		outcome, err := t.store.WaitForRegistration(ctx)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("chronicle: registration: %w", err)
+		}
+		g, attemptCtx, done, err := t.client.acquire(ctx)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if g.number == outcome.Generation {
+			return g, attemptCtx, done, nil
+		}
+		done()
+	}
+}
+
 func (t *clientTransport) Invoke(ctx context.Context, method string, args, reply any, options ...grpc.CallOption) error {
-	g, ctx, done, err := t.client.acquire(ctx)
+	g, ctx, done, err := t.acquire(ctx)
 	if err != nil {
 		return &faults.BeforeDispatch{Cause: err}
 	}
 	defer done()
-	if t.store != nil {
-		if _, err = t.store.register(ctx, g); err != nil {
-			return &faults.BeforeDispatch{Cause: fmt.Errorf("chronicle: registration: %w", err)}
-		}
-	}
 	err = g.transport.Invoke(ctx, method, args, reply, options...)
 	// Message providers are caller code: release the RPC lease before invoking
 	// them, so they cannot deadlock shutdown by retaining their own generation.
@@ -78,15 +95,9 @@ func (t *clientTransport) Invoke(ctx context.Context, method string, args, reply
 }
 
 func (t *clientTransport) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, options ...grpc.CallOption) (grpc.ClientStream, error) {
-	g, ctx, done, err := t.client.acquire(ctx)
+	g, ctx, done, err := t.acquire(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if t.store != nil {
-		if _, err = t.store.register(ctx, g); err != nil {
-			done()
-			return nil, err
-		}
 	}
 	stream, err := g.transport.NewStream(ctx, desc, method, options...)
 	if err != nil {

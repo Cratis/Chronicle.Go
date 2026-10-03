@@ -53,17 +53,20 @@ type storeKey struct {
 	namespace Namespace
 }
 
-// EventStore is an immutable, concurrency-safe registered store/namespace handle.
+// EventStore is a concurrency-safe registered store/namespace handle.
 // It borrows its Client; Close the client to release resources.
 type EventStore struct {
-	client      *Client
-	name        StoreName
-	namespace   Namespace
-	catalog     *events.Catalog
-	constraints []constraints.Definition
-	log         *eventsequences.Sequence
-	sequencesMu sync.Mutex
-	sequences   map[events.SequenceID]*eventsequences.Sequence
+	client        *Client
+	definitions   *definitionCoordinator
+	readerRoot    *definitionRoot
+	latestReaders *readmodels.Service
+	name          StoreName
+	namespace     Namespace
+	catalog       *events.Catalog
+	constraints   []constraints.Definition
+	log           *eventsequences.Sequence
+	sequencesMu   sync.Mutex
+	sequences     map[events.SequenceID]*eventsequences.Sequence
 
 	projectionSnapshot       []projections.Definition
 	reactorSnapshot          []*reactors.Plan
@@ -150,7 +153,7 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 			c.mu.Unlock()
 			return nil, err
 		}
-		store = &EventStore{client: c, name: key.name, namespace: key.namespace, catalog: snapshot.events, constraints: snapshot.constraints}
+		store = &EventStore{client: c, name: key.name, namespace: key.namespace, catalog: snapshot.events, constraints: snapshot.constraints, definitions: c.definitions[key.name]}
 		store.log, err = eventsequences.New(key.name, key.namespace, events.EventLog, snapshot.events, &clientTransport{client: c, store: store})
 		if err != nil {
 			c.mu.Unlock()
