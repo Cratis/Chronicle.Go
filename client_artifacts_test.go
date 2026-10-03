@@ -11,6 +11,7 @@ import (
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
+	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/reducers"
 	"google.golang.org/protobuf/proto"
@@ -62,6 +63,7 @@ func TestWithProjectionPreservesEveryRegistryFieldExceptReplacedProducer(t *test
 	registry.constraintCompositions = []constraintComposition{{name: "canary"}}
 	registry.projections = []projections.Declaration{old, {}}
 	registry.reactors = []reactorDeclaration{{}}
+	registry.readModelReactors = []reactors.ReadModelDeclaration{{}}
 	registry.reducers = []reducers.Declaration{removed, {}}
 	registry.reactorMiddlewares = []any{"middleware"}
 	registry.reactorSideEffects = []reactorSideEffectHandler{nil}
@@ -76,11 +78,12 @@ func TestWithProjectionPreservesEveryRegistryFieldExceptReplacedProducer(t *test
 		projections: []projections.Declaration{{}, replacement}, reactors: registry.reactors,
 		reducers: []reducers.Declaration{{}}, reactorMiddlewares: registry.reactorMiddlewares,
 		reactorSideEffects: registry.reactorSideEffects, migrations: registry.migrations,
+		readModelReactors: registry.readModelReactors,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatal("replacement lost or changed unrelated registrations")
 	}
-	fields := map[string]bool{"mu": true, "descriptors": true, "constraints": true, "constraintCompositions": true, "readModels": true, "projections": true, "reactors": true, "reducers": true, "reactorMiddlewares": true, "reactorSideEffects": true, "migrations": true}
+	fields := map[string]bool{"mu": true, "descriptors": true, "constraints": true, "constraintCompositions": true, "readModels": true, "projections": true, "reactors": true, "reducers": true, "reactorMiddlewares": true, "reactorSideEffects": true, "migrations": true, "readModelReactors": true}
 	typ := reflect.TypeFor[Registry]()
 	original, detached := reflect.ValueOf(registry).Elem(), reflect.ValueOf(got).Elem()
 	for i := 0; i < typ.NumField(); i++ {

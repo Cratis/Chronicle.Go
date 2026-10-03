@@ -16,6 +16,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/projections"
+	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/reducers"
 )
@@ -53,6 +54,7 @@ type Client struct {
 	storeProjections  map[StoreName][]projections.Definition
 	reactors          reactorCatalogs
 	reducers          reducerCatalogs
+	readModelReactors readModelReactorCatalogs
 }
 
 // String describes the client without revealing endpoints or credentials.
@@ -85,8 +87,9 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		readModelCatalog: frozen.models, readModelCatalogs: make(map[StoreName]*readmodels.Catalog),
 		projections: frozen.projections, storeProjections: make(map[StoreName][]projections.Definition),
 		changed: make(chan struct{}), closeDone: make(chan struct{}),
-		reactors: reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)},
-		reducers: reducerCatalogs{defaults: frozen.reducers, stores: make(map[StoreName][]*reducers.Plan)}}
+		reactors:          reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)},
+		readModelReactors: readModelReactorCatalogs{defaults: frozen.readModelReactors, stores: make(map[StoreName][]*reactors.ReadModelPlan)},
+		reducers:          reducerCatalogs{defaults: frozen.reducers, stores: make(map[StoreName][]*reducers.Plan)}}
 	for name, registry := range config.stores {
 		if strings.TrimSpace(string(name)) == "" {
 			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
@@ -98,6 +101,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		c.catalogs[name], c.storeConstraints[name] = frozen.events, frozen.constraints
 		c.readModelCatalogs[name], c.storeProjections[name] = frozen.models, frozen.projections
 		c.reactors.stores[name] = frozen.reactors
+		c.readModelReactors.stores[name] = frozen.readModelReactors
 		c.reducers.stores[name] = frozen.reducers
 	}
 	c.config.registry, c.config.stores = nil, nil

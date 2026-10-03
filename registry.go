@@ -10,6 +10,7 @@ import (
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
+	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/reducers"
 )
@@ -26,6 +27,7 @@ type Registry struct {
 	readModels             []readmodels.Descriptor
 	projections            []projections.Declaration
 	reactors               []reactorDeclaration
+	readModelReactors      []reactors.ReadModelDeclaration
 	reducers               []reducers.Declaration
 	reactorMiddlewares     []any
 	reactorSideEffects     []reactorSideEffectHandler

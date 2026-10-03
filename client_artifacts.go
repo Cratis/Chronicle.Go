@@ -72,7 +72,8 @@ func (r *Registry) WithProjection(declaration projections.Declaration) (*Registr
 	result := &Registry{
 		descriptors: slices.Clone(r.descriptors), constraints: slices.Clone(r.constraints), readModels: slices.Clone(r.readModels),
 		constraintCompositions: slices.Clone(r.constraintCompositions), migrations: slices.Clone(r.migrations),
-		reactors: slices.Clone(r.reactors), reactorMiddlewares: slices.Clone(r.reactorMiddlewares), reactorSideEffects: slices.Clone(r.reactorSideEffects),
+		readModelReactors: slices.Clone(r.readModelReactors),
+		reactors:          slices.Clone(r.reactors), reactorMiddlewares: slices.Clone(r.reactorMiddlewares), reactorSideEffects: slices.Clone(r.reactorSideEffects),
 	}
 	for _, existing := range r.projections {
 		if existing.Model().GoType() != declaration.Model().GoType() {

@@ -10,6 +10,7 @@ import (
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
+	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/reducers"
 	"github.com/cratis/chronicle.go/serialization"
@@ -34,12 +35,13 @@ func (r *Registry) AddProjection(declaration projections.Declaration) error {
 }
 
 type registrySnapshot struct {
-	events      *events.Catalog
-	models      *readmodels.Catalog
-	constraints []constraints.Definition
-	projections []projections.Definition
-	reactors    []*reactorPlan
-	reducers    []*reducers.Plan
+	events            *events.Catalog
+	models            *readmodels.Catalog
+	constraints       []constraints.Definition
+	projections       []projections.Definition
+	reactors          []*reactorPlan
+	readModelReactors []*reactors.ReadModelPlan
+	reducers          []*reducers.Plan
 }
 
 func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
@@ -49,6 +51,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 	var models []readmodels.Descriptor
 	var declarations []projections.Declaration
 	var reactorDeclarations []reactorDeclaration
+	var readModelReactorDeclarations []reactors.ReadModelDeclaration
 	var reducerDeclarations []reducers.Declaration
 	var reactorMiddlewares []any
 	var reactorSideEffects []reactorSideEffectHandler
@@ -60,6 +63,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 		models = slices.Clone(registry.readModels)
 		declarations = slices.Clone(registry.projections)
 		reactorDeclarations = slices.Clone(registry.reactors)
+		readModelReactorDeclarations = slices.Clone(registry.readModelReactors)
 		reducerDeclarations = slices.Clone(registry.reducers)
 		reactorMiddlewares = slices.Clone(registry.reactorMiddlewares)
 		reactorSideEffects = slices.Clone(registry.reactorSideEffects)
@@ -167,5 +171,9 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 		return snapshot, err
 	}
 	err = compileReducers(&snapshot, reducerDeclarations, services)
+	if err != nil {
+		return snapshot, err
+	}
+	err = compileReadModelReactors(&snapshot, readModelReactorDeclarations, services, reactorSideEffects)
 	return snapshot, err
 }

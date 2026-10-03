@@ -103,6 +103,9 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 	sequences.RegisterEventSequencesServer(server, k)
 	if k.readModels != nil {
 		readmodelcontracts.RegisterReadModelsServer(server, k.readModels)
+		if materialized, ok := k.readModels.(readmodelcontracts.MaterializedReadModelsServer); ok {
+			readmodelcontracts.RegisterMaterializedReadModelsServer(server, materialized)
+		}
 	}
 	if k.projections != nil {
 		projectioncontracts.RegisterProjectionsServer(server, k.projections)
