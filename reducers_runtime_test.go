@@ -191,7 +191,7 @@ func TestReducerRuntimeFoldOrderDeletionGenerationAndCleanupBeforeAck(t *testing
 	}
 	server.operations <- &contracts.ReduceOperationMessage{Partition: "source", InitialState: result.ReadModelState, Events: []*contracts.AppendedEvent{foldEvent("FoldDeleted", 3, `{}`)}}
 	deleted := receiveOpening(t, ctx, server.results)
-	if deleted.ReadModelState != "" || deleted.State != contracts.ObservationState_Success || scopes.opened.Load() != 2 || scopes.closed.Load() != 2 {
+	if deleted.ReadModelState != "" || deleted.State != contracts.ObservationState_Success || deleted.LastSuccessfulObservation != 3 || deleted.Partition != "source" || scopes.opened.Load() != 2 || scopes.closed.Load() != 2 {
 		t.Fatal(deleted)
 	}
 	if err := store.UnregisterReducer(ctx, "fold"); err != nil {

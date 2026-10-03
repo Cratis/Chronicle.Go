@@ -588,6 +588,12 @@ second execution engine. Kernel fixtures target `19.29.4-development`.
 References use C# `2e31b0dfba489159b3db323238f16d0f277056b4`, relative to
 `Source/Clients/DotNET`. The [reducer guide](reducers.md) leads with plain Go,
 then conventions and optional DI. Contracts and kernel evidence target 19.29.4.
+The active reducer integration test skips only the confirmed missing-deletion
+signature of the kernel's [finishing catch-up job race](https://github.com/Cratis/Chronicle/issues/4548):
+event 2 is persisted but never delivered, the subscribed observer remains at
+checkpoint 1, and the unchanged model retains watermark 1 with no failed
+partitions. Delivered deletions and other failures are not skipped. The Go
+transport test independently verifies the deletion result and its checkpoint.
 
 | Behavior / C# source | Go surface and status | Evidence and deliberate difference |
 | --- | --- | --- |
