@@ -4,6 +4,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"slices"
@@ -22,7 +23,8 @@ const (
 // A panic payload can also be an ordinary sibling (in either order), so sanitizing
 // individual branches independently cannot decide which identities are safe.
 func sanitizeError(err error) (result error) {
-	// Only known standard-library Unwrap methods are called. Contain any
+	// Only known standard-library Unwrap methods are called; SDK diagnostics
+	// are inspected through exact-type field snapshots. Contain any
 	// unexpected inspection failure without retaining an unfinished snapshot.
 	defer func() {
 		if recover() != nil {
@@ -61,6 +63,7 @@ type diagnosticNode struct {
 	identity    diagnosticIdentity
 	leaf        error
 	diagnostic  *dependencyinjection.Error
+	selector    bool
 	children    []*diagnosticNode
 	kind        *diagnosticNode
 	cause       *diagnosticNode
@@ -176,6 +179,15 @@ func (w *diagnosticWalker) capture(err error, depth int) *diagnosticNode {
 		}
 		return node
 	}
+	if selection, ok := err.(*SelectorError); ok {
+		// Snapshot the SDK-owned wrapper before descent, just like provider
+		// fields. Never call Unwrap or admit application embedding/lookalikes.
+		original := *selection
+		node.selector = true
+		node.cause = w.capture(original.cause, depth+1)
+		node.children = []*diagnosticNode{node.cause}
+		return node
+	}
 	switch tree := err.(type) {
 	case interface{ Unwrap() []error }:
 		if !standardDiagnosticTopology(err) {
@@ -211,7 +223,9 @@ func (w *diagnosticWalker) capture(err error, depth int) *diagnosticNode {
 		w.incomplete = true
 		return nil
 	default:
-		if identity.ptr != 0 {
+		if identity.ptr != 0 || err == context.DeadlineExceeded {
+			// The exact standard context sentinel is a comparable value, not
+			// a pointer. No other application value error gains leaf identity.
 			node.leaf = err
 		}
 	}
@@ -255,6 +269,9 @@ func (w *diagnosticWalker) quarantine(node *diagnosticNode) {
 }
 
 func (w *diagnosticWalker) safeLeaf(err error) error {
+	if err == context.DeadlineExceeded && !w.ambiguous {
+		return context.DeadlineExceeded
+	}
 	identity := referenceIdentity(err)
 	if w.ambiguous || identity.ptr == 0 || w.quarantined[identity.ptr] {
 		return errUnsafeDiagnostic
@@ -274,6 +291,11 @@ func (w *diagnosticWalker) rebuild(node *diagnosticNode, categoriesOnly bool) er
 			return w.safeLeaf(safeKind(node.leaf))
 		}
 		return w.safeLeaf(node.leaf)
+	}
+	if node.selector {
+		// Rebuild rather than retaining the original: a panic in another branch
+		// may quarantine any of this wrapper's ordinary cause aliases.
+		return &SelectorError{cause: w.rebuild(node.cause, categoriesOnly)}
 	}
 	if node.diagnostic != nil {
 		// Never attach an original Kind object or panic Cause to public fields.

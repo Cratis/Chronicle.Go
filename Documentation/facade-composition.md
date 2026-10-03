@@ -5,19 +5,22 @@ description: Bind one borrowed client identity before preparing Chronicle defini
 
 Use captured preparation when one shared provider must contain the client identity
 and supply services needed to prepare that same client's definitions. This
-experimental v0.x API does not automatically bind stores or facades. For ordinary
-clients, keep using `NewClient` or `NewClientContext`; they capture and prepare in
-one call and return only a prepared client.
+experimental v0.x workflow uses the optional `services` adapter to bind borrowed
+client, store and facade instances. Root Chronicle packages remain independent of
+dependency injection. For ordinary clients, keep using `NewClient` or
+`NewClientContext`; they capture and prepare in one call.
 
 ## Compose the provider before preparing definitions
 
 1. Register events, models and definition factories in a Chronicle registry.
 2. Call `chronicle.CaptureClient(options...)`. Set all client configuration here,
    including any append-origin resolver and `chronicle.WithLogger(logger)`.
-3. Register `p.Client()` using `dependencyinjection.BindValue(&bindings, p.Client())`.
-   This is an explicit **borrowed** singleton, not an owned constructor result.
-4. Register application collaborators, then build the provider. Do not open a
-   preparation scope from inside a provider factory.
+3. Call `services.BindClient(&bindings, p.Client())`. This registers that exact
+   identity as a **borrowed** singleton, not an owned constructor result.
+   `dependencyinjection.BindValue` remains a valid explicit alternative.
+4. Call `services.BindEventStore(&bindings, selector)`, then the facade helpers
+   needed by application collaborators. Register those collaborators and build
+   the provider. Do not open a preparation scope inside a provider factory.
 5. Call `services.PrepareClient(ctx, p, provider)`. Await its result before creating
    consumers that read catalogs, connecting, or obtaining store handles.
 6. Use the returned client normally. It is exactly the identity from `p.Client()`.
@@ -36,8 +39,106 @@ can perform effects that Chronicle cannot prevent or roll back.
 
 An Arc SDK consumer that reads catalogs during construction must be created after
 preparation. This slice verifies a local catalog consumer, not actual Arc SDK
-adoption or a published cross-module pairing. Automatic client/store/facade binding
-helpers remain outside this API.
+adoption or a published cross-module pairing. Actual Arc consumer adoption remains
+tracked in [Arc.Go #29](https://github.com/Cratis/Arc.Go/issues/29).
+
+## Select and borrow facades per operation
+
+After preparation, open a provider scope using trusted host metadata. Resolve the
+store or facade through that scope. The first store resolution performs ordinary
+SDK connection and registration I/O; provider construction does not.
+
+| Helper | Exact key | Lifetime and ownership |
+| --- | --- | --- |
+| `BindClient` | `*chronicle.Client` | Borrowed Singleton |
+| `BindEventStore` | `*chronicle.EventStore` | Borrowed Scoped |
+| `BindEventLog` | `*eventsequences.Sequence` | Borrowed Scoped |
+| `BindEventTypes` | `*events.Catalog` | Borrowed Scoped |
+| `BindReadModels` | `*readmodels.Service` | Borrowed Scoped |
+| `BindCompliance` | `*compliance.Manager` | Borrowed Scoped |
+
+Bind the store once and then any number of different facade helpers. Every facade
+forwards the same instance exposed by that store. Across scopes, `Client.EventStore`
+reuses its existing cache keyed by **store and namespace**; there is no adapter-wide
+cache or cross-provider cache.
+
+The [source example](../services/example_bindings_test.go) shows both provider and
+plain store access, application-owned `SourceStoreMetadata`, append-origin options
+captured before preparation, and a metadata/principal guard. `ExampleBindEventStore`
+compiles as part of the unit suite; direct execution needs a development kernel.
+`TestFacadeSourceExampleUsesRealStoreAPI` runs its composition function against an
+in-process gRPC fixture, not a real kernel.
+
+A consumer interface must resolve its concrete key and return that **same borrowed
+instance**, with the same lifetime, rather than call another constructor. Multiple
+targets use application wrapper types with existing `BindBorrowed` factories (see
+`AuditLog` in the example). Fundamentals v0.1 has no named/keyed registration here;
+these helpers do not introduce one or register a provider for callbacks to retain.
+
+### Selection and failure lifetime
+
+`StoreSelector` has signature
+`func(context.Context) (chronicle.StoreName, chronicle.Namespace, error)`. Both
+coordinates must be nonblank. Selection is host metadata, **not authorization**;
+never derive tenancy from untrusted message payloads. The host installs trusted
+metadata and owns access checks. Fundamentals' `container.WithContextGuard` can
+reject changed coordinates, principal or metadata presence even for cached values;
+the helper neither installs that guard nor authenticates the caller.
+
+Selection runs synchronously, once per scope, on the first resolving caller's
+context, preserving its values and deadline. Supply a bounded operation context,
+honor cancellation in the selector, and join resolution before closing the scope.
+There is no background invocation. Other callers can cancel their own waits
+without canceling the owner. An owner cancellation freezes failure even if its
+callback returns successful coordinates. A canceled caller rejected by the provider
+before selection starts has not consumed the selection attempt.
+
+A private, resource-free scoped cell is cached **before** selection runs. It keeps
+only copied coordinates or a safe error, never a context or resolver. Store
+registration failure can retry in the same scope with those coordinates; a selector
+failure, panic or owner cancellation requires a **new scope** to select again.
+`SelectorError` formats only fixed text. Its cause follows the adapter's sanitized
+diagnostic grammar; direct context errors remain inspectable, blank names expose
+`ErrInvalidConfiguration`, and recovered panics expose `ErrSelectorPanicked`, never
+their payload. Adapted reactor/factory scopes preserve `errors.As` access to a
+rebuilt `SelectorError` and `errors.Is` access to safe ordinary causes and context
+sentinels. Panic-alias quarantine applies across the complete bounded error graph,
+including causes wrapped by `SelectorError`. Do not mutate a returned error graph
+concurrently with inspection. Sensitive coordinate values are not included in
+diagnostics.
+
+Selectors must only read metadata: **do not resolve services or call the SDK from a
+selector**, including via a retained/global scope. Declared dependency cycles and
+singleton-to-scoped dependencies fail during Fundamentals provider build. Hidden
+resolution cannot be detected by the adapter: a reentrant store lookup can wait on
+the provider's already-in-flight store factory before reaching a selection-cell
+check. Context recursion markers cannot fix that boundary. Such callbacks are
+unsupported; no goroutine-identity heuristic or hidden resolver is provided.
+
+An unprepared client remains bindable. Store resolution returns `ErrNotPrepared`
+without SDK transport I/O and does not poison later preparation. The application
+metadata selector may run **before** that root guard; this is not a guarantee of
+callback-free resolution. The adapter never calls `Ready` as a startup probe.
+Closing the client before first facade resolution returns `ErrClosed`. Already
+cached facades remain borrowed handles whose operations obey SDK closure rules.
+
+### Registration is not a transaction
+
+Nil clients, selectors and registrars are rejected. With an optional `Catalog`,
+each helper preflights all keys it adds (including the private cell), duplicates
+and missing direct dependencies before registering anything. Register the client
+before the store, then the facades. Without `Catalog`, graph/missing-key validation
+belongs to provider build or resolution. These are exact-key checks, not proof of
+arbitrary provider factories' identity or ownership.
+
+Helpers return `Register` failures unchanged and never replace existing bindings.
+An arbitrary `Registrar` offers no rollback: if cell registration succeeds but
+store registration fails, the cell is left registered. Discard that partial
+registrar; do not continue composing or retry the batch. The cell owns no external
+resources. Previously successful helper calls also remain registered if a later
+helper fails. Registration is single-owner; preflight is not concurrent mutation
+protection. Interoperability evidence here uses Fundamentals v0.1's actual container,
+not a claim of native support for other containers.
 
 ## Preparation contract
 
@@ -73,8 +174,9 @@ for preparation and runtime observers; neither closes the provider.
   preflighted before the first temporary scope. Each distinct captured registry
   compiles once. Every snapshot is published together, only after cleanup succeeds.
 
-Before successful preparation, `Connect`, `Ready`, `EventStore`, `EventStores`,
-`Catalogs`, and `Artifacts` fail before options, selectors or transport effects.
+Before successful preparation, root `Connect`, `Ready`, `EventStore`, `EventStores`,
+`Catalogs`, and `Artifacts` fail before their options, selectors or transport effects.
+The optional adapter's metadata selector is outside that root guard, as above.
 `Ready` does not retry a preparation-state error. A callback may handle a denial,
 and an external readiness probe does not invalidate preparation. Actual errors,
 cancellation, closure or cleanup failure prevent publication.
