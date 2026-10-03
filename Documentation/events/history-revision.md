@@ -22,9 +22,9 @@ registration/connection barriers, and never retry or stage in a unit of work.
 
 | Method | Target and result |
 | --- | --- |
-| `Redact(ctx, position, reason)` | One sequence-wide position, including zero. Nonblank `events.RedactionReason` required; `events.Unavailable` is invalid. Nil error means the asynchronous request was accepted. |
+| `Redact(ctx, position, reason)` | One sequence-wide position, including zero. Nonblank `events.RedactionReason` required; the three highest positions (`Unavailable`, C# `Max` and `BeforeFirst`) are invalid. Nil error means the asynchronous request was accepted. |
 | `RedactForEventSource(ctx, source, reason, typeIDs...)` | All matching events for one nonblank source, across **all source types and streams**. No type IDs means **all types**. IDs must be registered; each selects all generations. Nil error means accepted, not applied. |
-| `Revise(ctx, position, replacement)` | One existing event. A registered value or nonnil pointer supplies the type ID, generation and shared serialization plan. Nil error means accepted, not applied. |
+| `Revise(ctx, position, replacement)` | One existing event at an actual position, including zero. A registered value or nonnil pointer supplies the type ID, generation and shared serialization plan. Protected registered schemas fail closed before serialization or dispatch. Nil error means accepted, not applied. |
 | `CompleteStream(ctx, streamType, streamID)` | Permanently closes that explicit pair across **all event sources** in the sequence. Both arguments must be nonblank. Returns the **sequence-wide** tail at closure, or `events.Unavailable` for an empty sequence. |
 
 Source redaction is not a frozen snapshot: the kernel selects matching events
@@ -129,7 +129,10 @@ mutation requests, even though the kernel internally appends system events.
 
 - Invalid targets/reasons return `ErrInvalidConfiguration` before dispatch.
   Unknown replacement types or source-filter IDs return `ErrNotRegistered`;
-  replacement serialization failures also occur before dispatch.
+  replacement serialization failures also occur before dispatch. Protected
+  revision, or failure to inspect its schema metadata, returns a stable,
+  payload-free error preserving `errors.Is(err, chronicle.ErrUnsupported)`.
+  This is a known pre-dispatch rejection, not `MutationOutcomeUnknownError`.
 - Explicit authorization/validation envelope refusals remain inspectable as
   `*chronicle.EnvelopeError` with `errors.As`. They are not reported as accepted
   operations.
@@ -145,7 +148,10 @@ mutation requests, even though the kernel internally appends system events.
   eventsequences.StreamAlreadyCompleted)` means the pair remains closed;
   `eventsequences.DefaultStreamCannotBeCompleted` protects `All`/`Default`.
   Later appends to a closed pair are rejected with `StreamClosed`. There is no
-  reopen operation or public stream-status RPC in the pinned contract. Do not use
+  reopen operation or public stream-status RPC in the pinned contract. Returned
+  `Unavailable` means an empty sequence; returned C# `Max` or `BeforeFirst`
+  means `MutationOutcomeUnknownError` wrapping `ErrProtocol`, since the stream
+  may already have closed. Do not use
   another destructive completion call as a status query.
 
 ## Compliance and compensation are separate
@@ -155,13 +161,42 @@ leaves event identity/history in place while making protected PII unavailable;
 redaction removes all payload content for the selected events and does not erase
 subject keys. Neither automatically compensates a business operation.
 
-**Do not revise protected content on the pinned kernel.** Revision bypasses
-append's schema-driven PII/encryption processing and can persist plaintext in
-both revisions and the system request. A kernel-backed probe demonstrates that
-revised PII remains in a system request after erasure. This limitation also affects
-the equivalent C# request and is tracked in
-[Chronicle#4525](https://github.com/Cratis/Chronicle/issues/4525). Go does not hide it
-with client-side encryption or claim protected revision support.
+### Go's fail-closed revision policy
+
+`Revise` inspects the frozen selected-store catalog before serializing a
+replacement or making any RPC. **Any registered generation sharing its persisted
+type ID with a protected schema blocks revision**, even if the replacement's own
+historical schema has no classification. Field tags, explicit declarations and
+providers feed that schema; nested references and collection protection count too.
+PII and subject, namespace and global encryption all block revision. Failure to
+inspect metadata also blocks revision, using the same payload-free
+`ErrUnsupported` error. This deliberately diverges from C#'s direct dispatch.
+
+The check covers only classifications declared in that catalog. It cannot detect
+undeclared sensitive data, sensitive audit metadata or authoritative server-only
+classifications absent from the catalog. An unclassified local schema is **not
+proof** that data is safe: do not use revision when authoritative classifications
+are unknown. Keep registrations complete and audit metadata non-sensitive. This
+policy prevents declared protected revisions from leaving the SDK; it does not
+repair earlier plaintext leaks. There is no unsafe opt-out, target pre-read,
+client-side encryption or automatic retry.
+
+### Pinned kernel defect
+
+At kernel pin `ae5e00a8abaa688138b2c2f689e2b4659cccb4fd`,
+`Source/Kernel/Core/Sequences/Revise.cs:62–72` first appends an `EventRevised`
+system request whose `Content` is an unprotected string
+(`Core/EventSequences/EventRevised.cs`). The later application path
+(`Core/EventSequences/EventSequence.cs:451–469`) does not call
+`MakeEventCompliant`. Revision therefore bypasses append's schema-driven
+PII/encryption processing and can persist plaintext in both the system request
+and revisions. Erasure does not remove that system request. The defect also
+affects C#'s equivalent wire request and remains tracked in
+[Chronicle#4525](https://github.com/Cratis/Chronicle/issues/4525).
+
+Default SDK tests do not deliberately send unsafe revisions to reproduce this
+leak. Non-skipped zero-dispatch regressions and a kernel-backed rejection test
+verify the Go policy instead; they do not claim a kernel compliance fix.
 
 Compensating events describe business corrections. Compensation/tombstone
 metadata alone does not reverse history, redact data, or complete a stream.

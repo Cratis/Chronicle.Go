@@ -46,7 +46,8 @@ func (e CompleteStreamError) Error() string {
 // or stream-status RPC in the pinned contract. It carries no actor/reason fields
 // on the wire: consumers must authorize and audit it externally. No retries,
 // local append notifications or unit-of-work staging occur. Transport failures
-// are MutationOutcomeUnknownError, not proof the stream remains open.
+// and malformed returned tails are MutationOutcomeUnknownError, not proof the
+// stream remains open. Unavailable means absence; Max and BeforeFirst are invalid.
 func (s *Sequence) CompleteStream(ctx context.Context, streamType events.StreamType, streamID events.StreamID) (events.SequenceNumber, error) {
 	if err := ctx.Err(); err != nil {
 		return events.Unavailable, err
@@ -66,7 +67,11 @@ func (s *Sequence) CompleteStream(ctx context.Context, streamType events.StreamT
 	}
 	result := response.Response
 	if result.IsSuccess && result.Error == sequences.CompleteStreamError_COMPLETE_STREAM_ERROR_None {
-		return events.SequenceNumber(result.SequenceNumber), nil
+		tail := events.SequenceNumber(result.SequenceNumber)
+		if tail != events.Unavailable && tail >= events.Unavailable-2 {
+			return events.Unavailable, &MutationOutcomeUnknownError{Cause: fmt.Errorf("%w: invalid stream completion tail", faults.ErrProtocol)}
+		}
+		return tail, nil
 	}
 	if !result.IsSuccess {
 		switch result.Error {

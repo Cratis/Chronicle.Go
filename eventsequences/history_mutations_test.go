@@ -108,6 +108,59 @@ func TestHistoryMutationsRejectInvalidInputBeforeDispatch(t *testing.T) {
 	}
 }
 
+func TestPointHistoryMutationsRejectReservedPositionsBeforeDispatch(t *testing.T) {
+	for name, position := range map[string]events.SequenceNumber{
+		"unavailable":  events.Unavailable,
+		"max":          events.Unavailable - 1,
+		"before first": events.Unavailable - 2,
+	} {
+		t.Run(name, func(t *testing.T) {
+			sequence, calls := sequenceFixture(t, nil)
+			ctx := testContext(t)
+			for _, err := range []error{sequence.Redact(ctx, position, "reason"), sequence.Revise(ctx, position, opened{})} {
+				var unknown *eventsequences.MutationOutcomeUnknownError
+				if !errors.Is(err, chronicle.ErrInvalidConfiguration) || errors.As(err, &unknown) {
+					t.Fatalf("reserved target error: %v", err)
+				}
+			}
+			if calls.Load() != 0 {
+				t.Fatalf("reserved targets dispatched %d RPCs", calls.Load())
+			}
+		})
+	}
+}
+
+func TestPointHistoryMutationsAllowActualBoundaryPositions(t *testing.T) {
+	for _, position := range []events.SequenceNumber{0, events.Unavailable - 3} {
+		sequence, calls := sequenceFixture(t, map[string]rpcHandler{
+			"Redact": func(context.Context, any) (any, error) { return &sequences.CommandResult{IsAuthorized: true}, nil },
+			"Revise": func(context.Context, any) (any, error) { return &sequences.CommandResult{IsAuthorized: true}, nil },
+		})
+		ctx := testContext(t)
+		if err := sequence.Redact(ctx, position, "reason"); err != nil {
+			t.Fatal(err)
+		}
+		if err := sequence.Revise(ctx, position, opened{}); err != nil {
+			t.Fatal(err)
+		}
+		if calls.Load() != 2 {
+			t.Fatal(calls.Load())
+		}
+	}
+}
+
+func TestStreamCompletionAllowsActualBoundaryTails(t *testing.T) {
+	for _, tail := range []events.SequenceNumber{0, events.Unavailable - 3} {
+		sequence, calls := sequenceFixture(t, map[string]rpcHandler{"CompleteStream": func(context.Context, any) (any, error) {
+			return &sequences.CommandResult_CompleteStreamResponse{IsAuthorized: true, Response: &sequences.CompleteStreamResponse{IsSuccess: true, SequenceNumber: uint64(tail)}}, nil
+		}})
+		got, err := sequence.CompleteStream(testContext(t), "Orders", "closed")
+		if err != nil || got != tail || calls.Load() != 1 {
+			t.Fatalf("tail=%d error=%v calls=%d", got, err, calls.Load())
+		}
+	}
+}
+
 func historyOperations(s *eventsequences.Sequence) map[string]func(context.Context) error {
 	return map[string]func(context.Context) error{
 		"Redact":               func(ctx context.Context) error { return s.Redact(ctx, 0, "reason") },
@@ -181,19 +234,21 @@ func TestStreamCompletionTypedRefusalsAndMalformedResults(t *testing.T) {
 		{"already closed", &sequences.CompleteStreamResponse{Error: sequences.CompleteStreamError_AlreadyCompleted}, eventsequences.StreamAlreadyCompleted, false},
 		{"default", &sequences.CompleteStreamResponse{Error: sequences.CompleteStreamError_DefaultStreamCannotBeCompleted}, eventsequences.DefaultStreamCannotBeCompleted, false},
 		{"empty", &sequences.CompleteStreamResponse{IsSuccess: true, SequenceNumber: uint64(events.Unavailable)}, nil, false},
+		{"reserved max tail", &sequences.CompleteStreamResponse{IsSuccess: true, SequenceNumber: uint64(events.Unavailable - 1)}, chronicle.ErrProtocol, true},
+		{"reserved before first tail", &sequences.CompleteStreamResponse{IsSuccess: true, SequenceNumber: uint64(events.Unavailable - 2)}, chronicle.ErrProtocol, true},
 		{"future code", &sequences.CompleteStreamResponse{Error: 99}, chronicle.ErrProtocol, true},
 		{"no disposition", &sequences.CompleteStreamResponse{}, chronicle.ErrProtocol, true},
 		{"contradiction", &sequences.CompleteStreamResponse{IsSuccess: true, Error: sequences.CompleteStreamError_AlreadyCompleted}, chronicle.ErrProtocol, true},
 		{"absent", nil, chronicle.ErrProtocol, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sequence, _ := sequenceFixture(t, map[string]rpcHandler{"CompleteStream": func(context.Context, any) (any, error) {
+			sequence, calls := sequenceFixture(t, map[string]rpcHandler{"CompleteStream": func(context.Context, any) (any, error) {
 				return &sequences.CommandResult_CompleteStreamResponse{IsAuthorized: true, Response: tc.response}, nil
 			}})
 			tail, err := sequence.CompleteStream(testContext(t), events.AllStreamTypes, events.DefaultStreamID)
 			var unknown *eventsequences.MutationOutcomeUnknownError
-			if tail != events.Unavailable || !errors.Is(err, tc.want) || errors.As(err, &unknown) != tc.unknown {
-				t.Fatalf("tail=%d error=%v", tail, err)
+			if tail != events.Unavailable || !errors.Is(err, tc.want) || errors.As(err, &unknown) != tc.unknown || calls.Load() != 1 {
+				t.Fatalf("tail=%d error=%v calls=%d", tail, err, calls.Load())
 			}
 		})
 	}

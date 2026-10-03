@@ -6,6 +6,7 @@
 package integration_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -50,9 +51,9 @@ func TestKernelRevisionUsesRegisteredGeneration(t *testing.T) {
 	}
 }
 
-// This probes the real contract with synthetic data. A known leak is a cited
-// skip, never evidence that protected revision or erasure has been implemented.
-func TestKernelProtectedRevisionDoesNotSurviveErasure(t *testing.T) {
+// The SDK rejects unsafe revisions instead of exercising the kernel leak.
+// Kernel defect evidence remains documented separately under Chronicle#4525.
+func TestKernelProtectedRevisionRejected(t *testing.T) {
 	f := newKernelFixture(t)
 	client := f.client(integrationRegistry[CompliancePersonRegistered](t))
 	store, err := client.EventStore(f.ctx, f.storeName)
@@ -61,10 +62,11 @@ func TestKernelProtectedRevisionDoesNotSurviveErasure(t *testing.T) {
 	}
 	subject := uuid.NewString()
 	appended := appendSuccessfully(t, f.ctx, store, "source", CompliancePersonRegistered{Owner: subject, Name: "synthetic-original"})
-	if err = store.EventLog().Revise(f.ctx, *appended.Position, CompliancePersonRegistered{Owner: subject, Name: "synthetic-revision-pii"}); err != nil {
-		t.Fatal(err)
+	err = store.EventLog().Revise(f.ctx, *appended.Position, CompliancePersonRegistered{Owner: subject, Name: "synthetic-revision-pii"})
+	var unknown *eventsequences.MutationOutcomeUnknownError
+	if !errors.Is(err, chronicle.ErrUnsupported) || errors.As(err, &unknown) {
+		t.Fatalf("protected revision must be rejected before dispatch: %v", err)
 	}
-	awaitHistoryMutation(t, f.ctx, store.EventLog(), "source", func(h []events.Appended) bool { return len(h) == 1 && len(h[0].Revisions) == 1 })
 	if err = store.Compliance().ErasePII(f.ctx, subject); err != nil {
 		t.Fatal(err)
 	}
@@ -76,31 +78,19 @@ func TestKernelProtectedRevisionDoesNotSurviveErasure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	foundRevision := false
 	for _, request := range requests {
-		if request.Context.EventType.ID != "EventRevised" {
-			continue
+		if request.Context.EventType.ID == "EventRevised" {
+			t.Fatal("rejected revision created a system request")
 		}
-		foundRevision = true
-		if strings.Contains(string(request.Content), "synthetic-revision-pii") {
-			t.Skip("19.29.4 stores revised PII in the system request after erasure; C#-equivalent Revise wire: https://github.com/Cratis/Chronicle/issues/4525")
-		}
-	}
-	if !foundRevision {
-		t.Fatal("missing system revision request; cannot verify erasure")
 	}
 	history, err := store.EventLog().ReadSource(f.ctx, "source", eventsequences.SourceFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, event := range history {
-		if strings.Contains(string(event.Content), "synthetic-revision-pii") {
-			t.Fatal("revised PII survived erasure")
-		}
-		for _, revision := range event.Revisions {
-			if strings.Contains(string(revision.Content), "synthetic-revision-pii") {
-				t.Fatal("historical revision PII survived erasure")
-			}
-		}
+	if len(history) != 1 || len(history[0].Revisions) != 0 {
+		t.Fatalf("rejected revision changed history: %+v", history)
+	}
+	if strings.Contains(string(history[0].Content), "synthetic-revision-pii") {
+		t.Fatal("rejected replacement reached history")
 	}
 }
