@@ -6,6 +6,7 @@ package readmodels_test
 import (
 	"context"
 	"errors"
+	"math"
 	"strings"
 	"testing"
 
@@ -32,7 +33,17 @@ func TestProjectionReplayIsBoundedAndNormalizesKeysWithoutPartialResults(t *test
 		return &contracts.GetAllInstancesResponse{Instances: []string{`{"_id":"one"}`, `null`}}, nil
 	}}
 	service, ctx := serviceFixture(t, kernel, descriptor)
-	values, err := service.ReplayProjection(ctx, model.Identifier(), 7)
+	values, err := service.ReplayProjection(ctx, model.Identifier(), 0)
+	if err != nil || values == nil || len(values) != 0 || calls != 0 {
+		t.Fatalf("empty replay dispatched an RPC: %s %v calls=%d", values, err, calls)
+	}
+	for _, count := range []uint64{math.MaxInt32 + 1, 1 << 32, math.MaxUint64} {
+		values, err = service.ReplayProjection(ctx, model.Identifier(), count)
+		if !errors.Is(err, chronicle.ErrInvalidConfiguration) || values != nil || calls != 0 {
+			t.Fatalf("out-of-range replay %d: %s %v calls=%d", count, values, err, calls)
+		}
+	}
+	values, err = service.ReplayProjection(ctx, model.Identifier(), 7)
 	if err != nil || len(values) != 1 || !strings.Contains(string(values[0]), `"id":"one"`) {
 		t.Fatalf("replay: %s %v", values, err)
 	}

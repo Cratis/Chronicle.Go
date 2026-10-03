@@ -28,7 +28,8 @@ func eventRegistry(t *testing.T) *chronicle.Registry {
 func TestEventScenarioUsesProductionNamingAndIsolatedStorage(t *testing.T) {
 	for _, policy := range []serialization.NamingPolicy{serialization.PreservePropertyNames, chronicletest.CSharpScenarioNaming} {
 		t.Run(map[serialization.NamingPolicy]string{serialization.PreservePropertyNames: "preserve", serialization.CamelCase: "camel"}[policy], func(t *testing.T) {
-			s := chronicletest.NewEventScenario(t, chronicletest.Config{Registry: eventRegistry(t), Naming: policy})
+			var tb testing.TB = t
+			s := chronicletest.NewEventScenario(tb, chronicletest.Config{Registry: eventRegistry(t), Naming: policy})
 			if err := s.Given(t.Context(), "first", AccountOpened{Name: "Ada"}); err != nil {
 				t.Fatal(err)
 			}

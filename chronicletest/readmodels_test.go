@@ -6,6 +6,7 @@ package chronicletest_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
@@ -56,7 +57,8 @@ func reducerRegistry(t *testing.T) (*chronicle.Registry, readmodels.Model[Accoun
 }
 func TestReadModelScenarioFoldsRegisteredConventionsAndSelectsInstances(t *testing.T) {
 	registry, _, numbers := reducerRegistry(t)
-	s := chronicletest.NewReadModelScenario[Account](t, chronicletest.Config{Registry: registry})
+	var tb testing.TB = t
+	s := chronicletest.NewReadModelScenario[Account](tb, chronicletest.Config{Registry: registry})
 	if err := s.Given(t.Context(), "a", AccountOpened{Name: "Ada"}, auditMarker{}); err != nil {
 		t.Fatal(err)
 	}
@@ -128,6 +130,14 @@ func TestReadModelScenarioInlineProjectionOverridesReducerWithoutMutatingRegistr
 	value, err := s.Instance(t.Context())
 	if err != nil || !value.Exists {
 		t.Fatalf("registry mutated: %+v %v", value, err)
+	}
+}
+
+func TestReadModelScenarioRefusesKernelReducerRatherThanSilentlyFoldingLocally(t *testing.T) {
+	registry, _, _ := reducerRegistry(t)
+	s, err := chronicletest.OpenReadModelScenario[Account](t.Context(), chronicletest.Config{Registry: registry, Engine: chronicletest.Kernel})
+	if s != nil || !errors.Is(err, chronicletest.ErrFidelityUnavailable) || !strings.Contains(err.Error(), "require Substitute") {
+		t.Fatalf("kernel reducer: %v %v", s, err)
 	}
 }
 

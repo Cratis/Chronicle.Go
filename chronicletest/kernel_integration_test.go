@@ -19,6 +19,7 @@ import (
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/google/uuid"
 )
 
 func kernelConfig(registry *chronicle.Registry) chronicletest.Config {
@@ -35,7 +36,9 @@ func TestKernelReadModelScenarioDiscoversProjectionAndRejectsAmbiguousInstance(t
 	if _, err := chronicle.RegisterReadModel[ProjectedAccount](registry); err != nil {
 		t.Fatal(err)
 	}
-	s := chronicletest.NewReadModelScenario[ProjectedAccount](t, kernelConfig(registry))
+	config := kernelConfig(registry)
+	config.Store = chronicle.StoreName("borrowed-" + uuid.NewString())
+	s := chronicletest.NewReadModelScenario[ProjectedAccount](t, config)
 	ctx := kernelContext(t)
 	chronicletest.RequireFidelity(t, s.Fidelity(), chronicletest.ProjectionExecution)
 	if err := s.Given(ctx, "a", AccountOpened{Name: "Ada"}); err != nil {
@@ -58,8 +61,24 @@ func TestKernelReadModelScenarioDiscoversProjectionAndRejectsAmbiguousInstance(t
 	if err != nil || selected.Value.Name != "Grace" {
 		t.Fatalf("selection: %+v %v", selected, err)
 	}
-	if !errors.Is(s.Fidelity().Require(chronicletest.ObserverLifecycle), chronicletest.ErrFidelityUnavailable) {
-		t.Fatal("replay claimed observer catch-up")
+	for _, layer := range []chronicletest.Layer{chronicletest.ObserverLifecycle, chronicletest.DeliveryMetadata, chronicletest.EffectAcceptance} {
+		if !errors.Is(s.Fidelity().Require(layer), chronicletest.ErrFidelityUnavailable) {
+			t.Fatalf("replay claimed %s", layer)
+		}
+	}
+	// A new scenario borrowing a populated store must not replay unseeded history.
+	empty := chronicletest.NewReadModelScenario[ProjectedAccount](t, config)
+	emptyValues, err := empty.Instances(ctx)
+	if err != nil || emptyValues == nil || len(emptyValues) != 0 {
+		t.Fatalf("empty borrowed scenario replayed history: %+v %v", emptyValues, err)
+	}
+	emptyInstance, err := empty.Instance(ctx)
+	if err != nil || emptyInstance.Exists {
+		t.Fatalf("empty borrowed instance: %+v %v", emptyInstance, err)
+	}
+	emptyInstance, err = empty.InstanceFor(ctx, "a")
+	if err != nil || emptyInstance.Exists {
+		t.Fatalf("empty borrowed keyed instance: %+v %v", emptyInstance, err)
 	}
 }
 func TestKernelReadModelScenarioInlineProjectionOverridesReducer(t *testing.T) {

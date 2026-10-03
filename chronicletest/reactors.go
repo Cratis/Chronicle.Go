@@ -14,6 +14,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/observerruntime"
+	"github.com/cratis/chronicle.go/internal/reactoreffects"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -24,8 +25,8 @@ import (
 // the outer slice. Serial use only; the zero value is ready to use.
 type RecordingReactorSideEffectHandlers struct{ produced []any }
 
-// RecordEffect implements reactors.EffectRecorder. Declared return types still
-// undergo production compilation; custom commands must have a registered handler.
+// RecordEffect flattens a payload without executing it. Reactor scenarios call it
+// only after production classification; direct callers supply their own validation.
 func (r *RecordingReactorSideEffectHandlers) RecordEffect(ctx context.Context, _ reactors.SideEffectContext, value any) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -150,10 +151,22 @@ func openReactorScenario[R any](ctx context.Context, config Config, id reactors.
 	return s, nil
 }
 
-// NewReactorScenario constructs a testing.T-owned fixture with automatic cleanup.
-func NewReactorScenario[R any](t *testing.T, config Config) *ReactorScenario[R] {
+// NewReactorScenario constructs a testing.TB-owned fixture with automatic cleanup.
+func NewReactorScenario[R any](t testing.TB, config Config) *ReactorScenario[R] {
 	t.Helper()
 	s, err := OpenReactorScenario[R](t.Context(), config)
+	if err != nil {
+		constructionFailure(t, err)
+	}
+	cleanup(t, s.Close)
+	return s
+}
+
+// NewReactorScenarioForID selects a registered reactor by ID and registers
+// testing.TB cleanup, including for callback declarations without an artifact type.
+func NewReactorScenarioForID(t testing.TB, config Config, id reactors.ID) *ReactorScenario[any] {
+	t.Helper()
+	s, err := OpenReactorScenarioForID(t.Context(), config, id)
 	if err != nil {
 		constructionFailure(t, err)
 	}
@@ -210,6 +223,10 @@ func (s *ReactorScenario[R]) Given(ctx context.Context, source events.SourceID, 
 		if !ok {
 			return chronicle.ErrNotRegistered
 		}
+		if _, subscribed := s.plan.Descriptor(descriptor.Ref().ID); !subscribed {
+			s.next++
+			continue
+		}
 		data, err := descriptor.Marshal(value)
 		if err != nil {
 			return err
@@ -231,7 +248,7 @@ func (s *ReactorScenario[R]) Given(ctx context.Context, source events.SourceID, 
 			}
 		}
 		s.next++
-		if err = lease.Invoke(deliveryCtx, content, ec, s); err != nil {
+		if err = lease.Invoke(deliveryCtx, content, ec, recordingRuntime[R]{s}); err != nil {
 			return err
 		}
 		if s.plan.PerEvent() {
@@ -255,9 +272,20 @@ func (s *ReactorScenario[R]) Append(context.Context, events.SourceID, any) error
 	return ErrFidelityUnavailable
 }
 
-// RecordEffect replaces effect execution with explicit recording.
+// RecordEffect replaces effect execution with explicit recording after production
+// classification. Calling it directly does not perform production validation.
 func (s *ReactorScenario[R]) RecordEffect(ctx context.Context, ec reactors.SideEffectContext, value any) error {
 	return s.recorder.RecordEffect(ctx, ec, value)
+}
+
+// recordingRuntime keeps the test-only production extension internal while
+// preserving the recorder's public calling convention. It does not use metadata.
+type recordingRuntime[R any] struct{ *ReactorScenario[R] }
+
+var _ reactoreffects.Recorder = recordingRuntime[any]{}
+
+func (r recordingRuntime[R]) RecordEffect(ctx context.Context, value any) error {
+	return r.ReactorScenario.RecordEffect(ctx, reactors.SideEffectContext{}, value)
 }
 
 // Close releases the offline client. No live observers were created.

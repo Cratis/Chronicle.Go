@@ -52,6 +52,8 @@ type ReadModelScenario[M any] struct {
 // OpenReadModelScenario selects the registered producer for M. At most one options
 // value is accepted. Inline projection precedence is applied to a detached registry.
 // Projections require Kernel even with no seeded events, refusing false green tests.
+// Reducers require Substitute: like C# scenarios they fold through the production
+// invoker locally and do not establish kernel append/constraint fidelity.
 func OpenReadModelScenario[M any](ctx context.Context, config Config, options ...ReadModelOptions[M]) (*ReadModelScenario[M], error) {
 	if len(options) > 1 {
 		return nil, chronicle.ErrInvalidConfiguration
@@ -104,6 +106,9 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 		}
 	}
 	if s.reducer != nil {
+		if config.Engine == Kernel {
+			return fail(fmt.Errorf("%w: reducer scenarios require Substitute for in-process folding; use a kernel EventScenario for append constraints", ErrFidelityUnavailable))
+		}
 		if option.Initial != nil {
 			s.initial, err = s.model.Marshal(option.Initial)
 			if err != nil {
@@ -135,8 +140,8 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 	return s, nil
 }
 
-// NewReadModelScenario registers testing.T cleanup and skips only a missing kernel endpoint.
-func NewReadModelScenario[M any](t *testing.T, config Config, options ...ReadModelOptions[M]) *ReadModelScenario[M] {
+// NewReadModelScenario registers testing.TB cleanup and skips only a missing kernel endpoint.
+func NewReadModelScenario[M any](t testing.TB, config Config, options ...ReadModelOptions[M]) *ReadModelScenario[M] {
 	t.Helper()
 	s, err := OpenReadModelScenario[M](t.Context(), config, options...)
 	if err != nil {
@@ -153,7 +158,7 @@ func (s *ReadModelScenario[M]) Fidelity() Fidelity {
 		return localFidelity()
 	}
 	f := kernelFidelity()
-	f.substituted = append(f.substituted, ObserverLifecycle, ReadModelStorage, DurableStorage)
+	f.substituted = append(f.substituted, ObserverLifecycle, ReadModelStorage, DurableStorage, DeliveryMetadata, EffectAcceptance)
 	return f
 }
 

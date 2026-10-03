@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/internal/faults"
@@ -18,7 +19,8 @@ func (d Descriptor) KeyProperty() string { return idProperty(d) }
 
 // ReplayProjection computes all instances by replaying at most eventCount events
 // through the kernel projection. This does not wait for or prove sink/observer
-// catch-up. The count must be finite (not MaxUint64); zero means no events.
+// catch-up. Counts above math.MaxInt32 are invalid; zero returns an empty non-nil
+// result without an RPC.
 // Reducers are explicitly unsupported here. Returned JSON is owned and ID aliases
 // are normalized by the same path as Get. No local projection engine is used.
 func (s *Service) ReplayProjection(ctx context.Context, model Identifier, eventCount uint64) ([]json.RawMessage, error) {
@@ -30,11 +32,14 @@ func (s *Service) ReplayProjection(ctx context.Context, model Identifier, eventC
 	if kind != Projection || id == "" {
 		return nil, fmt.Errorf("%w: registered projection required", faults.ErrUnsupported)
 	}
-	if eventCount == ^uint64(0) {
-		return nil, invalid("finite replay count required")
+	if eventCount > math.MaxInt32 {
+		return nil, invalid("replay count exceeds kernel limit")
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
+	}
+	if eventCount == 0 {
+		return []json.RawMessage{}, nil
 	}
 	response, err := s.client.GetAllInstances(ctx, &contracts.GetAllInstancesRequest{EventStore: string(s.store), Namespace: string(s.namespace), ReadModelIdentifier: string(model), EventSequenceId: string(d.EventSequence()), EventCount: eventCount})
 	if err != nil {

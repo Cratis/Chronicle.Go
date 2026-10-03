@@ -43,8 +43,9 @@ if len(history) != 1 {
 }
 ```
 
-`New*` helpers call `t.Helper()` and register cleanup. `Open*` constructors instead
-return `(scenario, error)` and require `Close`; use these outside `testing.T`.
+`New*` helpers accept `testing.TB`, call `t.Helper()` and register cleanup.
+`Open*` constructors instead return `(scenario, error)` and require `Close`; use
+these outside tests and benchmarks.
 [Complete compiling examples](../chronicletest/example_test.go) include all domain
 types, registrations and imports for each scenario kind.
 
@@ -111,6 +112,12 @@ if !instance.Exists || instance.Value.Name != "Grace" {
 }
 ```
 
+Reducer scenarios require `Engine: Substitute` (the default). Like C#'s
+`ReadModelScenario`, they use the real fold invoker in-process over substituted
+storage. `Engine: Kernel` returns `ErrFidelityUnavailable` for a reducer rather
+than silently running locally. Use a kernel `EventScenario` to test append-time
+constraints or live reducer delivery.
+
 Reducer results preserve absence/deletion and fail without partial state on fold
 errors. Unsubscribed events do not invoke folds. Distinct sources fold separately;
 `Instance` returns `ErrAmbiguousInstance` if more than one result exists. Choose
@@ -124,7 +131,10 @@ scenarios reject them before connecting, rather than accidentally executing
 unrelated side effects. Use a kernel `EventScenario` when live observers are the
 subject of the test. Result reads call the kernel's bounded projection replay, not a second
 Go projection engine and not a sleep-based observer wait. The real kernel resolves
-joins and custom keys. `Instance` counts all returned roots before selecting one.
+joins and custom keys. With no seeded events, reads return empty results without
+an RPC, even if you explicitly borrow a populated store. Replay counts above
+`math.MaxInt32` are rejected rather than wrapping the kernel's signed limit.
+`Instance` counts all returned roots before selecting one.
 Keyed access requires the kernel response to include a nonempty string ID: declare
 a root `ID` field or `chronicle:"key"` with a kernel-compatible `id`/`Id` JSON name.
 If the schema drops the key, keyed access fails instead of guessing from seed order.
@@ -164,20 +174,25 @@ Each `Given` opens a fresh production batch scope; `PerEvent` registrations reta
 their per-event activation policy. Constructor/handler failures and cleanup errors
 are returned, and handler panics become errors through the invoker. Synthetic
 `reactors.Delivery` identities are monotonic across calls, including failures.
-They are not a simulation of kernel replay or retry identities.
+Unsubscribed registered events advance the synthetic sequence but do not activate
+scopes, invoke handlers or run middleware. They are not a simulation of kernel
+replay or retry identities.
 
 The recorder flattens collections, `eventsequences.Entry` and
 `EventsWithConcurrencyScopes` to their payloads. It records returned commands
 without running their registered executors. Custom declared return types still
-need the production side-effect handler registration; recording does not bypass
-signature validation. `OpenReactorScenarioForID` also selects explicit callback
-registrations without a Go artifact type.
+need the production side-effect handler registration. Production signature
+validation and runtime effect classification run before recording; unregistered
+payloads, nil collection items, unclaimed nested collections and invalid event
+wrappers fail without partial recording. `OpenReactorScenarioForID` and
+`NewReactorScenarioForID` select explicit callback registrations without a Go
+artifact type.
 
 `Produced()` copies the outer slice but borrows payload objects. Do not mutate
 those objects while asserting. Nested/cyclic collections are bounded at depth 64.
-The recorder can accept shapes a production transport rejects: a green `Produced`
-assertion proves **only the returned payload**, never that the event was appended
-or a command was accepted. Direct side effects inside your handler still run;
+A green `Produced` assertion proves **only a classified returned payload**,
+not serialization or transport acceptance: no event was appended and no command
+executor ran. Direct side effects inside your handler still run;
 inject test collaborators for those yourself.
 
 ## Make fidelity requirements explicit
@@ -209,7 +224,9 @@ has a deliberately small contract and rejects unsupported operations.
 C# can load the real kernel into its process; Go cannot claim that fidelity from
 an in-memory map. Local scenarios therefore do not prove protection/key erasure,
 durable storage, retries/quarantine or multi-node semantics. Even a real-kernel
-projection replay is not evidence that a live observer caught up. The
+projection replay is not evidence that a live observer caught up. Projection
+fixtures also report delivery metadata and effect acceptance as unavailable: they
+neither receive reactor deliveries nor execute returned effects. The
 [kernel-backed siblings](../chronicletest/kernel_integration_test.go) separately
 exercise projection replay, constraint rejection and live reactor lifecycle. Full
 protected-data scenario coverage awaits the SDK's compliance surface; see the

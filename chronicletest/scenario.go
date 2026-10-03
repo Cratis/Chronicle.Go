@@ -4,7 +4,7 @@
 // Package chronicletest provides isolated scenarios using production Chronicle
 // client plans. The substitute is not a Go implementation of the Chronicle kernel.
 // Scenarios are serial fixtures: do not call their methods concurrently. Create
-// one per test and close it, or use New* helpers for testing.T-owned cleanup.
+// one per test and close it, or use New* helpers for testing.TB-owned cleanup.
 package chronicletest
 
 import (
@@ -39,7 +39,8 @@ const (
 type Config struct {
 	// Registry supplies the same declarations as the production client.
 	Registry *chronicle.Registry
-	// Engine selects event storage; reducers and reactors always invoke locally.
+	// Engine selects event storage. Reducer scenarios require Substitute;
+	// reactor scenarios always invoke locally.
 	Engine Engine
 	// ConnectionString is required for Kernel; there is no implicit endpoint.
 	ConnectionString string
@@ -180,7 +181,7 @@ func configuration(config Config) (Config, []chronicle.ClientOption, error) {
 	return config, options, nil
 }
 
-func cleanup(t *testing.T, close func() error) {
+func cleanup(t testing.TB, close func() error) {
 	t.Helper()
 	t.Cleanup(func() {
 		if err := close(); err != nil {
@@ -188,7 +189,7 @@ func cleanup(t *testing.T, close func() error) {
 		}
 	})
 }
-func constructionFailure(t *testing.T, err error) {
+func constructionFailure(t testing.TB, err error) {
 	t.Helper()
 	if errors.Is(err, ErrKernelUnavailable) {
 		t.Skipf("kernel scenario skipped: %v (set CHRONICLE_INTEGRATION_CONNECTION_STRING)", err)

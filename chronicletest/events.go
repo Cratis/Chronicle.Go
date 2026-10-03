@@ -65,9 +65,9 @@ func OpenEventScenario(ctx context.Context, config Config) (*EventScenario, erro
 	return result, nil
 }
 
-// NewEventScenario is the testing.T-oriented constructor with automatic cleanup.
+// NewEventScenario is the testing.TB-oriented constructor with automatic cleanup.
 // Only an omitted kernel endpoint skips; a configured but broken server fails.
-func NewEventScenario(t *testing.T, config Config) *EventScenario {
+func NewEventScenario(t testing.TB, config Config) *EventScenario {
 	t.Helper()
 	scenario, err := OpenEventScenario(t.Context(), config)
 	if err != nil {

@@ -196,6 +196,9 @@ func TestReactorScenarioPerEventClosesEveryActivation(t *testing.T) {
 	}, reactors.PerEvent()); err != nil {
 		t.Fatal(err)
 	}
+	if err := chronicle.RegisterReactorSideEffectHandler(registry, &commandHandler{}); err != nil {
+		t.Fatal(err)
+	}
 	s := chronicletest.NewReactorScenario[*scenarioReactor](t, chronicletest.Config{Registry: registry})
 	if err := s.SeedReadModel("one", Account{}); err != nil {
 		t.Fatal(err)
@@ -205,5 +208,122 @@ func TestReactorScenarioPerEventClosesEveryActivation(t *testing.T) {
 	}
 	if activations != 2 || closes != 2 {
 		t.Fatalf("per-event ownership: %d/%d", activations, closes)
+	}
+}
+
+func TestReactorScenarioRejectsInvalidEffectsWithoutRecordingPartialResults(t *testing.T) {
+	cases := []struct {
+		name  string
+		value any
+		want  error
+	}{
+		{"unregistered", mailCommand{}, chronicle.ErrInvalidConfiguration},
+		{"nil item", nil, chronicle.ErrInvalidConfiguration},
+		{"typed nil item", (*WelcomeRequested)(nil), chronicle.ErrInvalidConfiguration},
+		{"unclaimed nested collection", []any{[]any{WelcomeRequested{}}}, chronicle.ErrInvalidConfiguration},
+		{"missing entry source", eventsequences.Entry{Event: WelcomeRequested{}}, chronicle.ErrInvalidConfiguration},
+		{"nil entry event", eventsequences.Entry{Source: "other"}, chronicle.ErrInvalidConfiguration},
+		{"unregistered entry event", eventsequences.Entry{Source: "other", Event: mailCommand{}}, chronicle.ErrNotRegistered},
+		{"invalid batch entry", eventsequences.EventsWithConcurrencyScopes{Events: []eventsequences.Entry{{Event: WelcomeRequested{}}}}, chronicle.ErrInvalidConfiguration},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			registry := eventRegistry(t)
+			if _, err := chronicle.RegisterEvent[WelcomeRequested](registry); err != nil {
+				t.Fatal(err)
+			}
+			result := []any{WelcomeRequested{Message: "accepted"}}
+			if err := chronicle.RegisterReactorHandlers(registry, "effects", []reactors.Handler{
+				reactors.Returning(func(context.Context, AccountOpened) ([]any, error) { return result, nil }),
+			}); err != nil {
+				t.Fatal(err)
+			}
+			var tb testing.TB = t
+			s := chronicletest.NewReactorScenarioForID(tb, chronicletest.Config{Registry: registry}, "effects")
+			if err := s.Given(t.Context(), "one", AccountOpened{}); err != nil {
+				t.Fatal(err)
+			}
+			result = []any{WelcomeRequested{Message: "partial"}, tc.value}
+			if err := s.Given(t.Context(), "one", AccountOpened{}); !errors.Is(err, tc.want) {
+				t.Fatalf("invalid effect: %v, want %v", err, tc.want)
+			}
+			produced := s.Produced()
+			if len(produced) != 1 || produced[0].(WelcomeRequested).Message != "accepted" {
+				t.Fatalf("invalid return partially recorded: %+v", produced)
+			}
+		})
+	}
+}
+
+type subscribedReactor struct {
+	sequences *[]events.SequenceNumber
+	closes    *int
+}
+
+func (r *subscribedReactor) On(_ AccountOpened, ec events.Context) {
+	*r.sequences = append(*r.sequences, ec.SequenceNumber)
+}
+func (r *subscribedReactor) Close() error { *r.closes++; return nil }
+
+type deliveryMiddleware struct{ before, after *int }
+
+func (m *deliveryMiddleware) Before(context.Context, reactors.Invocation) error {
+	*m.before++
+	return nil
+}
+func (m *deliveryMiddleware) After(context.Context, reactors.Invocation) error {
+	*m.after++
+	return nil
+}
+
+func TestReactorScenarioSkipsUnsubscribedEventsWithoutActivatingOrRunningMiddleware(t *testing.T) {
+	for _, perEvent := range []bool{false, true} {
+		t.Run(map[bool]string{false: "batch", true: "per event"}[perEvent], func(t *testing.T) {
+			registry := eventRegistry(t)
+			if _, err := chronicle.RegisterEvent[AccountClosed](registry); err != nil {
+				t.Fatal(err)
+			}
+			var sequences []events.SequenceNumber
+			activations, closes, middlewareActivations, before, after := 0, 0, 0, 0, 0
+			var options []reactors.Option
+			if perEvent {
+				options = append(options, reactors.PerEvent())
+			}
+			if err := chronicle.RegisterReactor[*subscribedReactor](registry, func() *subscribedReactor {
+				activations++
+				return &subscribedReactor{&sequences, &closes}
+			}, options...); err != nil {
+				t.Fatal(err)
+			}
+			if err := chronicle.RegisterReactorMiddleware(registry, func() *deliveryMiddleware {
+				middlewareActivations++
+				return &deliveryMiddleware{&before, &after}
+			}); err != nil {
+				t.Fatal(err)
+			}
+			s := chronicletest.NewReactorScenario[*subscribedReactor](t, chronicletest.Config{Registry: registry})
+			if err := s.Given(t.Context(), "one", AccountClosed{}); err != nil {
+				t.Fatal(err)
+			}
+			if activations != 0 || middlewareActivations != 0 || before != 0 || after != 0 {
+				t.Fatal("unsubscribed event activated the plan")
+			}
+			if err := s.Given(t.Context(), "one", AccountClosed{}, AccountOpened{}, AccountClosed{}, AccountOpened{}, AccountClosed{}); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.Given(t.Context(), "one", AccountOpened{}); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(sequences, []events.SequenceNumber{2, 4, 6}) {
+				t.Fatalf("subscription sequence gaps: %v", sequences)
+			}
+			wantActivations := 2
+			if perEvent {
+				wantActivations = 3
+			}
+			if activations != wantActivations || closes != wantActivations || middlewareActivations != wantActivations || before != 3 || after != 3 {
+				t.Fatalf("delivery lifecycle: activations=%d closes=%d middleware=%d hooks=%d/%d", activations, closes, middlewareActivations, before, after)
+			}
+		})
 	}
 }
