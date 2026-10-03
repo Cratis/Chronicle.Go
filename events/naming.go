@@ -12,7 +12,7 @@ import (
 // WithNamingPolicy compiles a detached descriptor for registry composition. It
 // does not mutate this descriptor, its handles, or any existing catalog.
 func (d Descriptor) WithNamingPolicy(policy serialization.NamingPolicy) (Descriptor, error) {
-	plan, err := serialization.Compile(d.typ, policy)
+	plan, err := d.plan.WithNamingPolicy(policy)
 	if err != nil {
 		return Descriptor{}, err
 	}

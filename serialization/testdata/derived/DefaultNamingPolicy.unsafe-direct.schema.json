@@ -1,0 +1,1 @@
+{"type":"object","properties":{"Actor":{"type":"object"},"Actors":{"type":"array","items":{"type":"object"}}},"required":["Actor","Actors"],"title":"Changed"}

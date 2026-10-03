@@ -1,0 +1,122 @@
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Cratis.Serialization;
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Schemas;
+
+var derived = new ExplicitDerivedTypes();
+foreach (var naming in new INamingPolicy[] { new DefaultNamingPolicy(), new CamelCaseNamingPolicy() })
+{
+    var options = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = naming.JsonPropertyNamingPolicy,
+        PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        WriteIndented = false
+    };
+    options.Converters.Add(new DerivedTypeJsonConverterFactory(derived));
+    var leaf = new Human("Ada <&é>", "https://example.test", new Detail("nested"));
+    var root = new Human("root", "url", new Detail("outer")) { Child = leaf, Children = [leaf] };
+    var value = new Changed(root, [leaf, new Robot(42)]);
+    var payload = JsonSerializer.Serialize(value, options);
+    Console.WriteLine(naming.GetType().Name + " payload=" + payload);
+    var schema = new JsonSchemaGenerator(new NoMetadata(), naming, derived).Generate(typeof(Changed));
+    Console.WriteLine(naming.GetType().Name + " schema=" + schema.ToJson());
+    try
+    {
+        var decoded = JsonSerializer.Deserialize<Changed>(payload, options)!;
+        var decodedRoot = (Human)decoded.Actor;
+        Console.WriteLine("decoded root=" + decodedRoot.GetType().Name + ", child=" + (decodedRoot.Child?.GetType().Name ?? "NULL") + ", children=" + string.Join(",", decodedRoot.Children.Select(x => x?.GetType().Name ?? "NULL")));
+    }
+    catch (Exception error)
+    {
+        Console.WriteLine("decode failure=" + error.GetType().Name + ":" + error.Message);
+    }
+
+    var memberOptions = new JsonSerializerOptions(options);
+    memberOptions.Converters.Clear();
+    var members = new MemberTypes();
+    memberOptions.Converters.Add(new DerivedTypeJsonConverterFactory(members));
+    var robot = new RobotValue(42);
+    var human = new HumanValue("Ada <&é>", "https://example.test", new Detail("nested"), [robot]);
+    var supported = new MembersChanged(human, [human, robot], new() { ["one"] = robot }, new FamilyHolder(robot), human);
+    var supportedPayload = JsonSerializer.Serialize(supported, memberOptions);
+    var supportedSchema = new JsonSchemaGenerator(new NoMetadata(), naming, members).Generate(typeof(MembersChanged)).ToJson();
+    var roundTrip = JsonSerializer.Deserialize<MembersChanged>(supportedPayload, memberOptions)!;
+    if (roundTrip.Primary is not HumanValue primary || primary.Children[0] is not RobotValue || roundTrip.Members[1] is not RobotValue || roundTrip.Lookup["one"] is not RobotValue || roundTrip.Holder.Selected is not RobotValue)
+        throw new InvalidOperationException("Supported family shape did not round-trip");
+    var wrappedPayload = JsonSerializer.Serialize<Member>(new WrappedValue(new FamilyHolder(robot)), memberOptions);
+    if (JsonSerializer.Deserialize<Member>(wrappedPayload, memberOptions) is not WrappedValue { Holder.Selected: RobotValue { Count: 42 } })
+        throw new InvalidOperationException("Ordinary object inside a derivative lost declared family context");
+    if (args.Length == 0)
+    {
+        var target = Path.GetFullPath("serialization/testdata/derived");
+        Directory.CreateDirectory(target);
+        File.WriteAllText(Path.Combine(target, naming.GetType().Name + ".payload.json"), supportedPayload + "\n");
+        File.WriteAllText(Path.Combine(target, naming.GetType().Name + ".wrapped.payload.json"), wrappedPayload + "\n");
+        File.WriteAllText(Path.Combine(target, naming.GetType().Name + ".schema.json"), supportedSchema + "\n");
+        File.WriteAllText(Path.Combine(target, naming.GetType().Name + ".unsafe-direct.payload.json"), payload + "\n");
+        File.WriteAllText(Path.Combine(target, naming.GetType().Name + ".unsafe-direct.schema.json"), schema.ToJson() + "\n");
+    }
+    else
+    {
+        foreach (var producer in new[] { "go", "csharp" })
+        {
+            var kernelPayload = File.ReadAllText(Path.Combine(args[0], naming.GetType().Name + "." + producer + ".kernel.json"));
+            var fromKernel = JsonSerializer.Deserialize<MembersChanged>(kernelPayload, memberOptions)!;
+            if (JsonSerializer.Serialize(fromKernel, memberOptions) != supportedPayload)
+                throw new InvalidOperationException("Kernel round-trip changed " + producer + " payload");
+            Console.WriteLine(naming.GetType().Name + " " + producer + " kernel payload decoded by .NET: PASS");
+        }
+    }
+    Console.WriteLine(naming.GetType().Name + " supported family arrays, maps and ordinary nested object: PASS");
+}
+
+public interface Member;
+[DerivedType("human")]
+public record HumanValue(string Name, string URLValue, Detail Nested, Member[] Children) : Member;
+[DerivedType("robot")]
+public record RobotValue(long Count) : Member;
+[DerivedType("wrapped")]
+public record WrappedValue(FamilyHolder Holder) : Member;
+public record FamilyHolder(Member Selected);
+public record MembersChanged(Member Primary, Member[] Members, Dictionary<string, Member> Lookup, FamilyHolder Holder, HumanValue Plain);
+public class MemberTypes : IDerivedTypes
+{
+    public IEnumerable<Type> TypesWithDerivatives => [typeof(Member)];
+    public bool HasDerivatives(Type type) => type == typeof(Member);
+    public bool IsDerivedType(Type type) => type == typeof(HumanValue) || type == typeof(RobotValue) || type == typeof(WrappedValue);
+    public Type GetDerivedTypeFor(Type targetType, DerivedTypeId id) => id.Value switch { "human" => typeof(HumanValue), "robot" => typeof(RobotValue), "wrapped" => typeof(WrappedValue), _ => throw new ArgumentException() };
+    public Type GetTargetTypeFor(Type derivedType) => typeof(Member);
+}
+
+public interface Actor;
+[DerivedType("human")]
+public record Human(string Name, string URLValue, Detail Nested) : Actor
+{
+    public Actor? Child { get; init; }
+    public Actor[] Children { get; init; } = [];
+    [JsonPropertyName("explicit_label")]
+    public string Label { get; init; } = "tag";
+}
+[DerivedType("robot")]
+public record Robot(long Count) : Actor;
+public record Detail(string DisplayName);
+public record Changed(Actor Actor, Actor[] Actors);
+
+public class ExplicitDerivedTypes : IDerivedTypes
+{
+    public IEnumerable<Type> TypesWithDerivatives => [typeof(Actor)];
+    public bool HasDerivatives(Type type) => type == typeof(Actor);
+    public bool IsDerivedType(Type type) => type == typeof(Human) || type == typeof(Robot);
+    public Type GetDerivedTypeFor(Type targetType, DerivedTypeId id) => id.Value switch { "human" => typeof(Human), "robot" => typeof(Robot), _ => throw new ArgumentException() };
+    public Type GetTargetTypeFor(Type derivedType) => typeof(Actor);
+}
+public class NoMetadata : IComplianceMetadataResolver
+{
+    public bool HasMetadataFor(Type type) => false;
+    public bool HasMetadataFor(PropertyInfo property) => false;
+    public IEnumerable<ComplianceMetadata> GetMetadataFor(Type type) => [];
+    public IEnumerable<ComplianceMetadata> GetMetadataFor(PropertyInfo property) => [];
+}

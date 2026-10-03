@@ -91,7 +91,7 @@ func collectFields(n *node, path, goPath string, index []int, collection bool, r
 		}
 		indices := append(append([]int(nil), index...), f.index...)
 		scalar, format := classify(f.value)
-		*result = append(*result, Field{GoField: fieldName, Index: indices, Name: f.name, Path: fieldPath, Type: f.value.typ, Nullable: f.value.typ.Kind() == reflect.Pointer, Scalar: scalar, Format: format, Collection: collection, Tag: f.tag, plan: f.value})
+		*result = append(*result, Field{GoField: fieldName, Index: indices, Name: f.name, Path: fieldPath, Type: f.value.typ, Nullable: f.value.typ.Kind() == reflect.Pointer || f.value.typ.Kind() == reflect.Interface, Scalar: scalar, Format: format, Collection: collection, Tag: f.tag, plan: f.value})
 		collectFields(f.value, fieldPath, fieldName, indices, collection, result, active)
 	}
 }
@@ -117,12 +117,38 @@ func classify(n *node) (Scalar, string) {
 // ValidateRole rejects declarations that cannot be honored by the artifact role.
 // Compile already validates syntax and supported model directives.
 func (p *Plan) ValidateRole(role declarations.Role) error {
-	for _, f := range p.Fields() {
-		if err := validateTag(f.Tag, role, p.typ.String(), f.GoField, f.Path); err != nil {
-			return err
+	return p.visitAll(func(n *node) error {
+		for _, f := range n.fields {
+			if err := validateTag(f.tag, role, p.typ.String(), f.goName, f.name); err != nil {
+				return err
+			}
 		}
-	}
-	return nil
+		for _, derivative := range n.derivatives {
+			if err := visitNodes(derivative.node, map[*node]bool{}, func(child *node) error {
+				for _, f := range child.fields {
+					if role == declarations.Model {
+						switch strings.ToLower(f.name) {
+						case "_subject", "__subject", "__subjects":
+							return codecError(derivative.registration, f.goName, "reserved compliance property")
+						}
+					}
+					directives, err := declarations.Parse(declarations.V1, f.tag)
+					if err != nil {
+						return err
+					}
+					for _, directive := range directives {
+						if directive.Name != "pii" && directive.Name != "encrypted" && directive.Name != "compliance-details" {
+							return codecError(derivative.registration, f.goName, "artifact role declarations within derivatives are not supported")
+						}
+					}
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 func validateTag(tag string, role declarations.Role, artifact, field, path string) error {
 	parsed, err := declarations.Parse(declarations.V1, tag)

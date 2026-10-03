@@ -137,6 +137,7 @@ func (m Model[T]) Identifier() Identifier { return m.descriptor.Identifier() }
 // Nil options and invalid final configurations fail before registry admission.
 type ModelOption func(*modelConfig)
 type modelConfig struct {
+	codecs             *serialization.Codecs
 	identifier         Identifier
 	identifierExplicit bool
 	containerExplicit  bool
@@ -153,6 +154,16 @@ type modelConfig struct {
 	pii                []string
 	protection         []compliance.Declaration
 	subject            string
+}
+
+// WithCodecs selects an immutable explicit derived codec set. The last option
+// wins; nil clears it. Classification providers are frozen at declaration.
+func WithCodecs(codecs *serialization.Codecs) ModelOption {
+	if codecs != nil {
+		owned := *codecs
+		codecs = &owned
+	}
+	return func(c *modelConfig) { c.codecs = codecs }
 }
 
 // WithIdentifier overrides the default full Go import path plus type name. Use an
@@ -257,7 +268,7 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 	if config.sink.Type == NoSink && strings.TrimSpace(config.observerID) == "" && !config.passive {
 		return Model[T]{}, invalid("passive models require a nonblank observer identifier")
 	}
-	plan, err := serialization.CompileReadModel(typ)
+	plan, err := serialization.CompileReadModelWith(typ, serialization.Config{Codecs: config.codecs})
 	if err != nil {
 		return Model[T]{}, err
 	}
@@ -268,6 +279,10 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 		return Model[T]{}, err
 	}
 	if err := collectSubject(plan, &config); err != nil {
+		return Model[T]{}, err
+	}
+	config.protection, err = plan.FreezeProtection(config.protection...)
+	if err != nil {
 		return Model[T]{}, err
 	}
 	schema, err := modelSchema(plan, config)

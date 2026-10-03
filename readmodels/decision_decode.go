@@ -5,8 +5,10 @@ package readmodels
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // DecisionCodecPanicError means an application model decoder panicked during a
@@ -24,7 +26,9 @@ func (*DecisionCodecPanicError) Unwrap() error { return faults.ErrProtocol }
 // release and before final cancellation/generation/epoch checks and issuance.
 func decodeDecision[T any](raw Instance[json.RawMessage], descriptor Descriptor) (instance Instance[T], err error) {
 	defer func() {
-		if recover() != nil {
+		panicked := recover() != nil
+		var callbackPanic *serialization.CallbackPanicError
+		if panicked || errors.As(err, &callbackPanic) {
 			instance = Instance[T]{}
 			err = &DecisionCodecPanicError{}
 		}

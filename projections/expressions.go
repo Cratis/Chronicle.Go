@@ -189,6 +189,8 @@ func stringFormat(format string) string {
 func objectCompatible(target, source serialization.Field, targetFields, sourceFields []serialization.Field) bool {
 	targetType, sourceType := indirectType(target.Type), indirectType(source.Type)
 	switch targetType.Kind() {
+	case reflect.Interface:
+		return sourceType.Kind() == reflect.Interface && target.SameRepresentation(source)
 	case reflect.Slice, reflect.Array, reflect.Map:
 		if targetType.Kind() == reflect.Map {
 			if sourceType.Kind() != reflect.Map {
@@ -197,8 +199,8 @@ func objectCompatible(target, source serialization.Field, targetFields, sourceFi
 		} else if sourceType.Kind() != reflect.Slice && sourceType.Kind() != reflect.Array {
 			return false
 		}
-		targetElement, targetOK := elementField(target, targetType.Elem())
-		sourceElement, sourceOK := elementField(source, sourceType.Elem())
+		targetElement, targetOK := target.Element()
+		sourceElement, sourceOK := source.Element()
 		return targetOK && sourceOK && scalarCompatible(targetElement, sourceElement, targetFields, sourceFields)
 	case reflect.Struct:
 		if sourceType.Kind() != reflect.Struct {
@@ -224,18 +226,6 @@ func childFields(fields []serialization.Field, path string) []serialization.Fiel
 		}
 	}
 	return children
-}
-
-func elementField(parent serialization.Field, typ reflect.Type) (serialization.Field, bool) {
-	// Collection metadata describes the container, so compile only the element's
-	// scalar classification. Descendant names still come from the original plans.
-	plan, err := serialization.Compile(reflect.StructOf([]reflect.StructField{{Name: "Value", Type: typ}}))
-	if err != nil {
-		return serialization.Field{}, false
-	}
-	field := plan.Fields()[0]
-	field.Path = parent.Path
-	return field, true
 }
 
 func scalarRepresentation(field serialization.Field) (serialization.Scalar, bool) {
