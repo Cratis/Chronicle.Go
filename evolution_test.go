@@ -83,13 +83,29 @@ func equalEvolutionJSON(t *testing.T, actual, expected string) {
 	t.Helper()
 	decode := func(data string) any {
 		t.Helper()
-		var value any
+		if !json.Valid([]byte(data)) {
+			t.Fatalf("invalid JSON: %s", data)
+		}
 		d := json.NewDecoder(strings.NewReader(data))
 		d.UseNumber()
-		if err := d.Decode(&value); err != nil {
-			t.Fatal(err)
+		if token, err := d.Token(); err != nil || token != json.Delim('{') {
+			t.Fatalf("expected JSON object: %s (%v)", data, err)
 		}
-		return value
+		// Only the top-level property order controls migration writes. Nested
+		// expression objects retain ordinary semantic JSON comparison.
+		var properties []any
+		for d.More() {
+			key, err := d.Token()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var value any
+			if err := d.Decode(&value); err != nil {
+				t.Fatal(err)
+			}
+			properties = append(properties, key, value)
+		}
+		return properties
 	}
 	if !reflect.DeepEqual(decode(actual), decode(expected)) {
 		t.Fatalf("JSON = %s, want %s", actual, expected)
@@ -171,8 +187,8 @@ func TestMigrationRegistrationMatchesCSharpWire(t *testing.T) {
 	if migration.FromGeneration != 1 || migration.ToGeneration != 2 {
 		t.Fatal("wrong adjacency")
 	}
-	equalEvolutionJSON(t, migration.UpcastJmesPath, `{"firstName":{"$split":{"source":"full_name","separator":" ","part":0}},"lastName":{"$split":{"source":"full_name","separator":" ","part":1}},"kind":{"$defaultValue":"customer"},"contact.email_address":{"$rename":"contact_info.old_address"},"state_code":{"$mapValues":{"source":"old_state","mappings":[{"from":1,"to":10},{"from":2,"to":10},{"from":3,"to":20}]}}}`)
-	equalEvolutionJSON(t, migration.DowncastJmesPath, `{"full_name":{"$combine":{"sources":["firstName","lastName"],"separator":" "}},"contact_info.old_address":{"$rename":"contact.email_address"},"old_state":{"$mapValues":{"source":"state_code","mappings":[{"from":10,"to":1},{"from":20,"to":3}]}}}`)
+	equalEvolutionJSON(t, migration.UpcastJmesPath, `{"state_code":{"$mapValues":{"source":"old_state","mappings":[{"from":1,"to":10},{"from":2,"to":10},{"from":3,"to":20}]}},"firstName":{"$split":{"source":"full_name","separator":" ","part":0}},"lastName":{"$split":{"source":"full_name","separator":" ","part":1}},"kind":{"$defaultValue":"customer"},"contact.email_address":{"$rename":"contact_info.old_address"}}`)
+	equalEvolutionJSON(t, migration.DowncastJmesPath, `{"old_state":{"$mapValues":{"source":"state_code","mappings":[{"from":10,"to":1},{"from":20,"to":3}]}},"full_name":{"$combine":{"sources":["firstName","lastName"],"separator":" "}},"contact_info.old_address":{"$rename":"contact.email_address"}}`)
 }
 func TestDirectionalMigrationOverrideAndFrozenInputs(t *testing.T) {
 	registry, current, previous := evolutionRegistry(t)
@@ -193,7 +209,7 @@ func TestDirectionalMigrationOverrideAndFrozenInputs(t *testing.T) {
 	captured.DefaultValue("Kind", "retained builder mutation")
 	catalog := catalogFor(t, registry)
 	compiled := catalog.Migrations()[0]
-	equalEvolutionJSON(t, compiled.UpcastJSON, `{"Kind":{"$defaultValue":{"value":"original"}},"state_code":{"$mapValues":{"source":"old_state","mappings":[{"from":1,"to":99}]}}}`)
+	equalEvolutionJSON(t, compiled.UpcastJSON, `{"state_code":{"$mapValues":{"source":"old_state","mappings":[{"from":1,"to":99}]}},"Kind":{"$defaultValue":{"value":"original"}}}`)
 	equalEvolutionJSON(t, compiled.DowncastJSON, `{"old_state":{"$mapValues":{"source":"state_code","mappings":[{"from":99,"to":2}]}}}`)
 	copies := catalog.Migrations()
 	copies[0].UpcastJSON = "changed"
@@ -201,6 +217,83 @@ func TestDirectionalMigrationOverrideAndFrozenInputs(t *testing.T) {
 		t.Fatal("catalog leaked mutable migration definitions")
 	}
 }
+func TestMigrationPreservesExpressionInsertionOrder(t *testing.T) {
+	for _, scenario := range []struct {
+		name     string
+		upcast   func(*events.MigrationBuilder[evolutionV2, evolutionV1])
+		downcast func(*events.MigrationBuilder[evolutionV1, evolutionV2])
+		wantUp   string
+		wantDown string
+	}{
+		{
+			name: "rename child before parent",
+			upcast: func(b *events.MigrationBuilder[evolutionV2, evolutionV1]) {
+				b.RenamedFrom("Contact.Email", "FullName").RenamedFrom("Contact", "Contact")
+			},
+			downcast: func(b *events.MigrationBuilder[evolutionV1, evolutionV2]) {
+				b.RenamedFrom("Contact.Address", "FirstName").RenamedFrom("Contact", "Contact")
+			},
+			wantUp:   `{"contact.email_address":{"$rename":"full_name"},"contact":{"$rename":"contact_info"}}`,
+			wantDown: `{"contact_info.old_address":{"$rename":"FirstName"},"contact_info":{"$rename":"contact"}}`,
+		},
+		{
+			name: "rename parent before child",
+			upcast: func(b *events.MigrationBuilder[evolutionV2, evolutionV1]) {
+				b.RenamedFrom("Contact", "Contact").RenamedFrom("Contact.Email", "FullName")
+			},
+			downcast: func(b *events.MigrationBuilder[evolutionV1, evolutionV2]) {
+				b.RenamedFrom("Contact", "Contact").RenamedFrom("Contact.Address", "FirstName")
+			},
+			wantUp:   `{"contact":{"$rename":"contact_info"},"contact.email_address":{"$rename":"full_name"}}`,
+			wantDown: `{"contact_info":{"$rename":"contact"},"contact_info.old_address":{"$rename":"FirstName"}}`,
+		},
+		{
+			name: "default child before parent",
+			upcast: func(b *events.MigrationBuilder[evolutionV2, evolutionV1]) {
+				b.DefaultValue("Contact.Email", "specific").DefaultValue("Contact", map[string]any{"email_address": "whole"})
+			},
+			downcast: func(b *events.MigrationBuilder[evolutionV1, evolutionV2]) {
+				b.DefaultValue("Contact.Address", "specific").DefaultValue("Contact", map[string]any{"old_address": "whole"})
+			},
+			wantUp:   `{"contact.email_address":{"$defaultValue":"specific"},"contact":{"$defaultValue":{"email_address":"whole"}}}`,
+			wantDown: `{"contact_info.old_address":{"$defaultValue":"specific"},"contact_info":{"$defaultValue":{"old_address":"whole"}}}`,
+		},
+		{
+			name: "default parent before child",
+			upcast: func(b *events.MigrationBuilder[evolutionV2, evolutionV1]) {
+				b.DefaultValue("Contact", map[string]any{"email_address": "whole"}).DefaultValue("Contact.Email", "specific")
+			},
+			downcast: func(b *events.MigrationBuilder[evolutionV1, evolutionV2]) {
+				b.DefaultValue("Contact", map[string]any{"old_address": "whole"}).DefaultValue("Contact.Address", "specific")
+			},
+			wantUp:   `{"contact":{"$defaultValue":{"email_address":"whole"}},"contact.email_address":{"$defaultValue":"specific"}}`,
+			wantDown: `{"contact_info":{"$defaultValue":{"old_address":"whole"}},"contact_info.old_address":{"$defaultValue":"specific"}}`,
+		},
+		{
+			name: "repeated target keeps first position and last expression",
+			upcast: func(b *events.MigrationBuilder[evolutionV2, evolutionV1]) {
+				b.RenamedFrom("Contact.Email", "FullName").RenamedFrom("Contact", "Contact").DefaultValue("Contact.Email", "last")
+			},
+			downcast: func(b *events.MigrationBuilder[evolutionV1, evolutionV2]) {
+				b.RenamedFrom("Contact.Address", "FirstName").RenamedFrom("Contact", "Contact").DefaultValue("Contact.Address", "last")
+			},
+			wantUp:   `{"contact.email_address":{"$defaultValue":"last"},"contact":{"$rename":"contact_info"}}`,
+			wantDown: `{"contact_info.old_address":{"$defaultValue":"last"},"contact_info":{"$rename":"contact"}}`,
+		},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			registry, current, previous := evolutionRegistry(t)
+			migration := events.Migration[evolutionV2, evolutionV1]{Upcast: scenario.upcast, Downcast: scenario.downcast}
+			if err := chronicle.RegisterEventMigration(registry, current, previous, migration); err != nil {
+				t.Fatal(err)
+			}
+			compiled := catalogFor(t, registry).Migrations()[0]
+			equalEvolutionJSON(t, compiled.UpcastJSON, scenario.wantUp)
+			equalEvolutionJSON(t, compiled.DowncastJSON, scenario.wantDown)
+		})
+	}
+}
+
 func TestMigrationInvalidGraphsFailBeforeConnection(t *testing.T) {
 	for _, scenario := range []string{"missing chain", "duplicate", "missing target", "missing source", "gap", "different ID", "unregistered endpoint", "missing intermediate"} {
 		t.Run(scenario, func(t *testing.T) {

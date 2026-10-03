@@ -78,7 +78,12 @@ func (c *Catalog) WithMigrations(declarations []MigrationDeclaration, validateCh
 }
 
 func compileMigration(operations []migrationOperation, target, source Descriptor) (string, error) {
-	result := map[string]any{}
+	type propertyExpression struct {
+		path  string
+		value any
+	}
+	result := make([]propertyExpression, 0, len(operations))
+	positions := map[string]int{}
 	for _, operation := range operations {
 		targetPath, err := migrationPath(target, operation.target)
 		if err != nil {
@@ -111,13 +116,36 @@ func compileMigration(operations []migrationOperation, target, source Descriptor
 		case "$mapValues":
 			expression = map[string]any{"source": sourcePath, "mappings": operation.mappings}
 		}
-		result[targetPath] = map[string]any{operation.kind: expression}
+		value := map[string]any{operation.kind: expression}
+		if position, ok := positions[targetPath]; ok {
+			// C# dictionary assignment replaces the value without moving the
+			// target's first insertion position.
+			result[position].value = value
+		} else {
+			positions[targetPath] = len(result)
+			result = append(result, propertyExpression{path: targetPath, value: value})
+		}
 	}
-	data, err := json.Marshal(result)
-	if err != nil {
-		return "", fmt.Errorf("%w: invalid migration JSON", faults.ErrInvalidConfiguration)
+	// The kernel applies overlapping property writes in this order. Marshaling
+	// a map would sort targets and change parent/child migration semantics.
+	data := []byte{'{'}
+	for i, property := range result {
+		key, err := json.Marshal(property.path)
+		if err != nil {
+			return "", fmt.Errorf("%w: invalid migration JSON", faults.ErrInvalidConfiguration)
+		}
+		value, err := json.Marshal(property.value)
+		if err != nil {
+			return "", fmt.Errorf("%w: invalid migration JSON", faults.ErrInvalidConfiguration)
+		}
+		if i > 0 {
+			data = append(data, ',')
+		}
+		data = append(data, key...)
+		data = append(data, ':')
+		data = append(data, value...)
 	}
-	return string(data), nil
+	return string(append(data, '}')), nil
 }
 
 func migrationPath(descriptor Descriptor, path string) (string, error) {
