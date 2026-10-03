@@ -215,6 +215,208 @@ func TestSanitizerDiscardsAmbiguousPanicIdentity(t *testing.T) {
 	}
 }
 
+type diagnosticChildren []error
+
+func (diagnosticChildren) Error() string      { panic("Error must not run") }
+func (e *diagnosticChildren) Unwrap() []error { return *e }
+
+func TestSanitizerDiscoversPanicsThroughOriginalKindEdges(t *testing.T) {
+	for _, panicFirst := range []bool{false, true} {
+		for _, wrappedKind := range []bool{false, true} {
+			t.Run(fmt.Sprintf("panic-first=%t/wrapped-kind=%t", panicFirst, wrappedKind), func(t *testing.T) {
+				formatted, calls := 0, 0
+				secret := &secretFailure{&formatted}
+				ordinary := errors.New("ordinary sibling")
+				panicNode := &di.Error{Kind: di.ErrCallbackPanicked, Panic: secret}
+				var originalKind error = panicNode
+				if wrappedKind {
+					originalKind = &hostileDiagnostic{child: panicNode, calls: &calls}
+				}
+				outer := &di.Error{Kind: originalKind, Cause: &di.Error{Kind: di.ErrFactoryFailed}}
+				children := []error{secret, outer, ordinary}
+				if panicFirst {
+					children[0], children[1] = children[1], children[0]
+				}
+				clean := sanitizeError(errors.Join(children...))
+				assertSafeProviderDiagnostics(t, clean)
+				var leaked *secretFailure
+				if errors.Is(clean, secret) || errors.As(clean, &leaked) || formatted != 0 {
+					t.Fatal("original Kind hid a panic payload alias")
+				}
+				if !errors.Is(clean, ordinary) || !errors.Is(clean, di.ErrCallbackPanicked) || !errors.Is(clean, di.ErrFactoryFailed) {
+					t.Fatal("distinct ordinary sibling or safe category lost")
+				}
+				if wrappedKind && calls != 1 {
+					t.Fatal("original Kind was not inspected exactly once", calls)
+				}
+			})
+		}
+	}
+}
+
+func TestSanitizerQuarantinesOriginalPayloadKindAndCauseTopology(t *testing.T) {
+	for _, panicFirst := range []bool{false, true} {
+		for _, edge := range []string{"Kind", "Cause"} {
+			t.Run(fmt.Sprintf("panic-first=%t/edge=%s", panicFirst, edge), func(t *testing.T) {
+				formatted := 0
+				secret := &secretFailure{&formatted}
+				ordinary := errors.New("ordinary sibling")
+				payload := &di.Error{}
+				if edge == "Kind" {
+					payload.Kind = &di.Error{Kind: secret}
+				} else {
+					payload.Cause = &di.Error{Cause: secret}
+				}
+				panicNode := &di.Error{Kind: di.ErrFactoryFailed, Panic: payload}
+				children := []error{secret, panicNode, ordinary}
+				if panicFirst {
+					children[0], children[1] = children[1], children[0]
+				}
+				clean := sanitizeError(errors.Join(children...))
+				assertSafeProviderDiagnostics(t, clean)
+				var leaked *secretFailure
+				if errors.Is(clean, secret) || errors.Is(clean, payload) || errors.As(clean, &leaked) || formatted != 0 {
+					t.Fatal("original panic topology leaked a sibling alias")
+				}
+				if !errors.Is(clean, ordinary) || !errors.Is(clean, di.ErrCallbackPanicked) || !errors.Is(clean, di.ErrFactoryFailed) {
+					t.Fatal("distinct ordinary sibling or safe category lost")
+				}
+			})
+		}
+	}
+}
+
+func TestSanitizerRejectsOriginalKindAndCauseCycles(t *testing.T) {
+	for _, edge := range []string{"Kind", "Cause"} {
+		t.Run(edge, func(t *testing.T) {
+			cycle := &di.Error{Kind: di.ErrFactoryFailed}
+			if edge == "Kind" {
+				cycle.Kind = cycle
+			} else {
+				cycle.Cause = cycle
+			}
+			ordinary := errors.New("ordinary sibling")
+			clean := sanitizeError(errors.Join(ordinary, cycle))
+			assertSafeProviderDiagnostics(t, clean)
+			if clean != errUnsafeDiagnostic || errors.Is(clean, ordinary) {
+				t.Fatal("cycle did not discard the entire snapshot")
+			}
+		})
+	}
+}
+
+func TestSanitizerChargesNilEdgesAndRefusesWholeOversizedSnapshots(t *testing.T) {
+	ordinary := errors.New("ordinary sibling")
+	for _, size := range []int{maxDiagnosticNodes - 1, maxDiagnosticNodes, maxDiagnosticNodes * 100} {
+		t.Run(fmt.Sprintf("slots=%d", size), func(t *testing.T) {
+			children := make(diagnosticChildren, size)
+			children[size-1] = ordinary
+			clean := sanitizeError(&children)
+			assertSafeProviderDiagnostics(t, clean)
+			if errors.Is(clean, ordinary) != (size == maxDiagnosticNodes-1) {
+				t.Fatal("root and nil edges were not charged exactly")
+			}
+		})
+	}
+	storm := make(diagnosticChildren, maxDiagnosticNodes*100)
+	for _, stormFirst := range []bool{false, true} {
+		children := []error{ordinary, &storm}
+		if stormFirst {
+			children[0], children[1] = children[1], children[0]
+		}
+		if clean := sanitizeError(errors.Join(children...)); clean != errUnsafeDiagnostic {
+			t.Fatal("nil-only storm retained a partial ordinary sibling")
+		}
+	}
+}
+
+func TestDiagnosticCaptureAcceptsExactSmallRootedEdgeBudgets(t *testing.T) {
+	ordinary := errors.New("ordinary sibling")
+	mixed := diagnosticChildren{nil, ordinary, nil}
+	nilChild := diagnosticChildren{nil}
+	for _, tc := range []struct {
+		name   string
+		tree   error
+		budget int
+	}{
+		{"mixed nils", &mixed, 4},
+		{"nil-only list", &nilChild, 2},
+		{"single nil unwrap", &hostileDiagnostic{calls: new(int)}, 2},
+		{"provider nil fields", &di.Error{}, 3},
+		{"provider nil payload topology", &di.Error{Kind: di.ErrFactoryFailed, Panic: &nilChild}, 5},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, budget := range []int{tc.budget - 1, tc.budget} {
+				walker := diagnosticWalker{
+					remaining: budget, seen: make(map[diagnosticIdentity]*diagnosticNode),
+					active: make(map[diagnosticIdentity]bool), quarantined: make(map[uintptr]bool),
+				}
+				walker.capture(tc.tree, 0)
+				if walker.incomplete != (budget < tc.budget) || (!walker.incomplete && walker.remaining != 0) {
+					t.Fatalf("budget=%d remaining=%d incomplete=%t", budget, walker.remaining, walker.incomplete)
+				}
+			}
+		})
+	}
+}
+
+func TestSanitizerChecksEdgeListBudgetBeforeInspectingChildren(t *testing.T) {
+	calls := 0
+	children := make(diagnosticChildren, maxDiagnosticNodes)
+	children[0] = &hostileDiagnostic{calls: &calls}
+	if clean := sanitizeError(&children); clean != errUnsafeDiagnostic || calls != 0 {
+		t.Fatal("oversized edge list was partially inspected", calls)
+	}
+}
+
+func TestSanitizerAcceptsExactDepthLimit(t *testing.T) {
+	for _, depth := range []int{maxDiagnosticDepth - 1, maxDiagnosticDepth} {
+		ordinary := errors.New("ordinary sibling")
+		tree := ordinary
+		calls := 0
+		for range depth {
+			tree = &hostileDiagnostic{child: tree, calls: &calls}
+		}
+		clean := sanitizeError(tree)
+		if errors.Is(clean, ordinary) != (depth < maxDiagnosticDepth) || calls != depth {
+			t.Fatal("incorrect depth boundary", depth, calls)
+		}
+	}
+}
+
+func TestSanitizerPreservesDistinctOrdinaryIdentityAfterCategoryOnlyEmission(t *testing.T) {
+	first, second := errors.New("ordinary first"), errors.New("ordinary second")
+	kind := errors.Join(di.ErrMissing, first)
+	clean := sanitizeError(errors.Join(&di.Error{Kind: kind}, first, second))
+	assertSafeProviderDiagnostics(t, clean)
+	if !errors.Is(clean, first) || !errors.Is(clean, second) || !errors.Is(clean, di.ErrMissing) {
+		t.Fatal("category-only rebuild hid distinct safe ordinary identities")
+	}
+}
+
+func TestSanitizerScrubsInspectionPanicsInOriginalKindAndPayloadGraphs(t *testing.T) {
+	for _, tree := range []error{
+		&di.Error{Kind: panickingUnwrap{}},
+		&di.Error{Kind: di.ErrFactoryFailed, Panic: &di.Error{Kind: panickingUnwrap{}}},
+	} {
+		ordinary := errors.New("ordinary sibling")
+		clean := sanitizeError(errors.Join(ordinary, tree))
+		assertSafeProviderDiagnostics(t, clean)
+		var diagnostic *di.Error
+		if !errors.As(clean, &diagnostic) || diagnostic.Panic != nil || diagnostic.Cause != nil || diagnostic.Operation != "inspect diagnostics" || !errors.Is(clean, di.ErrCallbackPanicked) || errors.Is(clean, ordinary) {
+			t.Fatal("inspection panic exposed an unfinished snapshot")
+		}
+	}
+}
+
+func TestSanitizerKeepsReturnedOrdinarySecretsWithoutKnownPanicAliases(t *testing.T) {
+	ordinary := errors.New("ordinary returned secret")
+	clean := sanitizeError(&di.Error{Kind: di.ErrFactoryFailed, Cause: ordinary})
+	if !errors.Is(clean, ordinary) || !errors.Is(clean, di.ErrFactoryFailed) {
+		t.Fatal("ordinary returned causes must remain inspectable")
+	}
+}
+
 func assertSafeProviderDiagnostics(t *testing.T, err error) {
 	t.Helper()
 	if err == nil {
