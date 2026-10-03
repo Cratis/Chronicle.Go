@@ -16,7 +16,9 @@ import (
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/projections"
+	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/reducers"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -62,6 +64,8 @@ type EventStore struct {
 	sequences   map[events.SequenceID]*eventsequences.Sequence
 
 	projectionSnapshot []projections.Definition
+	reactorSnapshot    []*reactors.Plan
+	reducerSnapshot    []*reducers.Plan
 	readModels         *readmodels.Service
 	reactors           storeObservers
 	reducers           storeObservers

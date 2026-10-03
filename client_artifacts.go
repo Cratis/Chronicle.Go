@@ -38,14 +38,8 @@ func (c *Client) Artifacts(store StoreName) (Artifacts, error) {
 	if err != nil {
 		return Artifacts{}, err
 	}
-	reactorPlans := c.reactors.defaults
-	if selected, ok := c.reactors.stores[store]; ok {
-		reactorPlans = selected
-	}
-	reducerPlans := c.reducers.defaults
-	if selected, ok := c.reducers.stores[store]; ok {
-		reducerPlans = selected
-	}
+	reactorPlans := snapshot.reactors
+	reducerPlans := snapshot.reducers
 	return Artifacts{snapshot.events, snapshot.models, snapshot.projections, slices.Clone(reactorPlans), slices.Clone(reducerPlans), slices.Clone(snapshot.constraints)}, nil
 }
 

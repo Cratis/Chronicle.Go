@@ -17,6 +17,9 @@ import (
 )
 
 func (s *EventStore) reducerPlans() []*reducers.Plan {
+	if s.reducerSnapshot != nil {
+		return s.reducerSnapshot
+	}
 	if plans, ok := s.client.reducers.stores[s.name]; ok {
 		return plans
 	}

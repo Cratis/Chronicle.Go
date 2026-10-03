@@ -40,6 +40,8 @@ type Declaration struct {
 type configuration struct {
 	id               ID
 	sequence         events.SequenceID
+	sequenceExplicit bool
+	sourceStore      string
 	version          string
 	active           bool
 	passive          bool
@@ -66,11 +68,18 @@ func WithVersion(version string) Option {
 
 // WithEventSequence selects the source sequence; the default is event-log.
 func WithEventSequence(id events.SequenceID) Option {
-	return func(c *configuration) { c.sequence = id }
+	return func(c *configuration) { c.sequence = id; c.sequenceExplicit = true }
 }
 
 // WithEventLog explicitly selects the event log.
 func WithEventLog() Option { return WithEventSequence(events.EventLog) }
+
+// WithSourceStore overrides event-origin inference, like C# [EventStore]. It
+// selects inbox-<store> even in that store and cannot be combined with an explicit
+// sequence. For ordinary origin metadata use events.WithSourceStore.
+func WithSourceStore(store string) Option {
+	return func(c *configuration) { c.sourceStore = store; c.invalid = c.invalid || strings.TrimSpace(store) == "" }
+}
 
 // WithActive disables or enables kernel materialization (default true). It does
 // not make reads local; use Passive for on-demand in-process folding.
@@ -158,7 +167,7 @@ func define(typ reflect.Type, model readmodels.Descriptor, factory any, explicit
 		}
 		option(&c)
 	}
-	if model.GoType() == nil || strings.TrimSpace(string(c.id)) == "" || strings.TrimSpace(string(c.sequence)) == "" || c.invalid {
+	if model.GoType() == nil || strings.TrimSpace(string(c.id)) == "" || strings.TrimSpace(string(c.sequence)) == "" || c.invalid || (c.sourceStore != "" && c.sequenceExplicit) {
 		return Declaration{}, invalid("invalid reducer options or model")
 	}
 	for _, tag := range append(slices.Clone(c.tags), c.filterTags...) {

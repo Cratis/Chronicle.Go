@@ -30,7 +30,8 @@ func TestProjectionSourceTemplateResolvesPerStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	kernel := &supervisedKernel{
-		readModels: &readModelKernel{register: func(context.Context, *modelcontracts.RegisterManyRequest) error { return nil }},
+		subscriptions: &automaticSubscriptionKernel{},
+		readModels:    &readModelKernel{register: func(context.Context, *modelcontracts.RegisterManyRequest) error { return nil }},
 		projections: &projectionKernel{register: func(_ context.Context, r *contracts.RegisterRequest) error {
 			want := "inbox-origin"
 			if r.EventStore == "origin" {

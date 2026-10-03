@@ -38,7 +38,32 @@ func (c *Client) selectedStoreSnapshot(store StoreName) (registrySnapshot, error
 		snapshot.events, snapshot.models = selected, c.readModelCatalogs[store]
 		snapshot.constraints, snapshot.projections = c.storeConstraints[store], c.storeProjections[store]
 	}
+	snapshot.reactors = c.reactors.defaults
+	if selected, ok := c.reactors.stores[store]; ok {
+		snapshot.reactors = selected
+	}
+	snapshot.reactors = slices.Clone(snapshot.reactors)
+	for i, plan := range snapshot.reactors {
+		snapshot.reactors[i] = plan.ForStore(string(store))
+	}
+	snapshot.reducers = c.reducers.defaults
+	if selected, ok := c.reducers.stores[store]; ok {
+		snapshot.reducers = selected
+	}
+	snapshot.reducers = slices.Clone(snapshot.reducers)
 	models := snapshot.models.Descriptors()
+	for i, plan := range snapshot.reducers {
+		bound, err := plan.ForStore(string(store))
+		if err != nil {
+			return registrySnapshot{}, err
+		}
+		snapshot.reducers[i] = bound
+		for j, model := range models {
+			if model.Identifier() == bound.Model().Identifier() {
+				models[j] = bound.Model()
+			}
+		}
+	}
 	snapshot.projections = slices.Clone(snapshot.projections)
 	for i, definition := range snapshot.projections {
 		bound, err := definition.ForStore(string(store))

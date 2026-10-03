@@ -34,6 +34,7 @@ type fold struct {
 // registration/reconnect never executes constructors or repeats discovery.
 type Plan struct {
 	declaration Declaration
+	sourceStore string
 	model       readmodels.Descriptor
 	factory     artifacts.Constructor
 	services    ScopeFactory
@@ -113,11 +114,8 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 	if !ok || model.GoType() != d.model.GoType() {
 		return fail("", nil, invalid("model is not registered"))
 	}
-	bound, err := readmodels.BindReducer(model, string(d.Identifier()), d.config.sequence, d.config.passive)
-	if err != nil {
-		return fail("", nil, err)
-	}
-	p := &Plan{declaration: d, model: bound, services: services, folds: map[events.TypeID]fold{}, descriptors: map[events.TypeID]events.Descriptor{}}
+	var err error
+	p := &Plan{declaration: d, model: model, services: services, folds: map[events.TypeID]fold{}, descriptors: map[events.TypeID]events.Descriptor{}}
 	if !d.explicit {
 		p.factory, err = artifacts.CompileConstructor(d.typ, d.factory, services)
 		if err != nil {
@@ -193,8 +191,14 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 			p.ordered = append(p.ordered, descriptor.Ref())
 		}
 	}
-	p.hash = p.fingerprint()
-	return p, nil
+	if err := p.inferSource(); err != nil {
+		return fail("", nil, err)
+	}
+	bound, err := p.ForStore("")
+	if err != nil {
+		return fail("", nil, err)
+	}
+	return bound, nil
 }
 func compileFold(name string, function reflect.Value, receiver bool, model reflect.Type) (fold, error) {
 	f := fold{name: name, function: function, receiver: receiver}

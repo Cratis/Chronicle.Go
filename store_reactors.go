@@ -14,6 +14,9 @@ import (
 )
 
 func (s *EventStore) reactorPlans() []*reactors.Plan {
+	if s.reactorSnapshot != nil {
+		return s.reactorSnapshot
+	}
 	if plans, ok := s.client.reactors.stores[s.name]; ok {
 		return plans
 	}
