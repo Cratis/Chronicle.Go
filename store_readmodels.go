@@ -21,7 +21,7 @@ func (s *EventStore) initializeReadModels() error {
 	if selected, ok := s.client.readModelCatalogs[s.name]; ok {
 		catalog = selected
 	}
-	service, err := readmodels.New(s.name, s.namespace, catalog, &clientTransport{client: s.client, store: s})
+	service, err := readmodels.New(s.name, s.namespace, catalog, &clientTransport{client: s.client, store: s}, readmodels.WithPassiveReader(s.readPassiveReducer))
 	if err != nil {
 		return err
 	}

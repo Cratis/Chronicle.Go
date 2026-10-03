@@ -161,6 +161,12 @@ func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, w
 		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "reactors", Failure: err})
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
+	if err := s.startReducers(ctx, g, waitReady); err != nil {
+		outcome.Failure = err
+		outcome.RetryPending = ctx.Err() == nil && g.ctx.Err() == nil
+		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "reducers", Failure: err})
+		return outcome, &RegistrationError{Outcome: outcome}
+	}
 	return outcome, nil
 }
 

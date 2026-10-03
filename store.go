@@ -58,7 +58,8 @@ type EventStore struct {
 	log         *eventsequences.Sequence
 
 	readModels *readmodels.Service
-	reactors   storeReactors
+	reactors   storeObservers
+	reducers   storeObservers
 }
 
 // Name returns the logical store name.

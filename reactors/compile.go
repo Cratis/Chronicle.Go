@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"unicode/utf16"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/internal/discovery"
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
@@ -19,7 +20,6 @@ var contextType = reflect.TypeFor[context.Context]()
 var errorType = reflect.TypeFor[error]()
 var eventContextType = reflect.TypeFor[events.Context]()
 var deliveryType = reflect.TypeFor[Delivery]()
-var scopeType = reflect.TypeFor[Scope]()
 var middlewareType = reflect.TypeFor[Middleware]()
 
 type argument struct {
@@ -36,13 +36,7 @@ type call struct {
 	returnsEvent bool
 	returnsError bool
 }
-type constructor struct {
-	typ      reflect.Type
-	fn       reflect.Value
-	context  bool
-	args     []reflect.Type
-	borrowed bool
-}
+type constructor = artifacts.Constructor
 
 // Plan is a catalog-isolated, immutable dispatch plan shared by both authoring
 // paths. Build it with Compile; reconnect reuses it without rediscovery.
@@ -128,17 +122,7 @@ func CompileWithMiddleware(d Declaration, catalog *events.Catalog, models *readm
 			return fail("constructor", d.typ, err)
 		}
 		p.factory = factory
-		methods := make([]reflect.Method, d.typ.NumMethod())
-		for i := range methods {
-			methods[i] = d.typ.Method(i)
-		}
-		slices.SortFunc(methods, func(a, b reflect.Method) int {
-			if a.Type.NumIn() != b.Type.NumIn() {
-				return b.Type.NumIn() - a.Type.NumIn()
-			}
-			return slices.Compare(utf16.Encode([]rune(a.Name)), utf16.Encode([]rune(b.Name)))
-		})
-		for _, method := range methods {
+		for _, method := range discovery.Methods(d.typ) {
 			t := method.Type
 			first := 1
 			if t.NumIn() > first && t.In(first) == contextType {
@@ -214,16 +198,7 @@ func CompileWithMiddleware(d Declaration, catalog *events.Catalog, models *readm
 	return p, nil
 }
 func matchingEvents(typ reflect.Type, catalog *events.Catalog) []events.Descriptor {
-	if typ.Kind() == reflect.Interface && typ.NumMethod() == 0 {
-		return nil
-	}
-	var result []events.Descriptor
-	for _, d := range catalog.Descriptors() {
-		if d.GoType().AssignableTo(typ) || reflect.PointerTo(d.GoType()).AssignableTo(typ) {
-			result = append(result, d)
-		}
-	}
-	return result
+	return discovery.Events(typ, catalog)
 }
 func compileCall(name string, fn reflect.Value, receiver bool, catalog *events.Catalog, models *readmodels.Catalog, services ScopeFactory) (call, error) {
 	t := fn.Type()
@@ -263,41 +238,11 @@ func compileCall(name string, fn reflect.Value, receiver bool, catalog *events.C
 	c.returnsEvent = n == 1
 	return c, nil
 }
-func validateService(factory ScopeFactory, typ reflect.Type) error {
-	if typ == scopeType {
-		return nil
-	}
-	if catalog, ok := factory.(Catalog); ok && !catalog.Contains(typ) {
-		return invalid("unresolvable service parameter: " + typ.String())
-	}
-	return nil
-}
 func compileConstructor(typ reflect.Type, factory any, services ScopeFactory) (constructor, error) {
-	c := constructor{typ: typ}
-	_, plain := services.(defaultFactory)
-	catalog, hasCatalog := services.(Catalog)
-	if factory == nil || (!plain && hasCatalog && catalog.Contains(typ)) {
-		c.borrowed = true
-		return c, validateService(services, typ)
+	c, err := artifacts.CompileConstructor(typ, factory, services)
+	var parameter *artifacts.ParameterError
+	if errors.As(err, &parameter) {
+		err = &DeclarationError{Method: "constructor", Parameter: parameter.Type, Cause: parameter.Cause}
 	}
-	if nilLike(factory) {
-		return c, invalid("nil constructor")
-	}
-	t := reflect.TypeOf(factory)
-	if t.Kind() != reflect.Func || t.IsVariadic() || t.NumOut() < 1 || t.NumOut() > 2 || t.Out(0) != typ || (t.NumOut() == 2 && t.Out(1) != errorType) {
-		return c, invalid("constructor must return the registered type, optionally followed by error")
-	}
-	c.fn = reflect.ValueOf(factory)
-	for i := 0; i < t.NumIn(); i++ {
-		arg := t.In(i)
-		if i == 0 && arg == contextType {
-			c.context = true
-			continue
-		}
-		if err := validateService(services, arg); err != nil {
-			return c, &DeclarationError{Method: "constructor", Parameter: arg, Cause: err}
-		}
-		c.args = append(c.args, arg)
-	}
-	return c, nil
+	return c, err
 }

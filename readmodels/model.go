@@ -35,7 +35,7 @@ const (
 	SQL SinkType = "SQL"
 	// InMemory selects the kernel's in-memory sink.
 	InMemory SinkType = "InMemory"
-	// NoSink selects immediate projection rather than materialized state.
+	// NoSink selects on-demand projection or in-process reduction.
 	NoSink SinkType = "None"
 )
 
@@ -54,8 +54,8 @@ type ObserverType uint8
 const (
 	// Projection is the C# default observer type.
 	Projection ObserverType = 2
-	// Reducer identifies a reducer-backed materialized model. In-process folds and
-	// reducer sessions are not supported by this package.
+	// Reducer identifies a reducer-backed model. Passive instances fold locally;
+	// reducer sessions are not supported.
 	Reducer ObserverType = 1
 )
 
@@ -131,6 +131,8 @@ type modelConfig struct {
 	container, display string
 	sink               Sink
 	observer           ObserverType
+	observerExplicit   bool
+	passive            bool
 	observerID         string
 	sequence           events.SequenceID
 	sequenceExplicit   bool
@@ -164,7 +166,7 @@ func WithSink(sink Sink) ModelOption { return func(c *modelConfig) { c.sink = si
 
 // WithObserver associates a registered producer. It does not register that producer.
 func WithObserver(kind ObserverType, id string) ModelOption {
-	return func(c *modelConfig) { c.observer, c.observerID = kind, id }
+	return func(c *modelConfig) { c.observer, c.observerID, c.observerExplicit = kind, id, true }
 }
 
 // WithEventSequence selects the sequence for immediate reads (default event-log).
@@ -231,11 +233,8 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 	if err != nil || id.String() != config.sink.ConfigurationID {
 		return Model[T]{}, invalid("sink configuration requires a canonical UUID")
 	}
-	if config.sink.Type == NoSink && strings.TrimSpace(config.observerID) == "" {
+	if config.sink.Type == NoSink && strings.TrimSpace(config.observerID) == "" && !config.passive {
 		return Model[T]{}, invalid("passive models require a nonblank observer identifier")
-	}
-	if config.observer == Reducer && config.sink.Type == NoSink {
-		return Model[T]{}, fmt.Errorf("%w: passive reducers require an in-process fold", faults.ErrUnsupported)
 	}
 	plan, err := serialization.CompileReadModel(typ)
 	if err != nil {

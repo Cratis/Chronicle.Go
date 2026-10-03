@@ -11,6 +11,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/reducers"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -38,6 +39,7 @@ type registrySnapshot struct {
 	constraints []constraints.Definition
 	projections []projections.Definition
 	reactors    []*reactorPlan
+	reducers    []*reducers.Plan
 }
 
 func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, services reactorScopeFactory) (registrySnapshot, error) {
@@ -45,6 +47,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 	var models []readmodels.Descriptor
 	var declarations []projections.Declaration
 	var reactorDeclarations []reactorDeclaration
+	var reducerDeclarations []reducers.Declaration
 	var reactorMiddlewares []any
 	snapshot := registrySnapshot{}
 	if registry != nil {
@@ -53,6 +56,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 		models = slices.Clone(registry.readModels)
 		declarations = slices.Clone(registry.projections)
 		reactorDeclarations = slices.Clone(registry.reactors)
+		reducerDeclarations = slices.Clone(registry.reducers)
 		reactorMiddlewares = slices.Clone(registry.reactorMiddlewares)
 		snapshot.constraints = slices.Clone(registry.constraints)
 		registry.mu.Unlock()
@@ -65,6 +69,12 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 	modelCatalog, err := readmodels.NewCatalog(models...)
 	if err != nil {
 		return snapshot, err
+	}
+	for _, declaration := range reducerDeclarations {
+		model, ok := modelCatalog.LookupIdentifier(declaration.Model().Identifier())
+		if !ok || model != declaration.Model() {
+			return snapshot, &reducers.DeclarationError{Reducer: declaration.Identifier(), Cause: fmt.Errorf("%w: reducer model is not registered in this store", ErrInvalidConfiguration)}
+		}
 	}
 	claimed := make(map[readmodels.Identifier]bool)
 	for _, declaration := range declarations {
@@ -134,5 +144,9 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 		}
 	}
 	err = compileReactors(&snapshot, reactorDeclarations, services, reactorMiddlewares)
+	if err != nil {
+		return snapshot, err
+	}
+	err = compileReducers(&snapshot, reducerDeclarations, services)
 	return snapshot, err
 }
