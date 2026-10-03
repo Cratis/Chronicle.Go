@@ -48,11 +48,25 @@ func OpenReducer(ctx context.Context, conn grpc.ClientConnInterface, connectionI
 }
 
 // Run processes one complete fold and cleanup before acknowledging it. Replay
-// notifications have no handshake; user replay hooks remain out of scope.
+// notifications run serially in fresh scopes and have no result handshake.
 func (r *Reducer) Run(ctx context.Context) error {
 	return runStream(ctx, r.stream.Recv, func(ctx context.Context, operation *contracts.ReduceOperationMessage) (*contracts.ReducerResult, error) {
 		if operation.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
-			return nil, nil
+			var state reducers.ReplayState
+			switch operation.ReplayState {
+			case contracts.ReplayState_BeginReplay:
+				state = reducers.BeginReplay
+			case contracts.ReplayState_EndReplay:
+				state = reducers.EndReplay
+			case contracts.ReplayState_BeginReplayPartition:
+				state = reducers.BeginReplayPartition
+			case contracts.ReplayState_EndReplayPartition:
+				state = reducers.EndReplayPartition
+			default:
+				return nil, fmt.Errorf("%w: unknown reducer replay state %d", faults.ErrProtocol, operation.ReplayState)
+			}
+			ctx = reducers.WithBatch(ctx, reducers.Batch{Reducer: r.plan.Identifier(), Store: r.store, Namespace: r.namespace, Sequence: r.plan.EventSequence()})
+			return nil, r.plan.NotifyReplay(ctx, state, events.SourceID(operation.Partition))
 		}
 		result := r.handle(ctx, operation)
 		if result.State == contracts.ObservationState_Success && r.OnChange != nil {
