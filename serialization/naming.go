@@ -5,6 +5,7 @@ package serialization
 
 import (
 	"fmt"
+	"strings"
 	"unicode"
 
 	"github.com/cratis/chronicle.go/internal/faults"
@@ -84,6 +85,21 @@ func RebindPath(path string, from, to []Field) (string, error) {
 			if field.GoField == original.GoField && field.Type == original.Type {
 				return field.Path, nil
 			}
+		}
+	}
+	for _, parent := range RootFields(from) {
+		if !strings.HasPrefix(path, parent.Path+".") {
+			continue
+		}
+		for _, candidate := range RootFields(to) {
+			if parent.GoField != candidate.GoField || parent.Type != candidate.Type {
+				continue
+			}
+			suffix, err := RebindPath(strings.TrimPrefix(path, parent.Path+"."), parent.Fields(), candidate.Fields())
+			if err != nil {
+				return "", err
+			}
+			return candidate.Path + "." + suffix, nil
 		}
 	}
 	return "", fmt.Errorf("%w: property path %q has no matching plan field", faults.ErrInvalidConfiguration, path)

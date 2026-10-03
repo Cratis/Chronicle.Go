@@ -63,7 +63,6 @@ func TestSchemaAndSerializationShareNames(t *testing.T) {
 	}
 }
 
-type recursive struct{ Next *recursive }
 type protected struct {
 	Email string `chronicle:"pii"`
 }
@@ -72,7 +71,7 @@ type custom string
 func (custom) MarshalJSON() ([]byte, error) { return []byte(`"custom"`), nil }
 
 func TestUnsupportedShapesFailBeforeRegistration(t *testing.T) {
-	for _, typ := range []reflect.Type{reflect.TypeFor[recursive](), reflect.TypeFor[protected](), reflect.TypeFor[struct{ Value any }](), reflect.TypeFor[struct{ Value custom }](), reflect.TypeFor[struct{ Value map[int]string }](), reflect.TypeFor[struct {
+	for _, typ := range []reflect.Type{reflect.TypeFor[protected](), reflect.TypeFor[struct{ Value any }](), reflect.TypeFor[struct{ Value custom }](), reflect.TypeFor[struct{ Value map[int]string }](), reflect.TypeFor[struct {
 		Value string `json:",string"`
 	}](), reflect.StructOf([]reflect.StructField{
 		{Name: "First", Type: reflect.TypeFor[string](), Tag: `json:"x"`},

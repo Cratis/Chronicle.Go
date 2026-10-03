@@ -12,7 +12,7 @@ import (
 	"github.com/cratis/fundamentals.go/concepts"
 )
 
-func compileConcept(n *node, representation concepts.Representation, active map[reflect.Type]bool, policy NamingPolicy) (*node, error) {
+func compileConcept(n *node, representation concepts.Representation, state *compileState, policy NamingPolicy) (*node, error) {
 	n.concept = &representation
 	n.scalar = true
 	format := ""
@@ -26,7 +26,7 @@ func compileConcept(n *node, representation concepts.Representation, active map[
 	case concepts.KindTimeSpan:
 		format = "duration"
 	default:
-		underlying, err := compile(representation.Type, active, policy, false)
+		underlying, err := compile(representation.Type, state, policy, false)
 		if err != nil {
 			return nil, err
 		}

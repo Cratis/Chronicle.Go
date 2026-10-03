@@ -10,6 +10,7 @@
 package serialization
 
 import (
+	"crypto/sha256"
 	"encoding"
 	"encoding/json"
 	"fmt"
@@ -31,12 +32,14 @@ type Plan struct {
 	typ    reflect.Type
 }
 type node struct {
-	typ     reflect.Type
-	fields  []field
-	item    *node
-	schema  map[string]any
-	scalar  bool
-	concept *concepts.Representation
+	typ           reflect.Type
+	fields        []field
+	item          *node
+	schema        map[string]any
+	scalar        bool
+	concept       *concepts.Representation
+	reference     *node
+	readModelRoot bool
 }
 type field struct {
 	index               int
@@ -47,8 +50,8 @@ type field struct {
 	isZero              func(reflect.Value) bool
 }
 
-// Compile validates a struct shape before registration. Embedded fields, recursive
-// types, custom marshalers, interface values and unsupported chronicle directives
+// Compile validates a struct shape before registration. Recursive types use schema
+// references. Embedded fields, custom marshalers, interface values and unsupported chronicle directives
 // are rejected rather than generating a schema that disagrees with serialization.
 // Recognized model directives are metadata; event registries must also ValidateRole.
 // Naming defaults to PreservePropertyNames; the last optional policy wins.
@@ -75,9 +78,15 @@ func compilePlan(typ reflect.Type, readModel bool, policies ...NamingPolicy) (*P
 	if typ == nil || typ.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("%w: event must be a named struct", faults.ErrInvalidConfiguration)
 	}
-	root, err := compile(typ, make(map[reflect.Type]bool), policy, readModel)
+	state := &compileState{active: map[reflect.Type]*node{}, definitions: map[string]any{}}
+	root, err := compile(typ, state, policy, readModel)
 	if err != nil {
 		return nil, err
+	}
+	if len(state.definitions) > 0 {
+		// Clone before adding definitions: a recursive root may itself be a target.
+		root.schema = maps.Clone(root.schema)
+		root.schema["definitions"] = state.definitions
 	}
 	root.schema["$schema"] = "http://json-schema.org/draft-07/schema#"
 	root.schema["title"] = typ.Name()
@@ -91,13 +100,38 @@ func compilePlan(typ reflect.Type, readModel bool, policies ...NamingPolicy) (*P
 // Schema returns the immutable JSON Schema string with the same property names as Marshal.
 func (p *Plan) Schema() string { return p.schema }
 
-func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy, readModelRoot bool) (*node, error) {
-	if active[typ] {
-		return nil, unsupported(typ, "recursive shape")
+type compileState struct {
+	active      map[reflect.Type]*node
+	definitions map[string]any
+}
+
+func compile(typ reflect.Type, state *compileState, policy NamingPolicy, readModelRoot bool) (*node, error) {
+	if previous := state.active[typ]; previous != nil && !previous.readModelRoot {
+		if typ.Kind() == reflect.Struct {
+			name := fmt.Sprintf("%s_%x", typ.Name(), sha256.Sum256([]byte(typ.PkgPath()+"."+typ.String())))
+			state.definitions[name] = previous.schema
+			return &node{typ: typ, reference: previous, schema: map[string]any{"$ref": "#/definitions/" + name}}, nil
+		}
+		// A repeated collection/pointer wrapping an active struct must reach
+		// that struct so the reference targets the object, not its container.
+		element := typ.Elem()
+		if element.Kind() == reflect.Pointer {
+			element = element.Elem()
+		}
+		if element.Kind() != reflect.Struct || state.active[element] == nil {
+			return nil, unsupported(typ, "recursive non-object shape")
+		}
 	}
-	active[typ] = true
-	defer delete(active, typ)
-	n := &node{typ: typ, schema: make(map[string]any)}
+	n := &node{typ: typ, schema: make(map[string]any), readModelRoot: readModelRoot}
+	previous := state.active[typ]
+	state.active[typ] = n
+	defer func() {
+		if previous == nil {
+			delete(state.active, typ)
+		} else {
+			state.active[typ] = previous
+		}
+	}()
 	if typ == reflect.TypeFor[time.Time]() {
 		n.scalar = true
 		n.schema["type"], n.schema["format"] = "string", "date-time"
@@ -111,7 +145,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy
 	// Traverse pointers before testing marshaler interfaces: pointers to the
 	// supported built-ins inherit their marshaling methods too.
 	if typ.Kind() == reflect.Pointer {
-		item, err := compile(typ.Elem(), active, policy, false)
+		item, err := compile(typ.Elem(), state, policy, false)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +160,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy
 	if representation, ok, err := concepts.Underlying(typ); err != nil {
 		return nil, fmt.Errorf("%w: %w", faults.ErrInvalidConfiguration, err)
 	} else if ok {
-		return compileConcept(n, representation, active, policy)
+		return compileConcept(n, representation, state, policy)
 	}
 	for _, contract := range []reflect.Type{reflect.TypeFor[json.Marshaler](), reflect.TypeFor[encoding.TextMarshaler]()} {
 		if typ.Implements(contract) || reflect.PointerTo(typ).Implements(contract) {
@@ -146,7 +180,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy
 		if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
 			return nil, unsupported(typ, "byte slices need an explicit wire format")
 		}
-		item, err := compile(typ.Elem(), active, policy, false)
+		item, err := compile(typ.Elem(), state, policy, false)
 		if err != nil {
 			return nil, err
 		}
@@ -158,7 +192,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy
 			n.schema["type"], n.schema["items"] = "array", item.schema
 		}
 	case reflect.Struct:
-		if err := n.compileFields(active, policy, readModelRoot); err != nil {
+		if err := n.compileFields(state, policy, readModelRoot); err != nil {
 			return nil, err
 		}
 	case reflect.Bool:
@@ -182,7 +216,7 @@ func compile(typ reflect.Type, active map[reflect.Type]bool, policy NamingPolicy
 	return n, nil
 }
 
-func (n *node) compileFields(active map[reflect.Type]bool, policy NamingPolicy, readModelRoot bool) error {
+func (n *node) compileFields(state *compileState, policy NamingPolicy, readModelRoot bool) error {
 	properties := make(map[string]any)
 	required := []string{}
 	for i := 0; i < n.typ.NumField(); i++ {
@@ -212,7 +246,7 @@ func (n *node) compileFields(active map[reflect.Type]bool, policy NamingPolicy, 
 		if err := validateTag(tag, declarations.Model, n.typ.String(), f.Name, name); err != nil {
 			return err
 		}
-		value, err := compile(f.Type, active, policy, false)
+		value, err := compile(f.Type, state, policy, false)
 		if err != nil {
 			return err
 		}

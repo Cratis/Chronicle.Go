@@ -25,7 +25,7 @@ func (p *Plan) Marshal(value any) ([]byte, error) {
 	if !v.IsValid() || v.Type() != p.typ {
 		return nil, fmt.Errorf("chronicle: value does not match serializer plan")
 	}
-	encoded, err := p.root.encode(v, false)
+	encoded, err := p.root.encode(v, false, &encodeState{active: map[valueVisit]bool{}}, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,33 @@ func (n *node) checkInteger(value reflect.Value, dictionary bool) error {
 	return nil
 }
 
-func (n *node) encode(value reflect.Value, dictionary bool) (any, error) {
+type valueVisit struct {
+	typ     reflect.Type
+	pointer uintptr
+	length  int
+}
+type encodeState struct{ active map[valueVisit]bool }
+
+func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, depth int) (any, error) {
+	if depth > 256 {
+		return nil, unsupported(n.typ, "JSON nesting exceeds 256 levels")
+	}
+	if n.reference != nil {
+		return n.reference.encode(value, dictionary, state, depth)
+	}
+	if value.Kind() == reflect.Pointer || value.Kind() == reflect.Map || value.Kind() == reflect.Slice {
+		visit := valueVisit{typ: value.Type(), pointer: value.Pointer()}
+		if value.Kind() == reflect.Slice {
+			visit.length = value.Len()
+		}
+		if visit.pointer != 0 {
+			if state.active[visit] {
+				return nil, unsupported(n.typ, "cyclic JSON value")
+			}
+			state.active[visit] = true
+			defer delete(state.active, visit)
+		}
+	}
 	if n.concept != nil {
 		return n.encodeConcept(value, dictionary)
 	}
@@ -70,7 +96,7 @@ func (n *node) encode(value reflect.Value, dictionary bool) (any, error) {
 		if value.IsNil() {
 			return nil, nil
 		}
-		return n.item.encode(value.Elem(), dictionary)
+		return n.item.encode(value.Elem(), dictionary, state, depth+1)
 	case reflect.Struct:
 		result := make(map[string]any, len(n.fields))
 		for _, field := range n.fields {
@@ -78,7 +104,7 @@ func (n *node) encode(value reflect.Value, dictionary bool) (any, error) {
 			if (field.omitEmpty && empty(v)) || (field.omitZero && field.isZero(v)) {
 				continue
 			}
-			encoded, err := field.value.encode(v, dictionary)
+			encoded, err := field.value.encode(v, dictionary, state, depth+1)
 			if err != nil {
 				return nil, fmt.Errorf("property %s: %w", field.name, err)
 			}
@@ -93,7 +119,7 @@ func (n *node) encode(value reflect.Value, dictionary bool) (any, error) {
 		}
 		result := make([]any, value.Len())
 		for i := range result {
-			encoded, err := n.item.encode(value.Index(i), dictionary)
+			encoded, err := n.item.encode(value.Index(i), dictionary, state, depth+1)
 			if err != nil {
 				return nil, err
 			}
@@ -110,7 +136,7 @@ func (n *node) encode(value reflect.Value, dictionary bool) (any, error) {
 		result := make(map[string]any, value.Len())
 		iterator := value.MapRange()
 		for iterator.Next() {
-			encoded, err := n.item.encode(iterator.Value(), true)
+			encoded, err := n.item.encode(iterator.Value(), true, state, depth+1)
 			if err != nil {
 				return nil, err
 			}
