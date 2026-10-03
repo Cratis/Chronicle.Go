@@ -5,7 +5,6 @@ package chronicle
 
 import (
 	"context"
-	"slices"
 
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/internal/wire"
@@ -18,30 +17,16 @@ import (
 func (s *EventStore) ReadModels() *readmodels.Service { return s.readModels }
 
 func (s *EventStore) initializeReadModels() error {
-	catalog := s.client.readModelCatalog
-	if selected, ok := s.client.readModelCatalogs[s.name]; ok {
-		catalog = selected
-	}
-	models := catalog.Descriptors()
-	definitions := s.projectionDefinitions()
-	s.projectionSnapshot = slices.Clone(definitions)
-	for i, definition := range definitions {
-		bound, err := definition.ForStore(string(s.name))
-		if err != nil {
-			return err
-		}
-		s.projectionSnapshot[i] = bound
-		for j, model := range models {
-			if model.Identifier() == bound.Model().Identifier() {
-				models[j] = bound.Model()
-			}
-		}
-	}
-	catalog, err := readmodels.NewCatalog(models...)
+	snapshot, err := s.client.selectedStoreSnapshot(s.name)
 	if err != nil {
 		return err
 	}
-	service, err := readmodels.New(s.name, s.namespace, catalog, &clientTransport{client: s.client, store: s}, readmodels.WithPassiveReader(s.readPassiveReducer))
+	return s.initializeReadModelsFromSnapshot(snapshot)
+}
+
+func (s *EventStore) initializeReadModelsFromSnapshot(snapshot registrySnapshot) error {
+	s.projectionSnapshot = snapshot.projections
+	service, err := readmodels.New(s.name, s.namespace, snapshot.models, &clientTransport{client: s.client, store: s}, readmodels.WithPassiveReader(s.readPassiveReducer))
 	if err != nil {
 		return err
 	}

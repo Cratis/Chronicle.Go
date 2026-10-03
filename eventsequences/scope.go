@@ -25,23 +25,37 @@ func (s *Sequence) resolveScope(ctx context.Context, source events.SourceID, con
 }
 
 func (s *Sequence) resolveLabeledScope(ctx context.Context, source events.SourceID, scope Scope) (*sequences.ConcurrencyScope, error) {
-	result, err := scopeContract(source, scope)
+	resolved, err := s.resolveExpectation(ctx, source, scope)
 	if err != nil {
 		return nil, err
 	}
+	return scopeContract(source, resolved)
+}
+
+// resolvedUnchecked is distinct from Resolve: a resolved empty tail must never
+// be read again at commit. Unlike NoCheck it retains the chosen history filter.
+const resolvedUnchecked = 4
+
+func (s *Sequence) resolveExpectation(ctx context.Context, source events.SourceID, scope Scope) (Scope, error) {
+	scope = cloneScope(scope)
+	if _, err := scopeContract(source, scope); err != nil {
+		return Scope{}, err
+	}
 	if scope.Expectation.kind != 0 {
-		return result, nil
+		return scope, nil
 	}
 	tail, exists, err := s.tail(ctx, scope.Filter)
 	if err != nil {
-		return nil, fmt.Errorf("chronicle: resolve concurrency tail: %w", err)
+		return Scope{}, fmt.Errorf("chronicle: resolve concurrency tail: %w", err)
 	}
 	if exists {
-		result.SequenceNumber = uint64(tail)
+		scope.Expectation = Exact(tail)
 	} else if s.concurrency.CheckFirstAppendIntoAScope {
-		result.ExpectsNoMatchingEvent = true
+		scope.Expectation = NoMatchingEvent()
+	} else {
+		scope.Expectation = Expectation{kind: resolvedUnchecked}
 	}
-	return result, nil
+	return scope, nil
 }
 
 func scopeContract(source events.SourceID, scope Scope) (*sequences.ConcurrencyScope, error) {
@@ -70,6 +84,8 @@ func scopeContract(source events.SourceID, scope Scope) (*sequences.ConcurrencyS
 		result.SequenceNumber = uint64(scope.Expectation.position)
 	case 2:
 		result.ExpectsNoMatchingEvent = true
+	case resolvedUnchecked:
+		// Already resolved against an empty tail with first-append checks off.
 	case 3:
 		if filter.SourceID != nil || filter.SourceType != nil || filter.StreamType != nil || filter.StreamID != nil || len(filter.EventTypes) > 0 {
 			return nil, fmt.Errorf("%w: NoCheck cannot carry narrowing", faults.ErrInvalidConfiguration)
