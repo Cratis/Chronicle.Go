@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	reactorcontracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	contracts "github.com/cratis/chronicle.go/contracts/observation/reducers"
@@ -89,12 +88,12 @@ func (r *Reducer) handle(ctx context.Context, operation *contracts.ReduceOperati
 			failure = faults.ErrProtocol
 			return result
 		}
-		value := reflect.New(r.plan.Model().GoType())
-		if err := json.Unmarshal(data, value.Interface()); err != nil {
+		value, err := r.plan.Model().Unmarshal(data)
+		if err != nil {
 			failure = faults.ErrProtocol
 			return result
 		}
-		initial = value.Interface()
+		initial = value
 	}
 	batch := make([]reducers.Event, 0, len(operation.Events))
 	for _, appended := range operation.Events {

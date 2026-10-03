@@ -56,7 +56,13 @@ func (t *generationTransport) Invoke(ctx context.Context, method string, args, r
 	if err != nil {
 		return &faults.BeforeDispatch{Cause: err}
 	}
-	if err = ctx.Err(); err != nil {
+	// Caller code may ignore cancellation while acquiring a token. The call
+	// context follows its generation through an asynchronous AfterFunc bridge,
+	// so also check the generation before dispatching after that callback returns.
+	if err = ctx.Err(); err == nil {
+		err = t.generation.ctx.Err()
+	}
+	if err != nil {
 		return &faults.BeforeDispatch{Cause: err}
 	}
 	err = t.generation.raw.Invoke(ctx, method, args, reply, options...)

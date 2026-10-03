@@ -63,12 +63,23 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 	if err := json.Unmarshal(document, &fields); err != nil {
 		return nil, &ReleaseError{Cause: faults.ErrProtocol}
 	}
+	declared := make(map[string]bool)
+	for _, field := range serialization.RootFields(d.definition.plan.Fields()) {
+		declared[field.Name] = true
+	}
 	subject := ""
 	// Stored lineage is authoritative for raw documents; a typed instance normally
 	// resolves the explicitly selected property, then the Go ID property.
 	subjectProperties := []string{"__subject", d.definition.config.subject}
 	if id := releaseIDProperty(d); id != "" {
-		subjectProperties = append(subjectProperties, id, "_id", "id", "Id", "ID")
+		subjectProperties = append(subjectProperties, id)
+		for _, alias := range []string{"_id", "id", "Id", "ID"} {
+			// A distinct declared field is never an ID alias. Only an explicit
+			// subject selection or stored lineage can select it as an owner.
+			if !declared[alias] {
+				subjectProperties = append(subjectProperties, alias)
+			}
+		}
 	}
 	for _, name := range subjectProperties {
 		if name == "" {
@@ -84,10 +95,6 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 		if err := json.Unmarshal(lineage, &subjects); err != nil {
 			return nil, &ReleaseError{Cause: faults.ErrProtocol}
 		}
-	}
-	declared := make(map[string]bool)
-	for _, field := range serialization.RootFields(d.definition.plan.Fields()) {
-		declared[field.Name] = true
 	}
 	groups := make(map[string]map[string]json.RawMessage)
 	for name, value := range fields {
@@ -243,7 +250,7 @@ func (r *Reader[T]) Release(ctx context.Context, value T) (T, error) {
 	if err != nil {
 		return zero, &ReleaseError{Cause: err}
 	}
-	result, err := decode[T](Instance[json.RawMessage]{Value: released, Exists: true})
+	result, err := decode[T](Instance[json.RawMessage]{Value: released, Exists: true}, d)
 	if err != nil {
 		return zero, &ReleaseError{Cause: err}
 	}

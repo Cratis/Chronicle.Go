@@ -173,17 +173,18 @@ func (r *Reader[T]) Get(ctx context.Context, key Key) (Instance[T], error) {
 	if err != nil {
 		return Instance[T]{}, err
 	}
-	return decode[T](raw)
+	return decode[T](raw, d)
 }
-func decode[T any](raw Instance[json.RawMessage]) (Instance[T], error) {
+func decode[T any](raw Instance[json.RawMessage], d Descriptor) (Instance[T], error) {
 	result := Instance[T]{Exists: raw.Exists, LastHandled: raw.LastHandled}
 	if !raw.Exists {
 		return result, nil
 	}
-	if err := json.Unmarshal(raw.Value, &result.Value); err != nil {
+	value, err := d.Unmarshal(raw.Value)
+	if err != nil {
 		return Instance[T]{}, fmt.Errorf("%w: model document does not match declared type", faults.ErrProtocol)
 	}
-	normalizeCollections(reflect.ValueOf(&result.Value).Elem())
+	result.Value = *value.(*T)
 	return result, nil
 }
 func normalizeCollections(value reflect.Value) {
@@ -235,7 +236,16 @@ func normalizeID(data []byte, d Descriptor) ([]byte, error) {
 	if _, exists := fields[name]; exists {
 		return data, nil
 	}
+	declared := make(map[string]bool)
+	for _, field := range d.definition.plan.Fields() {
+		declared[field.Path] = true
+	}
 	for _, alias := range []string{"_id", "id", "Id", "ID", "iD"} {
+		// An independently declared property is not a sink key alias, even
+		// when its spelling differs from the key only by case (Id versus ID).
+		if declared[alias] {
+			continue
+		}
 		if value, exists := fields[alias]; exists {
 			fields[name] = value
 			delete(fields, alias)

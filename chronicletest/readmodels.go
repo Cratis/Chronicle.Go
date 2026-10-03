@@ -18,6 +18,7 @@ import (
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/reducers"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // ReadModelOptions configures a scenario before production registry compilation.
@@ -227,30 +228,42 @@ func (s *ReadModelScenario[M]) Instances(ctx context.Context) (map[readmodels.Ke
 	}
 	result := map[readmodels.Key]M{}
 	for _, document := range documents {
-		key, err := modelKey(document, s.model.KeyProperty())
+		key, err := modelKey(document, s.model)
 		if err != nil {
 			return nil, err
 		}
 		if _, duplicate := result[key]; duplicate {
 			return nil, chronicle.ErrProtocol
 		}
-		var value M
-		if err = json.Unmarshal(document, &value); err != nil {
+		value, err := s.model.Unmarshal(document)
+		if err != nil {
 			return nil, err
 		}
-		result[key] = value
+		result[key] = *value.(*M)
 	}
 	return result, nil
 }
-func modelKey(document json.RawMessage, property string) (readmodels.Key, error) {
+func modelKey(document json.RawMessage, model readmodels.Descriptor) (readmodels.Key, error) {
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(document, &object); err != nil {
 		return "", err
 	}
-	for _, name := range []string{property, "_id", "id", "Id", "ID"} {
-		if name == "" {
-			continue
+	names := []string{model.KeyProperty()}
+	if names[0] == "" {
+		declared := make(map[string]bool)
+		for _, field := range serialization.RootFields(model.Fields()) {
+			declared[field.Name] = true
 		}
+		names = nil
+		for _, alias := range []string{"_id", "id", "Id", "ID"} {
+			if !declared[alias] {
+				names = append(names, alias)
+			}
+		}
+	}
+	// ReplayProjection already normalizes genuine sink aliases. When a model
+	// declares a key, require that exact property; another field is not a key.
+	for _, name := range names {
 		raw, ok := object[name]
 		if !ok {
 			continue
@@ -281,10 +294,11 @@ func (s *ReadModelScenario[M]) reduce(ctx context.Context) (map[readmodels.Key]M
 		batch := batches[key]
 		var initial *M
 		if s.initial != nil {
-			initial = new(M)
-			if err := json.Unmarshal(s.initial, initial); err != nil {
+			value, err := s.model.Unmarshal(s.initial)
+			if err != nil {
 				return nil, err
 			}
+			initial = value.(*M)
 		}
 		if len(batch) == 0 {
 			if initial != nil {
@@ -302,11 +316,11 @@ func (s *ReadModelScenario[M]) reduce(ctx context.Context) (map[readmodels.Key]M
 			if err != nil {
 				return nil, err
 			}
-			var value M
-			if err = json.Unmarshal(data, &value); err != nil {
+			value, err := s.model.Unmarshal(data)
+			if err != nil {
 				return nil, err
 			}
-			result[key] = value
+			result[key] = *value.(*M)
 		}
 	}
 	return result, nil
@@ -329,11 +343,11 @@ func (s *ReadModelScenario[M]) Instance(ctx context.Context) (readmodels.Instanc
 		if len(documents) == 0 {
 			return readmodels.Instance[M]{}, nil
 		}
-		var value M
-		if err = json.Unmarshal(documents[0], &value); err != nil {
+		value, err := s.model.Unmarshal(documents[0])
+		if err != nil {
 			return readmodels.Instance[M]{}, err
 		}
-		return readmodels.Instance[M]{Exists: true, Value: value}, nil
+		return readmodels.Instance[M]{Exists: true, Value: *value.(*M)}, nil
 	}
 	values, err := s.Instances(ctx)
 	if err != nil {

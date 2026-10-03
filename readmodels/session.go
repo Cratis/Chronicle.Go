@@ -79,7 +79,7 @@ func (s *Session[T]) Get(ctx context.Context) (Instance[T], error) {
 	if err != nil {
 		return Instance[T]{}, err
 	}
-	return decode[T](raw)
+	return decode[T](raw, s.descriptor)
 }
 
 // Close dehydrates using the exact model, key, namespace, sequence and session ID.
