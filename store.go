@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/contracts/eventstores"
@@ -57,6 +58,8 @@ type EventStore struct {
 	catalog     *events.Catalog
 	constraints []constraints.Definition
 	log         *eventsequences.Sequence
+	sequencesMu sync.Mutex
+	sequences   map[events.SequenceID]*eventsequences.Sequence
 
 	projectionSnapshot []projections.Definition
 	readModels         *readmodels.Service
@@ -76,12 +79,26 @@ func (s *EventStore) EventTypes() *events.Catalog { return s.catalog }
 // EventLog returns the primary sequence, cached for this store handle.
 func (s *EventStore) EventLog() *eventsequences.Sequence { return s.log }
 
-// EventSequence returns a handle for a nonblank sequence ID.
+// EventSequence returns the cached handle for a nonblank sequence ID. Concurrent
+// calls share the handle and its append subscriptions within this store/namespace.
 func (s *EventStore) EventSequence(id events.SequenceID) (*eventsequences.Sequence, error) {
 	if id == events.EventLog {
 		return s.log, nil
 	}
-	return eventsequences.New(s.name, s.namespace, id, s.catalog, &clientTransport{client: s.client, store: s})
+	s.sequencesMu.Lock()
+	defer s.sequencesMu.Unlock()
+	if sequence := s.sequences[id]; sequence != nil {
+		return sequence, nil
+	}
+	sequence, err := eventsequences.New(s.name, s.namespace, id, s.catalog, &clientTransport{client: s.client, store: s})
+	if err != nil {
+		return nil, err
+	}
+	if s.sequences == nil {
+		s.sequences = map[events.SequenceID]*eventsequences.Sequence{events.EventLog: s.log}
+	}
+	s.sequences[id] = sequence
+	return sequence, nil
 }
 
 // EventStore connects, ensures the store/namespace and registers its explicit
@@ -121,6 +138,7 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 			c.mu.Unlock()
 			return nil, err
 		}
+		store.sequences = map[events.SequenceID]*eventsequences.Sequence{events.EventLog: store.log}
 		if err = store.initializeReadModelsFromSnapshot(snapshot); err != nil {
 			c.mu.Unlock()
 			return nil, err

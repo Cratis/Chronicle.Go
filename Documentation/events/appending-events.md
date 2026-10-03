@@ -3,7 +3,7 @@ title: Append events
 description: Inspect append outcomes and select explicit, optimistic or protected-empty concurrency scopes.
 ---
 
-Use `store.EventLog().Append(ctx, sourceID, event, options...)` to persist one registered fact. A sequence position is unsigned and sequence-wide, not a source revision; the first position is zero. `EventSequence(id)` returns another sequence handle and a construction error for a blank ID. The event log is the same sequence implementation.
+Use `store.EventLog().Append(ctx, sourceID, event, options...)` to persist one registered fact. A sequence position is unsigned and sequence-wide, not a source revision; the first position is zero. `EventSequence(id)` returns the cached handle for that store/namespace/sequence and a construction error for a blank ID. The event log is the same sequence implementation.
 
 ## Inspect both errors and results
 
@@ -21,9 +21,12 @@ A result includes correlation, whether concurrency checking actually ran, every 
 ## Observe command-attributable append attempts
 
 Use `unsubscribe := sequence.OnAppend(func(eventsequences.AppendNotification))`
-to observe local append results on that exact handle; `defer unsubscribe()` releases
-the callback. This is **not** a durable event subscription, global interception or
-an observer-completion signal. Other handles, processes and clients do not notify it.
+to observe local append results; `defer unsubscribe()` releases the callback.
+`EventStore` shares sequence handles and subscriptions per client, store, namespace
+and sequence, like C#. This is **not** a durable event subscription, global
+interception or an observer-completion signal. Other stores, namespaces, sequences,
+processes and clients do not notify it. Low-level `eventsequences.New` is the escape
+hatch for independent, handle-local subscriptions.
 
 Given a sequence handle and the command's nonzero `correlation`, collect attempts
 with a callback like this (imports: `sync` and `eventsequences`):
@@ -63,7 +66,8 @@ Each notification contains:
 `AppendPreparedBatch` deliver once per nonempty request, including named-tag
 variants, known rejections and unknown outcomes. Notifications start only after
 local preparation succeeds and the request is handed to the RPC client. Local
-validation/serialization/scope-resolution failures do not notify: callers must
+validation/serialization/scope-resolution failures and known pre-dispatch
+transport failures do not notify: callers must
 still check returned errors. Eventless checks do not notify either.
 
 [Unit-of-work](unit-of-work.md) staging does not notify. A nonempty commit uses
@@ -93,7 +97,7 @@ command state. Keep callback state concurrency-safe while shared-handle appends
 may still be running; the callback closure remains alive for admitted deliveries.
 
 For Arc.Go-style command tracking, set `metadata.WithCorrelation` before invoking
-handlers, subscribe to their same sequence handle, filter `n.CorrelationID`, and
+handlers, subscribe to each sequence on their store/namespace, filter `n.CorrelationID`, and
 retain `Committed`, `Rejected` and `Unknown` separately. A later empty transaction
 completion cannot erase an immediate unknown outcome. To observe only immediate
 writes, unsubscribe before the transaction owner commits and inspect its retained

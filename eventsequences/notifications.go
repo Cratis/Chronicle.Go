@@ -71,8 +71,9 @@ type appendSubscription struct {
 	callback func(AppendNotification) // Guarded by appendSubscriptions.mu.
 }
 
-// OnAppend subscribes to this exact Sequence handle, not all handles with the
-// same coordinates. Nil callbacks are ignored and return a no-op unsubscribe.
+// OnAppend subscribes to this Sequence. EventStore caches handles, so subscriptions
+// are shared per client, store, namespace and sequence. Low-level New handles keep
+// independent subscriptions. Nil callbacks return a no-op unsubscribe.
 // The caller must unsubscribe to release the callback and its captured state.
 // Unsubscribe is concurrency-safe, idempotent and nonblocking, including inside
 // callbacks. It prevents new callback admissions but does not join an already
@@ -81,7 +82,7 @@ type appendSubscription struct {
 // Subscribers run synchronously in subscription order, after a validated,
 // nonempty request is handed to the RPC client and its result becomes known,
 // before Append/AppendMany/AppendBatch/AppendPreparedBatch returns. Staging,
-// local preparation failures, rollback and eventless operations do not notify.
+// pre-dispatch failures, rollback and eventless operations do not notify.
 // Unit-of-work commits notify through AppendPreparedBatch, before unit completion.
 // The subscriber list is snapshotted at delivery; subscriptions added during a
 // callback start with the next delivery. Disposal before admission skips it.

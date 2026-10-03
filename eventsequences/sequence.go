@@ -31,8 +31,10 @@ type Sequence struct {
 }
 
 // New creates a low-level sequence over a caller-owned connection and registered
-// catalog. It does not ensure registration or compatibility; prefer EventStore's
-// handles, which enforce those barriers. Invalid coordinates or nil dependencies fail.
+// catalog. Each call creates independent, handle-local append subscriptions; this
+// is the low-level escape hatch from EventStore's shared sequence handles. It does
+// not ensure registration or compatibility; prefer EventStore's handles, which
+// enforce those barriers. Invalid coordinates or nil dependencies fail.
 func New(store metadata.StoreName, namespace metadata.Namespace, id events.SequenceID, catalog *events.Catalog, conn grpc.ClientConnInterface) (*Sequence, error) {
 	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || strings.TrimSpace(string(id)) == "" || catalog == nil || conn == nil {
 		return nil, fmt.Errorf("%w: sequence coordinates, catalog and connection are required", faults.ErrInvalidConfiguration)
@@ -89,8 +91,11 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 		return AppendResult{}, err
 	}
 	ctx = metadata.WithCorrelation(ctx, wire.Correlation(request.CorrelationId))
+	dispatched := true
 	defer func() {
-		err = joinNotificationError(err, s.notifySingle(source, descriptor.Ref(), config.route, wire.Correlation(request.CorrelationId), result, err))
+		if dispatched {
+			err = joinNotificationError(err, s.notifySingle(source, descriptor.Ref(), config.route, wire.Correlation(request.CorrelationId), result, err))
+		}
 	}()
 	var envelope *sequences.CommandResult_AppendResponse
 	if len(config.named) == 0 {
@@ -101,6 +106,7 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	if err != nil {
 		var local *faults.BeforeDispatch
 		if errors.As(err, &local) {
+			dispatched = false
 			return AppendResult{}, local.Cause
 		}
 		return AppendResult{}, &OutcomeUnknownError{Cause: err}

@@ -81,6 +81,10 @@ func (b preparedBatch) hasNamedTags() bool {
 }
 
 func (s *Sequence) finishBatch(batch preparedBatch, envelope *sequences.CommandResult_AppendManyResponse, err error) (BatchResult, error) {
+	var local *faults.BeforeDispatch
+	if errors.As(err, &local) {
+		return BatchResult{}, local.Cause
+	}
 	result, err := s.batchOutcome(batch, envelope, err)
 	return result, joinNotificationError(err, s.notifyBatch(batch, result, err))
 }

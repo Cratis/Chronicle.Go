@@ -6,13 +6,65 @@ package eventsequences_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/cratis/chronicle.go/contracts/sequences"
+	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/metadata"
+	"google.golang.org/grpc"
 )
+
+type beforeDispatchConnection struct {
+	cause error
+	calls int
+}
+
+func (c *beforeDispatchConnection) Invoke(context.Context, string, any, any, ...grpc.CallOption) error {
+	c.calls++
+	return fmt.Errorf("transport preflight: %w", &faults.BeforeDispatch{Cause: c.cause})
+}
+
+func (c *beforeDispatchConnection) NewStream(context.Context, *grpc.StreamDesc, string, ...grpc.CallOption) (grpc.ClientStream, error) {
+	return nil, faults.ErrUnsupported
+}
+
+func TestAppendNotificationsExcludeBeforeDispatchFailures(t *testing.T) {
+	typeOfEvent, err := events.Define[opened](events.WithID("opened"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	typeOfChanged, err := events.Define[changed](events.WithID("changed"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := events.NewCatalog(typeOfEvent.Descriptor(), typeOfChanged.Descriptor())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, cause := range []error{faults.ErrClosed, context.Canceled, errors.New("registration failed")} {
+		t.Run(cause.Error(), func(t *testing.T) {
+			for _, path := range notificationPaths {
+				t.Run(path.name, func(t *testing.T) {
+					conn := &beforeDispatchConnection{cause: cause}
+					sequence, err := eventsequences.New("store", "tenant", events.EventLog, catalog, conn)
+					if err != nil {
+						t.Fatal(err)
+					}
+					var count int
+					defer sequence.OnAppend(func(eventsequences.AppendNotification) { count++ })()
+					_, err = notificationAppend(testContext(t), sequence, path.name)
+					var unknown *eventsequences.OutcomeUnknownError
+					if !errors.Is(err, cause) || errors.As(err, &unknown) || count != 0 || conn.calls != 1 {
+						t.Fatalf("error = %v, notifications = %d, transport calls = %d", err, count, conn.calls)
+					}
+				})
+			}
+		})
+	}
+}
 
 func TestAppendNotificationsRemainHandleLocal(t *testing.T) {
 	first, _ := sequenceFixture(t, map[string]rpcHandler{"Append": successfulNotificationHandler})
