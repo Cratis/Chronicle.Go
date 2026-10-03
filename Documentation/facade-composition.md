@@ -91,8 +91,19 @@ option wins; a final nil (including a typed nil) fails configuration validation.
 Without the option, `CaptureClient` captures `slog.Default()` at that call, not
 later at `Prepare` or reconnect. `NewClient` and `NewClientContext` capture and
 prepare immediately. Options and selected registries are frozen at capture;
-changing the global default or reusing an option slice afterward cannot reroute
-that client.
+reusing an option slice afterward cannot replace that client's logger or handler
+identity. Their underlying state and output destinations remain application-owned,
+not snapshotted.
+
+The pristine `slog.Default()` handler writes through `log.Default()`'s current
+writer. Changing that writer affects an already captured logger. In particular,
+`slog.SetDefault(customLogger)` installs a standard-log bridge to the custom
+handler, so diagnostics through the captured pristine logger can reach that new
+handler (with the original record rendered as message text). By contrast, a
+custom logger selected before capture retains its handler identity across later
+`slog.SetDefault` calls. For strict destination isolation, pass `WithLogger` an
+explicit logger whose handler and writer remain stable; Chronicle does not
+replace the pristine default with an SDK-owned handler.
 
 `reactors.WithLogger`, `reducers.WithLogger` and
 `reactors.WithReadModelLogger` override the client fallback for their artifact,
@@ -105,8 +116,10 @@ call `slog.SetDefault`. Your handler must support concurrent synchronous calls,
 honor cancellation, and avoid reentering client lifecycle methods or blocking
 shutdown. Chronicle contains handler panics without logging their values or
 recursively calling the same handler; it cannot make an arbitrary blocking
-handler harmless. Handler failures do not change dispatch, commit or acknowledgment
-outcomes.
+handler harmless. A logging handler called on SDK-owned work must not call
+`Client.Close`: joining that work from its own callback can deadlock. These are
+cooperative callback limits, not a guarantee of harmless caller blocking. Handler
+panics do not change dispatch, commit or acknowledgment outcomes.
 
 SDK-owned records carry fixed operation, stage and bounded category strings.
 They omit payloads, credentials, tokens, principals, raw metadata, source IDs,
@@ -115,7 +128,8 @@ only exact trusted identities/types; it does not invoke application error
 formatting, traversal or gRPC status hooks. Wrapped or unknown errors use the
 coarse `failure` category. Even logical artifact names are omitted: choose
 non-sensitive names if you add them in your own logging. Fields already attached
-to your logger, handler context inspection and application-written logs are your
+to your logger, attributes added or changed by a borrowed handler, mutable writer
+state, handler context inspection and application-written logs are your
 responsibility. This contract does not redact returned error graphs, explicit
 `WithReadModelErrorHandler` callbacks or kernel exception-message wire fields.
 

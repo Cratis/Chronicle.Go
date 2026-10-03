@@ -50,6 +50,8 @@ type ClientPreparation struct {
 // selected declaration collections without SDK I/O or schema, definition, service,
 // or selector callbacks. Arbitrary ClientOption functions themselves still execute.
 // Immutable descriptor plans and borrowed callbacks keep their existing ownership.
+// Logger and handler identities are captured, not their mutable destination state;
+// see WithLogger for the pristine slog default's standard-log bridge exception.
 func CaptureClient(options ...ClientOption) (*ClientPreparation, error) {
 	config := clientConfig{logger: slog.Default(), uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
 		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize,

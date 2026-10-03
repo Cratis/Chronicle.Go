@@ -9,7 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
+	"os"
+	"os/exec"
 	"reflect"
 	"strings"
 	"sync"
@@ -173,6 +176,65 @@ func invokeLoggingPlans(t *testing.T, c *Client) {
 	}
 	if err := c.readModelReactors.defaults[0].Dispatch(ctx, readmodels.Change[json.RawMessage]{Type: readmodels.Added, HasValue: true, Value: json.RawMessage(`{"ID":"secret-model"}`)}, nil); err == nil {
 		t.Fatal("model callback failure suppressed")
+	}
+}
+
+// The pristine standard-log bridge cannot be restored with slog.SetDefault after
+// installing a custom handler. Use a fresh test process, never parent globals.
+func TestClientLoggerPristineDefaultBridge(t *testing.T) {
+	const guard = "CHRONICLE_TEST_PRISTINE_LOGGER"
+	if os.Getenv(guard) != "1" {
+		executable, err := os.Executable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		command := exec.CommandContext(t.Context(), executable, "-test.run=^TestClientLoggerPristineDefaultBridge$", "-test.count=1", "-test.timeout=30s")
+		command.Env = append(os.Environ(), guard+"=1")
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("isolated default bridge: %v\n%s", err, output)
+		}
+		return
+	}
+
+	pristine := slog.Default()
+	var originalWriter, currentWriter strings.Builder
+	log.SetOutput(&originalWriter)
+	var calls atomic.Int32
+	registry := NewRegistry()
+	if err := RegisterSeederFunc(registry, func(*seeding.Builder) error { return &loggingSecretError{&calls} }); err != nil {
+		t.Fatal(err)
+	}
+	beforeBridge := captureForTest(t, WithRegistry(registry))
+	afterBridge := captureForTest(t, WithRegistry(registry))
+	for _, p := range []*ClientPreparation{beforeBridge, afterBridge} {
+		if p.Client().config.logger != pristine || p.Client().config.logger.Handler() != pristine.Handler() {
+			t.Fatal("pristine logger/handler identity replaced at capture")
+		}
+	}
+	// Capturing identity does not snapshot log.Default's writer.
+	log.SetOutput(&currentWriter)
+	if c, err := beforeBridge.Prepare(t.Context(), nil); c != nil || err == nil {
+		t.Fatal("preparation failure suppressed")
+	}
+	if originalWriter.Len() != 0 || !strings.Contains(currentWriter.String(), "client preparation failed") {
+		t.Fatal("captured pristine handler did not use current standard-log writer")
+	}
+
+	custom := &recordingHandler{}
+	slog.SetDefault(slog.New(custom))
+	if c, err := afterBridge.Prepare(t.Context(), nil); c != nil || err == nil {
+		t.Fatal("preparation failure suppressed after bridge installation")
+	}
+	if afterBridge.Client().config.logger != pristine || afterBridge.Client().config.logger.Handler() != pristine.Handler() {
+		t.Fatal("SDK replaced captured identity after SetDefault")
+	}
+	records := custom.snapshot()
+	if len(records) != 1 || !strings.Contains(records[0].Message, "client preparation failed") ||
+		!strings.Contains(records[0].Message, "stage=prepare") || strings.Contains(records[0].Message, "secret") {
+		t.Fatal("actual SDK preparation diagnostic did not reach custom handler through standard-log bridge")
+	}
+	if calls.Load() != 0 {
+		t.Fatal("SDK diagnostic inspected application error")
 	}
 }
 

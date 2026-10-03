@@ -66,13 +66,20 @@ type clientConfig struct {
 // WithLogger selects the borrowed logger for SDK lifecycle and observer diagnostics.
 // The last option wins; a final nil logger is invalid. Without this option,
 // CaptureClient captures slog.Default (also used immediately by NewClientContext).
-// Explicit artifact loggers override this fallback. Loggers/handlers are never
-// closed, and Chronicle never calls slog.SetDefault. Handlers must support
+// Explicit artifact loggers override this fallback. Only logger and handler
+// identities are captured; their underlying state and writers remain app-owned.
+// In particular, the pristine slog default uses log.Default's current writer,
+// which a later slog.SetDefault(custom) bridges to that custom handler. Supply an
+// explicit logger with a stable handler/writer for strict destination isolation.
+// Loggers/handlers are never closed, and Chronicle never calls slog.SetDefault.
+// Handlers must support
 // concurrent, synchronous calls and honor cancellation without blocking shutdown
 // or reentering client lifecycle methods. Handler panics are contained, but
 // arbitrary blocking handlers cannot be made harmless. SDK records contain only
 // fixed operation/stage/category fields, not arbitrary errors or metadata.
-// Handler-added fields and context inspection remain the caller's responsibility.
+// Handler-added fields, mutable handler state and context inspection remain the
+// caller's responsibility. A handler running on SDK-owned work must not call
+// Client.Close: joining that work from its own callback can deadlock.
 // This option does not register a *slog.Logger service for artifact constructors.
 func WithLogger(logger *slog.Logger) ClientOption {
 	return func(c *clientConfig) { c.logger, c.loggerSet = logger, true }
