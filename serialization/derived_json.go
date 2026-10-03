@@ -39,7 +39,8 @@ func (n *node) validateFamilyValue(value reflect.Value) error {
 	return unsupported(n.typ, "unregistered dynamic derivative")
 }
 
-// Inspect the exact member before any map decoding can discard duplicate keys.
+// Select only the exact discriminator. Public decode/rebind boundaries scan the
+// entire token stream first, before any ancestor can collapse duplicate members.
 func discriminator(data []byte) (string, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	token, err := decoder.Token()

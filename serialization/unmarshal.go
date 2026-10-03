@@ -13,11 +13,13 @@ import (
 	"strings"
 
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/jsonstructure"
 	"github.com/cratis/fundamentals.go/concepts"
 )
 
 // Unmarshal decodes a JSON object through the same field plan as Marshal. target
 // must be a non-nil pointer to the plan's type. It is replaced only on success.
+// Duplicate members anywhere in the input are rejected before invoking codecs.
 // Unknown properties are ignored; exact JSON names win over case-insensitive
 // matches. An exact name declared for another field is never reused as a
 // case-insensitive fallback. Concepts use their declared JSON decoder. Decoding
@@ -27,6 +29,9 @@ func (p *Plan) Unmarshal(data []byte, target any) error {
 	value := reflect.ValueOf(target)
 	if p == nil || !value.IsValid() || value.Kind() != reflect.Pointer || value.IsNil() || value.Elem().Type() != p.typ {
 		return fmt.Errorf("%w: target does not match serializer plan", faults.ErrInvalidConfiguration)
+	}
+	if err := jsonstructure.Validate(data); err != nil {
+		return &UnmarshalError{cause: err}
 	}
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 || data[0] != '{' {

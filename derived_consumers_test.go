@@ -80,8 +80,14 @@ type DecisionDerivedModel struct {
 }
 
 func TestDecisionDerivedDecodeFailureIssuesNoModelOrToken(t *testing.T) {
-	for _, valid := range []bool{true, false} {
-		t.Run(map[bool]string{true: "valid", false: "missing discriminator"}[valid], func(t *testing.T) {
+	for name, document := range map[string]string{
+		"valid":                                  `{"id":"source","member":{"count":42,"_derivedTypeId":"robot"}}`,
+		"missing discriminator":                  `{"id":"source","member":{"count":42}}`,
+		"duplicate parent":                       `{"_id":"source","member":{"children":[{"_derivedTypeId":"robot","_derivedTypeId":"human"}],"children":[],"_derivedTypeId":"human"}}`,
+		"duplicate root before ID normalization": `{"_id":"source","member":{"_derivedTypeId":"human"},"member":{"_derivedTypeId":"robot"}}`,
+		"unknown array duplicate":                `{"_id":"source","unknown":[[{"secret":1,"secret":2}]]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
 			registry := NewRegistry()
 			codecs, err := derivedfixtures.Codecs()
 			if err != nil {
@@ -96,10 +102,6 @@ func TestDecisionDerivedDecodeFailureIssuesNoModelOrToken(t *testing.T) {
 			}
 			kernel := &supervisedKernel{}
 			client, ctx := supervisionClient(t, kernel, WithRegistry(registry))
-			document := `{"id":"source","member":{"count":42,"_derivedTypeId":"robot"}}`
-			if !valid {
-				document = `{"id":"source","member":{"count":42}}`
-			}
 			raw := &decisionCodecConn{ClientConnInterface: &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.29.4", protocol: "19.29.4"}, document: document}
 			client.config.borrowed = raw
 			store, err := client.EventStore(ctx, "store")
@@ -110,7 +112,7 @@ func TestDecisionDerivedDecodeFailureIssuesNoModelOrToken(t *testing.T) {
 			if raw.cleaned.Load() != 1 {
 				t.Fatal("decision cleanup missing")
 			}
-			if valid {
+			if name == "valid" {
 				if err != nil || read.Token.IsZero() || read.Instance.Value.Member != (derivedfixtures.RobotValue{Count: 42}) {
 					t.Fatalf("decision: %+v %v", read, err)
 				}

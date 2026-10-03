@@ -16,6 +16,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/jsonstructure"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
@@ -205,6 +206,10 @@ func decode[T any](raw Instance[json.RawMessage], d Descriptor) (Instance[T], er
 // normalizeID reconciles the MongoDB key alias without changing nested fields or
 // overriding a document's declared ID. Leave unchanged documents byte-for-byte.
 func normalizeID(data []byte, d Descriptor) ([]byte, error) {
+	// ID alias rewriting must not discard evidence before plan validation.
+	if err := jsonstructure.Validate(data); err != nil {
+		return nil, err
+	}
 	name := idProperty(d)
 	if name == "" {
 		return data, nil
@@ -239,5 +244,7 @@ func normalizeID(data []byte, d Descriptor) ([]byte, error) {
 	return data, nil
 }
 
-func validDocument(data []byte) bool { return len(data) > 0 && data[0] == '{' && json.Valid(data) }
-func notRegistered() error           { return fmt.Errorf("%w: read-model declaration", faults.ErrNotRegistered) }
+func validDocument(data []byte) bool {
+	return len(data) > 0 && data[0] == '{' && jsonstructure.Validate(data) == nil
+}
+func notRegistered() error { return fmt.Errorf("%w: read-model declaration", faults.ErrNotRegistered) }

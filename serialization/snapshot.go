@@ -10,6 +10,7 @@ import (
 
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/jsonstructure"
 )
 
 // Marshal serializes a value of the field's exact declared type through its codec.
@@ -46,6 +47,9 @@ func (f Field) Marshal(value any) ([]byte, error) {
 func (p *Plan) RebindJSON(data []byte, next *Plan) ([]byte, error) {
 	if p == nil || next == nil || p.typ != next.typ {
 		return nil, unsupported(nil, "matching snapshot plans required")
+	}
+	if err := jsonstructure.Validate(data); err != nil {
+		return nil, &UnmarshalError{cause: err}
 	}
 	bound, err := rebindJSON(data, p.root, next.root, 0)
 	if err != nil {
