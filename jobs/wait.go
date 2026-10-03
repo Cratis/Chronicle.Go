@@ -159,13 +159,11 @@ func (s *Service) TryFindJobsOfType(ctx context.Context, typeSubstring string, t
 }
 
 // WaitForNoJobs waits until no job in the selected statuses remains (empty means
-// all statuses). This corrects C#'s inverted status predicate; it is not completion evidence.
+// all statuses). Unknown numeric statuses may also be selected. This corrects
+// C#'s inverted status predicate; it is not completion evidence.
 func (s *Service) WaitForNoJobs(ctx context.Context, timeout time.Duration, statuses ...Status) error {
 	selected := make(map[Status]bool, len(statuses))
 	for _, status := range statuses {
-		if status < None || status > Removing {
-			return invalid("unknown job status")
-		}
 		selected[status] = true
 	}
 	_, err := s.waitList(ctx, timeout, func(all []Job) ([]Job, bool) {

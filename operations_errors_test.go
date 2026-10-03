@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -64,14 +65,20 @@ func TestAdministrationLostRepliesNeverRetry(t *testing.T) {
 	for _, tc := range mutations {
 		t.Run(tc.name, func(t *testing.T) {
 			var calls atomic.Int32
-			o, j := operationServices(t, operationsConnection(t, func(context.Context, string, proto.Message) (proto.Message, error) {
+			o, j := operationServices(t, operationsConnection(t, func(_ context.Context, method string, _ proto.Message) (proto.Message, error) {
+				if tc.name == "remove" && methodName(method) == "GetObservers" {
+					return &oc.IEnumerable_ObserverInformation{Items: []*oc.ObserverInformation{operationObserver()}}, nil
+				}
 				calls.Add(1)
-				return nil, status.Error(codes.Unavailable, "reply lost after effect")
+				return nil, status.Error(codes.Unavailable, "sensitive-operation-marker")
 			}))
 			err := tc.call(testContext(t), o, j)
 			var unknown *jobs.OutcomeUnknownError
 			if !errors.As(err, &unknown) || status.Code(err) != codes.Unavailable || calls.Load() != 1 {
 				t.Fatal(err, calls.Load())
+			}
+			if strings.Contains(err.Error(), "sensitive-operation-marker") || !strings.Contains(unknown.Unwrap().Error(), "sensitive-operation-marker") {
+				t.Fatal("error formatting leaked or lost deliberate cause access", err)
 			}
 			ctx, cancel := context.WithCancel(t.Context())
 			cancel()
@@ -145,7 +152,12 @@ func TestAdministrationRejectsMalformedResponses(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			o, j := operationServices(t, operationsConnection(t, func(context.Context, string, proto.Message) (proto.Message, error) { return tc.reply, nil }))
+			o, j := operationServices(t, operationsConnection(t, func(_ context.Context, method string, _ proto.Message) (proto.Message, error) {
+				if tc.name == "unknown removal" && methodName(method) == "GetObservers" {
+					return &oc.IEnumerable_ObserverInformation{Items: []*oc.ObserverInformation{operationObserver()}}, nil
+				}
+				return tc.reply, nil
+			}))
 			err := tc.call(testContext(t), o, j)
 			var unknown *jobs.OutcomeUnknownError
 			if !errors.Is(err, chronicle.ErrProtocol) || errors.As(err, &unknown) != tc.mutation {
@@ -169,7 +181,10 @@ func TestAdministrationPreservesRefusalsAbsenceAndTargetIsolation(t *testing.T) 
 	}
 	for i := range 4 {
 		t.Run(fmt.Sprint("remove-", i), func(t *testing.T) {
-			o, _ := operationServices(t, operationsConnection(t, func(context.Context, string, proto.Message) (proto.Message, error) {
+			o, _ := operationServices(t, operationsConnection(t, func(_ context.Context, method string, _ proto.Message) (proto.Message, error) {
+				if methodName(method) == "GetObservers" {
+					return &oc.IEnumerable_ObserverInformation{Items: []*oc.ObserverInformation{operationObserver()}}, nil
+				}
 				return &oc.RemoveObserverResponse{Outcome: oc.ObserverRemovalOutcome(i)}, nil
 			}))
 			v, err := o.Remove(testContext(t), "orders")

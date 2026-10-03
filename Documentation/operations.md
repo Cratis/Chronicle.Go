@@ -27,6 +27,12 @@ filter. Empty filters fail instead of reading the unfiltered sequence tail.
 `Information.LastHandled()`, `Next()` and `Tail()` preserve reserved sequence
 sentinels, including `events.Unavailable`. Position zero is valid.
 
+`SubscriptionKnown()` is true only for `Get`: the kernel does not query live
+subscriptions when building `List`. A listed `IsSubscribed() == false` means
+**unavailable**, not confirmed disconnected. Neither value proves producer
+readiness. `IsReplayable()` preserves protobuf-net's default-true policy and
+explicit false for reactor-wide `OnceOnly` declarations.
+
 Failure snapshots preserve partition identity, failure kind, timestamp and offset,
 messages, stack trace, resolution and quarantine flags. Clearing a quarantine is
 not the same as resolving a failed attempt. Diagnostic text may contain sensitive
@@ -47,16 +53,23 @@ All mutations require an explicit caller request and context.
 | `ClearPartitionQuarantine(ctx, id, sequence, partition, retryImmediately)` | The clearing outcome; retry outcome is meaningful only when requested and the fence was cleared |
 | `ClearObserverQuarantine(ctx, id, sequence)` | The observer-level clearing command was acknowledged |
 | `ClearFailedPartitions(ctx, id, sequence)` | The failure-clearing command was acknowledged, not the underlying problem repaired |
-| `Remove(ctx, id)` | One of `Removed`, `ObserverNotFound`, `ObserverActive`, `ObserverSubscribed`, with a blocking namespace when supplied |
+| `Remove(ctx, id)` | Resolve the stored sequence, then return `Removed`, `ObserverNotFound`, `ObserverActive` or `ObserverSubscribed`, with a blocking namespace when supplied |
+| `RemoveFrom(ctx, id, sequence)` / `information.Remove(ctx)` | Validate the explicit/snapshot sequence against the current definition before requesting the same store-wide removal |
 
 Supply the observer's declared source sequence for replay and recovery. Go does
 not use C# reactor replay's empty-sequence inference. An invalid replay job ID is
 an error, not C#'s `JobId.NotSet` fallback.
 
 **Persistent removal is store-wide.** The observer definition is shared across
-namespaces. `Remove` sends the current namespace and `event-log`, like C#
-`IObservers.Remove`, but the kernel refuses removal if the observer is active or
-subscribed in **any** namespace. Read-model data and sink containers remain.
+namespaces. Removal first reads the stored definition through `List` and uses its
+actual sequence. Missing, ambiguous, malformed or unsupported definition reads
+fail without dispatching removal; an explicit or snapshot sequence mismatch also
+fails locally. This intentionally corrects C# `IObservers.Remove`'s unsafe
+`event-log` default: the kernel's subscription guard targets the supplied sequence,
+but deletion removes the shared definition. With the correct sequence, the kernel
+refuses removal when the observer is active or subscribed in **any** namespace.
+Read-model data and sink containers remain. The lookup and mutation are not atomic
+and do not fence concurrent re-registration; stop declaring applications first.
 
 `store.UnregisterReactor`, `UnregisterReducer` and `UnregisterReadModelReactor`
 only stop and join this client's local subscriptions. They do not remove persistent
@@ -90,7 +103,11 @@ field distinguishes initial absence from disappearance after a poll observed it.
 Neither proves success: short successful jobs may be automatically removed, but
 so may explicitly deleted jobs. `Failed`, `CompletedWithFailures` and `Stopped`
 produce `*jobs.TerminalError` carrying the real snapshot. No successful job is
-synthesized from counters or disappearance.
+synthesized from counters or disappearance. Unknown numeric job/step statuses and
+status-history values remain available for diagnostics. An unknown job status
+never counts as terminal or successful; status waits continue until known evidence
+or their deadline. Unknown observer types, owners, runtime states and failure kinds
+are likewise preserved rather than failing an entire list.
 
 Job waits poll every 50ms, default to five seconds when timeout is zero and honor
 `jobs.InfiniteTimeout` without adding a deadline. The caller's cancellation or
@@ -146,7 +163,10 @@ error. Server timeout or expiration of the client grace produces a result with
 An unavailable append tail completes trivially, exposed by `Trivial()`. A
 committed append with a nil observer surface returns `*observation.CannotWaitError`.
 An unknown append outcome is an error, never trivial success. Processing success
-is not a stronger promise about durable sink/checkpoint persistence.
+is not a stronger promise about durable sink/checkpoint persistence. The kernel
+also returns success when **no matching observers exist**. A successful wait is
+not proof that an expected producer was registered, subscribed or ready; establish
+producer readiness independently before appending when your workflow requires it.
 
 ## Failure boundaries and kernel limitations
 
@@ -156,9 +176,13 @@ exception, the server may already have acted. Inspect state before making anothe
 explicit request. Authorization/validation refusals retain `chronicle.EnvelopeError`;
 context and gRPC status identities remain inspectable. No automatic mutation retry
 is added. Injected connections must not independently configure unsafe retries.
+`OutcomeUnknownError.Error()` prints only the operation and unknown-outcome text;
+its wrapped cause remains available for deliberate inspection and may contain
+sensitive server diagnostics.
 
-Required message fields, IDs, enums and contradictory completion flags are
-validated; malformed collections fail atomically. Proto3 scalar defaults and
+Required message fields, IDs, mutation-outcome enums and contradictory completion
+flags are validated; malformed collections fail atomically. Diagnostic enum values
+are preserved even when newer than this client. Proto3 scalar defaults and
 empty acknowledgement messages cannot establish more than their wire contract:
 for example a default removal outcome represents `Removed`, and an empty partition
 replay acknowledgement carries no completion evidence.

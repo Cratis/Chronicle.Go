@@ -50,12 +50,13 @@ func New(store metadata.StoreName, namespace metadata.Namespace, conn grpc.Clien
 	return &Service{store, namespace, contracts.NewObserversClient(conn), contracts.NewFailedPartitionsClient(conn), jobService}, nil
 }
 
-// List returns immutable observer snapshots in the current namespace.
+// List returns immutable observer snapshots in the current namespace. Subscription
+// state is unavailable here; use Get for an authoritative subscription query.
 func (s *Service) List(ctx context.Context) ([]Information, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	response, err := s.client.GetObservers(ctx, &contracts.AllObserversRequest{EventStore: string(s.store), Namespace: string(s.namespace)})
+	response, err := s.client.GetObservers(ctx, &contracts.AllObserversRequest{EventStore: string(s.store), Namespace: string(s.namespace)}, grpc.ForceCodec(informationCodec{}))
 	if err != nil {
 		return nil, wire.RPCError(err)
 	}
@@ -68,6 +69,7 @@ func (s *Service) List(ctx context.Context) ([]Information, error) {
 		if err != nil {
 			return nil, err
 		}
+		i.service = s
 		result = append(result, i)
 	}
 	return result, nil
@@ -79,7 +81,7 @@ func (s *Service) Get(ctx context.Context, id ID, sequence events.SequenceID) (*
 	if err := validate(ctx, id, sequence); err != nil {
 		return nil, err
 	}
-	response, err := s.client.GetObserverInformation(ctx, &contracts.GetObserverInformationRequest{EventStore: string(s.store), Namespace: string(s.namespace), ObserverId: string(id), EventSequenceId: string(sequence)})
+	response, err := s.client.GetObserverInformation(ctx, &contracts.GetObserverInformationRequest{EventStore: string(s.store), Namespace: string(s.namespace), ObserverId: string(id), EventSequenceId: string(sequence)}, grpc.ForceCodec(informationCodec{}))
 	if status.Code(err) == codes.NotFound {
 		return nil, nil
 	}
@@ -93,6 +95,8 @@ func (s *Service) Get(ctx context.Context, id ID, sequence events.SequenceID) (*
 	if result.ID() != id || result.Sequence() != sequence {
 		return nil, faults.ErrProtocol
 	}
+	result.service = s
+	result.subscriptionKnown = true
 	return &result, nil
 }
 
@@ -119,15 +123,54 @@ type RemovalResult struct {
 }
 
 // Remove deletes persistent observer records across ALL namespaces in this store.
-// It refuses active/subscribed observers and leaves read-model data and sink
-// containers untouched. Like C# IObservers.Remove it sends EventLog. It does not
-// unregister local declarations: use EventStore.UnregisterReactor/Reducer first
-// when appropriate; running another client may still block removal.
+// It first resolves the sequence from List's stored definition, never defaulting
+// to EventLog. Missing, ambiguous or unsupported definition reads fail closed.
+// The kernel refuses active/subscribed observers and leaves read-model data and
+// sink containers untouched. This does not unregister local declarations or fence
+// concurrent re-registration; stop declaring applications before removal.
 func (s *Service) Remove(ctx context.Context, id ID) (RemovalResult, error) {
-	if err := validate(ctx, id, events.EventLog); err != nil {
+	return s.remove(ctx, id, "")
+}
+
+// RemoveFrom requests removal for an explicit sequence, checked against the
+// current stored definition before mutation. A wrong/stale sequence is rejected.
+func (s *Service) RemoveFrom(ctx context.Context, id ID, sequence events.SequenceID) (RemovalResult, error) {
+	if err := validate(ctx, id, sequence); err != nil {
 		return RemovalResult{}, err
 	}
-	r, err := s.client.RemoveObserver(ctx, &contracts.RemoveObserver{EventStore: string(s.store), Namespace: string(s.namespace), ObserverId: string(id), EventSequenceId: string(events.EventLog)})
+	return s.remove(ctx, id, sequence)
+}
+
+func (s *Service) remove(ctx context.Context, id ID, expected events.SequenceID) (RemovalResult, error) {
+	if err := ctx.Err(); err != nil {
+		return RemovalResult{}, err
+	}
+	if strings.TrimSpace(string(id)) == "" {
+		return RemovalResult{}, invalid("observer required")
+	}
+	all, err := s.List(ctx)
+	if err != nil {
+		return RemovalResult{}, err
+	}
+	var sequence events.SequenceID
+	for _, information := range all {
+		if information.ID() == id {
+			if sequence != "" {
+				return RemovalResult{}, fmt.Errorf("%w: ambiguous observer definition", faults.ErrProtocol)
+			}
+			sequence = information.Sequence()
+		}
+	}
+	if sequence == "" {
+		return RemovalResult{}, fmt.Errorf("%w: observer definition unavailable for removal", faults.ErrProtocol)
+	}
+	if expected != "" && sequence != expected {
+		return RemovalResult{}, invalid("observer sequence differs from stored definition")
+	}
+	if err := ctx.Err(); err != nil {
+		return RemovalResult{}, err
+	}
+	r, err := s.client.RemoveObserver(ctx, &contracts.RemoveObserver{EventStore: string(s.store), Namespace: string(s.namespace), ObserverId: string(id), EventSequenceId: string(sequence)})
 	if err == nil && (r == nil || r.Outcome < 0 || r.Outcome > 3) {
 		err = faults.ErrProtocol
 	}

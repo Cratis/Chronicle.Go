@@ -48,7 +48,7 @@ func TestOperationsMatchHandDerivedCSharpGolden(t *testing.T) {
 		{"GetObservers", &oc.AllObserversRequest{EventStore: "store", Namespace: "tenant"}, &oc.IEnumerable_ObserverInformation{Items: []*oc.ObserverInformation{operationObserver()}}, func(o *observation.Service, _ *jobs.Service) error {
 			v, err := o.List(ctx)
 			if err == nil {
-				assertObserver(t, v[0])
+				assertObserver(t, v[0], false)
 				if len(v) != 1 {
 					t.Fatal(v)
 				}
@@ -58,7 +58,7 @@ func TestOperationsMatchHandDerivedCSharpGolden(t *testing.T) {
 		{"GetObserverInformation", &oc.GetObserverInformationRequest{EventStore: "store", Namespace: "tenant", ObserverId: "orders", EventSequenceId: "source-sequence"}, operationObserver(), func(o *observation.Service, _ *jobs.Service) error {
 			v, err := o.Get(ctx, "orders", "source-sequence")
 			if err == nil {
-				assertObserver(t, *v)
+				assertObserver(t, *v, true)
 			}
 			return err
 		}},
@@ -69,7 +69,7 @@ func TestOperationsMatchHandDerivedCSharpGolden(t *testing.T) {
 			}
 			return err
 		}},
-		{"RemoveObserver", &oc.RemoveObserver{EventStore: "store", Namespace: "tenant", ObserverId: "orders", EventSequenceId: "event-log"}, &oc.RemoveObserverResponse{Outcome: oc.ObserverRemovalOutcome_ObserverSubscribed, BlockingNamespace: "other-tenant"}, func(o *observation.Service, _ *jobs.Service) error {
+		{"RemoveObserver", &oc.RemoveObserver{EventStore: "store", Namespace: "tenant", ObserverId: "orders", EventSequenceId: "source-sequence"}, &oc.RemoveObserverResponse{Outcome: oc.ObserverRemovalOutcome_ObserverSubscribed, BlockingNamespace: "other-tenant"}, func(o *observation.Service, _ *jobs.Service) error {
 			v, err := o.Remove(ctx, "orders")
 			if v.Outcome != observation.ObserverSubscribed || v.BlockingNamespace != "other-tenant" {
 				t.Fatal(v)
@@ -128,6 +128,9 @@ func TestOperationsMatchHandDerivedCSharpGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			calls := 0
 			conn := operationsConnection(t, func(_ context.Context, method string, request proto.Message) (proto.Message, error) {
+				if tc.name == "RemoveObserver" && methodName(method) == "GetObservers" {
+					return &oc.IEnumerable_ObserverInformation{Items: []*oc.ObserverInformation{operationObserver()}}, nil
+				}
 				calls++
 				if methodName(method) != tc.name {
 					t.Errorf("method %s", method)
@@ -145,9 +148,9 @@ func TestOperationsMatchHandDerivedCSharpGolden(t *testing.T) {
 		})
 	}
 }
-func assertObserver(t *testing.T, v observation.Information) {
+func assertObserver(t *testing.T, v observation.Information, subscriptionKnown bool) {
 	t.Helper()
-	if v.ID() != "orders" || v.Sequence() != "source-sequence" || v.Type() != observation.Reactor || v.Owner() != observation.ClientOwner || v.RunningState() != observation.Quarantined || v.Next() != 10 || v.LastHandled() != 8 || v.Tail() != 12 || v.HandledEventCount() != 4 || !v.IsSubscribed() || !v.IsReplayable() || !reflect.DeepEqual(v.EventTypes(), []events.TypeRef{{ID: "ordered", Generation: 2}, {ID: "changed", Generation: 1}}) {
+	if v.ID() != "orders" || v.Sequence() != "source-sequence" || v.Type() != observation.Reactor || v.Owner() != observation.ClientOwner || v.RunningState() != observation.Quarantined || v.Next() != 10 || v.LastHandled() != 8 || v.Tail() != 12 || v.HandledEventCount() != 4 || v.SubscriptionKnown() != subscriptionKnown || v.IsSubscribed() != subscriptionKnown || !v.IsReplayable() || !reflect.DeepEqual(v.EventTypes(), []events.TypeRef{{ID: "ordered", Generation: 2}, {ID: "changed", Generation: 1}}) {
 		t.Fatalf("observer fields: %#v", v)
 	}
 	refs := v.EventTypes()

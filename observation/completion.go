@@ -133,6 +133,8 @@ func (r CompletionResult) FailedPartitions() []FailedPartition { return slices.C
 func (r CompletionResult) OutstandingObservers() []ID { return slices.Clone(r.outstanding) }
 
 // WaitForCompletion waits for observers of the original appended event types.
+// The kernel also reports success when there are no matching observers. This is
+// not producer readiness or durable sink persistence evidence.
 // The service's store/namespace must match; sequence comes ONLY from completion.
 // Nil service with a committed tail returns CannotWaitError. Zero timeout selects
 // 5s server + 200ms client grace. InfiniteTimeout sends 0 and adds no deadline.

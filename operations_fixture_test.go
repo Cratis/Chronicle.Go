@@ -22,12 +22,13 @@ import (
 
 type operationRPC func(context.Context, string, proto.Message) (proto.Message, error)
 
-func operationsConnection(t *testing.T, call operationRPC) *grpc.ClientConn {
+func operationsConnection(t *testing.T, call operationRPC, options ...grpc.ServerOption) *grpc.ClientConn {
 	t.Helper()
 	listener := bufconn.Listen(1 << 20)
-	server := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context, request any, info *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
+	options = append(options, grpc.UnaryInterceptor(func(ctx context.Context, request any, info *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
 		return call(ctx, info.FullMethod, request.(proto.Message))
 	}))
+	server := grpc.NewServer(options...)
 	jobcontracts.RegisterJobsServer(server, &jobcontracts.UnimplementedJobsServer{})
 	obscontracts.RegisterObserversServer(server, &obscontracts.UnimplementedObserversServer{})
 	obscontracts.RegisterFailedPartitionsServer(server, &obscontracts.UnimplementedFailedPartitionsServer{})

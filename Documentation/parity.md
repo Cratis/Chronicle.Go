@@ -67,14 +67,17 @@ The Kotlin and TypeScript client comparisons informed vocabulary and transport t
 
 The [operations reference](operations.md) describes the public workflows. Sources
 below are relative to `Source/Clients/DotNET` at `2e31b0dfb`; generated contracts
-remain pinned independently to 19.29.4. Golden fixtures are **hand-derived from
-C#**, not emitted by a .NET executable. Kernel witnesses use the repository's
-19.29.4-development image.
+remain pinned independently to 19.29.4. Request/result golden fixtures are
+**hand-derived from C#**, except the [observer wire fixtures](../testdata/observation/README.md),
+which were emitted by protobuf-net 3.4.30 using the actual contract at kernel
+revision `ae5e00a8`. Kernel paths below are relative to `Source/Kernel` at that
+revision. Kernel witnesses use the repository's 19.29.4-development image.
 
 | Behavior / C# source | Go surface and status | Executable evidence / differences |
 | --- | --- | --- |
 | Observer listing/state / `Observation/{IObservers,Observers,ObserverInformation}` | **Implemented**: `EventStore.Observers().List/Get`, immutable state snapshots | `TestOperationsMatchHandDerivedCSharpGolden`, `TestAdministrationRejectsMalformedResponses`; explicit sequence for Get, NotFound presence, state/tails/subscription/owner/type/count and detached event references |
-| Persistent removal / `Observation/{Observers,ObserverRemovalResult}` | **Implemented**: `Service.Remove`, four outcomes and blocking namespace | Golden and refusal tests, `TestKernelOperationsCompletionReplayAndJobEvidence`; store-wide deletion remains distinct from local `UnregisterReactor/Reducer/ReadModelReactor`. Kernel witness proves subscribed refusal, local unregister retains records, then persistent removal |
+| Replay policy and subscription availability / kernel `Contracts/Observation/ObserverInformation.cs:83–85`, `Grpc/Observation/{ObserverInformationConverters,Observers}` | **Implemented**, **Go-specific** availability: `IsReplayable`, `SubscriptionKnown`, `IsSubscribed` | `TestObserverSnapshotsDecodeCSharpWirePresence`, `TestKernelOperationsReplayabilitySubscriptionAndCustomSequenceRemoval`: a List/Get-only receive codec restores omitted field 10 to true while preserving explicit false. No generated/schema edits or global codec. List subscription is unavailable; Get queries it authoritatively. The kernel witness also exposed the same default on outgoing `Contracts/Observation/Reactions/ReactorDefinition` field 4: `TestReactorOnceOnlyEmitsExplicitFalseForCSharpDefault` ensures reactor-wide OnceOnly registration emits zero rather than silently opting into replay |
+| Persistent removal / `Observation/{Observers,ObserverRemovalResult}`; kernel `Core/Observation/ObserverRemover.cs:57,60,103` | **Implemented**, **Go-specific** safety correction: `Service.Remove`, `RemoveFrom`, `Information.Remove`, four outcomes and blocking namespace | `TestObserverRemovalUsesAuthoritativeCustomSequence`, `TestObserverRemovalFailsBeforeMutationWithoutSafeTarget`, `TestObserverSnapshotRemovalRejectsChangedSequence`, custom-sequence kernel witness. C#'s event-log default can target the wrong subscription guard before shared-definition deletion. Go resolves the current definition and validates explicit/snapshot sequences; unavailable or ambiguous definitions fail before mutation. No atomic re-registration fence. Existing ID-only callers retain their signature but now incur a lookup and cannot remove state-only orphans |
 | Failures / `Observation/{FailedPartitions,FailedPartition,FailedPartitionAttempt}` | **Implemented**: `FailedPartitions(ctx, id)` with optional observer filter and immutable attempts | Golden/malformed tests, `TestKernelOperationsFailedPartitionDiagnostics`; UUID, partition, timestamp offset, kind, messages/stack, resolved and quarantined flags preserved. No automatic recovery |
 | Recovery/quarantine / `Reactors/Reactors.cs:RetryFailedPartitionFor`, pinned `Contracts/Observation/*` | **Implemented**: retry outcomes, explicit partition replay, failure/observer/partition quarantine clearing | `TestAdministrationPreservesRefusalsAbsenceAndTargetIsolation`, golden and lost-reply tests; clear/retry distinctions retained. `RetryRequested` prevents treating proto3's default Started as an actual retry when none was requested. Empty acknowledgements prove no completion |
 | Replay / `Reactors/Reactors`, `Reducers/Reducers`, `Projections/Projections` | **Implemented**: `Observers().Replay` returns namespace-bound `jobs.Handle` | Golden, target isolation, malformed/lost reply and kernel replay/job witness. Explicit source sequence replaces C# reactor/reducer empty-sequence inference; malformed/zero job IDs fail rather than silently returning NotSet |
@@ -86,9 +89,21 @@ C#**, not emitted by a .NET executable. Kernel witnesses use the repository's
 
 All mutation failures after dispatch are conservative `OutcomeUnknownError`
 unless a local pre-dispatch or authorization/validation refusal is known. The SDK
-adds no mutation retries. Typed DTOs reject malformed required messages, IDs,
-enums and contradictory completion replies. Proto3 scalar defaults and empty
-acknowledgements retain their protocol limits; accepted work is not completed work.
+adds no mutation retries. `TestAdministrationLostRepliesNeverRetry` and
+`TestUnknownOutcomeFormattingDoesNotExposeCause` preserve error identities while
+omitting sensitive cause text from `OutcomeUnknownError.Error()`.
+
+Typed DTOs reject malformed required messages, IDs, mutation-outcome enums and
+contradictory completion replies. Diagnostic enums preserve future numeric values:
+`TestAdministrationPreservesForwardDiagnosticValues` covers observer states,
+failures, jobs, steps and histories, following C# `JobsConverters`,
+`JobStepConverters` and `FailedPartitionConverters` numeric casts (observer kinds
+retain numbers rather than C#'s Unknown mapping). `TestUnknownJobStatusIsNotCompletionOrTerminalEvidence`
+proves unknown status waits do not manufacture success or terminal evidence.
+Proto3 scalar defaults and empty acknowledgements retain their protocol limits;
+accepted work is not completed work. The kernel's `Grpc/Observation/Observers`
+completion method also succeeds with no matching observers: this is not expected
+producer readiness or durable sink/checkpoint evidence.
 
 ## JSON wire ordering and escaping
 

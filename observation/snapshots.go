@@ -4,6 +4,7 @@
 package observation
 
 import (
+	"context"
 	"slices"
 	"strings"
 	"time"
@@ -22,7 +23,7 @@ type ID string
 // Partition is the opaque observer partition key, not necessarily an event source.
 type Partition string
 
-// Type identifies the observer's kind.
+// Type identifies the observer's kind, preserving unknown numeric values.
 type Type int32
 
 const (
@@ -38,7 +39,7 @@ const (
 	External
 )
 
-// Owner identifies where an observer runs.
+// Owner identifies where an observer runs, preserving unknown numeric values.
 type Owner int32
 
 const (
@@ -50,7 +51,7 @@ const (
 	KernelOwner
 )
 
-// RunningState describes the current observer runtime state.
+// RunningState describes runtime state, preserving unknown numeric values.
 type RunningState int32
 
 const (
@@ -68,7 +69,7 @@ const (
 	Quarantined
 )
 
-// FailureKind distinguishes handling, timeout and disconnect failures.
+// FailureKind distinguishes failures, preserving unknown numeric values.
 type FailureKind int32
 
 const (
@@ -85,7 +86,9 @@ const (
 // Information is an immutable server snapshot. Zero is invalid. A running
 // state or a tail is not a guarantee of durable checkpoint persistence.
 type Information struct {
-	value *contracts.ObserverInformation
+	value             *contracts.ObserverInformation
+	service           *Service
+	subscriptionKnown bool
 }
 
 // ID returns the observer identity.
@@ -129,14 +132,28 @@ func (i Information) Tail() events.SequenceNumber {
 // RunningState returns runtime state independently of progress.
 func (i Information) RunningState() RunningState { return RunningState(i.value.GetRunningState()) }
 
+// SubscriptionKnown reports whether subscription state was queried. Only Get
+// supplies it; List does not ask the kernel's live observer activation.
+func (i Information) SubscriptionKnown() bool { return i.subscriptionKnown }
+
 // IsSubscribed reports a server-side subscription, not local goroutine lifetime.
-func (i Information) IsSubscribed() bool { return i.value.GetIsSubscribed() }
+// False when SubscriptionKnown is false means unavailable, NOT disconnected.
+func (i Information) IsSubscribed() bool { return i.subscriptionKnown && i.value.GetIsSubscribed() }
 
 // IsReplayable reports the server's replay policy.
 func (i Information) IsReplayable() bool { return i.value.GetIsReplayable() }
 
 // HandledEventCount returns the reported count.
 func (i Information) HandledEventCount() uint64 { return i.value.GetHandledEventCount() }
+
+// Remove requests store-wide removal using this snapshot's identity and sequence.
+// The current definition is checked again; a stale sequence fails before mutation.
+func (i Information) Remove(ctx context.Context) (RemovalResult, error) {
+	if i.service == nil {
+		return RemovalResult{}, invalid("observer snapshot required")
+	}
+	return i.service.RemoveFrom(ctx, i.ID(), i.Sequence())
+}
 
 // FailedPartition is an immutable diagnostic snapshot. Resolved and quarantined
 // remain independent; a cleared quarantine does not establish successful recovery.
@@ -191,7 +208,7 @@ func (a FailedAttempt) StackTrace() string { return a.stack }
 func (a FailedAttempt) Kind() FailureKind { return a.kind }
 
 func decodeInformation(v *contracts.ObserverInformation) (Information, error) {
-	if v == nil || strings.TrimSpace(v.Id) == "" || strings.TrimSpace(v.EventSequenceId) == "" || v.Type < 0 || v.Type > 4 || v.Owner < 0 || v.Owner > 2 || v.RunningState < 0 || v.RunningState > 5 {
+	if v == nil || strings.TrimSpace(v.Id) == "" || strings.TrimSpace(v.EventSequenceId) == "" {
 		return Information{}, faults.ErrProtocol
 	}
 	for _, ref := range v.EventTypes {
@@ -199,7 +216,7 @@ func decodeInformation(v *contracts.ObserverInformation) (Information, error) {
 			return Information{}, faults.ErrProtocol
 		}
 	}
-	return Information{proto.Clone(v).(*contracts.ObserverInformation)}, nil
+	return Information{value: proto.Clone(v).(*contracts.ObserverInformation)}, nil
 }
 func decodeFailures(values []*contracts.FailedPartition) ([]FailedPartition, error) {
 	result := make([]FailedPartition, 0, len(values))
@@ -209,7 +226,7 @@ func decodeFailures(values []*contracts.FailedPartition) ([]FailedPartition, err
 		}
 		p := FailedPartition{id: uuid.UUID(wire.Correlation(v.Id)), observer: ID(v.ObserverId), partition: Partition(v.Partition), resolved: v.IsResolved, quarantined: v.IsQuarantined}
 		for _, a := range v.Attempts {
-			if a == nil || a.Occurred == nil || a.Kind < 0 || a.Kind > 3 {
+			if a == nil || a.Occurred == nil {
 				return nil, faults.ErrProtocol
 			}
 			occurred, err := time.Parse(time.RFC3339Nano, a.Occurred.Value)

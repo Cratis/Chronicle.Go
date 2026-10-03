@@ -16,6 +16,7 @@ import (
 )
 
 // Status is the kernel job lifecycle status, independent of progress counters.
+// Unknown numeric values are preserved and are not terminal or success evidence.
 type Status int32
 
 const (
@@ -46,7 +47,8 @@ func (s Status) Terminal() bool {
 	return s == CompletedSuccessfully || s == CompletedWithFailures || s == Failed
 }
 
-// StepStatus is the kernel lifecycle status of a job step.
+// StepStatus is the kernel lifecycle status of a job step. Unknown numeric
+// values are preserved without treating them as successful completion.
 type StepStatus int32
 
 const (
@@ -201,7 +203,7 @@ func (s Step) Progress() StepProgress {
 func (s Step) StatusChanges() []StepStatusChange { return slices.Clone(s.changes) }
 
 func decodeJob(value *contracts.JobSummaryResponse, s *Service) (Job, error) {
-	if value == nil || value.Id == nil || uuid.UUID(wire.Correlation(value.Id)) == uuid.Nil || value.Type == "" || value.Created == nil || value.Progress == nil || value.Status < 0 || value.Status > 9 {
+	if value == nil || value.Id == nil || uuid.UUID(wire.Correlation(value.Id)) == uuid.Nil || value.Type == "" || value.Created == nil || value.Progress == nil {
 		return Job{}, faults.ErrProtocol
 	}
 	created, err := time.Parse(time.RFC3339Nano, value.Created.Value)
@@ -214,7 +216,7 @@ func decodeJob(value *contracts.JobSummaryResponse, s *Service) (Job, error) {
 	}
 	job := Job{handle: Handle{s, uuid.UUID(wire.Correlation(value.Id))}, value: proto.Clone(value).(*contracts.JobSummaryResponse), created: created}
 	for _, change := range value.StatusChanges {
-		if change == nil || change.Occurred == nil || change.Status < 0 || change.Status > 9 {
+		if change == nil || change.Occurred == nil {
 			return Job{}, faults.ErrProtocol
 		}
 		occurred, err := time.Parse(time.RFC3339Nano, change.Occurred.Value)
@@ -226,12 +228,12 @@ func decodeJob(value *contracts.JobSummaryResponse, s *Service) (Job, error) {
 	return job, nil
 }
 func decodeStep(value *contracts.JobStepSummaryResponse) (Step, error) {
-	if value == nil || value.Id == nil || uuid.UUID(wire.Correlation(value.Id)) == uuid.Nil || value.Type == "" || value.Progress == nil || value.Status < 0 || value.Status > 7 || value.Progress.Percentage < 0 || value.Progress.Percentage > 100 {
+	if value == nil || value.Id == nil || uuid.UUID(wire.Correlation(value.Id)) == uuid.Nil || value.Type == "" || value.Progress == nil || value.Progress.Percentage < 0 || value.Progress.Percentage > 100 {
 		return Step{}, faults.ErrProtocol
 	}
 	step := Step{value: proto.Clone(value).(*contracts.JobStepSummaryResponse)}
 	for _, change := range value.StatusChanges {
-		if change == nil || change.Occurred == nil || change.Status < 0 || change.Status > 7 {
+		if change == nil || change.Occurred == nil {
 			return Step{}, faults.ErrProtocol
 		}
 		occurred, err := time.Parse(time.RFC3339Nano, change.Occurred.Value)
