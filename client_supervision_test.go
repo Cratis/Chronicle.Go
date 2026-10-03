@@ -21,6 +21,7 @@ import (
 	reactorcontracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	reducercontracts "github.com/cratis/chronicle.go/contracts/observation/reducers"
 	projectioncontracts "github.com/cratis/chronicle.go/contracts/projections"
+	"github.com/cratis/chronicle.go/contracts/readmodelexplorer"
 	readmodelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	seedcontracts "github.com/cratis/chronicle.go/contracts/seeding"
 	"github.com/cratis/chronicle.go/contracts/sequences"
@@ -107,6 +108,9 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 	sequences.RegisterEventSequencesServer(server, k)
 	if k.readModels != nil {
 		readmodelcontracts.RegisterReadModelsServer(server, k.readModels)
+		if explorer, ok := k.readModels.(readmodelexplorer.ReadModelExplorerServer); ok {
+			readmodelexplorer.RegisterReadModelExplorerServer(server, explorer)
+		}
 		if materialized, ok := k.readModels.(readmodelcontracts.MaterializedReadModelsServer); ok {
 			readmodelcontracts.RegisterMaterializedReadModelsServer(server, materialized)
 		}
