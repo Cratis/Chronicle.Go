@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/contracts/eventstores"
 	"github.com/cratis/chronicle.go/events"
@@ -63,6 +64,7 @@ type EventStore struct {
 
 	projectionSnapshot []projections.Definition
 	readModels         *readmodels.Service
+	compliance         *compliance.Manager
 	reactors           storeObservers
 	reducers           storeObservers
 	readModelReactors  storeObservers
@@ -74,6 +76,10 @@ func (s *EventStore) Name() StoreName { return s.name }
 
 // Namespace returns this handle's isolated namespace.
 func (s *EventStore) Namespace() Namespace { return s.namespace }
+
+// Compliance returns the namespace-bound PII key lifecycle manager. Erasure and
+// reauthorization reach all stores in this namespace, never other namespaces.
+func (s *EventStore) Compliance() *compliance.Manager { return s.compliance }
 
 // EventTypes returns the frozen catalog registered before this handle was published.
 func (s *EventStore) EventTypes() *events.Catalog { return s.catalog }
@@ -142,6 +148,11 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 		}
 		store.sequences = map[events.SequenceID]*eventsequences.Sequence{events.EventLog: store.log}
 		if err = store.initializeReadModelsFromSnapshot(snapshot); err != nil {
+			c.mu.Unlock()
+			return nil, err
+		}
+		store.compliance, err = compliance.New(key.name, key.namespace, &clientTransport{client: c, store: store})
+		if err != nil {
 			c.mu.Unlock()
 			return nil, err
 		}
