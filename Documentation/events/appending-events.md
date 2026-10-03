@@ -28,14 +28,17 @@ interception or an observer-completion signal. Other stores, namespaces, sequenc
 processes and clients do not notify it. Low-level `eventsequences.New` is the escape
 hatch for independent, handle-local subscriptions.
 
-Given a sequence handle and the command's nonzero `correlation`, collect attempts
-with a callback like this (imports: `sync` and `eventsequences`):
+Given a sequence handle, assign the command a fresh origin and collect its
+immediate attempts like this (imports: `sync` and `eventsequences`; `ctx` is the
+command context):
 
 ```go
+origin := eventsequences.NewOrigin()
+ctx = eventsequences.WithOrigin(ctx, origin)
 var mu sync.Mutex
 var attempts []eventsequences.AppendNotification
 unsubscribe := sequence.OnAppend(func(n eventsequences.AppendNotification) {
-    if n.CorrelationID != correlation {
+    if n.Origin != origin {
         return
     }
     mu.Lock()
@@ -45,20 +48,23 @@ unsubscribe := sequence.OnAppend(func(n eventsequences.AppendNotification) {
 defer unsubscribe()
 ```
 
-Use the same correlation in the handlers' append context. Read `attempts` under
-`mu` after command-owned appends have returned; disposal does not join callbacks.
+Pass that context to the handlers' appends. Read `attempts` under `mu` after
+command-owned appends have returned; disposal does not join callbacks.
 
 Each notification contains:
 
 - `CorrelationID`: the effective **request** correlation, including an explicit
-  append override or generated ID. It remains available when the response is lost.
+  append override or generated ID. It remains available when the response is lost,
+  but several executions can legitimately share it.
+- `Origin`: the unit's identity for `Owner.Commit`, otherwise the origin installed
+  in the append context. Zero means unattributed.
 - `Operation`: store, namespace, sequence and distinct exact event types.
 - `Events`: original input order, source, type and generation, normalized route,
   and a position only when committed. Zero is a valid position. No event payload
   or mutable caller-owned event value is retained.
 - `Result`: the unchanged disposition and complete violations/error codes, as a
   `BatchResult` even for one event. Its correlation remains the kernel's response
-  correlation; use the notification's top-level correlation for attribution.
+  correlation; use `Origin` to distinguish executions sharing a correlation.
 - `Err`: the original operation error. A nil error alone does not mean success;
   inspect `Result.Disposition` and `Result.Err()`.
 
@@ -74,6 +80,36 @@ still check returned errors. Eventless checks do not notify either.
 `AppendPreparedBatch` and notifies **before** the unit's completion callback;
 rollback, empty completion and repeated commit do not emit accepted events. Never
 infer a notification's disposition from `IsCompleted` or a callback having run.
+
+### Distinguish executions sharing a correlation
+
+Correlation groups related work; it does not uniquely identify an execution.
+Arc.Go reactor batches can run several commands with one delivery correlation,
+when each command needs to collect only its own append attempts.
+
+`eventsequences.NewOrigin()` creates an opaque, comparable, nonzero token. Tokens
+are never reused within a process and remain valid after the execution completes.
+They are process-local: do not persist them, compare across restarts or use them
+as authorization credentials. Allocation is concurrency-safe; exhausting all
+uint64 identities panics rather than reusing one. There is no global subscription
+or correlation-to-command registry.
+
+`eventsequences.WithOrigin(ctx, origin)` installs a token without changing audit or
+wire metadata. `OriginFrom(ctx)` returns zero if none is installed; installing
+zero masks an inherited token. Immediate single/many/batch appends, metadata and
+named-tag variants inherit the append context's origin. Prepared batches use the
+**append-time** context, not the preparation context.
+
+`transactions.Begin` assigns a fresh origin, exposed by `UnitOfWork.Origin()`.
+`Owner.Commit` always notifies with that identity, ignoring origins in Begin,
+Stage or Commit contexts. The identity stays available after completion; nil and
+zero units return zero. Filter by `unit.Origin()` to track that unit's commit, or
+by a separate context token to track immediate writes without collecting the
+unit's commit. Do not filter by zero to claim ownership of unattributed work.
+
+`AppendNotification` is an SDK-produced callback value; consumers should receive
+it rather than construct positional literals. Existing correlation, results and
+wire contracts remain unchanged.
 
 ### Callback ownership and disposal
 
@@ -97,7 +133,8 @@ command state. Keep callback state concurrency-safe while shared-handle appends
 may still be running; the callback closure remains alive for admitted deliveries.
 
 For Arc.Go-style command tracking, set `metadata.WithCorrelation` before invoking
-handlers, subscribe to each sequence on their store/namespace, filter `n.CorrelationID`, and
+handlers, install a fresh `WithOrigin` token, subscribe to each sequence on their
+store/namespace, filter `n.Origin`, and
 retain `Committed`, `Rejected` and `Unknown` separately. A later empty transaction
 completion cannot erase an immediate unknown outcome. To observe only immediate
 writes, unsubscribe before the transaction owner commits and inspect its retained

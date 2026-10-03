@@ -51,6 +51,7 @@ type UnitOfWork struct {
 	mu          sync.Mutex
 	sequence    *eventsequences.Sequence
 	correlation metadata.CorrelationID
+	origin      eventsequences.Origin
 	pending     *eventsequences.PreparedBatch
 	hasWork     bool
 	state       State
@@ -65,7 +66,8 @@ type UnitOfWork struct {
 type Owner struct{ unit *UnitOfWork }
 
 // Begin binds one sequence (and hence one store and namespace), correlation and
-// actor without I/O. Missing correlation is generated once. It does not retain ctx
+// actor without I/O, assigning a fresh append origin independent of ctx's origin.
+// Missing correlation is generated once. It does not retain ctx
 // or install ambient state. Use WithUnitOfWork to share the participant explicitly.
 // Cancellation of Begin's context later does not cancel an independent Commit ctx.
 func Begin(ctx context.Context, sequence *eventsequences.Sequence) (*UnitOfWork, *Owner, error) {
@@ -84,7 +86,7 @@ func Begin(ctx context.Context, sequence *eventsequences.Sequence) (*UnitOfWork,
 	if err != nil {
 		return nil, nil, err
 	}
-	unit := &UnitOfWork{sequence: sequence, correlation: id, pending: pending, state: Open}
+	unit := &UnitOfWork{sequence: sequence, correlation: id, origin: eventsequences.NewOrigin(), pending: pending, state: Open}
 	return unit, &Owner{unit: unit}, nil
 }
 
@@ -163,6 +165,16 @@ func (u *UnitOfWork) CorrelationID() metadata.CorrelationID {
 		return metadata.CorrelationID{}
 	}
 	return u.correlation
+}
+
+// Origin returns the unit's immutable append attribution identity, including
+// after completion. Nil and zero units return zero. It is independent of the
+// correlation and any origins installed in Begin, Stage or Commit contexts.
+func (u *UnitOfWork) Origin() eventsequences.Origin {
+	if u == nil {
+		return eventsequences.Origin{}
+	}
+	return u.origin
 }
 
 // GetEvents returns defensive JSON snapshots in global staging order, including

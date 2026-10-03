@@ -48,7 +48,7 @@ func (s *Sequence) dispatchMany(ctx context.Context, source events.SourceID, con
 		}
 		response, err = s.service.AppendManyWithNamedTags(ctx, named)
 	}
-	return s.finishBatch(batch, response, err)
+	return s.finishBatch(OriginFrom(ctx), batch, response, err)
 }
 
 func (s *Sequence) dispatchBatch(ctx context.Context, batch preparedBatch) (BatchResult, error) {
@@ -68,7 +68,7 @@ func (s *Sequence) dispatchBatch(ctx context.Context, batch preparedBatch) (Batc
 		}
 		response, err = s.service.AppendManyForEventSourcesWithNamedTags(ctx, named)
 	}
-	return s.finishBatch(batch, response, err)
+	return s.finishBatch(OriginFrom(ctx), batch, response, err)
 }
 
 func (b preparedBatch) hasNamedTags() bool {
@@ -80,13 +80,13 @@ func (b preparedBatch) hasNamedTags() bool {
 	return false
 }
 
-func (s *Sequence) finishBatch(batch preparedBatch, envelope *sequences.CommandResult_AppendManyResponse, err error) (BatchResult, error) {
+func (s *Sequence) finishBatch(origin Origin, batch preparedBatch, envelope *sequences.CommandResult_AppendManyResponse, err error) (BatchResult, error) {
 	var local *faults.BeforeDispatch
 	if errors.As(err, &local) {
 		return BatchResult{}, local.Cause
 	}
 	result, err := s.batchOutcome(batch, envelope, err)
-	return result, joinNotificationError(err, s.notifyBatch(batch, result, err))
+	return result, joinNotificationError(err, s.notifyBatch(origin, batch, result, err))
 }
 
 func (s *Sequence) batchOutcome(batch preparedBatch, envelope *sequences.CommandResult_AppendManyResponse, err error) (BatchResult, error) {

@@ -51,14 +51,15 @@ func ExampleSequence_OnAppend() {
 	if err != nil {
 		panic(err)
 	}
-	ctx := metadata.WithCorrelation(context.Background(), correlation)
+	origin := eventsequences.NewOrigin()
+	ctx := eventsequences.WithOrigin(metadata.WithCorrelation(context.Background(), correlation), origin)
 
 	// A command adapter subscribes on the same handle handed to its handlers.
 	// Other concurrent commands may use this handle, so filter and synchronize.
 	var mu sync.Mutex
 	var attempts []eventsequences.AppendNotification
 	unsubscribe := sequence.OnAppend(func(n eventsequences.AppendNotification) {
-		if n.CorrelationID != correlation {
+		if n.Origin != origin {
 			return
 		}
 		mu.Lock()

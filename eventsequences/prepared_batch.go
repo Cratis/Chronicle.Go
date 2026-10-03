@@ -151,6 +151,7 @@ func (b *PreparedBatch) GetEvents() []json.RawMessage {
 // atomic heterogeneous batch. No event is serialized again. The snapshot must
 // originate from s; commit metadata comes from the snapshot, not ctx. This low-
 // level method does not prevent repeated calls; transaction owners do.
+// Local notification origin comes from ctx at append time, not the snapshot.
 func (s *Sequence) AppendPreparedBatch(ctx context.Context, snapshot *PreparedBatch) (BatchResult, error) {
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
