@@ -69,6 +69,9 @@ func TestWithProjectionPreservesEveryRegistryFieldExceptReplacedProducer(t *test
 	registry.reactorSideEffects = []reactorSideEffectHandler{nil}
 	registry.migrations = []events.MigrationDeclaration{{}}
 	registry.seeders = []seederDeclaration{{}}
+	registry.projectionFactories = []projectionFactoryDeclaration{{model: model.Descriptor()}, {}}
+	registry.constraintFactories = []constraintFactoryDeclaration{{}}
+	registry.migrationFactories = []migrationFactoryDeclaration{{}}
 	got, err := registry.WithProjection(replacement)
 	if err != nil {
 		t.Fatal(err)
@@ -79,12 +82,13 @@ func TestWithProjectionPreservesEveryRegistryFieldExceptReplacedProducer(t *test
 		projections: []projections.Declaration{{}, replacement}, reactors: registry.reactors,
 		reducers: []reducers.Declaration{{}}, reactorMiddlewares: registry.reactorMiddlewares,
 		reactorSideEffects: registry.reactorSideEffects, migrations: registry.migrations, seeders: registry.seeders,
-		readModelReactors: registry.readModelReactors,
+		readModelReactors:   registry.readModelReactors,
+		projectionFactories: []projectionFactoryDeclaration{{}}, constraintFactories: registry.constraintFactories, migrationFactories: registry.migrationFactories,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatal("replacement lost or changed unrelated registrations")
 	}
-	fields := map[string]bool{"mu": true, "descriptors": true, "constraints": true, "constraintCompositions": true, "readModels": true, "projections": true, "reactors": true, "reducers": true, "reactorMiddlewares": true, "reactorSideEffects": true, "migrations": true, "seeders": true, "readModelReactors": true}
+	fields := map[string]bool{"mu": true, "descriptors": true, "constraints": true, "constraintCompositions": true, "readModels": true, "projections": true, "reactors": true, "reducers": true, "reactorMiddlewares": true, "reactorSideEffects": true, "migrations": true, "seeders": true, "readModelReactors": true, "projectionFactories": true, "constraintFactories": true, "migrationFactories": true}
 	typ := reflect.TypeFor[Registry]()
 	original, detached := reflect.ValueOf(registry).Elem(), reflect.ValueOf(got).Elem()
 	for i := 0; i < typ.NumField(); i++ {

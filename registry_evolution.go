@@ -40,8 +40,9 @@ func RegisterEventGeneration[Previous, Current any](registry *Registry, current 
 
 // RegisterEventMigration records both directions between adjacent generations.
 // Authoring callbacks run synchronously once; their builders and literal values
-// are snapshotted. NewClient validates identity, adjacency, duplicate migrators,
-// property paths and (when enabled) the complete chain, before any network I/O.
+// are snapshotted. Duplicate direct/factory edges fail admission atomically.
+// NewClient validates identity, adjacency, property paths and (when enabled) the
+// complete chain, before any network I/O.
 func RegisterEventMigration[Upgrade, Previous any](registry *Registry, upgrade events.Type[Upgrade], previous events.Type[Previous], migration events.Migration[Upgrade, Previous]) error {
 	if registry == nil {
 		return fmt.Errorf("%w: nil registry", ErrInvalidConfiguration)
@@ -52,6 +53,9 @@ func RegisterEventMigration[Upgrade, Previous any](registry *Registry, upgrade e
 	}
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
+	if migrationEdgeTaken(registry, previous.Ref()) {
+		return invalidFactory("duplicate migration edge")
+	}
 	registry.migrations = append(registry.migrations, declaration)
 	return nil
 }

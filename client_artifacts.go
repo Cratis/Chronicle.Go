@@ -44,7 +44,7 @@ func (c *Client) Artifacts(store StoreName) (Artifacts, error) {
 }
 
 // WithProjection returns a detached registry with a replacement producer for the
-// declaration's model. It removes that model's prior projection/reducer, retains
+// declaration's model. It removes that model's prior projection/factory/reducer, retains
 // all other registrations, and never mutates r. NewClient performs normal complete
 // compilation/validation. This supports scenario-local inline overrides without
 // introducing another discovery pipeline. The model must already be registered.
@@ -64,6 +64,7 @@ func (r *Registry) WithProjection(declaration projections.Declaration) (*Registr
 		return nil, ErrNotRegistered
 	}
 	result := &Registry{
+		constraintFactories: slices.Clone(r.constraintFactories), migrationFactories: slices.Clone(r.migrationFactories),
 		descriptors: slices.Clone(r.descriptors), constraints: slices.Clone(r.constraints), readModels: slices.Clone(r.readModels),
 		constraintCompositions: slices.Clone(r.constraintCompositions), migrations: slices.Clone(r.migrations), seeders: slices.Clone(r.seeders),
 		readModelReactors: slices.Clone(r.readModelReactors),
@@ -72,6 +73,11 @@ func (r *Registry) WithProjection(declaration projections.Declaration) (*Registr
 	for _, existing := range r.projections {
 		if existing.Model().GoType() != declaration.Model().GoType() {
 			result.projections = append(result.projections, existing)
+		}
+	}
+	for _, existing := range r.projectionFactories {
+		if existing.model.GoType() != declaration.Model().GoType() {
+			result.projectionFactories = append(result.projectionFactories, existing)
 		}
 	}
 	for _, existing := range r.reducers {

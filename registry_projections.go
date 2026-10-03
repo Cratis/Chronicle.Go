@@ -10,6 +10,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -27,10 +28,8 @@ func (r *Registry) AddProjection(declaration projections.Declaration) error {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	for _, existing := range r.projections {
-		if existing.Identifier() == declaration.Identifier() || existing.Model().GoType() == declaration.Model().GoType() {
-			return fmt.Errorf("%w: duplicate projection identity or model", ErrInvalidConfiguration)
-		}
+	if projectionIdentityTaken(r, declaration.Identifier(), declaration.Model()) {
+		return fmt.Errorf("%w: duplicate projection identity or model", ErrInvalidConfiguration)
 	}
 	r.projections = append(r.projections, declaration)
 	return nil
@@ -50,11 +49,36 @@ type registrySnapshot struct {
 // compileRegistry resolves only the captured declarations. No mutable Registry is
 // consulted here, including after constraint composition or seeder preparation.
 func compileRegistry(ctx context.Context, captured *registryDeclarations, policy serialization.NamingPolicy, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
-	eventTypes := slices.Clone(captured.descriptors)
+	if err := validateDefinitionMetadata(captured); err != nil {
+		return registrySnapshot{}, err
+	}
+	schemas, err := prepareRegistrySchemas(captured, policy)
+	if err != nil {
+		return registrySnapshot{}, err
+	}
+	return compilePreparedRegistry(ctx, captured, schemas, services, validateGenerations)
+}
+
+func compilePreparedRegistry(ctx context.Context, captured *registryDeclarations, schemas registrySchemas, services reactorScopeFactory, validateGenerations bool) (snapshot registrySnapshot, err error) {
+	err = artifacts.Protect("registry", "compile", func() error {
+		prepared, prepareErr := prepareDefinitionFactories(ctx, captured, services)
+		if prepareErr != nil {
+			return prepareErr
+		}
+		snapshot, prepareErr = compileRegistryDefinitions(ctx, prepared, schemas, services, validateGenerations)
+		return prepareErr
+	})
+	if err != nil {
+		return registrySnapshot{}, err
+	}
+	return snapshot, nil
+}
+
+func compileRegistryDefinitions(ctx context.Context, captured *registryDeclarations, schemas registrySchemas, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
 	models := slices.Clone(captured.readModels)
 	declarations := slices.Clone(captured.projections)
 	snapshot := registrySnapshot{constraints: slices.Clone(captured.constraints)}
-	catalog, err := events.NewCatalog(eventTypes...)
+	catalog, err := events.NewCatalog(captured.descriptors...)
 	if err != nil {
 		return snapshot, err
 	}
@@ -102,35 +126,23 @@ func compileRegistry(ctx context.Context, captured *registryDeclarations, policy
 	if err != nil {
 		return snapshot, err
 	}
+	// Authoring used original field names. Only bind producer metadata onto the
+	// already frozen named models; never re-evaluate their classification providers.
+	models = schemas.models.Descriptors()
 	for _, compiled := range snapshot.projections {
 		for i, model := range models {
 			if model.Identifier() == compiled.Model().Identifier() {
-				models[i] = compiled.Model()
+				models[i], err = readmodels.BindProjection(model, compiled.Identifier(), compiled.EventSequence(), compiled.IsPassive())
+				if err != nil {
+					return registrySnapshot{}, err
+				}
 				break
 			}
 		}
 	}
-	// Resolve authoring against declaration plans first, then rebind every path by
-	// field identity into detached client plans. The registry and its handles stay immutable.
-	for i, event := range eventTypes {
-		eventTypes[i], err = event.WithNamingPolicy(policy)
-		if err != nil {
-			return registrySnapshot{}, err
-		}
-	}
-	snapshot.events, err = events.NewCatalog(eventTypes...)
+	snapshot.events, err = schemas.events.WithMigrations(captured.migrations, validateGenerations)
 	if err != nil {
 		return registrySnapshot{}, err
-	}
-	snapshot.events, err = snapshot.events.WithMigrations(captured.migrations, validateGenerations)
-	if err != nil {
-		return registrySnapshot{}, err
-	}
-	for i, model := range models {
-		models[i], err = model.WithNamingPolicy(policy)
-		if err != nil {
-			return registrySnapshot{}, err
-		}
 	}
 	snapshot.models, err = readmodels.NewCatalog(models...)
 	if err != nil {

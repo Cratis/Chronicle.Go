@@ -126,6 +126,12 @@ type MigrationDeclaration struct {
 	upcast, downcast  []migrationOperation
 }
 
+// Upgrade returns the exact declared target generation descriptor.
+func (d MigrationDeclaration) Upgrade() Descriptor { return d.upgrade }
+
+// Previous returns the exact declared source generation descriptor.
+func (d MigrationDeclaration) Previous() Descriptor { return d.previous }
+
 // DefineMigration snapshots callbacks and values without resolving catalog paths.
 // Both callbacks are mandatory; registration errors never partially admit a map.
 func DefineMigration[U, P any](upgrade Type[U], previous Type[P], migration Migration[U, P]) (MigrationDeclaration, error) {

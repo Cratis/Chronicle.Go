@@ -21,6 +21,9 @@ import (
 // snapshot; adding declarations afterwards does not mutate existing clients.
 type Registry struct {
 	mu                     sync.Mutex
+	projectionFactories    []projectionFactoryDeclaration
+	constraintFactories    []constraintFactoryDeclaration
+	migrationFactories     []migrationFactoryDeclaration
 	descriptors            []events.Descriptor
 	migrations             []events.MigrationDeclaration
 	constraints            []constraints.Definition
@@ -39,6 +42,9 @@ type Registry struct {
 // and service instances remain borrowed; capturing never invokes application code.
 // Compilation must clone any collection it changes, preserving this admission epoch.
 type registryDeclarations struct {
+	projectionFactories    []projectionFactoryDeclaration
+	constraintFactories    []constraintFactoryDeclaration
+	migrationFactories     []migrationFactoryDeclaration
 	descriptors            []events.Descriptor
 	migrations             []events.MigrationDeclaration
 	constraints            []constraints.Definition
@@ -60,6 +66,7 @@ func captureRegistry(registry *Registry) *registryDeclarations {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
 	return &registryDeclarations{
+		projectionFactories: slices.Clone(registry.projectionFactories), constraintFactories: slices.Clone(registry.constraintFactories), migrationFactories: slices.Clone(registry.migrationFactories),
 		descriptors: slices.Clone(registry.descriptors), migrations: slices.Clone(registry.migrations),
 		constraints: slices.Clone(registry.constraints), constraintCompositions: slices.Clone(registry.constraintCompositions),
 		readModels: slices.Clone(registry.readModels), projections: slices.Clone(registry.projections),

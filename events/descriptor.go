@@ -31,6 +31,13 @@ type Descriptor struct {
 	protection    []compliance.Declaration
 }
 
+// SameDeclaration reports exact declaration identity, not merely matching wire
+// identities. Detached naming plans are distinct; use the original registered
+// descriptor when declaring definition-factory output metadata.
+func (d Descriptor) SameDeclaration(other Descriptor) bool {
+	return d.typ != nil && d.typ == other.typ && d.ref == other.ref && d.plan == other.plan
+}
+
 // Ref returns the persisted identity and generation.
 func (d Descriptor) Ref() TypeRef { return d.ref }
 

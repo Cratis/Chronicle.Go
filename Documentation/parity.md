@@ -224,6 +224,26 @@ server encryption certificate; ordinary Go tests remain container-free.
 | Write fence and replacement-key authorization / same PII manager and kernel key storage | **Implemented**: failures propagate without append retries; `AllowNewEncryptionKeyFor` is explicit and cannot recover old ciphertext | Lifecycle kernel fixture rejects writes in both stores, permits another namespace and reauthorizes new writes while old content remains shredded. Wire has no stable typed `EncryptionKeyErased` detail; existing append/transport identities remain inspectable |
 | Partial lifecycle failures, unsupported kernels and confidentiality guard / `IPIIManager`, kernel `EncryptionKeyLifecycleIncomplete` | **Implemented** transport contract with redacted public error text; no success inferred from partial server work | `TestLifecycleFailuresPreserveIdentityWithoutSensitiveDiagnostics`, `TestLifecycleRejectsReservedKeysAndCancellationBeforeDispatch`; `ErrLifecycle`, `errors.As`, gRPC/context/unsupported identities. Distributed fault injection and backend recovery remain unverified |
 
+## Definition factories
+
+C02–C08/C10 and issues [#21](https://github.com/Cratis/Chronicle.Go/issues/21) /
+[#22](https://github.com/Cratis/Chronicle.Go/issues/22) reference
+`Source/Clients/DotNET/{ClientArtifactsActivator,ActivatedArtifact}.cs`,
+`Projections/Projections.cs:536–570`, `Events/Constraints/ConstraintsByBuilderProvider.cs`,
+`Events/Migrations/EventTypeMigrators.cs`, and `Seeding/EventSeeding.cs` at
+`2e31b0dfba489159b3db323238f16d0f277056b4`. See the
+[config-backed definition workflow](definition-factories.md).
+
+| Behavior | Go surface and status | Executable evidence / exact boundary |
+| --- | --- | --- |
+| Config-backed preparation | **Partial**: `RegisterProjectionFactory[P]`, `RegisterConstraintFactory[C]`, `RegisterEventMigrationFactory[M]`; fixed family/output metadata, plain constructors or borrowed services | `TestDefinitionFactoriesPlainAndFundamentalsProduceIdenticalFrozenArtifacts`, `ExampleRegisterProjectionFactory`; original descriptors and names are required, not callback-driven artifact discovery |
+| Activation ownership | **Go-specific**: temporary scopes, owned explicit constructor results, borrowed resolved services/provider, registered-service precedence | `TestDefinitionPreparationCleansPartialScopesAndConstructorResultsBeforeDependencies`, `TestAdapterPreservesPartiallyOpenedScopeForOwnerCleanup`, Singleton/scoped equivalence fixture; unlike C# non-disposable definition activation, disposable artifacts are allowed and released before publication |
+| Failure boundary | **Go-specific**: payload-free `PreparationError`, inspectable causes/recovered panic, cleanup failure prevents publication | `TestDefinitionPreparationPreservesPanicWithoutEverFormattingItsValue`, cleanup/cancellation fixture; unlike C# log-and-skip or swallowed disposal failures, Go aborts preparation. Application effects cannot be rolled back |
+| Captured schema and definition epochs | **Implemented** for selected registries: capture all before callbacks, freeze all base schemas before definitions, compile a shared registry once | `TestClientCapturesAllRegistriesBeforeApplicationPreparation`, `TestAllSelectedSchemasFreezeBeforeDefinitionCallbacks`, `TestSkipKeepAliveRejectsCapturedObserversBeforeAnyFactoryOrClassifier`, `TestFactoryPreparationRetainsOriginalModelHandle`; classification results use Go member identity without retaining application providers |
+| Canonical compilation and replay | **Implemented** for the three factory families alongside direct declarations | `TestFactoryAndDirectRegistrationUnionMatchesAndReconnectIsCallbackFree` compares complete gRPC requests to direct declarations and across reconnect; `TestFactoryVariantsAndDirectGlobalsUseOneCanonicalGroupCompiler` covers variant/global composition and frozen defaults/labels; `TestKernelDefinitionFactoriesMaterializeConstrainAndEvolve` covers materialization, uniqueness rejection, historical upcast and downcast on 19.29.4-development |
+| Identity conflicts and callback lifetimes | **Go-specific** fail-closed metadata and output checks | `TestDefinitionFactoryDuplicateAdmissionIsAtomic`, `TestDefinitionFactoriesRequireExactOutputIdentitiesAndNoRuntimeMessages`, `TestDefinitionPreparationResolverIsBorrowedGuardedAndExpires`; direct migration duplicates now fail registration atomically rather than waiting for NewClient. Factory constraints allow static messages only; no retained scoped message provider |
+| Borrowed facade composition | **Not implemented** in this slice | No two-phase preparation or automatic client/store/sequence bindings. Visible facade dependencies are rejected by `TestDefinitionPreparationRejectsVisibleFacadeDependenciesBeforeOpeningScope`; hidden dependency graphs remain an application contract. #22 remains partially accepted; client-lifetime strategies and enrichment are separate work |
+
 ## Event seeding
 
 C112 and the C03/C08 final registration stage reference

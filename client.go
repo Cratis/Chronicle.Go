@@ -17,6 +17,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
@@ -71,8 +72,9 @@ func (c *Client) GoString() string { return c.String() }
 
 // NewClient validates and freezes configuration without network I/O. TLS validates
 // by default. Omitted credentials select Chronicle's public development credentials.
-// All selected registries are captured before application preparation. Registered
-// seeders run synchronously once per distinct registry to prepare immutable definitions.
+// All selected registries are captured before application preparation. Definition
+// factories and seeders run synchronously once per distinct registry; reconnect
+// reuses their frozen outputs without application preparation callbacks.
 // Use NewClientContext when preparation scopes need caller cancellation.
 func NewClient(options ...ClientOption) (*Client, error) {
 	return NewClientContext(context.Background(), options...)
@@ -102,12 +104,14 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 	// callback later changes that registry for a future client.
 	names := slices.Sorted(maps.Keys(config.stores))
 	captured := make(map[*Registry]*registryDeclarations)
+	var selected []*registryDeclarations
 	capture := func(registry *Registry) *registryDeclarations {
 		if declarations, ok := captured[registry]; ok {
 			return declarations
 		}
 		declarations := captureRegistry(registry)
 		captured[registry] = declarations
+		selected = append(selected, declarations)
 		return declarations
 	}
 	defaults := capture(config.registry)
@@ -124,12 +128,27 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 			}
 		}
 	}
+	for _, declarations := range selected {
+		if err := artifacts.Protect("registry", "metadata", func() error { return validateDefinitionMetadata(declarations) }); err != nil {
+			return nil, err
+		}
+	}
+	// Finish every selected base schema before any definition constructor or
+	// composition callback can change application configuration for another store.
+	schemas := make(map[*registryDeclarations]registrySchemas)
+	for _, declarations := range selected {
+		prepared, err := prepareRegistrySchemas(declarations, config.naming)
+		if err != nil {
+			return nil, err
+		}
+		schemas[declarations] = prepared
+	}
 	compiled := make(map[*registryDeclarations]registrySnapshot)
 	compile := func(declarations *registryDeclarations) (registrySnapshot, error) {
 		if frozen, ok := compiled[declarations]; ok {
 			return frozen, nil
 		}
-		frozen, err := compileRegistry(ctx, declarations, config.naming, config.reactorServices, config.validateEventTypes)
+		frozen, err := compilePreparedRegistry(ctx, declarations, schemas[declarations], config.reactorServices, config.validateEventTypes)
 		if err == nil {
 			compiled[declarations] = frozen
 		}

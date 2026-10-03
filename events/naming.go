@@ -4,13 +4,16 @@
 package events
 
 import (
-	"github.com/cratis/chronicle.go/compliance"
-	"github.com/cratis/chronicle.go/serialization"
 	"slices"
+
+	"github.com/cratis/chronicle.go/compliance"
+	"github.com/cratis/chronicle.go/internal/classifications"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // WithNamingPolicy compiles a detached descriptor for registry composition. It
-// does not mutate this descriptor, its handles, or any existing catalog.
+// does not mutate this descriptor, its handles, or any existing catalog. Provider
+// classifications are frozen by Go member identity for subsequent rebinding.
 func (d Descriptor) WithNamingPolicy(policy serialization.NamingPolicy) (Descriptor, error) {
 	plan, err := serialization.Compile(d.typ, policy)
 	if err != nil {
@@ -28,5 +31,11 @@ func (d Descriptor) WithNamingPolicy(policy serialization.NamingPolicy) (Descrip
 		d.protection[i] = compliance.Property(path, declaration.Metadata())
 	}
 	d.plan = plan
-	return d.compileDeclarations()
+	d.protection, err = classifications.Snapshot(d.protection, func(declarations []compliance.Declaration) error {
+		d.protection = declarations
+		var compileErr error
+		d, compileErr = d.compileDeclarations()
+		return compileErr
+	})
+	return d, err
 }

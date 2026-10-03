@@ -44,6 +44,7 @@ type supervisedKernel struct {
 	registrations       atomic.Int32
 	registered          chan struct{}
 	register            func(context.Context) error
+	registerEventTypes  func(context.Context, *eventtypes.RegisterEventTypesRequest) error
 	appendCall          func(context.Context) error
 	mu                  sync.Mutex
 	namespaceCounts     map[string]int
@@ -65,8 +66,13 @@ func (k *supervisedKernel) EnsureNamespace(_ context.Context, r *namespaces.Ensu
 	k.mu.Unlock()
 	return &namespaces.CommandResult{IsAuthorized: true}, nil
 }
-func (k *supervisedKernel) RegisterEventTypes(ctx context.Context, _ *eventtypes.RegisterEventTypesRequest) (*eventtypes.CommandResult, error) {
+func (k *supervisedKernel) RegisterEventTypes(ctx context.Context, request *eventtypes.RegisterEventTypesRequest) (*eventtypes.CommandResult, error) {
 	k.registrations.Add(1)
+	if k.registerEventTypes != nil {
+		if err := k.registerEventTypes(ctx, request); err != nil {
+			return nil, err
+		}
+	}
 	if k.register != nil {
 		if err := k.register(ctx); err != nil {
 			return nil, err

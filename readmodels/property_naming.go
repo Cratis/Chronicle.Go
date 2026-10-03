@@ -7,12 +7,14 @@ import (
 	"slices"
 
 	"github.com/cratis/chronicle.go/compliance"
+	"github.com/cratis/chronicle.go/internal/classifications"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
 // WithNamingPolicy compiles detached property metadata for registry composition.
 // Container names and declaration identity are unchanged; existing typed handles
-// remain valid when used with the resulting client catalog.
+// remain valid when used with the resulting client catalog. Provider classifications
+// are frozen by Go member identity for subsequent naming and producer binding.
 func (d Descriptor) WithNamingPolicy(policy serialization.NamingPolicy) (Descriptor, error) {
 	if d.definition == nil {
 		return Descriptor{}, invalid("model required")
@@ -48,7 +50,12 @@ func (d Descriptor) WithNamingPolicy(policy serialization.NamingPolicy) (Descrip
 		}
 		copy.config.protection[i] = compliance.Property(path, declaration.Metadata())
 	}
-	copy.schema, err = modelSchema(plan, copy.config)
+	copy.config.protection, err = classifications.Snapshot(copy.config.protection, func(declarations []compliance.Declaration) error {
+		copy.config.protection = declarations
+		var schemaErr error
+		copy.schema, schemaErr = modelSchema(plan, copy.config)
+		return schemaErr
+	})
 	if err != nil {
 		return Descriptor{}, err
 	}
