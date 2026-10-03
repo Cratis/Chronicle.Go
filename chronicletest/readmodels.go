@@ -24,7 +24,10 @@ import (
 // ReadModelOptions configures a scenario before production registry compilation.
 // Projection replaces the discovered producer (including a reducer). Initial
 // supplies reducer state, copied through production serialization at construction;
-// initial projection state is unsupported and fails explicitly.
+// initial projection state is unsupported and fails explicitly. Projection
+// declarations with nonempty initial state are also refused: the pinned kernel's
+// all-instance replay omits that state (Chronicle.Go#38). Use a production
+// EventScenario and materialized reads to witness initial values instead.
 type ReadModelOptions[M any] struct {
 	// Projection replaces the registered producer for M in this fixture only.
 	Projection *projections.Declaration
@@ -126,6 +129,9 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 	}
 	if option.Initial != nil {
 		return fail(fmt.Errorf("%w: projection initial state", chronicle.ErrUnsupported))
+	}
+	if s.projection.KernelDefinition().InitialModelState != "{}" {
+		return fail(fmt.Errorf("%w: kernel all-instance replay omits projection initial state; use materialized reads (Chronicle.Go#38)", ErrFidelityUnavailable))
 	}
 	if len(s.artifacts.Reactors) != 0 || len(s.artifacts.Reducers) != 0 {
 		return fail(fmt.Errorf("%w: projection scenario registry contains other Go observers; isolate the registry or use EventScenario for live lifecycle", chronicle.ErrUnsupported))

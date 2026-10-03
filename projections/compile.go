@@ -58,6 +58,9 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 	if d.err != nil {
 		return locate(d.err)
 	}
+	if d.globalFor != nil && (d.initialState != "" || len(d.labels) != 0) {
+		return locate(invalid("global handlers cannot author initial state or artifact labels"))
+	}
 	if d.model.GoType() == nil || catalog == nil || blank(d.id) || blank(string(d.sequence)) {
 		return locate(invalid("model, catalog, projection identity and sequence required"))
 	}
@@ -65,7 +68,11 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 	if err != nil {
 		return locate(err)
 	}
-	compiled := &definition{id: d.id, model: bound, sequence: d.sequence, passive: d.passive, notRewindable: d.notRewindable, variant: d.variant, sequenceExplicit: d.sequenceExplicit}
+	initialState, err := prepareInitialState(d.model, d.initialState)
+	if err != nil {
+		return locate(err)
+	}
+	compiled := &definition{id: d.id, model: bound, sequence: d.sequence, passive: d.passive, notRewindable: d.notRewindable, variant: d.variant, sequenceExplicit: d.sequenceExplicit, initialState: initialState, labels: slices.Clone(d.labels)}
 	for _, event := range d.aliases {
 		if err = validateEvent(catalog, event); err != nil {
 			return locate(err)

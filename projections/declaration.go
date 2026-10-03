@@ -41,6 +41,8 @@ type declaration struct {
 	globals                                    []globalDeclaration
 	children                                   []childDeclaration
 	nodes                                      map[reflect.Type]*declaration
+	initialState                               string
+	labels                                     []string
 	err                                        error
 }
 type subscription struct {
@@ -210,6 +212,7 @@ func UsingConstantKey(value string) FromOption {
 func cloneDeclaration(d *declaration) *declaration {
 	copy := *d
 	copy.aliases = maps.Clone(d.aliases)
+	copy.labels = slices.Clone(d.labels)
 	copy.entering = slices.Clone(d.entering)
 	copy.subscriptions = slices.Clone(d.subscriptions)
 	for i := range copy.subscriptions {

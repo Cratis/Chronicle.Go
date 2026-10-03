@@ -113,6 +113,16 @@ func (d Descriptor) EventSequence() events.SequenceID { return d.definition.conf
 // must not mutate it during the call. This does not apply encryption.
 func (d Descriptor) Marshal(value any) ([]byte, error) { return d.definition.plan.Marshal(value) }
 
+// RebindJSON returns a detached serialized snapshot with this descriptor's names.
+// The original descriptor must describe the same Go type. Explicit nulls and
+// omissions survive; no user callbacks or encryption are invoked.
+func (d Descriptor) RebindJSON(data []byte, original Descriptor) ([]byte, error) {
+	if d.definition == nil || original.definition == nil {
+		return nil, invalid("matching model descriptors required")
+	}
+	return original.definition.plan.RebindJSON(data, d.definition.plan)
+}
+
 // Model is a typed, immutable declaration, normally returned by chronicle.RegisterReadModel.
 type Model[T any] struct{ descriptor Descriptor }
 
