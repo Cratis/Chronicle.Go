@@ -1,4 +1,4 @@
-# Validate the single root Go module independently of local workspaces.
+# Validate every explicitly listed Go module independently of local workspaces.
 name: Go Build
 
 on:
@@ -21,29 +21,58 @@ env:
   GOWORK: 'off'
 
 jobs:
-  test:
-    name: Test (${{ matrix.os }}, Go ${{ matrix.go }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        go: ['1.26.x', '1.27.x']
-        include:
-          - os: macos-latest
-            go: '1.27.x'
-          - os: windows-latest
-            go: '1.27.x'
+  modules:
+    name: Module layout and matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.modules.outputs.matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: ${{ matrix.go }}
-          cache: ${{ hashFiles('go.sum') != '' }}
-          cache-dependency-path: go.sum
+          go-version: '1.26.x'
+          cache: false
+      - name: Test native module policy
+        run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
+      - name: Enforce module allow-list and portable paths
+        id: modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          matrix=$(python3 -B .github/scripts/go_modules.py matrix)
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+      - name: Verify public nested root dependencies (including unpublished previews)
+        run: python3 -B .github/scripts/go_modules.py dependencies
+
+  test:
+    name: ${{ matrix.module.dir == '.' && format('Test ({0}, Go {1})', matrix.platform.os, matrix.platform.go) || format('Test ({0}, Go {1}) ({2})', matrix.platform.os, matrix.platform.go, matrix.module.dir) }}
+    needs: modules
+    defaults:
+      run:
+        working-directory: ${{ matrix.module.dir }}
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJSON(needs.modules.outputs.matrix).module }}
+        platform:
+          - {os: ubuntu-latest, go: '1.26.x'}
+          - {os: ubuntu-latest, go: '1.27.x'}
+          - {os: macos-latest, go: '1.27.x'}
+          - {os: windows-latest, go: '1.27.x'}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.platform.go }}
+          cache: ${{ hashFiles(format('{0}/go.sum', matrix.module.dir)) != '' }}
+          cache-dependency-path: ${{ matrix.module.dir }}/go.sum
       - name: Download dependencies
         run: go mod download
       - name: Verify dependency checksums
@@ -56,7 +85,14 @@ jobs:
         run: go test -count=1 -timeout=2m ./...
 
   race:
-    name: Race detector
+    name: ${{ matrix.module.dir == '.' && 'Race detector' || format('Race detector ({0})', matrix.module.dir) }}
+    needs: modules
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.modules.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.module.dir }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -68,12 +104,19 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.27.x'
-          cache: ${{ hashFiles('go.sum') != '' }}
-          cache-dependency-path: go.sum
+          cache: ${{ hashFiles(format('{0}/go.sum', matrix.module.dir)) != '' }}
+          cache-dependency-path: ${{ matrix.module.dir }}/go.sum
       - run: go test -race -count=1 -timeout=3m ./...
 
   lint:
-    name: Go lint and module hygiene
+    name: ${{ matrix.module.dir == '.' && 'Go lint and module hygiene' || format('Go lint and module hygiene ({0})', matrix.module.dir) }}
+    needs: modules
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.modules.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.module.dir }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -83,49 +126,29 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.26.x'
-          cache: ${{ hashFiles('go.sum') != '' }}
-          cache-dependency-path: go.sum
-      - name: Verify gofmt
-        shell: bash
-        run: |
-          set -euo pipefail
-          unformatted=$(git ls-files -z -- '*.go' | xargs -0 -r gofmt -l)
-          if [ -n "$unformatted" ]; then
-            printf 'Run gofmt on:\n%s\n' "$unformatted"
-            exit 1
-          fi
-      - name: Enforce single-module layout and portable paths
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import json, subprocess
-          files = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
-          files = [p for p in files if p]
-          modules = [p for p in files if p == 'go.mod' or p.endswith('/go.mod')]
-          if modules != ['go.mod']:
-              raise SystemExit('This release workflow supports exactly one root go.mod; design nested module releases first.')
-          folded = [p.casefold() for p in files]
-          if len(set(folded)) != len(folded):
-              raise SystemExit('Paths differing only by case are not portable.')
-          module = json.loads(subprocess.check_output(['go', 'mod', 'edit', '-json']))
-          if module.get('Replace'):
-              raise SystemExit('Published modules must not rely on replace directives; consumers ignore them.')
-          PY
-      - name: Check tidy manifests with the minimum supported Go
-        run: |
-          go mod tidy
-          changes=$(git status --porcelain --untracked-files=normal -- go.mod go.sum)
-          if [ -n "$changes" ]; then
-            printf 'Commit go mod tidy changes:\n%s\n' "$changes"
-            exit 1
-          fi
+          cache: ${{ hashFiles(format('{0}/go.sum', matrix.module.dir)) != '' }}
+          cache-dependency-path: ${{ matrix.module.dir }}/go.sum
+      - name: Verify gofmt for this module only
+        env:
+          MODULE_DIR: ${{ matrix.module.dir }}
+        run: python3 -B "$GITHUB_WORKSPACE/.github/scripts/go_modules.py" gofmt --root "$GITHUB_WORKSPACE" --module "$MODULE_DIR"
+      - name: Check tidy manifests with the minimum supported Go (without edits)
+        run: go mod tidy -diff
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.14.0
+          working-directory: ${{ matrix.module.dir }}
           args: --timeout=3m
 
   vulnerabilities:
-    name: Go vulnerability check
+    name: ${{ matrix.module.dir == '.' && 'Go vulnerability check' || format('Go vulnerability check ({0})', matrix.module.dir) }}
+    needs: modules
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.modules.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.module.dir }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -135,8 +158,8 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.27.x'
-          cache: ${{ hashFiles('go.sum') != '' }}
-          cache-dependency-path: go.sum
+          cache: ${{ hashFiles(format('{0}/go.sum', matrix.module.dir)) != '' }}
+          cache-dependency-path: ${{ matrix.module.dir }}/go.sum
       - name: Install pinned govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
       - run: govulncheck ./...
@@ -159,15 +182,19 @@ jobs:
         run: actionlint -color
 
   contracts:
+    needs: modules
+    if: fromJSON(needs.modules.outputs.matrix).module[0].contracts
     uses: ./.github/workflows/contracts.yml
 
   integration:
+    needs: modules
+    if: fromJSON(needs.modules.outputs.matrix).module[0].kernelIntegration
     uses: ./.github/workflows/integration.yml
 
   gate:
     name: Go gate
     if: always()
-    needs: [test, race, lint, vulnerabilities, workflows, contracts, integration]
+    needs: [modules, test, race, lint, vulnerabilities, workflows, contracts, integration]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
