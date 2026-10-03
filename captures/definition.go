@@ -86,20 +86,22 @@ func conditionPaths(paths []string, join string) Condition {
 	if len(paths) == 0 {
 		return Condition{err: invalid("condition properties required")}
 	}
-	for _, path := range paths {
+	operands := make([]string, len(paths))
+	for i, path := range paths {
 		if !validPath(path) {
 			return Condition{err: invalid("invalid condition property")}
 		}
+		operands[i] = propertyOperand(path)
 	}
-	return Condition{text: strings.Join(paths, join)}
+	return Condition{text: strings.Join(operands, join)}
 }
 
 // Transition detects a property's change between two literal string values.
 func Transition(property, from, to string) Condition {
-	if !validPath(property) || strings.ContainsAny(from+to, "\r\n\"") {
+	if !validPath(property) || !validLiteral(from) || !validLiteral(to) {
 		return Condition{err: invalid("invalid transition property or literal")}
 	}
-	return Condition{text: property + " from \"" + from + "\" to \"" + to + "\""}
+	return Condition{text: propertyOperand(property) + " from " + quoteLiteral(from) + " to " + quoteLiteral(to)}
 }
 
 // Added detects a newly observed item.
@@ -126,7 +128,8 @@ type AppendRule struct {
 
 // Append snapshots an event's persisted ID (not C#'s CLR simple-name quirk),
 // condition and serialized target-path assignments. Expressions are CDL text.
-// IDs outside CDL's dotted-identifier grammar fail at Build, never silently rename.
+// IDs outside CDL's uppercase-leading single-identifier grammar fail at Build,
+// never silently rename.
 func Append[T any](event events.Type[T], when Condition, assignments map[string]string) AppendRule {
 	return AppendRule{event: event.Descriptor().Ref().ID, when: when, assignments: maps.Clone(assignments)}
 }
@@ -139,7 +142,7 @@ type Mapping struct {
 
 // Rename maps a source property to a target property.
 func Rename(source, target string) Mapping {
-	if !validPath(source) || !validPath(target) {
+	if !validPath(source) || !validMapTarget(target) {
 		return Mapping{err: invalid("invalid mapping path")}
 	}
 	return Mapping{lines: []string{target + " = " + source}}
@@ -147,7 +150,7 @@ func Rename(source, target string) Mapping {
 
 // Template assigns a template without surrounding backticks.
 func Template(target, template string) Mapping {
-	if !validPath(target) || !line(template) || strings.ContainsRune(template, '`') {
+	if !validMapTarget(target) || !line(template) || strings.ContainsRune(template, '`') {
 		return Mapping{err: invalid("invalid mapping template")}
 	}
 	return Mapping{lines: []string{target + " = `" + template + "`"}}
@@ -157,26 +160,31 @@ func Template(target, template string) Mapping {
 type Translation struct{ From, To string }
 
 // Translate maps values in order; duplicate entries are retained like C#.
+// Targets must be nonempty CDL word tokens (letters, digits, underscores and
+// Unicode word characters), not quoted literals or paths.
 func Translate(target, source string, entries ...Translation) Mapping {
-	if !validPath(target) || !validPath(source) || len(entries) == 0 {
+	if !validMapTarget(target) || !validPath(source) || len(entries) == 0 {
 		return Mapping{err: invalid("invalid translation")}
 	}
 	result := Mapping{lines: []string{target + " = " + source + " translate"}}
 	for _, entry := range entries {
-		if strings.ContainsAny(entry.From+entry.To, "\r\n\"") {
+		if !validLiteral(entry.From) {
 			return Mapping{err: invalid("invalid translation literal")}
 		}
-		result.lines = append(result.lines, "  \""+entry.From+"\" => \""+entry.To+"\"")
+		if !validWord(entry.To) {
+			return Mapping{err: fmt.Errorf("%w: capture translation target must fit CDL's word grammar", faults.ErrUnsupported)}
+		}
+		result.lines = append(result.lines, "  "+quoteLiteral(entry.From)+" => "+entry.To)
 	}
 	return result
 }
 
 // Split splits a source property's value into ordered target properties.
 func Split(source, separator string, targets ...string) Mapping {
-	if !validPath(source) || len(targets) == 0 || strings.ContainsAny(separator, "\r\n\"") {
+	if !validPath(source) || len(targets) == 0 || !validLiteral(separator) {
 		return Mapping{err: invalid("invalid split")}
 	}
-	result := Mapping{lines: []string{"split " + source + " by \"" + separator + "\""}}
+	result := Mapping{lines: []string{"split " + source + " by " + quoteLiteral(separator)}}
 	for _, target := range targets {
 		if !validPath(target) {
 			return Mapping{err: invalid("invalid split target")}
@@ -246,7 +254,7 @@ func (b *Builder) Children(path, key string, scope Scope) *Builder {
 // Build validates source/key/conditions and renders a new named CDL definition.
 // It does not claim runtime support for every authorable language construct.
 func (b *Builder) Build(name string) (Definition, error) {
-	if b == nil || !validPath(name) || !validPath(b.key) || b.source.kind == "" || !line(b.source.name) {
+	if b == nil || !validCaptureName(name) || !validPath(b.key) || b.source.kind == "" || !line(b.source.name) {
 		return Definition{}, invalid("capture name, source and key required")
 	}
 	var out strings.Builder
@@ -284,7 +292,7 @@ func (b *Builder) Build(name string) (Definition, error) {
 		values []nested
 	}{{"nested", b.nested}, {"children", b.children}} {
 		for _, n := range group.values {
-			if !validPath(n.path) || (group.kind == "children" && !validPath(n.key)) {
+			if !validPath(n.path) || (group.kind == "children" && (!validMapTarget(n.path) || !validPath(n.key))) {
 				return Definition{}, invalid("invalid scope path or child key")
 			}
 			header := group.kind + " " + n.path
@@ -319,8 +327,8 @@ func renderScope(scope Scope, indent int, write func(int, string)) error {
 		}
 	}
 	for _, rule := range scope.appends {
-		if !validPath(string(rule.event)) {
-			return fmt.Errorf("%w: capture event ID must fit CDL's dotted identifier grammar", faults.ErrUnsupported)
+		if !validEventID(string(rule.event)) {
+			return fmt.Errorf("%w: capture event ID must fit CDL's uppercase-leading single identifier grammar", faults.ErrUnsupported)
 		}
 		if rule.when.err != nil {
 			return rule.when.err

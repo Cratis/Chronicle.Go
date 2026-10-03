@@ -70,6 +70,25 @@ CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
 
 The tests create isolated random stores, validate registration and schema preservation, exercise numeric/nullable/dictionary round trips and concurrency bounds, and read persisted events through public contracts. Stop your test container afterwards. A missing endpoint fails rather than silently skipping integration tests.
 
+### Pinned capture parser checks
+
+The optional capture AST test uses the real Screenplay 4.16.0 parser to check
+Go-rendered translation syntax, identifiers, condition kinds and literal round
+trips. It requires the .NET 10 SDK in addition to the normal Go/kernel setup:
+
+```sh
+dotnet build internal/integration/testdata/captureparser/CaptureParser.csproj \
+  -c Release -p:BaseIntermediateOutputPath="$PWD/.ai-work/captureparser/obj/" \
+  -o "$PWD/.ai-work/captureparser/bin/"
+CHRONICLE_CAPTURE_PARSER_DLL="$PWD/.ai-work/captureparser/bin/CaptureParser.dll" \
+CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
+  go test -tags=integration -count=1 -timeout=2m ./internal/integration
+```
+
+Without `CHRONICLE_CAPTURE_PARSER_DLL`, only this optional AST test skips; kernel
+capture validation still runs and checks compilation before capability errors.
+The Go unit regressions remain independent of .NET and a sibling checkout.
+
 ## Conventions
 
 - Use American English and idiomatic Go, including context cancellation and explicit error handling.

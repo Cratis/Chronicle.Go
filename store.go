@@ -63,14 +63,15 @@ type EventStore struct {
 	sequencesMu sync.Mutex
 	sequences   map[events.SequenceID]*eventsequences.Sequence
 
-	projectionSnapshot []projections.Definition
-	reactorSnapshot    []*reactors.Plan
-	reducerSnapshot    []*reducers.Plan
-	readModels         *readmodels.Service
-	reactors           storeObservers
-	reducers           storeObservers
-	readModelReactors  storeObservers
-	readModelChanges   readmodels.ReductionChanges
+	projectionSnapshot       []projections.Definition
+	reactorSnapshot          []*reactors.Plan
+	reducerSnapshot          []*reducers.Plan
+	readModelReactorSnapshot []*reactors.ReadModelPlan
+	readModels               *readmodels.Service
+	reactors                 storeObservers
+	reducers                 storeObservers
+	readModelReactors        storeObservers
+	readModelChanges         readmodels.ReductionChanges
 }
 
 // Name returns the logical store name.

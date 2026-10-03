@@ -14,10 +14,7 @@ import (
 )
 
 func (s *EventStore) readModelReactorPlans() []*reactors.ReadModelPlan {
-	if plans, ok := s.client.readModelReactors.stores[s.name]; ok {
-		return plans
-	}
-	return s.client.readModelReactors.defaults
+	return s.readModelReactorSnapshot
 }
 func (s *EventStore) startReadModelReactors(ctx context.Context, g *generation, waitReady bool) error {
 	var plans []observerPlan

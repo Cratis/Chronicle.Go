@@ -28,6 +28,7 @@ func (s *EventStore) initializeReadModelsFromSnapshot(snapshot registrySnapshot)
 	s.projectionSnapshot = snapshot.projections
 	s.reactorSnapshot = snapshot.reactors
 	s.reducerSnapshot = snapshot.reducers
+	s.readModelReactorSnapshot = snapshot.readModelReactors
 	service, err := readmodels.New(s.name, s.namespace, snapshot.models, &clientTransport{client: s.client, store: s}, readmodels.WithPassiveReader(s.readPassiveReducer), readmodels.WithReductionChanges(&s.readModelChanges))
 	if err != nil {
 		return err

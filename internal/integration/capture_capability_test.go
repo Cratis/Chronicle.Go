@@ -69,6 +69,35 @@ func TestKernelCaptureCapability(t *testing.T) {
 	if len(result.Data) != 1 || result.Data[0].Id != definition.ID().String() || result.Data[0].Declaration != definition.Declaration() || result.Data[0].Status != contracts.CaptureStatus_Stopped {
 		t.Fatal("saved capture differs or was activated")
 	}
+	// The actual kernel compiler must parse translations before its runtime
+	// validator reports the known map-operation capability gap.
+	translated, err := builder.Map(captures.Translate("status", "status", captures.Translation{From: `C:\new`, To: "open"})).Build("TranslatedCapture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, submit := range []func() error{func() error { return store.Captures().Validate(f.ctx, translated) }, func() error { return store.Captures().Save(f.ctx, translated) }} {
+		var failure *captures.ValidationError
+		if err = submit(); !errors.As(err, &failure) || len(failure.Messages) != 1 || failure.Messages[0] != "Map operations are not supported by the capturing engine yet" {
+			t.Fatalf("translation failed before runtime capability validation: %v", err)
+		}
+	}
+	persisted, err := contracts.NewCapturesClient(f.conn).GetCaptures(f.ctx, &contracts.GetCapturesRequest{EventStore: string(f.storeName)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = wire.CheckEnvelope(persisted); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, capture := range persisted.Data {
+		if capture.Id == translated.ID().String() {
+			found = capture.Declaration == translated.Declaration() && capture.Status == contracts.CaptureStatus_Stopped
+		}
+	}
+	if !found {
+		t.Fatal("runtime-unsupported translation was not saved as a stopped definition")
+	}
+	builder.Map()
 	for _, source := range []captures.Source{captures.Webhook("/items"), captures.MessageTopic("items")} {
 		unsupported, err := builder.From(source).Build("UnsupportedCapture")
 		if err != nil {

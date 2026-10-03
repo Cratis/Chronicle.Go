@@ -79,5 +79,24 @@ func (c *Client) selectedStoreSnapshot(store StoreName) (registrySnapshot, error
 	}
 	var err error
 	snapshot.models, err = readmodels.NewCatalog(models...)
-	return snapshot, err
+	if err != nil {
+		return registrySnapshot{}, err
+	}
+	snapshot.readModelReactors = c.readModelReactors.defaults
+	if selected, ok := c.readModelReactors.stores[store]; ok {
+		snapshot.readModelReactors = selected
+	}
+	snapshot.readModelReactors = slices.Clone(snapshot.readModelReactors)
+	for i, plan := range snapshot.readModelReactors {
+		model, ok := snapshot.models.LookupIdentifier(plan.Model().Identifier())
+		if !ok {
+			return registrySnapshot{}, fmt.Errorf("%w: read-model reactor model missing from selected store", ErrInvalidConfiguration)
+		}
+		bound, err := plan.ForModel(model)
+		if err != nil {
+			return registrySnapshot{}, err
+		}
+		snapshot.readModelReactors[i] = bound
+	}
+	return snapshot, nil
 }

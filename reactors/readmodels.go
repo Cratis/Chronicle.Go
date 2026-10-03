@@ -154,6 +154,22 @@ func (p *ReadModelPlan) Identifier() ID { return p.declaration.Identifier() }
 // Model returns the frozen model declaration.
 func (p *ReadModelPlan) Model() readmodels.Descriptor { return p.model }
 
+// ForModel returns a detached plan bound to the selected store's model snapshot.
+// The identifier, generation and Go type must match the compiled model. It does
+// not rediscover callbacks or mutate the original plan; catalog binding performs
+// no I/O and is safe for concurrent use.
+func (p *ReadModelPlan) ForModel(model readmodels.Descriptor) (*ReadModelPlan, error) {
+	if model.Identifier() != p.model.Identifier() || model.GoType() != p.model.GoType() || model.Generation() != p.model.Generation() {
+		return nil, invalid("read-model reactor binding requires the compiled model")
+	}
+	bound := *p
+	bound.model = model
+	effects := *p.effects
+	effects.declaration.config.sequence = model.EventSequence()
+	bound.effects = &effects
+	return &bound, nil
+}
+
 // IsMaterialized reports whether to use the snapshot-window RPC.
 func (p *ReadModelPlan) IsMaterialized() bool { return p.declaration.config.materialized }
 

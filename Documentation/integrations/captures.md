@@ -57,14 +57,26 @@ Preparation invokes it once without discovery, activation scopes or I/O.
 Source/key/map choices replace previous choices; append and scope declarations
 accumulate. Input maps and slices are copied. Repeated assignment keys have normal
 Go map replacement semantics; rendering sorts keys for reproducibility.
-Conditions and mapping expressions cannot inject new declaration lines.
+Conditions and mapping expressions cannot inject new declaration lines. String
+values in transitions, translation sources and split separators preserve literal
+backslashes, quotes, tabs and line breaks through CDL escaping. A property named
+`added` or `removed` remains a property-change condition, not an item lifecycle
+condition; only `Added()` and `Removed()` select those lifecycle triggers.
+
+Translation targets are unquoted, nonempty CDL word tokens, such as `open` or
+`Open_2`. Spaces, punctuation and dotted paths cannot be represented and fail with
+`chronicle.ErrUnsupported`. Map targets and child collection names must be single
+identifiers beginning with a lowercase ASCII letter or underscore.
 
 Unlike C# `AppendBuilder<TEvent>`, which uses the CLR simple type name, Go uses the
-registered **persisted event ID**. CDL currently requires dotted identifiers:
-letters followed by letters, digits or underscores per segment. IDs containing
-hyphens, slashes or other syntax fail with `chronicle.ErrUnsupported`; they are
-never silently renamed. Use a compatible persisted ID from the beginning, not a
-rename of an already persisted event solely for a capture.
+registered **persisted event ID**. The pinned Screenplay 4.16.0 parser requires a
+single identifier starting with an uppercase ASCII letter, followed by word
+characters (letters, decimal digits, underscores and other Unicode connectors or
+nonspacing marks in the basic multilingual plane). Lowercase-leading, dotted, hyphenated and slash-separated IDs
+fail with `chronicle.ErrUnsupported`; they are never silently renamed. Capture
+names are single identifiers beginning with an ASCII letter or underscore. Use a
+compatible persisted ID from the beginning, not a rename of an already persisted
+event solely for a capture.
 
 Webhook-source authorization is **not implemented**: CDL has no authorization
 fields and the kernel exposes no typed capture-definition submission RPC. Go does
