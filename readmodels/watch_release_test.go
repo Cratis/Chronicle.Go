@@ -93,6 +93,73 @@ func TestMaterializedWindowsNeverDecryptReleasedPlaintextAgain(t *testing.T) {
 	}
 }
 
+func TestNamespaceEncryptedWindowsValidateServerReleasedValuesWithoutRelease(t *testing.T) {
+	type namespaceSecret struct {
+		Shared string `json:"shared" chronicle:"encrypted(scope=namespace)"`
+	}
+	model, err := readmodels.Define[namespaceSecret]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	plaintext := base64.StdEncoding.EncodeToString(make([]byte, 256))
+	// The pinned kernel profile witnesses this final representation. Unlike
+	// the mixed/global refusal test, this is an admitted namespace-only window,
+	// not an unreleased sink document or an idempotence claim.
+	document := `{"shared":"` + plaintext + `"}`
+	kernel := &watchKernel{
+		release: func(context.Context, *compliancecontracts.ReleaseRequest) (*compliancecontracts.ReleaseResponse, error) {
+			t.Error("server-released namespace value sent to Release")
+			return nil, errors.New("unexpected second release")
+		},
+		get: func(context.Context, *contracts.GetInstancesRequest) (*contracts.GetInstancesResponse, error) {
+			return &contracts.GetInstancesResponse{Instances: []string{document}}, nil
+		},
+		observe: func(_ *contracts.ObserveInstancesRequest, stream grpc.ServerStreamingServer[contracts.ObserveInstancesResponse]) error {
+			if err := stream.Send(&contracts.ObserveInstancesResponse{Instances: []string{document}}); err != nil {
+				return err
+			}
+			<-stream.Context().Done()
+			return stream.Context().Err()
+		},
+	}
+	service, ctx := watchFixture(t, kernel, model.Descriptor())
+	reader := readmodels.For(service, model)
+	raw, err := service.Materialized().GetInstances(ctx, model.Identifier(), nil)
+	if err != nil || len(raw) != 1 || string(raw[0]) != document {
+		t.Fatal("raw namespace window changed", err)
+	}
+	typed, err := reader.Materialized().GetInstances(ctx, nil)
+	if err != nil || len(typed) != 1 || typed[0].Shared != plaintext {
+		t.Fatal("typed namespace window changed", err)
+	}
+	rawSub, err := service.Materialized().ObserveInstances(ctx, model.Identifier(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := rawSub.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	raw, err = rawSub.Recv()
+	if err != nil || len(raw) != 1 || string(raw[0]) != document {
+		t.Fatal("raw namespace snapshot changed", err)
+	}
+	typedSub, err := reader.Materialized().ObserveInstances(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := typedSub.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	typed, err = typedSub.Recv()
+	if err != nil || len(typed) != 1 || typed[0].Shared != plaintext {
+		t.Fatal("typed namespace snapshot changed", err)
+	}
+}
+
 func TestClassifiedWatchesRefuseBeforeTransportOrLocalAttachment(t *testing.T) {
 	for _, kind := range []readmodels.ObserverType{readmodels.Projection, readmodels.Reducer} {
 		for _, classification := range []compliance.Classification{{PII: true}, {Encrypted: true}, {Encrypted: true, Scope: compliance.Namespace}, {Encrypted: true, Scope: compliance.Global}} {
