@@ -132,7 +132,7 @@ func (n *node) compileFamily(state *compileState, policy NamingPolicy) error {
 			return err
 		}
 		for _, f := range fields {
-			if f.name == derivedTypeID {
+			if strings.EqualFold(f.name, derivedTypeID) {
 				return codecError(registration, f.goName, "property collides with discriminator")
 			}
 			if dereference(f.field.Type).Kind() == reflect.Interface {
