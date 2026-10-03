@@ -27,6 +27,7 @@ type Registry struct {
 	projections            []projections.Declaration
 	reactors               []reactorDeclaration
 	reducers               []reducers.Declaration
+	seeders                []seederDeclaration
 	reactorMiddlewares     []any
 	reactorSideEffects     []reactorSideEffectHandler
 }

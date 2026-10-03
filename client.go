@@ -7,7 +7,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"maps"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +20,7 @@ import (
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/reducers"
+	"github.com/cratis/chronicle.go/seeding"
 )
 
 // Client owns a generation supervisor and frozen registries. Construct with
@@ -53,6 +56,8 @@ type Client struct {
 	storeProjections  map[StoreName][]projections.Definition
 	reactors          reactorCatalogs
 	reducers          reducerCatalogs
+	seeds             seeding.Definition
+	storeSeeds        map[StoreName]seeding.Definition
 }
 
 // String describes the client without revealing endpoints or credentials.
@@ -63,7 +68,18 @@ func (c *Client) GoString() string { return c.String() }
 
 // NewClient validates and freezes configuration without network I/O. TLS validates
 // by default. Omitted credentials select Chronicle's public development credentials.
+// Registered seeders run synchronously once to prepare immutable definitions.
+// Use NewClientContext when preparation scopes need caller cancellation.
 func NewClient(options ...ClientOption) (*Client, error) {
+	return NewClientContext(context.Background(), options...)
+}
+
+// NewClientContext is NewClient with a context for definition preparation and
+// optional scoped construction. The context is not retained by the client.
+func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	config := clientConfig{uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
 		keepAliveTimeout: 5 * time.Second, reactorRetryWait: connection.Wait, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
 	for _, option := range options {
@@ -76,7 +92,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	frozen, err := freezeRegistry(config.registry, config.naming, config.reactorServices, config.validateEventTypes)
+	frozen, err := freezeRegistry(ctx, config.registry, config.naming, config.reactorServices, config.validateEventTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -84,14 +100,16 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		catalogs: make(map[StoreName]*events.Catalog), storeConstraints: make(map[StoreName][]constraints.Definition), stores: make(map[storeKey]*EventStore),
 		readModelCatalog: frozen.models, readModelCatalogs: make(map[StoreName]*readmodels.Catalog),
 		projections: frozen.projections, storeProjections: make(map[StoreName][]projections.Definition),
+		seeds: frozen.seeds, storeSeeds: make(map[StoreName]seeding.Definition),
 		changed: make(chan struct{}), closeDone: make(chan struct{}),
 		reactors: reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)},
 		reducers: reducerCatalogs{defaults: frozen.reducers, stores: make(map[StoreName][]*reducers.Plan)}}
-	for name, registry := range config.stores {
+	for _, name := range slices.Sorted(maps.Keys(config.stores)) {
+		registry := config.stores[name]
 		if strings.TrimSpace(string(name)) == "" {
 			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
 		}
-		frozen, err := freezeRegistry(registry, config.naming, config.reactorServices, config.validateEventTypes)
+		frozen, err := freezeRegistry(ctx, registry, config.naming, config.reactorServices, config.validateEventTypes)
 		if err != nil {
 			return nil, err
 		}
@@ -99,6 +117,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		c.readModelCatalogs[name], c.storeProjections[name] = frozen.models, frozen.projections
 		c.reactors.stores[name] = frozen.reactors
 		c.reducers.stores[name] = frozen.reducers
+		c.storeSeeds[name] = frozen.seeds
 	}
 	c.config.registry, c.config.stores = nil, nil
 	c.config.skipCompatibility = config.skipCompatibility || uri.skipCompatibility
@@ -172,7 +191,7 @@ func nilValue(value any) bool {
 
 // Dial constructs and connects a client. Startup failure closes owned resources.
 func Dial(ctx context.Context, options ...ClientOption) (*Client, error) {
-	client, err := NewClient(options...)
+	client, err := NewClientContext(ctx, options...)
 	if err != nil {
 		return nil, err
 	}

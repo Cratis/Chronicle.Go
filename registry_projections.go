@@ -4,6 +4,7 @@
 package chronicle
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/reducers"
+	"github.com/cratis/chronicle.go/seeding"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -40,9 +42,10 @@ type registrySnapshot struct {
 	projections []projections.Definition
 	reactors    []*reactorPlan
 	reducers    []*reducers.Plan
+	seeds       seeding.Definition
 }
 
-func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
+func freezeRegistry(ctx context.Context, registry *Registry, policy serialization.NamingPolicy, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
 	var eventTypes []events.Descriptor
 	var migrations []events.MigrationDeclaration
 	var constraintCompositions []constraintComposition
@@ -50,6 +53,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 	var declarations []projections.Declaration
 	var reactorDeclarations []reactorDeclaration
 	var reducerDeclarations []reducers.Declaration
+	var seeders []seederDeclaration
 	var reactorMiddlewares []any
 	var reactorSideEffects []reactorSideEffectHandler
 	snapshot := registrySnapshot{}
@@ -61,6 +65,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 		declarations = slices.Clone(registry.projections)
 		reactorDeclarations = slices.Clone(registry.reactors)
 		reducerDeclarations = slices.Clone(registry.reducers)
+		seeders = slices.Clone(registry.seeders)
 		reactorMiddlewares = slices.Clone(registry.reactorMiddlewares)
 		reactorSideEffects = slices.Clone(registry.reactorSideEffects)
 		snapshot.constraints = slices.Clone(registry.constraints)
@@ -166,6 +171,9 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 	if err != nil {
 		return snapshot, err
 	}
-	err = compileReducers(&snapshot, reducerDeclarations, services)
+	if err = compileReducers(&snapshot, reducerDeclarations, services); err != nil {
+		return snapshot, err
+	}
+	snapshot.seeds, err = prepareSeeders(ctx, snapshot.events, seeders, services)
 	return snapshot, err
 }
