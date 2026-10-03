@@ -32,6 +32,16 @@ func TestDecisionServerProtectionAndGenerationRefuseBeforeAndAfterFold(t *testin
 		{"malformed property", `{"properties":{"id":{"type":"string"},"secret":"PRIVATE"}}`, 1},
 		{"duplicate metadata hides classification", `{"properties":{"id":{"type":"string"},"secret":{"security":[{"metadataType":"EncryptedSubject"}],"security":[]}}}`, 1},
 		{"invalid JSON", `{"properties":PRIVATE`, 1},
+		{"dependency namespace", `{"properties":{"id":{"type":"string"},"name":{"type":"string"}},"dependencies":{"id":{"properties":{"name":{"security":[{"metadataType":"EncryptedNamespace"}]}}}}}`, 1},
+		{"dependency global", `{"properties":{"id":{"type":"string"}},"dependencies":{"id":{"properties":{"name":{"security":[{"metadataType":"EncryptedGlobal"}]}}}}}`, 1},
+		{"dependency PII", `{"properties":{"id":{"type":"string"}},"dependencies":{"id":{"properties":{"name":{"compliance":[{"metadataType":"PII"}]}}}}}`, 1},
+		{"dependency unknown", `{"properties":{"id":{"type":"string"}},"dependencies":{"id":{"properties":{"name":{"security":[{"metadataType":"FutureProtection"}]}}}}}`, 1},
+		{"dependency reference", `{"properties":{"id":{"type":"string"}},"dependencies":{"id":{"$ref":"#/definitions/private"}},"definitions":{"private":{"properties":{"name":{"security":[{"metadataType":"EncryptedNamespace"}]}}}}}`, 1},
+		{"nested dependency reference", `{"properties":{"id":{"type":"string"},"nested":{"dependencies":{"trigger":{"$ref":"#/definitions/private"}}}},"definitions":{"private":{"security":[{"metadataType":"EncryptedGlobal"}]}}}`, 1},
+		{"dependency malformed metadata", `{"properties":{"id":{"type":"string"}},"dependencies":{"id":{"security":"PRIVATE"}}}`, 1},
+		{"dependency duplicate hides metadata", `{"properties":{"id":{"type":"string"}},"dependencies":{"id":{"security":[{"metadataType":"EncryptedNamespace"}]},"id":{}}}`, 1},
+		{"unknown container metadata", `{"properties":{"id":{"type":"string"}},"extension":{"properties":{"name":{"security":"PRIVATE"}}}}`, 1},
+		{"property names metadata", `{"properties":{"id":{"type":"string"}},"propertyNames":{"security":[{"metadataType":"EncryptedGlobal"}]}}`, 1},
 		{"generation changed", "", 2},
 		{"generation missing", "", 0},
 	} {
@@ -82,7 +92,7 @@ func TestDecisionAgreementAllowsPlainNonKeySchemaDifferencesAtSelectedGeneration
 		if _, ok := request.(*contracts.GetDefinitionsRequest); ok {
 			response := f.respond(request).(*contracts.GetDefinitionsResponse)
 			response.ReadModels[0].Type.Generation = 2
-			response.ReadModels[0].Schema = `{"properties":{"id":{"type":"string"},"newServerProperty":{"$ref":"#/definitions/plain~1node"}},"definitions":{"plain/node":{"type":"string"}}}`
+			response.ReadModels[0].Schema = `{"properties":{"id":{"type":"string"},"newServerProperty":{"$ref":"#/definitions/plain~1node"}},"definitions":{"plain/node":{"type":"string"}},"dependencies":{"id":["newServerProperty"],"newServerProperty":{"properties":{"name":{"type":"number","default":{"security":[{"metadataType":"PII"}]}},"annotation":{"enum":[{"security":null}]}}}}}`
 			return response, nil
 		}
 		return nil, nil
