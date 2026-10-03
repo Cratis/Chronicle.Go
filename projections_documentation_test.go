@@ -14,6 +14,10 @@ func TestOrderProjectionSnippetsMatchCompiledExample(t *testing.T) {
 	checkProjectionSnippets(t, "examples/projections/orders.go", "Documentation/projections/orders.md", []string{"orders-events", "orders-model-bound", "orders-fluent"})
 }
 
+func TestVariantProjectionSnippetsMatchCompiledExample(t *testing.T) {
+	checkProjectionSnippets(t, "examples/projections/variants.go", "Documentation/projections/variants.md", []string{"variant-models", "variant-model-bound", "variant-fluent"})
+}
+
 func TestProjectionSnippetsMatchCompiledExample(t *testing.T) {
 	checkProjectionSnippets(t, "examples/projections/main.go", "Documentation/projections/index.md", []string{"model-bound", "fluent"})
 }
