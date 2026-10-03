@@ -36,6 +36,8 @@
   href: reactors.md
 - name: Reducers
   href: reducers.md
+- name: Testing with scenarios
+  href: testing-with-scenarios.md
 - name: Parity and limitations
   href: parity.md
 - name: Releases
