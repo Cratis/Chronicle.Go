@@ -26,14 +26,34 @@ import (
 // ambiguous panic identities, cycles, or traversal limits discard the entire
 // diagnostic graph; application inspection hooks are never called or forwarded.
 func WithServices(factory dependencyinjection.ScopeFactory) chronicle.ClientOption {
-	if factory == nil || (reflect.ValueOf(factory).Kind() == reflect.Pointer && reflect.ValueOf(factory).IsNil()) {
-		return chronicle.WithServices(nil)
+	return chronicle.WithServices(adaptFactory(factory))
+}
+
+// PrepareClient prepares the captured identity with borrowed Fundamentals scopes.
+// Nil selects captured WithServices or the container-free default. Argument and
+// retained-outcome rules are those of ClientPreparation.Prepare. Close Chronicle
+// and join any outstanding PrepareClient call before closing the provider.
+func PrepareClient(ctx context.Context, p *chronicle.ClientPreparation, scopes dependencyinjection.ScopeFactory) (*chronicle.Client, error) {
+	return p.Prepare(ctx, adaptFactory(scopes))
+}
+
+func adaptFactory(factory dependencyinjection.ScopeFactory) reactors.ScopeFactory {
+	if factory == nil {
+		return nil
+	}
+	value := reflect.ValueOf(factory)
+	switch value.Kind() {
+	case reflect.Pointer, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan, reflect.Interface:
+		if value.IsNil() {
+			// Preserve typed nil for Prepare's pre-admission validation.
+			return (*scopeFactory)(nil)
+		}
 	}
 	adapter := scopeFactory{factory}
 	if catalog, ok := factory.(dependencyinjection.Catalog); ok {
-		return chronicle.WithServices(catalogFactory{adapter, catalog})
+		return catalogFactory{adapter, catalog}
 	}
-	return chronicle.WithServices(adapter)
+	return adapter
 }
 
 type scopeFactory struct {
@@ -82,6 +102,9 @@ func (s adaptedScope) Close(ctx context.Context) error { return sanitizeError(s.
 // Arc adapters can verify ScopeOwner/ContextChecker before borrowing it. Never
 // close it or retain it past the delivery; Chronicle owns its operation lifetime.
 func Scope(scope reactors.Scope) (dependencyinjection.Scope, bool) {
+	if wrapped, ok := scope.(interface{ UnderlyingScope() reactors.Scope }); ok {
+		scope = wrapped.UnderlyingScope()
+	}
 	adapted, ok := scope.(adaptedScope)
 	return adapted.scope, ok
 }

@@ -21,6 +21,7 @@ Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Without th
 - [Reducers](reducers.md): nullable state folds, convention discovery and passive reads.
 - [Read models](read-models/index.md): typed reads, best-effort watches and materialized windows.
 - [Definition factories](definition-factories.md): prepare projections, constraints and migrations from configuration.
+- [Shared-provider client preparation](facade-composition.md): bind one borrowed client identity before preparing its definitions.
 - [Decision reads](read-models/decision-reads.md): admitted optimistic projection guards and owner-controlled commits.
 - [Read-model reactors](read-model-reactors.md): Added/Modified/Removed callbacks with scoped effects.
 - [Patterns](patterns.md): contextual and usual-action questions with honest empty answers.

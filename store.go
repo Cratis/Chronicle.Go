@@ -121,6 +121,9 @@ func (s *EventStore) EventSequence(id events.SequenceID) (*eventsequences.Sequen
 // Concurrent calls share registration; failed passes can be retried on the same handle.
 // Required registrations never report successful readiness after a failed envelope.
 func (c *Client) EventStore(ctx context.Context, name StoreName, options ...StoreOption) (*EventStore, error) {
+	if err := c.requirePrepared("event store", false); err != nil {
+		return nil, err
+	}
 	config := storeConfig{namespace: DefaultNamespace}
 	for _, option := range options {
 		if option == nil {
@@ -142,7 +145,7 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 	}
 	store := c.stores[key]
 	if store == nil {
-		snapshot, err := c.selectedStoreSnapshot(key.name)
+		snapshot, err := c.selectedStoreSnapshotLocked(key.name)
 		if err != nil {
 			c.mu.Unlock()
 			return nil, err
@@ -174,6 +177,9 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 
 // EventStores lists authorized logical stores after connection preflight.
 func (c *Client) EventStores(ctx context.Context) ([]StoreName, error) {
+	if err := c.requirePrepared("event stores", false); err != nil {
+		return nil, err
+	}
 	if err := c.connect(ctx, false); err != nil {
 		return nil, err
 	}

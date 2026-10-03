@@ -7,12 +7,15 @@ import "context"
 
 // Close immediately cancels client-owned work and joins it. Repeated calls return
 // the same cleanup result. Borrowed channels and token sources are never closed.
+// Preparation is caller-owned: Close cancels it but does not join its callbacks
+// or cleanup. Join Prepare before closing the borrowed scope provider.
 // Use CloseContext for a bounded wait when a callback may ignore cancellation.
 func (c *Client) Close() error { return c.CloseContext(context.Background()) }
 
 // CloseContext cancels owned work immediately and waits up to ctx's deadline for
 // cleanup. A context error means cleanup is incomplete; it continues in the
 // background. A later Close/CloseContext can join it. Go cannot kill callbacks.
+// Like Close, this does not join caller-owned preparation.
 func (c *Client) CloseContext(ctx context.Context) error {
 	c.beginShutdown(false)
 	c.cancel()

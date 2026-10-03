@@ -32,9 +32,9 @@ func (c *Client) Connect(ctx context.Context) error { return c.connect(ctx, true
 
 func (c *Client) connect(ctx context.Context, explicit bool) error {
 	c.mu.Lock()
-	if c.closed {
+	if err := c.requirePreparedLocked("connect", false); err != nil {
 		c.mu.Unlock()
-		return ErrClosed
+		return err
 	}
 	if err := ctx.Err(); err != nil {
 		c.mu.Unlock()

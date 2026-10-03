@@ -65,6 +65,9 @@ func (s *EventStore) WaitForRegistration(ctx context.Context) (RegistrationOutco
 // when called. Connect alone does not imply artifact readiness. Concurrently
 // created stores carry their own barrier. Terminal failures are not retried here.
 func (c *Client) Ready(ctx context.Context) error {
+	if err := c.requirePrepared("ready", false); err != nil {
+		return err
+	}
 	stores := c.storeSnapshot()
 	for {
 		g, attemptCtx, done, err := c.acquireReady(ctx)
@@ -91,7 +94,7 @@ func (c *Client) Ready(ctx context.Context) error {
 }
 
 func retryReadiness(ctx context.Context, err error) bool {
-	return err != nil && ctx.Err() == nil && !terminalConnectionError(err)
+	return err != nil && ctx.Err() == nil && !errors.Is(err, ErrNotPrepared) && !errors.Is(err, ErrPreparationInProgress) && !terminalConnectionError(err)
 }
 
 // acquireReady tolerates a generation disappearing between connection readiness

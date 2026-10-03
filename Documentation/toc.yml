@@ -8,6 +8,8 @@
   href: connection-strings/lifecycle.md
 - name: Definition factories
   href: definition-factories.md
+- name: Shared-provider client preparation
+  href: facade-composition.md
 - name: Events
   items:
     - name: Event types

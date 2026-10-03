@@ -52,20 +52,24 @@ func compileRegistry(ctx context.Context, captured *registryDeclarations, policy
 	if err := validateDefinitionMetadata(captured); err != nil {
 		return registrySnapshot{}, err
 	}
+	plans, err := preflightDefinitionFactories(captured, services, nil)
+	if err != nil {
+		return registrySnapshot{}, err
+	}
 	schemas, err := prepareRegistrySchemas(captured, policy)
 	if err != nil {
 		return registrySnapshot{}, err
 	}
-	return compilePreparedRegistry(ctx, captured, schemas, services, validateGenerations)
+	return compilePreparedRegistry(ctx, captured, schemas, services, validateGenerations, plans)
 }
 
-func compilePreparedRegistry(ctx context.Context, captured *registryDeclarations, schemas registrySchemas, services reactorScopeFactory, validateGenerations bool) (snapshot registrySnapshot, err error) {
+func compilePreparedRegistry(ctx context.Context, captured *registryDeclarations, schemas registrySchemas, services reactorScopeFactory, validateGenerations bool, plans registryFactoryPlans) (snapshot registrySnapshot, err error) {
 	err = artifacts.Protect("registry", "compile", func() error {
-		prepared, prepareErr := prepareDefinitionFactories(ctx, captured, services)
+		prepared, prepareErr := prepareDefinitionFactories(ctx, captured, plans)
 		if prepareErr != nil {
 			return prepareErr
 		}
-		snapshot, prepareErr = compileRegistryDefinitions(ctx, prepared, schemas, services, validateGenerations)
+		snapshot, prepareErr = compileRegistryDefinitions(ctx, prepared, schemas, services, validateGenerations, plans)
 		return prepareErr
 	})
 	if err != nil {
@@ -74,7 +78,7 @@ func compilePreparedRegistry(ctx context.Context, captured *registryDeclarations
 	return snapshot, nil
 }
 
-func compileRegistryDefinitions(ctx context.Context, captured *registryDeclarations, schemas registrySchemas, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
+func compileRegistryDefinitions(ctx context.Context, captured *registryDeclarations, schemas registrySchemas, services reactorScopeFactory, validateGenerations bool, plans registryFactoryPlans) (registrySnapshot, error) {
 	models := slices.Clone(captured.readModels)
 	declarations := slices.Clone(captured.projections)
 	snapshot := registrySnapshot{constraints: slices.Clone(captured.constraints)}
@@ -171,6 +175,6 @@ func compileRegistryDefinitions(ctx context.Context, captured *registryDeclarati
 	if err = compileReadModelReactors(&snapshot, captured.readModelReactors, services, captured.reactorSideEffects); err != nil {
 		return snapshot, err
 	}
-	snapshot.seeds, err = prepareSeeders(ctx, snapshot.events, captured.seeders, services)
+	snapshot.seeds, err = prepareSeeders(ctx, snapshot.events, captured.seeders, plans)
 	return snapshot, err
 }

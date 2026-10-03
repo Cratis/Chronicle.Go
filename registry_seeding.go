@@ -66,21 +66,7 @@ func registerSeeder(registry *Registry, declaration seederDeclaration) error {
 	return nil
 }
 
-func prepareSeeders(ctx context.Context, catalog *events.Catalog, declarations []seederDeclaration, services artifacts.ScopeFactory) (seeding.Definition, error) {
-	if nilValue(services) {
-		services = artifacts.DefaultScopeFactory()
-	}
-	constructors := make([]artifacts.Constructor, len(declarations))
-	for i, declaration := range declarations {
-		if declaration.instance != nil {
-			continue
-		}
-		constructor, err := compileDefinitionFactory("seeder", definitionFactory{declaration.typ, declaration.factory}, services)
-		if err != nil {
-			return seeding.Definition{}, fmt.Errorf("prepare seeder %s: %w", declaration.typ, err)
-		}
-		constructors[i] = constructor
-	}
+func prepareSeeders(ctx context.Context, catalog *events.Catalog, declarations []seederDeclaration, plans registryFactoryPlans) (seeding.Definition, error) {
 	return seeding.Prepare(catalog, seeding.Func(func(builder *seeding.Builder) error {
 		for i, declaration := range declarations {
 			if err := ctx.Err(); err != nil {
@@ -90,7 +76,7 @@ func prepareSeeders(ctx context.Context, catalog *events.Catalog, declarations [
 				if err := artifacts.Protect("seeder", "define", func() error { return declaration.instance.Seed(builder) }); err != nil {
 					return err
 				}
-			} else if err := prepareScopedSeeder(ctx, builder, services, constructors[i]); err != nil {
+			} else if err := prepareScopedSeeder(ctx, builder, plans, plans.seeders[i]); err != nil {
 				return err
 			}
 		}
@@ -98,8 +84,8 @@ func prepareSeeders(ctx context.Context, catalog *events.Catalog, declarations [
 	}))
 }
 
-func prepareScopedSeeder(ctx context.Context, builder *seeding.Builder, services artifacts.ScopeFactory, constructor artifacts.Constructor) error {
-	return artifacts.Prepare(ctx, "seeder", services, constructor, definitionDependency, func(value any) error {
+func prepareScopedSeeder(ctx context.Context, builder *seeding.Builder, plans registryFactoryPlans, constructor artifacts.Constructor) error {
+	return artifacts.Prepare(ctx, "seeder", plans.services, constructor, plans.check, func(value any) error {
 		return value.(seeding.Seeder).Seed(builder)
 	})
 }

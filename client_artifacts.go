@@ -32,9 +32,15 @@ type Artifacts struct {
 }
 
 // Artifacts returns the same frozen plans used by runtime registration and
-// invocation. It performs no I/O and is safe after Close, like Catalogs.
+// invocation. It performs no I/O and is safe after Close following successful
+// preparation, like Catalogs. An unprepared identity returns ErrNotPrepared.
 func (c *Client) Artifacts(store StoreName) (Artifacts, error) {
-	snapshot, err := c.selectedStoreSnapshot(store)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.requirePreparedLocked("artifacts", true); err != nil {
+		return Artifacts{}, err
+	}
+	snapshot, err := c.selectedStoreSnapshotLocked(store)
 	if err != nil {
 		return Artifacts{}, err
 	}

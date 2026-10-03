@@ -6,7 +6,8 @@ description: Build immutable projections, constraints and event migrations with 
 Use a definition factory when configuration or an application service supplies a
 projection, constraint, or migration definition. Keep direct declarations when no
 construction is needed. This experimental v0.x API supports configuration-only
-dependencies; it does not bind client or store facades into a container.
+dependencies. [Captured client preparation](facade-composition.md) supports an
+explicit borrowed client identity; automatic facade bindings are not provided.
 
 ## Register a config-backed projection
 
@@ -83,7 +84,8 @@ Each definition factory has a temporary scope:
 Resolved services belong to their scope or provider. Chronicle never closes them
 separately or closes the provider. In particular, a resolved Singleton survives
 preparation. Explicit constructors must not return borrowed aliases as owned
-results. Close Chronicle before closing your provider.
+results. Close Chronicle and join any outstanding preparation before closing your
+provider.
 
 Cleanup is close-once per lease, in reverse acquisition order. `CloseContext(ctx)`
 takes precedence over `Close(ctx)` and `Close()`. Cleanup preserves context metadata,
@@ -112,10 +114,12 @@ Factory constraints initially permit only static `WithMessage` templates.
 preparation scope. Direct constraints keep their existing runtime-provider
 contract. Client-lifetime collaborators need a separate explicit API.
 
-No factory may resolve its own not-yet-prepared client, event store, or sequence.
-Visible constructor and resolver requests for these facades fail; hidden closure
-or container-internal dependencies remain your responsibility. There is no
-two-phase client preparation or automatic facade-binding API in this slice.
+No factory may resolve its own not-yet-prepared event store or sequence. A factory
+may borrow the exact `*Client` identity through an explicit binding after
+`CaptureClient`; it cannot use the client's operational APIs until preparation
+succeeds. Client values, default-fabricated clients and SDK facade artifact results
+are rejected. Visible prohibited constructor dependencies fail before any scope
+opens; hidden closure or container-internal dependencies remain your responsibility.
 
 Preparation errors and panics return `PreparationError`. Its formatted text is
 payload-free. Recovered panic values (strings, objects and errors) are immediately

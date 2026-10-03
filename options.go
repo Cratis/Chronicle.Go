@@ -143,8 +143,9 @@ func WithNamingPolicy(policy serialization.NamingPolicy) ClientOption {
 	return func(c *clientConfig) { c.naming = policy }
 }
 
-// WithRegistry snapshots registered events, read models and constraints at NewClient time; later mutations
-// do not affect this client. Nil means an empty registry.
+// WithRegistry snapshots registered events, read models and constraints at
+// CaptureClient time (also used by NewClient); later mutations do not affect this
+// client. Nil means an empty registry.
 func WithRegistry(registry *Registry) ClientOption {
 	return func(c *clientConfig) { c.registry = registry }
 }

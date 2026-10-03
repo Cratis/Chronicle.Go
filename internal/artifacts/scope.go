@@ -38,10 +38,26 @@ type Catalog interface{ Contains(reflect.Type) bool }
 // or an opt-in resolver. Constructed values are owned by the scope.
 func DefaultScopeFactory() ScopeFactory { return defaultFactory{} }
 
+// IsDefaultScopeFactory identifies zero-container activation without wrapping or
+// changing the concrete factory used for constructor precedence.
+func IsDefaultScopeFactory(factory ScopeFactory) bool {
+	_, ok := factory.(defaultFactory)
+	return ok
+}
+
 type defaultFactory struct{}
 
 func (defaultFactory) NewScope(context.Context) (Scope, error) { return &defaultScope{}, nil }
 func (defaultFactory) Contains(t reflect.Type) bool {
+	base := t
+	if base.Kind() == reflect.Pointer {
+		base = base.Elem()
+	}
+	// The SDK client has identity and lifecycle ownership; zero construction (or
+	// a value copy) cannot supply a usable borrowed client to an artifact.
+	if base.PkgPath() == "github.com/cratis/chronicle.go" && base.Name() == "Client" {
+		return false
+	}
 	return t.Kind() == reflect.Struct || (t.Kind() == reflect.Pointer && t.Elem().Kind() == reflect.Struct) || t.Kind() == reflect.Slice
 }
 

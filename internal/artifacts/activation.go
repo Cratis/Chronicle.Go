@@ -16,11 +16,20 @@ var scopeType = reflect.TypeFor[Scope]()
 
 // Constructor is an immutable activation plan.
 type Constructor struct {
-	typ      reflect.Type
-	fn       reflect.Value
-	context  bool
-	args     []reflect.Type
-	borrowed bool
+	typ         reflect.Type
+	fn          reflect.Value
+	context     bool
+	args        []reflect.Type
+	borrowed    bool
+	resultCheck func(reflect.Type) error
+}
+
+// WithResultValidation rejects forbidden dynamic artifact types before ownership
+// transfers, including results returned alongside errors. It also checks borrowed
+// results. Ordinary accepted constructor results retain the usual cleanup rules.
+func (c Constructor) WithResultValidation(check func(reflect.Type) error) Constructor {
+	c.resultCheck = check
+	return c
 }
 
 // ParameterError retains the unresolvable constructor dependency.
@@ -111,7 +120,11 @@ func (l *Lease) Construct(ctx context.Context, c Constructor) (any, error) {
 
 func (l *Lease) construct(ctx context.Context, c Constructor, scope Scope) (any, error) {
 	if c.borrowed {
-		return Resolve(ctx, scope, c.typ)
+		value, err := Resolve(ctx, scope, c.typ)
+		if err == nil && c.resultCheck != nil {
+			err = c.resultCheck(reflect.TypeOf(value))
+		}
+		return value, err
 	}
 	args := []reflect.Value{}
 	if c.context {
@@ -126,11 +139,20 @@ func (l *Lease) construct(ctx context.Context, c Constructor, scope Scope) (any,
 	}
 	results := c.fn.Call(args)
 	value := results[0].Interface()
+	var constructorErr error
+	if len(results) == 2 && !results[1].IsNil() {
+		constructorErr = results[1].Interface().(error)
+	}
 	if !NilLike(value) {
+		if c.resultCheck != nil {
+			if err := c.resultCheck(reflect.TypeOf(value)); err != nil {
+				return nil, errors.Join(err, constructorErr)
+			}
+		}
 		l.owned = append(l.owned, value)
 	}
-	if len(results) == 2 && !results[1].IsNil() {
-		return nil, results[1].Interface().(error)
+	if constructorErr != nil {
+		return nil, constructorErr
 	}
 	if NilLike(value) {
 		return nil, invalid("constructor returned nil")
