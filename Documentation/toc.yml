@@ -30,6 +30,8 @@
       href: projections/index.md
     - name: Orders with children and joins
       href: projections/orders.md
+    - name: Variants and shared handlers
+      href: projections/variants.md
 - name: Reactors
   href: reactors.md
 - name: Parity and limitations
