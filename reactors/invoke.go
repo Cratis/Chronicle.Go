@@ -143,7 +143,13 @@ func (l *Lease) Invoke(ctx context.Context, content any, eventContext events.Con
 		}
 	}()
 	handler, ok := l.plan.handlers[eventContext.EventType.ID]
-	if !ok {
+	isReplay := eventContext.ObservationState&events.ObservationReplay != 0
+	if isReplay {
+		if replacement, found := l.plan.replayHandlers[eventContext.EventType.ID]; found {
+			handler, ok = replacement, true
+		}
+	}
+	if !ok || (isReplay && handler.onceOnly) {
 		return nil
 	}
 	for _, middleware := range l.middlewares {
@@ -203,14 +209,7 @@ func (l *Lease) Invoke(ctx context.Context, content any, eventContext events.Con
 		return results[len(results)-1].Interface().(error)
 	}
 	if handler.returnsEvent {
-		value := results[0].Interface()
-		if !nilLike(value) {
-			source := eventContext.SourceID
-			if provider, ok := l.instance.(EventSourceIDProvider); ok {
-				source = provider.GetEventSourceID()
-			}
-			return runtime.Append(ctx, source, value)
-		}
+		return l.handleEffect(ctx, results[0].Interface(), invocation, runtime, handler.onceOnly)
 	}
 	return nil
 }

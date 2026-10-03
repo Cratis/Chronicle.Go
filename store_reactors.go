@@ -46,6 +46,8 @@ func (s *EventStore) UnregisterReactor(ctx context.Context, id reactors.ID) erro
 
 type reactorStoreRuntime struct{ store *EventStore }
 
+func (r reactorStoreRuntime) EventLog() reactors.EventAppender { return r.store.EventLog() }
+
 func (r reactorStoreRuntime) Append(ctx context.Context, source events.SourceID, value any) error {
 	result, err := r.store.EventLog().Append(ctx, source, value)
 	if err != nil {

@@ -35,20 +35,24 @@ type call struct {
 	args         []argument
 	returnsEvent bool
 	returnsError bool
+	onceOnly     bool
 }
 type constructor = artifacts.Constructor
 
 // Plan is a catalog-isolated, immutable dispatch plan shared by both authoring
 // paths. Build it with Compile; reconnect reuses it without rediscovery.
 type Plan struct {
-	declaration Declaration
-	handlers    map[events.TypeID]call
-	descriptors map[events.TypeID]events.Descriptor
-	ordered     []events.TypeRef
-	factory     constructor
-	middlewares []constructor
-	services    ScopeFactory
-	shadows     []Shadow
+	declaration    Declaration
+	handlers       map[events.TypeID]call
+	replayHandlers map[events.TypeID]call
+	descriptors    map[events.TypeID]events.Descriptor
+	ordered        []events.TypeRef
+	factory        constructor
+	middlewares    []constructor
+	services       ScopeFactory
+	shadows        []Shadow
+	catalog        *events.Catalog
+	sideEffects    []SideEffectHandler
 }
 
 // Shadow diagnoses a method hidden by C# richest-signature/name precedence.
@@ -67,7 +71,7 @@ func (p *Plan) Identifier() ID { return p.declaration.Identifier() }
 // EventSequence returns the observed sequence.
 func (p *Plan) EventSequence() events.SequenceID { return p.declaration.config.sequence }
 
-// EventTypes returns the subscribed types in catalog registration order.
+// EventTypes returns the union of live and replay subscriptions in catalog order.
 func (p *Plan) EventTypes() []events.TypeRef { return slices.Clone(p.ordered) }
 
 // PerEvent reports the explicit activation override.
@@ -98,6 +102,13 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 // preceding its per-reactor middleware. The input slice is not retained; factories
 // follow WithMiddleware's activation and ownership contract.
 func CompileWithMiddleware(d Declaration, catalog *events.Catalog, models *readmodels.Catalog, services ScopeFactory, middlewareFactories []any) (*Plan, error) {
+	return CompileWithExtensions(d, catalog, models, services, middlewareFactories, nil)
+}
+
+// CompileWithExtensions compiles registry middleware and borrowed side-effect
+// handlers before per-reactor extensions. Slices are copied; handler instances
+// must be concurrency-safe. No constructors or Handle methods run at compilation.
+func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readmodels.Catalog, services ScopeFactory, middlewareFactories []any, sideEffects []SideEffectHandler) (*Plan, error) {
 	if d.Identifier() == "" || catalog == nil || models == nil {
 		return nil, invalid("reactor and catalogs required")
 	}
@@ -107,7 +118,13 @@ func CompileWithMiddleware(d Declaration, catalog *events.Catalog, models *readm
 	if nilLike(services) {
 		return nil, invalid("nil scope factory")
 	}
-	p := &Plan{declaration: d, handlers: map[events.TypeID]call{}, descriptors: map[events.TypeID]events.Descriptor{}, services: services}
+	p := &Plan{declaration: d, handlers: map[events.TypeID]call{}, replayHandlers: map[events.TypeID]call{}, descriptors: map[events.TypeID]events.Descriptor{}, services: services, catalog: catalog}
+	p.sideEffects = append(slices.Clone(sideEffects), d.config.sideEffects...)
+	for _, handler := range p.sideEffects {
+		if nilLike(handler) {
+			return nil, invalid("nil side-effect handler")
+		}
+	}
 	fail := func(method string, t reflect.Type, err error) (*Plan, error) {
 		var detail *DeclarationError
 		if errors.As(err, &detail) {
@@ -116,6 +133,7 @@ func CompileWithMiddleware(d Declaration, catalog *events.Catalog, models *readm
 		}
 		return nil, &DeclarationError{Reactor: d.Identifier(), Method: method, Parameter: t, Cause: err}
 	}
+	selected := map[string]bool{}
 	if !d.explicit {
 		factory, err := compileConstructor(d.typ, d.factory, services)
 		if err != nil {
@@ -135,20 +153,31 @@ func CompileWithMiddleware(d Declaration, catalog *events.Catalog, models *readm
 			if len(matching) == 0 {
 				continue
 			}
-			handler, err := compileCall(method.Name, method.Func, true, catalog, models, services)
+			handler, err := compileCall(method.Name, method.Func, true, catalog, models, services, p.sideEffects)
 			if err != nil {
 				return fail(method.Name, t.In(first), err)
 			}
+			selected[method.Name] = true
+			handler.onceOnly = slices.Contains(d.config.onceMethods, method.Name)
+			handlers := p.handlers
+			if slices.Contains(d.config.replayMethods, method.Name) {
+				handlers = p.replayHandlers
+			}
 			for _, descriptor := range matching {
 				id := descriptor.Ref().ID
-				if previous, exists := p.handlers[id]; exists {
+				if previous, exists := handlers[id]; exists {
 					p.shadows = append(p.shadows, Shadow{descriptor.Ref(), previous.name, method.Name})
 					d.config.logger.Warn("reactor handler shadowed", "reactor", d.Identifier(), "event", id, "winner", previous.name, "hidden", method.Name)
 					continue
 				}
-				p.handlers[id] = handler
+				handlers[id] = handler
 				p.descriptors[id] = descriptor
 			}
+		}
+	}
+	for _, name := range append(slices.Clone(d.config.replayMethods), d.config.onceMethods...) {
+		if !selected[name] {
+			return fail(name, nil, invalid("policy must select a discovered exported event handler"))
 		}
 	}
 	for i, explicit := range d.config.handlers {
@@ -160,24 +189,29 @@ func CompileWithMiddleware(d Declaration, catalog *events.Catalog, models *readm
 		if len(matching) == 0 {
 			return fail(name, explicit.event, invalid("callback event is not registered"))
 		}
-		handler, err := compileCall(name, reflect.ValueOf(explicit.function), false, catalog, models, services)
+		handler, err := compileCall(name, reflect.ValueOf(explicit.function), false, catalog, models, services, p.sideEffects)
 		if err != nil {
 			return fail(name, explicit.event, err)
 		}
+		handler.onceOnly = explicit.onceOnly
+		handlers := p.handlers
+		if explicit.replay {
+			handlers = p.replayHandlers
+		}
 		for _, descriptor := range matching {
 			id := descriptor.Ref().ID
-			if _, exists := p.handlers[id]; exists {
+			if _, exists := handlers[id]; exists {
 				return fail(name, explicit.event, invalid("duplicate explicit event binding"))
 			}
-			p.handlers[id] = handler
+			handlers[id] = handler
 			p.descriptors[id] = descriptor
 		}
 	}
-	if len(p.handlers) == 0 {
+	if len(p.descriptors) == 0 {
 		return fail("", nil, invalid("no registered event handlers"))
 	}
 	for _, descriptor := range catalog.Descriptors() {
-		if _, ok := p.handlers[descriptor.Ref().ID]; ok {
+		if _, ok := p.descriptors[descriptor.Ref().ID]; ok {
 			p.ordered = append(p.ordered, descriptor.Ref())
 		}
 	}
@@ -200,7 +234,7 @@ func CompileWithMiddleware(d Declaration, catalog *events.Catalog, models *readm
 func matchingEvents(typ reflect.Type, catalog *events.Catalog) []events.Descriptor {
 	return discovery.Events(typ, catalog)
 }
-func compileCall(name string, fn reflect.Value, receiver bool, catalog *events.Catalog, models *readmodels.Catalog, services ScopeFactory) (call, error) {
+func compileCall(name string, fn reflect.Value, receiver bool, catalog *events.Catalog, models *readmodels.Catalog, services ScopeFactory, sideEffects []SideEffectHandler) (call, error) {
 	t := fn.Type()
 	c := call{name: name, fn: fn, receiver: receiver}
 	first := 0
@@ -232,8 +266,8 @@ func compileCall(name string, fn reflect.Value, receiver bool, catalog *events.C
 		c.returnsError = true
 		n--
 	}
-	if n > 1 || (n == 1 && len(matchingEvents(t.Out(0), catalog)) == 0) {
-		return c, invalid("unsupported result: expected no result, error, registered event, or event plus error")
+	if n > 1 || (n == 1 && !supportsResult(t.Out(0), catalog, sideEffects)) {
+		return c, invalid("unsupported result: expected no result, error, event/effect or claimed custom result, optionally plus error")
 	}
 	c.returnsEvent = n == 1
 	return c, nil
