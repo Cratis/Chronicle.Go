@@ -48,12 +48,24 @@ type clientConfig struct {
 	tlsSet, tokenSet, borrowedSet, uriSet  bool
 	validateEventTypes                     bool
 	concurrency                            eventsequences.ConcurrencyPolicy
+	appendOriginResolver                   eventsequences.AppendOriginResolver
 	naming                                 serialization.NamingPolicy
 	registry                               *Registry
 	stores                                 map[StoreName]*Registry
 	reactorServices                        reactorScopeFactory
 	reactorServicesSet                     bool
 	reactorRetryWait                       func(context.Context, time.Duration) error
+}
+
+// WithAppendOriginResolver selects a borrowed metadata-only callback for local
+// immediate append attribution on every store/namespace/sequence of this client.
+// Last wins; nil disables resolution and preserves OriginFrom(ctx). Configuration
+// is frozen at NewClient; the callback must support synchronous concurrent calls.
+// It runs outside SDK locks with the actual append context and cannot replace it.
+// Errors/panics fail before RPCs or notifications with a payload-free
+// eventsequences.AppendOriginResolutionError. SDK-owned unit commits bypass it.
+func WithAppendOriginResolver(resolver eventsequences.AppendOriginResolver) ClientOption {
+	return func(c *clientConfig) { c.appendOriginResolver = resolver }
 }
 
 // WithConnectionString selects the URI; it is validated by NewClient.

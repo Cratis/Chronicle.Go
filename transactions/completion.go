@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/appendorigin"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/metadata"
 )
@@ -20,6 +21,8 @@ import (
 // Transport loss and errors-only kernel responses are outcome-unknown. No owner
 // retry is possible. A repeated call returns the retained result and ErrCompleted;
 // a concurrent attempt returns ErrCompleting. Empty work succeeds without an RPC.
+// Local append attribution always uses the unit's SDK-owned origin, bypassing
+// external append origin resolution regardless of ctx's origin.
 func (o *Owner) Commit(ctx context.Context) (eventsequences.BatchResult, error) {
 	if o == nil || o.unit == nil {
 		return eventsequences.BatchResult{}, faults.ErrInvalidConfiguration
@@ -40,7 +43,7 @@ func (o *Owner) Commit(ctx context.Context) (eventsequences.BatchResult, error) 
 	if err != nil {
 		result.Disposition = eventsequences.Rejected
 	} else if hasWork {
-		result, err = u.sequence.AppendPreparedBatch(eventsequences.WithOrigin(ctx, u.origin), pending)
+		result, err = u.sequence.AppendPreparedBatch(appendorigin.WithUnit(eventsequences.WithOrigin(ctx, u.origin), u.origin, pending), pending)
 	}
 	if err != nil && ctx.Err() != nil && !errors.Is(err, ctx.Err()) {
 		err = errors.Join(err, ctx.Err())

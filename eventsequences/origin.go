@@ -35,12 +35,14 @@ type originKey struct{}
 
 // WithOrigin returns a context carrying origin for immediate append notifications.
 // A zero origin masks an inherited origin. It does not change correlation or wire
-// metadata. Unit-of-work commits use the unit's own origin instead.
+// metadata. A configured AppendOriginResolver can override it. Unit-of-work
+// commits use the unit's own origin instead, bypassing that resolver.
 func WithOrigin(ctx context.Context, origin Origin) context.Context {
 	return context.WithValue(ctx, originKey{}, origin)
 }
 
 // OriginFrom returns the installed origin, or zero when none is installed.
+// It does not invoke a configured AppendOriginResolver.
 func OriginFrom(ctx context.Context) Origin {
 	origin, _ := ctx.Value(originKey{}).(Origin)
 	return origin

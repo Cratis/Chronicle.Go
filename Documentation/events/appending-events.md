@@ -56,8 +56,9 @@ Each notification contains:
 - `CorrelationID`: the effective **request** correlation, including an explicit
   append override or generated ID. It remains available when the response is lost,
   but several executions can legitimately share it.
-- `Origin`: the unit's identity for `Owner.Commit`, otherwise the origin installed
-  in the append context. Zero means unattributed.
+- `Origin`: the unit's identity for `Owner.Commit`, otherwise the configured
+  resolver's selection or the origin installed in the append context. Zero means
+  unattributed.
 - `Operation`: store, namespace, sequence and distinct exact event types.
 - `Events`: original input order, source, type and generation, normalized route,
   and a position only when committed. Zero is a valid position. No event payload
@@ -96,9 +97,9 @@ or correlation-to-command registry.
 
 `eventsequences.WithOrigin(ctx, origin)` installs a token without changing audit or
 wire metadata. `OriginFrom(ctx)` returns zero if none is installed; installing
-zero masks an inherited token. Immediate single/many/batch appends, metadata and
-named-tag variants inherit the append context's origin. Prepared batches use the
-**append-time** context, not the preparation context.
+zero masks an inherited token. Without a resolver, immediate single/many/batch
+appends, metadata and named-tag variants inherit the append context's origin.
+Prepared batches use the **append-time** context, not the preparation context.
 
 `transactions.Begin` assigns a fresh origin, exposed by `UnitOfWork.Origin()`.
 `Owner.Commit` always notifies with that identity, ignoring origins in Begin,
@@ -110,6 +111,51 @@ unit's commit. Do not filter by zero to claim ownership of unattributed work.
 `AppendNotification` is an SDK-produced callback value; consumers should receive
 it rather than construct positional literals. Existing correlation, results and
 wire contracts remain unchanged.
+
+### Resolve origins from command metadata
+
+If a command framework keeps its invocation token in a metadata snapshot rather
+than `WithOrigin`, configure the shared client with
+`chronicle.WithAppendOriginResolver(eventsequences.AppendOriginResolver)`. The
+callback reads the **current append context**, not a captured request context.
+Chronicle does not depend on Arc or replace the operation context: cancellation,
+deadlines, application values, actor, causation and wire metadata remain intact.
+See the executable [ExampleWithAppendOriginResolver](../../append_origin_resolver_test.go).
+
+The callback returns `(Origin, handled bool, error)`:
+
+- `handled=true` selects the returned origin, **including zero**, overriding any
+  enclosing origin. Independent commands sharing a correlation can select
+  distinct invocation tokens; joined commands can select their root's token.
+- `handled=false` ignores the returned origin and falls back to `OriginFrom(ctx)`.
+- An error or panic returns a typed `AppendOriginResolutionError` with a
+  `Rejected` result **before any RPC**, including concurrency tail reads. There
+  is no fallback or append notification. Neither the error nor panic payload is
+  retained, formatted or unwrapped, because it may expose sensitive context.
+
+Each immediate append invokes the callback once, synchronously and outside SDK
+locks, before scope resolution and dispatch; metadata wrappers do not invoke it
+again. `PrepareBatch` and transaction staging never invoke it. Public prepared
+batch dispatch resolves from its dispatch context, while `Owner.Commit` bypasses
+it using the SDK-owned unit origin, even with a nonzero enclosing origin or a
+failing callback. Installing a unit's public token with `WithOrigin` does not
+confer that bypass.
+
+Configuration is frozen at `NewClient` and shared across its stores, namespaces
+and sequence handles. Options are last-wins; nil disables resolution. The
+callback is borrowed and must support concurrent calls, honor cancellation and
+return promptly. It owns no transport or request lifetime. Bound any recursive
+appends yourself. Low-level `eventsequences.New` can receive the same immutable
+callback through an `AppendOriginResolverProvider` connection, without changing
+its constructor or existing public result/configuration layouts.
+
+This extends the local identity contract from
+[#47](https://github.com/Cratis/Chronicle.Go/issues/47) through the metadata-only
+hook requested in [#67](https://github.com/Cratis/Chronicle.Go/issues/67); it does
+not claim completed Arc integration. Appends through another client or handlers
+that discard the supplied operation context are outside this attribution
+mechanism. Tokens and notifications provide no durable broker identity,
+exactly-once delivery or cross-process ownership guarantee.
 
 ### Callback ownership and disposal
 
@@ -133,7 +179,8 @@ command state. Keep callback state concurrency-safe while shared-handle appends
 may still be running; the callback closure remains alive for admitted deliveries.
 
 For Arc.Go-style command tracking, set `metadata.WithCorrelation` before invoking
-handlers, install a fresh `WithOrigin` token, subscribe to each sequence on their
+handlers, install a fresh `WithOrigin` token or configure a resolver that reads
+that invocation's metadata snapshot, subscribe to each sequence on their
 store/namespace, filter `n.Origin`, and
 retain `Committed`, `Rejected` and `Unknown` separately. A later empty transaction
 completion cannot erase an immediate unknown outcome. To observe only immediate

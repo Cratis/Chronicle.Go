@@ -16,7 +16,7 @@ import (
 	"github.com/cratis/chronicle.go/metadata"
 )
 
-func (s *Sequence) dispatchMany(ctx context.Context, source events.SourceID, config appendConfig, batch preparedBatch) (BatchResult, error) {
+func (s *Sequence) dispatchMany(ctx context.Context, source events.SourceID, config appendConfig, batch preparedBatch, origin Origin) (BatchResult, error) {
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
 	}
@@ -48,10 +48,10 @@ func (s *Sequence) dispatchMany(ctx context.Context, source events.SourceID, con
 		}
 		response, err = s.service.AppendManyWithNamedTags(ctx, named)
 	}
-	return s.finishBatch(OriginFrom(ctx), batch, response, err)
+	return s.finishBatch(origin, batch, response, err)
 }
 
-func (s *Sequence) dispatchBatch(ctx context.Context, batch preparedBatch) (BatchResult, error) {
+func (s *Sequence) dispatchBatch(ctx context.Context, batch preparedBatch, origin Origin) (BatchResult, error) {
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
 	}
@@ -68,7 +68,7 @@ func (s *Sequence) dispatchBatch(ctx context.Context, batch preparedBatch) (Batc
 		}
 		response, err = s.service.AppendManyForEventSourcesWithNamedTags(ctx, named)
 	}
-	return s.finishBatch(OriginFrom(ctx), batch, response, err)
+	return s.finishBatch(origin, batch, response, err)
 }
 
 func (b preparedBatch) hasNamedTags() bool {

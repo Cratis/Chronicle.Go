@@ -50,12 +50,17 @@ func sequenceFixture(t *testing.T, handlers map[string]rpcHandler) (*eventsequen
 
 type policyConnection struct {
 	grpc.ClientConnInterface
-	policy eventsequences.ConcurrencyPolicy
+	policy   eventsequences.ConcurrencyPolicy
+	resolver eventsequences.AppendOriginResolver
 }
 
 func (c policyConnection) ConcurrencyPolicy() eventsequences.ConcurrencyPolicy { return c.policy }
 
-func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events.Catalog, policy eventsequences.ConcurrencyPolicy) (*eventsequences.Sequence, *atomic.Int32) {
+func (c policyConnection) AppendOriginResolver() eventsequences.AppendOriginResolver {
+	return c.resolver
+}
+
+func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events.Catalog, policy eventsequences.ConcurrencyPolicy, resolvers ...eventsequences.AppendOriginResolver) (*eventsequences.Sequence, *atomic.Int32) {
 	t.Helper()
 	calls := &atomic.Int32{}
 	listener := bufconn.Listen(1024 * 1024)
@@ -89,7 +94,11 @@ func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events
 		}
 		<-done
 	})
-	sequence, err := eventsequences.New("store", "tenant", "event-log", catalog, policyConnection{ClientConnInterface: conn, policy: policy})
+	var resolver eventsequences.AppendOriginResolver
+	if len(resolvers) > 0 {
+		resolver = resolvers[0]
+	}
+	sequence, err := eventsequences.New("store", "tenant", "event-log", catalog, policyConnection{ClientConnInterface: conn, policy: policy, resolver: resolver})
 	if err != nil {
 		t.Fatal(err)
 	}

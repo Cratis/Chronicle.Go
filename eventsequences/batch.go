@@ -24,6 +24,10 @@ func (s *Sequence) AppendMany(ctx context.Context, source events.SourceID, value
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
 	}
+	origin, err := s.resolveAppendOrigin(ctx)
+	if err != nil {
+		return BatchResult{Disposition: Rejected}, err
+	}
 	if strings.TrimSpace(string(source)) == "" {
 		return BatchResult{}, faults.ErrInvalidConfiguration
 	}
@@ -69,9 +73,9 @@ func (s *Sequence) AppendMany(ctx context.Context, source events.SourceID, value
 		return BatchResult{}, err
 	}
 	if config.route == normalizedRoute(Route{}) {
-		return s.dispatchMany(ctx, source, config, batch)
+		return s.dispatchMany(ctx, source, config, batch, origin)
 	}
-	return s.dispatchBatch(ctx, batch)
+	return s.dispatchBatch(ctx, batch, origin)
 }
 
 // AppendBatch atomically appends entries without grouping or reordering sources.
@@ -82,6 +86,10 @@ func (s *Sequence) AppendMany(ctx context.Context, source events.SourceID, value
 func (s *Sequence) AppendBatch(ctx context.Context, entries []Entry, options ...BatchOption) (BatchResult, error) {
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
+	}
+	origin, err := s.resolveAppendOrigin(ctx)
+	if err != nil {
+		return BatchResult{Disposition: Rejected}, err
 	}
 	config := batchConfig{correlation: metadata.Correlation(ctx)}
 	for _, option := range options {
@@ -94,7 +102,7 @@ func (s *Sequence) AppendBatch(ctx context.Context, entries []Entry, options ...
 	if err != nil {
 		return BatchResult{}, err
 	}
-	return s.dispatchBatch(ctx, batch)
+	return s.dispatchBatch(ctx, batch, origin)
 }
 
 type preparedBatch struct {
