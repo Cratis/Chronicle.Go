@@ -156,6 +156,19 @@ func TestReadModelScenarioRefusesModelBoundProjectionWithoutKernel(t *testing.T)
 		t.Fatalf("substitute projection: %v", err)
 	}
 }
+func TestReadModelScenarioRefusesProjectionDefaultsBeforeConnection(t *testing.T) {
+	registry := eventRegistry(t)
+	model, err := chronicle.RegisterReadModel[ProjectedAccount](registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	declaration := projections.ModelBound(model, projections.WithInitialValues(ProjectedAccount{Name: "default"}))
+	scenario, err := chronicletest.OpenReadModelScenario[ProjectedAccount](t.Context(), chronicletest.Config{Registry: registry, Engine: chronicletest.Kernel, ConnectionString: "chronicle://127.0.0.1:1"}, chronicletest.ReadModelOptions[ProjectedAccount]{Projection: &declaration})
+	if scenario != nil || !errors.Is(err, chronicletest.ErrFidelityUnavailable) || !strings.Contains(err.Error(), "initial state") {
+		t.Fatalf("projection defaults did not fail before I/O: %v %v", scenario, err)
+	}
+}
+
 func TestReadModelScenarioTypedCallbacksShareFoldPlanAndInitialState(t *testing.T) {
 	registry := eventRegistry(t)
 	model, err := chronicle.RegisterReadModel[Account](registry)

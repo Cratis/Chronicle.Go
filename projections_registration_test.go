@@ -61,6 +61,13 @@ func projectionRegistry(t *testing.T) (*Registry, readmodels.Model[ProjectionMod
 }
 func TestProjectionDiscoveryRegistrationAndFrozenReplay(t *testing.T) {
 	registry, model := projectionRegistry(t)
+	labels := []string{"accounts", "accounts", "read"}
+	initial := ProjectionModel{Name: "initial"}
+	if err := registry.AddProjection(projections.ModelBound(model, projections.WithInitialValues(initial), projections.WithLabels(labels...))); err != nil {
+		t.Fatal(err)
+	}
+	initial.Name = "mutated"
+	labels[0] = "mutated"
 	var modelCalls, projectionCalls, reads atomic.Int32
 	requests := make(chan *contracts.RegisterRequest, 2)
 	entered, release := make(chan struct{}), make(chan struct{})
@@ -117,8 +124,18 @@ func TestProjectionDiscoveryRegistrationAndFrozenReplay(t *testing.T) {
 		t.Fatalf("%+v %v", outcome, err)
 	}
 	first := <-requests
+	if first.Projections[0].InitialModelState != `{"id":"","name":"initial"}` || len(first.Projections[0].Tags) != 2 || first.Projections[0].Tags[0] != "accounts" {
+		t.Fatal("initial state/labels did not survive preparation")
+	}
 	exposed := one.Projections()
-	exposed[0].KernelDefinition().From[0].Value.Properties["name"] = "changed"
+	hash, err := exposed[0].Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wire := exposed[0].KernelDefinition()
+	wire.From[0].Value.Properties["name"] = "changed"
+	wire.InitialModelState = "{}"
+	wire.Tags[0] = "changed"
 	// A registry extension cannot alter the snapshot replayed by the existing client.
 	type LaterProjection struct {
 		Name string `chronicle:"set(ProjectionOpened)"`
@@ -141,6 +158,9 @@ func TestProjectionDiscoveryRegistrationAndFrozenReplay(t *testing.T) {
 	second := <-requests
 	if !proto.Equal(first, second) {
 		t.Fatal("reconnect did not reuse the frozen definition")
+	}
+	if next, err := one.Projections()[0].Hash(); err != nil || next != hash {
+		t.Fatal("reconnect changed definition identity")
 	}
 	for _, store := range []*EventStore{one, two} {
 		instance, err := readmodels.For(store.ReadModels(), model).Get(ctx, "key")
