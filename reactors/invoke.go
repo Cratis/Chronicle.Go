@@ -10,9 +10,10 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/internal/discovery"
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -70,18 +71,14 @@ type Lease struct {
 	scope       Scope
 	instance    any
 	middlewares []Middleware
-	owned       []any
-	mu          sync.Mutex
-	closed      bool
-	closeErr    error
-	closeDone   chan struct{}
+	resources   *artifacts.Lease
 }
 
 // Activate opens a scope and constructs the artifact/middleware chain. ctx carries
 // batch coordinates, not the first event's identity. No constructors run at Compile.
 // Activation failures close all successfully acquired resources before returning.
 func (p *Plan) Activate(ctx context.Context) (lease *Lease, err error) {
-	l := &Lease{plan: p, closeDone: make(chan struct{})}
+	l := &Lease{plan: p}
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			err = fmt.Errorf("activation panic: %v", recovered)
@@ -92,22 +89,19 @@ func (p *Plan) Activate(ctx context.Context) (lease *Lease, err error) {
 			lease = nil
 		}
 	}()
-	l.scope, err = p.services.NewScope(ctx)
+	l.resources, err = artifacts.Open(ctx, p.services)
 	if err != nil {
 		return nil, err
 	}
-	if nilLike(l.scope) {
-		l.scope = nil
-		return nil, invalid("scope factory returned nil")
-	}
+	l.scope = l.resources.Scope
 	if !p.declaration.explicit {
-		l.instance, err = l.construct(ctx, p.factory)
+		l.instance, err = l.resources.Construct(ctx, p.factory)
 		if err != nil {
 			return nil, err
 		}
 	}
 	for _, factory := range p.middlewares {
-		value, createErr := l.construct(ctx, factory)
+		value, createErr := l.resources.Construct(ctx, factory)
 		if createErr != nil {
 			return nil, createErr
 		}
@@ -119,82 +113,21 @@ func (p *Plan) Activate(ctx context.Context) (lease *Lease, err error) {
 	}
 	return l, nil
 }
-func (l *Lease) construct(ctx context.Context, c constructor) (any, error) {
-	if c.borrowed {
-		return resolve(ctx, l.scope, c.typ)
-	}
-	args := []reflect.Value{}
-	if c.context {
-		args = append(args, reflect.ValueOf(ctx))
-	}
-	for _, t := range c.args {
-		value, err := resolve(ctx, l.scope, t)
-		if err != nil {
-			return nil, err
-		}
-		args = append(args, reflect.ValueOf(value))
-	}
-	results := c.fn.Call(args)
-	value := results[0].Interface()
-	if !nilLike(value) {
-		l.owned = append(l.owned, value)
-	}
-	if len(results) == 2 && !results[1].IsNil() {
-		return nil, results[1].Interface().(error)
-	}
-	if nilLike(value) {
-		return nil, invalid("constructor returned nil")
-	}
-	return value, nil
-}
-func resolve(ctx context.Context, scope Scope, t reflect.Type) (any, error) {
-	if t == scopeType {
-		return scope, nil
-	}
-	value, err := scope.Resolve(ctx, t)
-	if err != nil {
-		return nil, err
-	}
-	if nilLike(value) || !reflect.TypeOf(value).AssignableTo(t) {
-		return nil, invalid("resolver returned nil or wrong service type: " + t.String())
-	}
-	return value, nil
-}
 
 // Close releases constructor results in reverse order, then closes the scope.
 // Cleanup failures are retained and fail handling before acknowledgement. Effects
 // may already have happened: a subsequent kernel retry can repeat them.
 func (l *Lease) Close(ctx context.Context) error {
-	l.mu.Lock()
-	if l.closed {
-		done := l.closeDone
-		l.mu.Unlock()
-		<-done
-		return l.closeErr
+	if l.resources == nil {
+		return nil
 	}
-	l.closed = true
-	l.mu.Unlock()
-	var err error
-	for i := len(l.owned) - 1; i >= 0; i-- {
-		err = errors.Join(err, closeValue(ctx, l.owned[i]))
-	}
-	if l.scope != nil {
-		err = errors.Join(err, closeValue(ctx, l.scope))
-	}
-	l.mu.Lock()
-	l.closeErr = err
-	close(l.closeDone)
-	l.mu.Unlock()
-	return err
+	return l.resources.Close(ctx)
 }
 
 // Invoke runs one handler, then its returned event, surrounded by middleware.
 // Panics become handling failures rather than terminating the observer worker.
 func (l *Lease) Invoke(ctx context.Context, content any, eventContext events.Context, runtime Runtime) (err error) {
-	l.mu.Lock()
-	closed := l.closed
-	l.mu.Unlock()
-	if closed {
+	if l.resources.Closed() {
 		return invalid("artifact lease closed")
 	}
 	delivery := Delivery{l.plan.Identifier(), eventContext.Store, eventContext.Namespace, l.plan.EventSequence(), eventContext.SourceID, eventContext.SequenceNumber}
@@ -229,20 +162,8 @@ func (l *Lease) Invoke(ctx context.Context, content any, eventContext events.Con
 	if handler.context {
 		args = append(args, reflect.ValueOf(ctx))
 	}
-	eventValue := reflect.ValueOf(content)
-	if !eventValue.IsValid() {
-		return invalid("nil event")
-	}
-	if !eventValue.Type().AssignableTo(handler.event) {
-		if eventValue.Kind() == reflect.Pointer && !eventValue.IsNil() {
-			eventValue = eventValue.Elem()
-		} else if reflect.PointerTo(eventValue.Type()).AssignableTo(handler.event) {
-			pointer := reflect.New(eventValue.Type())
-			pointer.Elem().Set(eventValue)
-			eventValue = pointer
-		}
-	}
-	if !eventValue.Type().AssignableTo(handler.event) {
+	eventValue, valid := discovery.EventArgument(content, handler.event)
+	if !valid {
 		return invalid("event has wrong type")
 	}
 	args = append(args, eventValue)
@@ -265,7 +186,7 @@ func (l *Lease) Invoke(ctx context.Context, content any, eventContext events.Con
 					value, err = runtime.ReadModel(ctx, arg.model, key, arg.typ)
 				}
 			} else {
-				value, err = resolve(ctx, l.scope, arg.typ)
+				value, err = artifacts.Resolve(ctx, l.scope, arg.typ)
 			}
 		}
 		if err != nil {

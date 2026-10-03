@@ -11,6 +11,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/reducers"
 )
 
 // Registry is an isolated collection of explicit declarations. Its zero value is
@@ -23,6 +24,7 @@ type Registry struct {
 	readModels         []readmodels.Descriptor
 	projections        []projections.Declaration
 	reactors           []reactorDeclaration
+	reducers           []reducers.Declaration
 	reactorMiddlewares []any
 }
 

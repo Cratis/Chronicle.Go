@@ -18,6 +18,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	"github.com/cratis/chronicle.go/contracts/namespaces"
 	reactorcontracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
+	reducercontracts "github.com/cratis/chronicle.go/contracts/observation/reducers"
 	projectioncontracts "github.com/cratis/chronicle.go/contracts/projections"
 	readmodelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/contracts/sequences"
@@ -46,6 +47,7 @@ type supervisedKernel struct {
 	readModels          readmodelcontracts.ReadModelsServer
 	projections         projectioncontracts.ProjectionsServer
 	reactors            reactorcontracts.ReactorsServer
+	reducers            reducercontracts.ReducersServer
 	streamInterceptor   grpc.StreamClientInterceptor
 }
 
@@ -92,7 +94,7 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 	k.registered = make(chan struct{}, 20)
 	k.namespaceCounts = make(map[string]int)
 	listener := bufconn.Listen(1024 * 1024)
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.WaitForHandlers(true))
 	clients.RegisterConnectionServiceServer(server, k)
 	eventstores.RegisterEventStoresServer(server, k)
 	eventtypes.RegisterEventTypesServer(server, k)
@@ -107,6 +109,9 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 	}
 	if k.reactors != nil {
 		reactorcontracts.RegisterReactorsServer(server, k.reactors)
+	}
+	if k.reducers != nil {
+		reducercontracts.RegisterReducersServer(server, k.reducers)
 	}
 	served := make(chan struct{})
 	go func() {

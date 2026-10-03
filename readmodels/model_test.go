@@ -73,7 +73,7 @@ func TestReadModelInvalidDeclarationsFailClosed(t *testing.T) {
 	if _, err := readmodels.Define[*Person](); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
 		t.Fatal(err)
 	}
-	if _, err := readmodels.Define[Person](readmodels.WithObserver(readmodels.Reducer, "r"), readmodels.WithSink(readmodels.Sink{Type: readmodels.NoSink})); !errors.Is(err, chronicle.ErrUnsupported) {
+	if _, err := readmodels.Define[Person](readmodels.WithObserver(readmodels.Reducer, "r"), readmodels.WithSink(readmodels.Sink{Type: readmodels.NoSink})); err != nil {
 		t.Fatal(err)
 	}
 	type Reserved struct {

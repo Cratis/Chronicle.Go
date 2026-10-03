@@ -28,15 +28,25 @@ type Service struct {
 	catalog    *Catalog
 	client     contracts.ReadModelsClient
 	compliance compliance.ComplianceClient
+	passive    PassiveReader
 }
 
 // New constructs a service without I/O. The caller owns the channel and any
 // registration/readiness barriers; the store facade supplies those automatically.
-func New(store metadata.StoreName, namespace metadata.Namespace, catalog *Catalog, conn grpc.ClientConnInterface) (*Service, error) {
+func New(store metadata.StoreName, namespace metadata.Namespace, catalog *Catalog, conn grpc.ClientConnInterface, options ...ServiceOption) (*Service, error) {
 	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || catalog == nil || conn == nil || (reflect.ValueOf(conn).Kind() == reflect.Pointer && reflect.ValueOf(conn).IsNil()) {
 		return nil, invalid("store, namespace, catalog and transport required")
 	}
-	return &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), compliance: compliance.NewComplianceClient(conn)}, nil
+	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), compliance: compliance.NewComplianceClient(conn)}
+	for _, option := range options {
+		if option == nil {
+			return nil, invalid("nil service option")
+		}
+		if err := option(service); err != nil {
+			return nil, err
+		}
+	}
+	return service, nil
 }
 
 // Catalog returns the immutable set of registered models.
@@ -75,6 +85,22 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 	}
 	if key == "*" {
 		return Instance[json.RawMessage]{}, fmt.Errorf("%w: unspecified-key replay is not a one-shot instance read", faults.ErrUnsupported)
+	}
+	if kind, _ := d.Observer(); kind == Reducer && d.Sink().Type == NoSink {
+		if s.passive == nil || session != "" {
+			return Instance[json.RawMessage]{}, fmt.Errorf("%w: passive reducer reader unavailable or session requested", faults.ErrUnsupported)
+		}
+		result, err := s.passive(ctx, d, key)
+		if err != nil {
+			return Instance[json.RawMessage]{}, err
+		}
+		if result.Exists {
+			result.Value, err = s.Release(ctx, d.Identifier(), result.Value)
+			if err != nil {
+				return Instance[json.RawMessage]{}, err
+			}
+		}
+		return result, nil
 	}
 	response, err := s.client.GetInstanceByKey(ctx, &contracts.GetInstanceByKeyRequest{EventStore: string(s.store), Namespace: string(s.namespace), ReadModelIdentifier: string(d.Identifier()), EventSequenceId: string(d.EventSequence()), ReadModelKey: string(key), SessionId: session})
 	if err != nil {

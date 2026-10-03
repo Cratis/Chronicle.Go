@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 	"strconv"
 	"time"
 
@@ -58,25 +57,14 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 // Run processes batches sequentially until cancellation or stream failure. Effects
 // are never retried here. The kernel controls failure recovery and resume position.
 func (r *Reactor) Run(ctx context.Context) error {
-	for {
-		batch, err := r.stream.Recv()
-		if err != nil {
-			return err
-		}
-		if batch == nil {
-			return faults.ErrProtocol
-		}
+	return runStream(ctx, r.stream.Recv, func(ctx context.Context, batch *contracts.EventsToObserve) *contracts.ReactorResult {
 		if batch.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
-			continue
-		} // Replay notification callbacks belong to part 2; these have no result handshake.
-		result := r.handle(ctx, batch)
-		if err = ctx.Err(); err != nil {
-			return err
+			return nil
 		}
-		if err = r.stream.Send(&contracts.ReactorMessage{Content: &contracts.OneOf_RegisterReactor_ReactorResult{Value1: result}}); err != nil {
-			return err
-		}
-	}
+		return r.handle(ctx, batch)
+	}, func(result *contracts.ReactorResult) error {
+		return r.stream.Send(&contracts.ReactorMessage{Content: &contracts.OneOf_RegisterReactor_ReactorResult{Value1: result}})
+	})
 }
 func (r *Reactor) handle(ctx context.Context, batch *contracts.EventsToObserve) (result *contracts.ReactorResult) {
 	result = &contracts.ReactorResult{Partition: batch.Partition, State: contracts.ObservationState_Success, LastSuccessfulObservation: uint64(events.Unavailable)}
@@ -155,21 +143,11 @@ func (r *Reactor) decode(appended *contracts.AppendedEvent) (events.Context, any
 	if !ok {
 		return ec, nil, fmt.Errorf("%w: unsubscribed event type", faults.ErrProtocol)
 	}
-	content := appended.Content
-	if target := descriptor.Ref().Generation; target != ec.EventType.Generation {
-		if generational, ok := appended.GenerationalContent[int32(target)]; ok {
-			content = generational
-			ec.EventType.Generation = target
-		}
+	generations := make(map[events.Generation]json.RawMessage, len(appended.GenerationalContent))
+	for generation, content := range appended.GenerationalContent {
+		generations[events.Generation(generation)] = json.RawMessage(content)
 	}
-	value := reflect.New(descriptor.GoType())
-	if err := json.Unmarshal([]byte(content), value.Interface()); err != nil {
-		return ec, nil, fmt.Errorf("%w: invalid event content", faults.ErrProtocol)
-	}
-	if len(content) == 0 || content == "null" {
-		return ec, nil, faults.ErrProtocol
-	}
-	return ec, value.Interface(), nil
+	return DecodeContent(descriptor, ec, []byte(appended.Content), generations)
 }
 func invocationContext(ctx context.Context, id reactors.ID, ec events.Context) context.Context {
 	ctx = metadata.WithCorrelation(ctx, ec.CorrelationID)

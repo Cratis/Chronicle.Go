@@ -17,6 +17,7 @@ import (
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/reducers"
 )
 
 // Client owns a generation supervisor and frozen registries. Construct with
@@ -51,6 +52,7 @@ type Client struct {
 	projections       []projections.Definition
 	storeProjections  map[StoreName][]projections.Definition
 	reactors          reactorCatalogs
+	reducers          reducerCatalogs
 }
 
 // String describes the client without revealing endpoints or credentials.
@@ -83,7 +85,8 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		readModelCatalog: frozen.models, readModelCatalogs: make(map[StoreName]*readmodels.Catalog),
 		projections: frozen.projections, storeProjections: make(map[StoreName][]projections.Definition),
 		changed: make(chan struct{}), closeDone: make(chan struct{}),
-		reactors: reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)}}
+		reactors: reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)},
+		reducers: reducerCatalogs{defaults: frozen.reducers, stores: make(map[StoreName][]*reducers.Plan)}}
 	for name, registry := range config.stores {
 		if strings.TrimSpace(string(name)) == "" {
 			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
@@ -95,6 +98,7 @@ func NewClient(options ...ClientOption) (*Client, error) {
 		c.catalogs[name], c.storeConstraints[name] = frozen.events, frozen.constraints
 		c.readModelCatalogs[name], c.storeProjections[name] = frozen.models, frozen.projections
 		c.reactors.stores[name] = frozen.reactors
+		c.reducers.stores[name] = frozen.reducers
 	}
 	c.config.registry, c.config.stores = nil, nil
 	c.config.skipCompatibility = config.skipCompatibility || uri.skipCompatibility

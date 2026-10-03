@@ -32,6 +32,8 @@
       href: projections/orders.md
 - name: Reactors
   href: reactors.md
+- name: Reducers
+  href: reducers.md
 - name: Parity and limitations
   href: parity.md
 - name: Releases
