@@ -119,29 +119,43 @@ type KernelOnceInput struct{ Number int }
 type KernelReplayReactor struct {
 	signals            chan string
 	live, replay, once *atomic.Int32
+	trace              func(string, events.Context)
 }
 
-func (r *KernelReplayReactor) Live(KernelReplayInput) { r.live.Add(1) }
+func (r *KernelReplayReactor) Live(_ KernelReplayInput, ec events.Context) {
+	r.live.Add(1)
+	r.trace("live", ec)
+}
 func (r *KernelReplayReactor) Rebuild(e KernelReplayInput, ec events.Context) error {
 	if ec.ObservationState&events.ObservationReplay == 0 {
 		return fmt.Errorf("replacement did not receive replay flag")
 	}
 	r.replay.Add(1)
+	r.trace("replay", ec)
 	return nil
 }
-func (r *KernelReplayReactor) Once(KernelOnceInput)              { r.once.Add(1) }
+func (r *KernelReplayReactor) Once(_ KernelOnceInput, ec events.Context) {
+	r.once.Add(1)
+	r.trace("once", ec)
+}
 func (r *KernelReplayReactor) BeginReplay(context.Context) error { r.signals <- "begin"; return nil }
 func (r *KernelReplayReactor) EndReplay(context.Context) error   { r.signals <- "end"; return nil }
 
 func TestKernelReactorReplayReplacementOnceOnlyAndNotifications(t *testing.T) {
 	f := newKernelFixture(t)
+	t.Logf("replay fixture store=%s", f.storeName)
 	r := integrationRegistry[KernelReplayInput](t)
 	if _, err := chronicle.RegisterEvent[KernelOnceInput](r); err != nil {
 		t.Fatal(err)
 	}
 	var live, replay, once atomic.Int32
 	signals := make(chan string, 16)
-	if err := chronicle.RegisterReactor[*KernelReplayReactor](r, func() *KernelReplayReactor { return &KernelReplayReactor{signals, &live, &replay, &once} }, reactors.WithID("replay-parity"), reactors.Replay("Rebuild"), reactors.OnceOnly("Once")); err != nil {
+	trace := func(handler string, ec events.Context) {
+		t.Logf("%s handler=%s position=%d observation=%d", time.Now().UTC().Format(time.RFC3339Nano), handler, ec.SequenceNumber, ec.ObservationState)
+	}
+	if err := chronicle.RegisterReactor[*KernelReplayReactor](r, func() *KernelReplayReactor {
+		return &KernelReplayReactor{signals, &live, &replay, &once, trace}
+	}, reactors.WithID("replay-parity"), reactors.Replay("Rebuild"), reactors.OnceOnly("Once")); err != nil {
 		t.Fatal(err)
 	}
 	client := f.client(r)
@@ -154,11 +168,28 @@ func TestKernelReactorReplayReplacementOnceOnlyAndNotifications(t *testing.T) {
 	ctx, cancel := context.WithTimeout(f.ctx, 20*time.Second)
 	defer cancel()
 	observers := contracts.NewObserversClient(f.conn)
+	request := &contracts.GetObserverInformationRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: "replay-parity"}
+	// Capture evidence before client cleanup, including when the poll RPC itself
+	// reaches the deadline. Neither a timeout nor a duplicate implies #4548.
+	diagnose := func() {
+		diagnostics, done := context.WithTimeout(f.ctx, 5*time.Second)
+		defer done()
+		info, infoErr := observers.GetObserverInformation(diagnostics, request)
+		history, historyErr := store.EventLog().ReadSource(diagnostics, "one", eventsequences.SourceFilter{})
+		failures, failuresErr := store.Observers().FailedPartitions(diagnostics, "replay-parity")
+		jobs, jobsErr := store.Jobs().List(diagnostics)
+		t.Logf("live=%d replay=%d once=%d state=%s subscribed=%t last=%d next=%d tail=%d handled=%d infoError=%v", live.Load(), replay.Load(), once.Load(), info.GetRunningState(), info.GetIsSubscribed(), info.GetLastHandledEventSequenceNumber(), info.GetNextEventSequenceNumber(), info.GetTailEventSequenceNumber(), info.GetHandledEventCount(), infoErr)
+		t.Logf("historyError=%v failures=%v failureError=%v jobs=%v jobError=%v", historyErr, failures, failuresErr, jobs, jobsErr)
+		for _, event := range history {
+			t.Logf("persisted position=%d type=%s content=%s", event.Context.SequenceNumber, event.Context.EventType.ID, event.Content)
+		}
+	}
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		info, err := observers.GetObserverInformation(ctx, &contracts.GetObserverInformationRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: "replay-parity"})
+		info, err := observers.GetObserverInformation(ctx, request)
 		if err != nil {
+			diagnose()
 			t.Fatal(err)
 		}
 		if info.LastHandledEventSequenceNumber == uint64(*last.Position) && live.Load() == 1 && once.Load() == 1 {
@@ -166,6 +197,7 @@ func TestKernelReactorReplayReplacementOnceOnlyAndNotifications(t *testing.T) {
 		}
 		select {
 		case <-ctx.Done():
+			diagnose()
 			t.Fatal("live observer did not finish", ctx.Err())
 		case <-ticker.C:
 		}
