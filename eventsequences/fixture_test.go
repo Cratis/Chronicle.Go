@@ -5,6 +5,7 @@ package eventsequences_test
 
 import (
 	"context"
+	"errors"
 	"net"
 	"strings"
 	"sync/atomic"
@@ -76,7 +77,7 @@ func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		if err := server.Serve(listener); err != nil {
+		if err := fixtureServeError(server.Serve(listener)); err != nil {
 			t.Error(err)
 		}
 	}()
@@ -103,6 +104,16 @@ func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events
 		t.Fatal(err)
 	}
 	return sequence, calls
+}
+
+// fixtureServeError tolerates only grpc-go's explicit Serve-after-Stop outcome.
+// NewClient is lazy: zero-RPC tests can finish and Stop before Serve starts.
+// The fixture still joins its server goroutine and reports every other error.
+func fixtureServeError(err error) error {
+	if errors.Is(err, grpc.ErrServerStopped) {
+		return nil
+	}
+	return err
 }
 
 func testContext(t *testing.T) context.Context {
