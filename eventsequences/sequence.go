@@ -94,7 +94,7 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	dispatched := true
 	defer func() {
 		if dispatched {
-			err = joinNotificationError(err, s.notifySingle(source, descriptor.Ref(), config.route, wire.Correlation(request.CorrelationId), result, err))
+			err = joinNotificationError(err, s.notifySingle(OriginFrom(ctx), source, descriptor.Ref(), config.route, wire.Correlation(request.CorrelationId), result, err))
 		}
 	}()
 	var envelope *sequences.CommandResult_AppendResponse

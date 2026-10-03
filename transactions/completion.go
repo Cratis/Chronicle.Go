@@ -40,7 +40,7 @@ func (o *Owner) Commit(ctx context.Context) (eventsequences.BatchResult, error) 
 	if err != nil {
 		result.Disposition = eventsequences.Rejected
 	} else if hasWork {
-		result, err = u.sequence.AppendPreparedBatch(ctx, pending)
+		result, err = u.sequence.AppendPreparedBatch(eventsequences.WithOrigin(ctx, u.origin), pending)
 	}
 	if err != nil && ctx.Err() != nil && !errors.Is(err, ctx.Err()) {
 		err = errors.Join(err, ctx.Err())

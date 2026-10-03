@@ -34,8 +34,12 @@ type AppendEvent struct {
 // and positions. Err and any wrapped errors are borrowed and must not be mutated.
 type AppendNotification struct {
 	// CorrelationID is the effective REQUEST correlation, even if the response is
-	// absent or carries a different ID. Use this to attribute work to a command.
+	// absent or carries a different ID. Multiple executions may share this ID;
+	// use Origin to distinguish them.
 	CorrelationID metadata.CorrelationID
+	// Origin identifies the unit of work for a commit, or the origin installed
+	// in an immediate append's context. Zero means unattributed.
+	Origin Origin
 	// Operation identifies the store, namespace, sequence and distinct exact types.
 	Operation OperationMetadata
 	// Events identifies each original input and its position when known.
@@ -90,7 +94,7 @@ type appendSubscription struct {
 // No internal locks are held during callbacks. Callbacks may subscribe, dispose
 // or append recursively (the caller must bound recursion). Concurrent appends may
 // invoke the same callback concurrently, with no cross-operation ordering; protect
-// shared command state and filter CorrelationID. Slow callbacks delay the caller.
+// shared command state and filter Origin. Slow callbacks delay the caller.
 // Panics become AppendCallbackPanicError, not a changed write disposition or a
 // silent failure. Notification Err excludes subscriber failures.
 func (s *Sequence) OnAppend(callback func(AppendNotification)) (unsubscribe func()) {
@@ -162,7 +166,7 @@ func cloneNotification(notification AppendNotification) AppendNotification {
 	return notification
 }
 
-func (s *Sequence) notifySingle(source events.SourceID, ref events.TypeRef, route Route, correlation metadata.CorrelationID, result AppendResult, err error) error {
+func (s *Sequence) notifySingle(origin Origin, source events.SourceID, ref events.TypeRef, route Route, correlation metadata.CorrelationID, result AppendResult, err error) error {
 	batch := BatchResult{Disposition: result.Disposition, CorrelationID: result.CorrelationID,
 		ConstraintViolations: result.ConstraintViolations, ConcurrencyViolations: result.ConcurrencyViolations,
 		Errors: result.Errors, ConcurrencyCheckPerformed: result.ConcurrencyCheckPerformed, Target: result.Target}
@@ -170,13 +174,13 @@ func (s *Sequence) notifySingle(source events.SourceID, ref events.TypeRef, rout
 		batch.Positions = []events.SequenceNumber{*result.Position}
 	}
 	return s.notifyAppend(AppendNotification{
-		CorrelationID: correlation, Operation: OperationMetadata{store: s.store, namespace: s.namespace, sequence: s.id, refs: []events.TypeRef{ref}},
+		Origin: origin, CorrelationID: correlation, Operation: OperationMetadata{store: s.store, namespace: s.namespace, sequence: s.id, refs: []events.TypeRef{ref}},
 		Events: []AppendEvent{{Source: source, EventType: ref, Route: normalizedRoute(route), Position: result.Position}}, Result: batch, Err: err,
 	})
 }
 
-func (s *Sequence) notifyBatch(batch preparedBatch, result BatchResult, err error) error {
-	notification := AppendNotification{CorrelationID: wire.Correlation(batch.request.CorrelationId), Result: result, Err: err,
+func (s *Sequence) notifyBatch(origin Origin, batch preparedBatch, result BatchResult, err error) error {
+	notification := AppendNotification{Origin: origin, CorrelationID: wire.Correlation(batch.request.CorrelationId), Result: result, Err: err,
 		Operation: OperationMetadata{store: s.store, namespace: s.namespace, sequence: s.id}}
 	seen := make(map[events.TypeRef]bool)
 	for i, event := range batch.request.Events {
