@@ -159,69 +159,134 @@ func TestDefinitionPreparationCleansPartialScopesAndConstructorResultsBeforeDepe
 	}
 }
 
-func TestDefinitionPreparationPreservesPanicWithoutEverFormattingItsValue(t *testing.T) {
-	for _, phase := range []string{"open", "construct", "define", "artifact close", "scope close"} {
-		t.Run(phase, func(t *testing.T) {
-			formatted, closed, scopeClosed := 0, 0, 0
-			payload := &sensitivePanic{&formatted}
-			registry := NewRegistry()
-			model, err := RegisterReadModel[catalogModel](registry)
-			if err != nil {
-				t.Fatal(err)
-			}
-			services := preparationFactory{open: func(context.Context) (reactors.Scope, error) {
-				if phase == "open" {
-					panic(payload)
-				}
-				return &preparationScope{close: func(context.Context) error {
-					scopeClosed++
-					if phase == "scope close" {
-						panic(payload)
+func TestDefinitionPreparationDiscardsPanicsWithoutEverFormattingTheirValues(t *testing.T) {
+	for _, kind := range []string{"string", "object", "error"} {
+		t.Run(kind, func(t *testing.T) {
+			for _, phase := range []string{"validate", "open", "resolve", "construct", "define", "artifact close", "scope close"} {
+				t.Run(phase, func(t *testing.T) {
+					formatted, closed, scopeClosed := 0, 0, 0
+					var payload any = "secret panic payload"
+					switch kind {
+					case "object":
+						payload = &sensitivePanic{&formatted}
+					case "error":
+						payload = errors.New("secret panic payload")
 					}
-					return nil
-				}}, nil
-			}}
-			err = RegisterProjectionFactory(registry, "prepared", model.Descriptor(), func() *preparationArtifact {
-				if phase == "construct" {
-					panic(payload)
-				}
-				return &preparationArtifact{close: func(context.Context) error {
-					closed++
-					if phase == "artifact close" {
-						panic(payload)
+					registry := NewRegistry()
+					model, err := RegisterReadModel[catalogModel](registry)
+					if err != nil {
+						t.Fatal(err)
 					}
-					return nil
-				}}
-			}, func(context.Context, *preparationArtifact) (projections.Declaration, error) {
-				if phase == "define" {
-					panic(payload)
-				}
-				return projections.ModelBound(model, projections.WithIdentifier("prepared")), nil
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			client, err := NewClient(WithRegistry(registry), WithServices(services))
-			var prepared *PreparationError
-			if client != nil || !errors.As(err, &prepared) || prepared.Recovered() != payload {
-				t.Fatalf("lost panic identity: %v", err)
-			}
-			_ = fmt.Sprintf("%v %+v %#v %s", err, err, err, err)
-			if formatted != 0 {
-				t.Fatal("panic payload was formatted")
-			}
-			wantScope, wantClosed := 1, 1
-			if phase == "open" {
-				wantScope, wantClosed = 0, 0
-			}
-			if phase == "construct" {
-				wantClosed = 0
-			}
-			if scopeClosed != wantScope || closed != wantClosed {
-				t.Fatalf("scope=%d artifact=%d", scopeClosed, closed)
+					services := preparationFactory{contains: func(typ reflect.Type) bool {
+						if phase == "validate" {
+							panic(payload)
+						}
+						return typ != reflect.TypeFor[*preparationArtifact]()
+					}, open: func(context.Context) (reactors.Scope, error) {
+						if phase == "open" {
+							panic(payload)
+						}
+						return &preparationScope{resolve: func(context.Context, reflect.Type) (any, error) {
+							if phase == "resolve" {
+								panic(payload)
+							}
+							return preparationDependency{}, nil
+						}, close: func(context.Context) error {
+							scopeClosed++
+							if phase == "scope close" {
+								panic(payload)
+							}
+							return nil
+						}}, nil
+					}}
+					err = RegisterProjectionFactory(registry, "prepared", model.Descriptor(), func(preparationDependency) *preparationArtifact {
+						if phase == "construct" {
+							panic(payload)
+						}
+						return &preparationArtifact{close: func(context.Context) error {
+							closed++
+							if phase == "artifact close" {
+								panic(payload)
+							}
+							return nil
+						}}
+					}, func(context.Context, *preparationArtifact) (projections.Declaration, error) {
+						if phase == "define" {
+							panic(payload)
+						}
+						return projections.ModelBound(model, projections.WithIdentifier("prepared")), nil
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+					client, err := NewClient(WithRegistry(registry), WithServices(services))
+					var prepared *PreparationError
+					if client != nil || !errors.As(err, &prepared) || !errors.Is(err, ErrInvalidConfiguration) {
+						t.Fatalf("panic published a client or lost its category: %v", err)
+					}
+					if _, exists := reflect.TypeOf(prepared).MethodByName("Recovered"); exists {
+						t.Fatal("preparation exposes recovered payloads")
+					}
+					assertDiscardedPreparationPanic(t, err, payload)
+					if formatted != 0 {
+						t.Fatal("panic payload was formatted")
+					}
+					wantScope, wantClosed := 1, 1
+					if phase == "open" || phase == "validate" {
+						wantScope, wantClosed = 0, 0
+					}
+					if phase == "construct" || phase == "resolve" {
+						wantClosed = 0
+					}
+					if scopeClosed != wantScope || closed != wantClosed {
+						t.Fatalf("scope=%d artifact=%d", scopeClosed, closed)
+					}
+				})
 			}
 		})
 	}
+}
+
+// Inspect all retained fields as well as the public error chain: a payload must
+// not merely be hidden by Error/Format, even behind an unexported cause field.
+func assertDiscardedPreparationPanic(t *testing.T, err error, payload any) {
+	t.Helper()
+	original := reflect.ValueOf(payload)
+	var inspect func(reflect.Value)
+	inspect = func(value reflect.Value) {
+		if !value.IsValid() {
+			return
+		}
+		if value.Type() == original.Type() && value.Comparable() && value.Equal(original) {
+			t.Fatal("diagnostic retains the panic payload")
+		}
+		if value.CanInterface() {
+			if diagnostic, ok := value.Interface().(error); ok {
+				if strings.Contains(fmt.Sprintf("%v %+v %#v %s", diagnostic, diagnostic, diagnostic, diagnostic), "secret panic payload") {
+					t.Fatal("diagnostic formats the panic payload")
+				}
+			}
+		}
+		switch value.Kind() {
+		case reflect.Pointer, reflect.Interface:
+			if !value.IsNil() {
+				inspect(value.Elem())
+			}
+		case reflect.Struct:
+			for i := 0; i < value.NumField(); i++ {
+				inspect(value.Field(i))
+			}
+		case reflect.Slice:
+			for i := 0; i < value.Len(); i++ {
+				inspect(value.Index(i))
+			}
+		case reflect.String:
+			if strings.Contains(value.String(), "secret panic payload") {
+				t.Fatal("diagnostic retains secret text")
+			}
+		}
+	}
+	inspect(reflect.ValueOf(err))
 }
 
 func TestDefinitionPreparationResolverIsBorrowedGuardedAndExpires(t *testing.T) {

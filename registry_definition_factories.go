@@ -19,7 +19,7 @@ import (
 
 // PreparationError reports a failed preparation boundary. Its text (including
 // formatted values) never contains application error or panic payloads. Unwrap
-// preserves causes for errors.Is/As; Recovered exposes the sensitive panic value.
+// preserves ordinary causes for errors.Is/As. Recovered panic values are discarded.
 // Failed preparation publishes no client, but cannot roll back application effects.
 type PreparationError = artifacts.PreparationError
 

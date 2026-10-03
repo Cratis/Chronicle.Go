@@ -89,8 +89,8 @@ type Lease struct {
 func Open(ctx context.Context, services ScopeFactory) (l *Lease, err error) {
 	l = &Lease{closeDone: make(chan struct{})}
 	defer func() {
-		if p := recover(); p != nil {
-			err = &panicError{value: p}
+		if recover() != nil {
+			err = &panicError{}
 		}
 	}()
 	l.Scope, err = services.NewScope(ctx)

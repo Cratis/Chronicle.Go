@@ -14,8 +14,8 @@ import (
 )
 
 // PreparationError describes a failed preparation boundary without formatting
-// application errors or panic values. Causes remain available through Unwrap.
-// Recovered returns the original panic value, if any; treat it as sensitive.
+// application errors or panic values. Ordinary causes remain available through
+// Unwrap; recovered panic values are discarded, never retained as diagnostics.
 type PreparationError struct {
 	// Family identifies the definition family, or registry-wide preparation.
 	Family string
@@ -32,19 +32,10 @@ func (e *PreparationError) Error() string {
 // Unwrap preserves application and cleanup failure identities.
 func (e *PreparationError) Unwrap() error { return e.cause }
 
-// Format redacts causes and recovered values for every fmt verb.
+// Format redacts application causes for every fmt verb.
 func (e *PreparationError) Format(s fmt.State, _ rune) { _, _ = io.WriteString(s, e.Error()) }
 
-// Recovered returns the original panic value without evaluating its formatting methods.
-func (e *PreparationError) Recovered() any {
-	var panicErr *panicError
-	if errors.As(e.cause, &panicErr) {
-		return panicErr.value
-	}
-	return nil
-}
-
-type panicError struct{ value any }
+type panicError struct{}
 
 func (*panicError) Error() string                { return "application callback panicked" }
 func (*panicError) Unwrap() error                { return invalid("application callback panicked") }
@@ -53,8 +44,8 @@ func (e *panicError) Format(s fmt.State, _ rune) { _, _ = io.WriteString(s, e.Er
 // Protect redacts errors and recovers panics at a synchronous preparation boundary.
 func Protect(family, stage string, run func() error) (err error) {
 	defer func() {
-		if value := recover(); value != nil {
-			err = &panicError{value: value}
+		if recover() != nil {
+			err = &panicError{}
 		}
 		if err != nil {
 			if _, prepared := err.(*PreparationError); !prepared {

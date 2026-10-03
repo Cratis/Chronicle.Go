@@ -118,10 +118,30 @@ or container-internal dependencies remain your responsibility. There is no
 two-phase client preparation or automatic facade-binding API in this slice.
 
 Preparation errors and panics return `PreparationError`. Its formatted text is
-payload-free; `errors.Is`/`errors.As` inspect causes and `Recovered()` exposes the
-original sensitive panic value without formatting it. Any preparation or cleanup
-failure returns no client and publishes no partial local catalog. Application
-side effects already performed cannot be rolled back.
+payload-free. Recovered panic values (strings, objects and errors) are immediately
+discarded: they are neither formatted nor retained in the returned diagnostics.
+There is no recovered-value accessor. Ordinary application failures remain
+inspectable with `errors.Is`/`errors.As`.
+
+The optional `services` adapter also sanitizes Fundamentals.Go provider errors.
+It creates fresh `dependencyinjection.Error` diagnostics with copied type-key paths,
+known operation names and stable failure categories. `Panic` is always nil, and a
+panic-bearing node's original `Cause` is discarded, even if it is an error value.
+Independent ordinary failures in a joined tree remain inspectable. Non-panic
+provider causes retain plain error leaves (including typed errors and cancellation
+sentinels), but application wrappers and their cached text are replaced, so wrapper
+identity is not preserved. Custom `As`/`Is` hooks are neither called nor forwarded.
+Unknown category/operation metadata is replaced with controlled diagnostics.
+
+Error-tree inspection runs under a separate recovery boundary, never inside a
+recovery defer. Cycles, more than 64 levels or 256 visited nodes, and unsupported
+inspection hooks produce payload-free failure diagnostics. A panic in `Unwrap`
+is discarded too; it cannot prevent cleanup of an already returned partial scope.
+As with preparation callbacks, an application `Unwrap` must return synchronously;
+these traversal limits cannot interrupt a blocking method.
+
+Any preparation or cleanup failure returns no client and publishes no partial
+local catalog. Application side effects already performed cannot be rolled back.
 
 See [projections](projections/index.md), [constraints](events/constraints.md),
 [event evolution](events/evolution.md), and [parity limits](parity.md#definition-factories).

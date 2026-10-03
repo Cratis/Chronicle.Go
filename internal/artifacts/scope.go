@@ -93,8 +93,8 @@ func (s *defaultScope) Close(ctx context.Context) error {
 }
 func closeValue(ctx context.Context, value any) (err error) {
 	defer func() {
-		if p := recover(); p != nil {
-			err = &panicError{value: p}
+		if recover() != nil {
+			err = &panicError{}
 		}
 	}()
 	if closer, ok := value.(interface{ CloseContext(context.Context) error }); ok {
