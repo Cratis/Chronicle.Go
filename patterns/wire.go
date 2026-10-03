@@ -4,6 +4,7 @@
 package patterns
 
 import (
+	"regexp"
 	"slices"
 	"time"
 
@@ -141,7 +142,16 @@ func decodePatterns(response *contracts.QueryResult_IEnumerable_BehaviorPatternD
 	return result, nil
 }
 
+// Validate lexical precision and offset minutes before time.Parse can truncate
+// fractions or normalize an out-of-range offset minute. Calendar validation and
+// DateTimeOffset's local/UTC range checks remain below. Short/absent fractions
+// are accepted alongside the pinned C# converter's seven-digit "O" format.
+var dateSyntax = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,7})?(Z|[+-][0-9]{2}:[0-5][0-9])$`)
+
 func parseDate(value string) (time.Time, error) {
+	if !dateSyntax.MatchString(value) {
+		return time.Time{}, ErrProtocol
+	}
 	result, err := time.Parse(time.RFC3339Nano, value)
 	// DateTimeOffset cannot carry sub-tick precision or sub-minute offsets.
 	_, offset := result.Zone()

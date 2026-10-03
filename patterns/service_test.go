@@ -303,6 +303,108 @@ func TestMalformedResponsesFailAtomically(t *testing.T) {
 	}
 }
 
+func TestResponseTimestampGrammar(t *testing.T) {
+	// SerializableDateTimeOffset.cs at 2e31b0dfb emits seven digits using "O".
+	// The Go response profile also permits short or absent fractional seconds.
+	valid := []struct {
+		name, value string
+		nanosecond  int
+		offset      int
+	}{
+		{"seven-digits", "2024-01-15T09:30:00.1234567+02:00", 123456700, 2 * 3600},
+		{"short-fraction", "2024-01-15T09:30:00.1Z", 100000000, 0},
+		{"zero-fraction", "2024-01-15T09:30:00.0000000Z", 0, 0},
+		{"absent-fraction", "2024-01-15T09:30:00Z", 0, 0},
+		{"positive-minute-59", "2024-01-15T09:30:00+13:59", 0, 13*3600 + 59*60},
+		{"negative-minute-59", "2024-01-15T09:30:00-13:59", 0, -13*3600 - 59*60},
+		{"maximum-positive-offset", "2024-01-15T09:30:00+14:00", 0, 14 * 3600},
+		{"maximum-negative-offset", "2024-01-15T09:30:00-14:00", 0, -14 * 3600},
+		{"negative-zero-offset", "2024-01-15T09:30:00-00:00", 0, 0},
+		{"minimum-date", "0001-01-01T00:00:00Z", 0, 0},
+		{"maximum-date", "9999-12-31T23:59:59.9999999Z", 999999900, 0},
+		{"gregorian-leap-day", "2000-02-29T09:30:00Z", 0, 0},
+	}
+	for _, tc := range valid {
+		t.Run(tc.name, func(t *testing.T) {
+			conn := &transport{invoke: func(_ context.Context, _ string, _, reply any) error {
+				r := reply.(*contracts.QueryResult_IEnumerable_BehaviorPatternDetailsResponse)
+				r.IsAuthorized = true
+				r.Data = []*contracts.BehaviorPatternDetailsResponse{{FirstSeen: &contracts.SerializableDateTimeOffset{Value: tc.value}, LastSeen: &contracts.SerializableDateTimeOffset{Value: tc.value}}}
+				return nil
+			}}
+			result, err := service(t, conn).GetPatternsForScope(t.Context(), "scope")
+			if err != nil || len(result.Data) != 1 {
+				t.Fatalf("valid timestamp rejected: %+v %v", result, err)
+			}
+			for _, date := range []time.Time{result.Data[0].FirstSeen, result.Data[0].LastSeen} {
+				_, offset := date.Zone()
+				if date.Nanosecond() != tc.nanosecond || offset != tc.offset {
+					t.Fatalf("timestamp changed: %v, want nanosecond=%d offset=%d", date, tc.nanosecond, tc.offset)
+				}
+			}
+		})
+	}
+}
+
+func TestMalformedTimestampResponsesFailAtomically(t *testing.T) {
+	invalid := []struct{ name, value string }{
+		{"normalized-offset-minute", "2024-01-15T09:30:00+00:60"},
+		{"normalized-negative-offset-minute", "2024-01-15T09:30:00-00:60"},
+		{"truncated-fraction", "2024-01-15T09:30:00.1234567001Z"},
+		{"eight-fraction-digits", "2024-01-15T09:30:00.12345670Z"},
+		{"excess-zero-precision", "2024-01-15T09:30:00.00000000Z"},
+		{"sub-tick-precision", "2024-01-15T09:30:00.123456701Z"},
+		{"positive-offset-past-maximum", "2024-01-15T09:30:00+14:01"},
+		{"negative-offset-past-maximum", "2024-01-15T09:30:00-14:01"},
+		{"offset-hour-past-maximum", "2024-01-15T09:30:00+15:00"},
+		{"offset-missing-sign", "2024-01-15T09:30:0002:00"},
+		{"offset-minute-not-two-digits", "2024-01-15T09:30:00+02:9"},
+		{"offset-minute-not-numeric", "2024-01-15T09:30:00+02:xx"},
+		{"empty-fraction", "2024-01-15T09:30:00.Z"},
+		{"comma-fraction", "2024-01-15T09:30:00,1234567Z"},
+		{"hour-not-two-digits", "2024-01-15T9:30:00Z"},
+		{"invalid-hour", "2024-01-15T24:30:00Z"},
+		{"invalid-minute", "2024-01-15T09:60:00Z"},
+		{"invalid-second", "2024-01-15T09:30:60Z"},
+		{"invalid-month", "2024-13-15T09:30:00Z"},
+		{"invalid-day", "2024-04-31T09:30:00Z"},
+		{"gregorian-non-leap-day", "1900-02-29T09:30:00Z"},
+		{"year-zero", "0000-01-15T09:30:00Z"},
+		{"utc-before-minimum", "0001-01-01T00:00:00+00:01"},
+		{"utc-after-maximum", "9999-12-31T23:59:59-00:01"},
+		{"missing-offset", "2024-01-15T09:30:00"},
+		{"malformed-TimeUTC", "TimeUTC"},
+		{"trailing-data", "2024-01-15T09:30:00Z\n"},
+	}
+	for _, tc := range invalid {
+		for _, field := range []string{"FirstSeen", "LastSeen"} {
+			t.Run(tc.name+"/"+field, func(t *testing.T) {
+				validDate := &contracts.SerializableDateTimeOffset{Value: "2024-01-15T09:30:00.1234567+02:00"}
+				valid := &contracts.BehaviorPatternDetailsResponse{FirstSeen: validDate, LastSeen: validDate}
+				malformed := &contracts.BehaviorPatternDetailsResponse{FirstSeen: validDate, LastSeen: validDate}
+				if field == "FirstSeen" {
+					malformed.FirstSeen = &contracts.SerializableDateTimeOffset{Value: tc.value}
+				} else {
+					malformed.LastSeen = &contracts.SerializableDateTimeOffset{Value: tc.value}
+				}
+				conn := &transport{invoke: func(_ context.Context, _ string, _, reply any) error {
+					r := reply.(*contracts.QueryResult_IEnumerable_BehaviorPatternDetailsResponse)
+					r.IsAuthorized = true
+					r.Data = []*contracts.BehaviorPatternDetailsResponse{valid, malformed}
+					return nil
+				}}
+				result, err := service(t, conn).GetPatternsForScope(t.Context(), "scope")
+				if !errors.Is(err, patterns.ErrProtocol) || !reflect.DeepEqual(result, patterns.QueryResult[patterns.BehaviorPattern]{}) {
+					t.Fatalf("malformed timestamp became partial success: %+v %v", result, err)
+				}
+				if err != patterns.ErrProtocol || strings.Contains(err.Error(), tc.value) {
+					t.Fatalf("protocol error exposed timestamp or parse error: %v", err)
+				}
+			})
+		}
+	}
+}
+
 func TestTransportErrorsKeepOriginalGraphWithoutSensitiveFormatting(t *testing.T) {
 	ordinary := errors.New("secret-local-cause")
 	for _, code := range []codes.Code{codes.Unimplemented, codes.Canceled, codes.DeadlineExceeded, codes.Unavailable} {
