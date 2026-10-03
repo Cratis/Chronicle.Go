@@ -3,7 +3,12 @@
 
 package readmodels
 
-import "github.com/cratis/chronicle.go/internal/faults"
+import (
+	"errors"
+
+	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/serialization"
+)
 
 // CodecPanicError means an application decoder panicked. It matches ErrProtocol
 // and never retains the panic value, which may contain protected content.
@@ -23,5 +28,13 @@ func readCodec(decode func() error) (err error) {
 			err = &CodecPanicError{}
 		}
 	}()
-	return decode()
+	err = decode()
+	// The shared serializer contains its own callbacks. Preserve this reader's
+	// panic category, including for nested causes, while error inspection is
+	// still covered by the outer recovery (As/Unwrap can invoke user code).
+	var callbackPanic *serialization.CallbackPanicError
+	if errors.As(err, &callbackPanic) {
+		return &CodecPanicError{}
+	}
+	return err
 }

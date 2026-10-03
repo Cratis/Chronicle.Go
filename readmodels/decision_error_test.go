@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cratis/chronicle.go/contracts/compliance"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/internal/faults"
@@ -20,13 +19,13 @@ import (
 
 func TestDecisionReadErrorsDoNotDiscloseTransportDiagnostics(t *testing.T) {
 	const sensitive = "private-person-source-key"
-	for _, failure := range []string{"fold", "cleanup", "both", "agreement", "tail", "release"} {
+	for _, failure := range []string{"fold", "cleanup", "both", "agreement", "tail"} {
 		t.Run(failure, func(t *testing.T) {
-			f := newDecisionFixture(t, WithPII("name"))
+			f := newDecisionFixture(t)
 			foldCause := status.Error(codes.Unimplemented, sensitive)
 			cleanupCause := status.Error(codes.Canceled, sensitive)
 			f.handle = func(_ context.Context, request any) (proto.Message, error) {
-				switch req := request.(type) {
+				switch request.(type) {
 				case *contracts.GetDefinitionsRequest:
 					if failure == "agreement" {
 						return nil, foldCause
@@ -43,11 +42,6 @@ func TestDecisionReadErrorsDoNotDiscloseTransportDiagnostics(t *testing.T) {
 					if failure == "cleanup" || failure == "both" {
 						return nil, cleanupCause
 					}
-				case *compliance.ReleaseRequest:
-					if failure == "release" {
-						return nil, foldCause
-					}
-					return &compliance.ReleaseResponse{Payload: req.Payload}, nil
 				}
 				return nil, nil
 			}
@@ -70,12 +64,6 @@ func TestDecisionReadErrorsDoNotDiscloseTransportDiagnostics(t *testing.T) {
 					if strings.Contains(member.Error(), sensitive) {
 						t.Fatal("joined member disclosed diagnostics")
 					}
-				}
-			}
-			if failure == "release" {
-				var release *ReleaseError
-				if !errors.As(err, &release) || !errors.Is(err, ErrRelease) || !errors.Is(release, foldCause) {
-					t.Fatal("lost typed release cause")
 				}
 			}
 			var rpc interface{ GRPCStatus() *status.Status }

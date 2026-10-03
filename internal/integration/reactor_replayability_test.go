@@ -15,6 +15,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/google/uuid"
+	"google.golang.org/grpc"
 )
 
 type KernelWideOnceInput struct{ Value string }
@@ -47,9 +48,15 @@ func TestKernelReactorWideOnceOnlyRefusesReplayJob(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			last := appendSuccessfully(t, f.ctx, store, "source", KernelWideOnceInput{Value: "live"})
+			t.Cleanup(func() { recordReplayDiagnostics(t, f, client, store) })
 			ctx, cancel := context.WithTimeout(f.ctx, 20*time.Second)
 			defer cancel()
+			// Open only sends registration; it does not acknowledge subscription.
+			// Appending before Active can invoke startup catch-up. Its interleaving
+			// completion can race Replay's job-ID receipt (Chronicle#4514). This
+			// replayability spec must start from a subscribed, live observer.
+			awaitActiveReplayObserver(t, ctx, store, !once, nil)
+			last := appendSuccessfully(t, ctx, store, "source", KernelWideOnceInput{Value: "live"})
 			select {
 			case ec := <-deliveries:
 				if ec.ObservationState&events.ObservationReplay != 0 {
@@ -58,27 +65,21 @@ func TestKernelReactorWideOnceOnlyRefusesReplayJob(t *testing.T) {
 			case <-ctx.Done():
 				t.Fatal("no live delivery", ctx.Err())
 			}
+			awaitActiveReplayObserver(t, ctx, store, !once, last.Position)
 			observers := contracts.NewObserversClient(f.conn)
-			ticker := time.NewTicker(50 * time.Millisecond)
-			defer ticker.Stop()
-			for {
-				info, err := observers.GetObserverInformation(ctx, &contracts.GetObserverInformationRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: "wide-once"})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if info.IsSubscribed && info.LastHandledEventSequenceNumber == uint64(*last.Position) {
-					break
-				}
-				select {
-				case <-ctx.Done():
-					t.Fatal("observer did not acknowledge live delivery", ctx.Err())
-				case <-ticker.C:
-				}
-			}
-			response, err := observers.Replay(ctx, &contracts.Replay{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: "wide-once"})
+			info, err := observers.GetObserverInformation(ctx, &contracts.GetObserverInformationRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: "wide-once", EventSequenceId: string(events.EventLog)}, grpc.ForceCodec(replayDiagnosticCodec{t}))
 			if err != nil {
 				t.Fatal(err)
 			}
+			t.Logf("before replay observer (raw proto3 defaults)=%v", info)
+			response, err := observers.Replay(ctx, &contracts.Replay{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: "wide-once", EventSequenceId: string(events.EventLog)}, grpc.ForceCodec(replayDiagnosticCodec{t}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if response == nil {
+				t.Fatal("nil replay response")
+			}
+			t.Logf("replay response JobId=%q", response.JobId)
 			job, err := uuid.Parse(response.JobId)
 			if err != nil {
 				t.Fatalf("invalid job ID %q: %v", response.JobId, err)

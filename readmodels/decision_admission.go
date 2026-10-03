@@ -14,6 +14,7 @@ import (
 	contracts "github.com/cratis/chronicle.go/contracts/projections"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/decision"
+	"github.com/cratis/chronicle.go/serialization"
 	"github.com/google/uuid"
 )
 
@@ -25,6 +26,8 @@ type DecisionReadRefusalReason string
 
 const (
 	DecisionUnavailable          DecisionReadRefusalReason = "unavailable"            // DecisionUnavailable means no SDK decision provider.
+	DecisionProtectedModel       DecisionReadRefusalReason = "protected-model"        // DecisionProtectedModel excludes every classified model from session-based decisions.
+	DecisionProtectionMetadata   DecisionReadRefusalReason = "protection-metadata"    // DecisionProtectionMetadata means model protection could not be determined.
 	DecisionReducer              DecisionReadRefusalReason = "reducer"                // DecisionReducer excludes reducer-backed models.
 	DecisionAmbiguousProjection  DecisionReadRefusalReason = "ambiguous-projection"   // DecisionAmbiguousProjection requires exactly one projection.
 	DecisionNotEventLog          DecisionReadRefusalReason = "not-event-log"          // DecisionNotEventLog excludes other sequences.
@@ -108,6 +111,16 @@ func (r *DecisionReader[T]) assess() (admittedDecision, error) {
 	}
 	refuse := func(reason DecisionReadRefusalReason) (admittedDecision, error) {
 		return admittedDecision{}, &DecisionReadRefused{Model: d.Identifier(), Reason: reason}
+	}
+	// Session replay releases using the requested source key, not authoritative
+	// per-event subjects. Never acquire a lease or inspect a document to decide
+	// whether a classified model happens to be safe (even an empty fold is not).
+	roots, err := serialization.ProtectionRoots(d.Schema())
+	if err != nil {
+		return refuse(DecisionProtectionMetadata)
+	}
+	if len(roots) != 0 {
+		return refuse(DecisionProtectedModel)
 	}
 	if kind, _ := d.Observer(); kind == Reducer {
 		return refuse(DecisionReducer)

@@ -113,23 +113,14 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 		action    string
 	}{
 		{"decode-panic", false, 1, "panic"},
-		{"protected-validation-panic", true, 1, "panic"},
-		{"protected-decode-panic", true, 2, "panic"},
 		{"decode-error", false, 1, "error"},
-		{"protected-validation-error", true, 1, "error"},
 		{"decode-typed-error", false, 1, "typed-error"},
-		{"protected-validation-typed-error", true, 1, "typed-error"},
 		{"decode-close", false, 1, "close"},
-		{"protected-validation-close", true, 1, "close"},
-		{"protected-decode-close", true, 2, "close"},
 		{"decode-cancel", false, 1, "cancel"},
-		{"protected-validation-cancel", true, 1, "cancel"},
 		{"decode-epoch", false, 1, "epoch"},
-		{"protected-validation-epoch", true, 1, "epoch"},
 		{"decode-generation-loss", false, 1, "generation"},
-		{"protected-validation-generation-loss", true, 1, "generation"},
 		{"valid-read", false, 1, "none"},
-		{"valid-protected-read", true, 1, "none"},
+		{"protected-read-refused", true, 1, "none"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			registry := NewRegistry()
@@ -169,7 +160,7 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 			}
 			var calls atomic.Int32
 			decisionCodecActions.Store(documentValue, func() error {
-				if raw.cleaned.Load() != 1 || raw.agreements.Load() != 2 || (tc.protected && raw.released.Load() == 0) {
+				if raw.cleaned.Load() != 1 || raw.agreements.Load() != 2 || raw.released.Load() != 0 {
 					t.Error("application codec ran before cleanup/release/agreement completed")
 				}
 				if int(calls.Add(1)) != tc.actionAt {
@@ -204,6 +195,13 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 				read, err = readmodels.DecisionsFor(store.ReadModels(), model).GetDetached(caller, "source")
 			}()
 			awaitSignal(t, ctx, done)
+			if tc.protected {
+				var refused *readmodels.DecisionReadRefused
+				if !errors.As(err, &refused) || refused.Reason != readmodels.DecisionProtectedModel || !read.Token.IsZero() || read.Instance.Exists || calls.Load() != 0 || raw.cleaned.Load() != 0 || raw.agreements.Load() != 0 || raw.released.Load() != 0 {
+					t.Fatal("classified decision did work or issued evidence", err)
+				}
+				return
+			}
 			if int(calls.Load()) < tc.actionAt {
 				t.Fatal("codec action was not exercised")
 			}

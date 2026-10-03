@@ -39,6 +39,7 @@ func TestDecisionErrorCallbacksRemainInsideRecovery(t *testing.T) {
 		{"joined As", errors.Join(errors.New("first"), errors.Join(&decisionAsPanic{})), true},
 		{"joined Unwrap", errors.Join(errors.New("first"), errors.Join(&decisionUnwrapPanic{})), true},
 		{"joined callback panic", errors.Join(errors.New("first"), &serialization.CallbackPanicError{}), true},
+		{"joined reader panic", errors.Join(errors.New("first"), &readmodels.CodecPanicError{}), true},
 		{"joined ordinary identity", errors.Join(errors.New("first"), ordinary), false},
 		{"Error method never invoked", &decisionErrorMethodPanic{}, false},
 	} {
@@ -75,7 +76,15 @@ func TestDecisionErrorCallbacksRemainInsideRecovery(t *testing.T) {
 						return tc.cause
 					})
 					t.Cleanup(func() { decisionCodecActions.Delete(t.Name()) })
-					read, err := readmodels.DecisionsFor(store.ReadModels(), model).GetDetached(ctx, "source")
+					reader := readmodels.DecisionsFor(store.ReadModels(), model)
+					read, err := reader.GetDetached(ctx, "source")
+					if protected {
+						var refused *readmodels.DecisionReadRefused
+						if !errors.As(err, &refused) || refused.Reason != readmodels.DecisionProtectedModel || reader.Admit().IsAdmitted || !read.Token.IsZero() || read.Instance.Exists || raw.cleaned.Load() != 0 || raw.agreements.Load() != 0 || raw.released.Load() != 0 {
+							t.Fatal("classified decision did work or issued evidence", err)
+						}
+						return
+					}
 					if err == nil || !read.Token.IsZero() || read.Instance.Exists || read.Instance.Value != (DecisionCodecModel{}) || raw.cleaned.Load() != 1 {
 						t.Fatal("failed codec returned model/token or skipped cleanup")
 					}

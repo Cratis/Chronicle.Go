@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cratis/chronicle.go/contracts/compliance"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
@@ -51,7 +50,8 @@ func (r *DecisionReader[T]) Get(ctx context.Context, key Key) (read DecisionRead
 }
 
 // GetDetached uses at most three fresh projection sessions, without enrolling or
-// creating a unit. It checks server agreement before and after each fold, captures
+// creating a unit. Classified models fail local admission before lease/RPC work.
+// It checks server agreement before and after each fold, captures
 // an unfiltered pre-fold log boundary, and probes the source's dependency types
 // separately. LastHandled is progress, never a proof or replacement boundary.
 // Cleanup is awaited, with a five-second cancellation-detached metadata-preserving
@@ -85,7 +85,7 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 	callerContext := ctx
 	ctx = lease.Context
 	pinned := &Service{store: service.store, namespace: service.namespace, catalog: service.catalog,
-		client: contracts.NewReadModelsClient(lease.Conn), compliance: compliance.NewComplianceClient(lease.Conn)}
+		client: contracts.NewReadModelsClient(lease.Conn)}
 	check := func() error {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -137,7 +137,7 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 			}
 			return DecisionRead[T]{}, &DecisionReadRefused{Model: admitted.descriptor.Identifier(), Reason: reason}
 		}
-		// All RPCs, release schema checks and awaited cleanup are complete. A
+		// All RPCs, protocol checks and awaited cleanup are complete. A
 		// codec may synchronously close the client, which joins counted work.
 		// Release cancels lease.Context, so the final check uses the caller's
 		// context and the separately retained generation/epoch identities.
@@ -204,12 +204,10 @@ func foldDecision(ctx context.Context, service *Service, descriptor Descriptor, 
 	if err != nil {
 		return Instance[json.RawMessage]{}, err
 	}
-	if raw.Exists {
-		raw.Value, err = service.releaseDocument(ctx, descriptor, raw.Value)
-		if err != nil {
-			return Instance[json.RawMessage]{}, err
-		}
-	}
+	// Admission excludes every classified model. The kernel session response
+	// already owns release; do not decrypt its final representation again.
+	// Protocol/duplicate checks ran in getInstance; codec validation follows
+	// cleanup outside the counted lease, before token issuance.
 	// An empty fold can contain projection initial state. It is still absent;
 	// null after a removal retains its meaningful LastHandled position.
 	if raw.LastHandled == nil {
