@@ -44,6 +44,8 @@
   href: reactors.md
 - name: Reducers
   href: reducers.md
+- name: Observer and job administration
+  href: operations.md
 - name: External integrations
   items:
     - name: Subscriptions, webhooks and services
