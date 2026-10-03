@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cratis/chronicle.go/contracts/compliance"
 	projections "github.com/cratis/chronicle.go/contracts/projections"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/contracts/sequences"
@@ -407,9 +406,9 @@ func TestDecisionAttemptExhaustionAndPresence(t *testing.T) {
 }
 
 func TestDecisionFailuresAwaitCleanupAndReturnNoToken(t *testing.T) {
-	for _, failure := range []string{"read", "decode", "release", "cleanup", "cancel", "epoch", "generation", "reserved-last", "reserved-tail"} {
+	for _, failure := range []string{"read", "decode", "duplicate-root", "duplicate-nested", "duplicate-array", "cleanup", "cancel", "epoch", "generation", "reserved-last", "reserved-tail"} {
 		t.Run(failure, func(t *testing.T) {
-			f := newDecisionFixture(t, WithPII("name"))
+			f := newDecisionFixture(t)
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			correlation, err := metadata.NewCorrelationID()
@@ -420,7 +419,7 @@ func TestDecisionFailuresAwaitCleanupAndReturnNoToken(t *testing.T) {
 			cause := errors.New("injected failure")
 			folds, cleanups := 0, 0
 			f.handle = func(call context.Context, request any) (proto.Message, error) {
-				switch req := request.(type) {
+				switch request.(type) {
 				case *sequences.TailSequenceNumberRequest:
 					if failure == "reserved-tail" {
 						return &sequences.QueryResult_EventSequenceTailResponse{IsAuthorized: true, Data: &sequences.EventSequenceTailResponse{SequenceNumber: ^uint64(0) - 1}}, nil
@@ -432,6 +431,12 @@ func TestDecisionFailuresAwaitCleanupAndReturnNoToken(t *testing.T) {
 						return nil, cause
 					case "decode":
 						return &contracts.GetInstanceByKeyResponse{ReadModel: `{"id":"source","name":32}`, LastHandledEventSequenceNumber: 5}, nil
+					case "duplicate-root":
+						return &contracts.GetInstanceByKeyResponse{ReadModel: `{"name":"private","name":"last"}`, LastHandledEventSequenceNumber: 5}, nil
+					case "duplicate-nested":
+						return &contracts.GetInstanceByKeyResponse{ReadModel: `{"unknown":{"name":"private","name":"last"}}`, LastHandledEventSequenceNumber: 5}, nil
+					case "duplicate-array":
+						return &contracts.GetInstanceByKeyResponse{ReadModel: `{"unknown":[{"name":"private","name":"last"}]}`, LastHandledEventSequenceNumber: 5}, nil
 					case "cancel":
 						cancel()
 						return nil, ctx.Err()
@@ -442,11 +447,6 @@ func TestDecisionFailuresAwaitCleanupAndReturnNoToken(t *testing.T) {
 					case "reserved-last":
 						return &contracts.GetInstanceByKeyResponse{ReadModel: `{}`, LastHandledEventSequenceNumber: ^uint64(0) - 2}, nil
 					}
-				case *compliance.ReleaseRequest:
-					if failure == "release" {
-						return nil, cause
-					}
-					return &compliance.ReleaseResponse{Payload: req.Payload}, nil
 				case *contracts.DehydrateSessionRequest:
 					cleanups++
 					deadline, ok := call.Deadline()

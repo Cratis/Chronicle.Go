@@ -5,9 +5,10 @@ package readmodels
 
 import "context"
 
-// ReleaseMany releases a collection in input order. Input values are never
-// modified. Any failure returns a nil slice, never partially released data.
-// Nil input remains nil. Already released values pass through kernel handlers.
+// ReleaseMany releases unreleased sink values in input order. It is not
+// idempotent: never pass server-released read results, since legitimate plaintext
+// can resemble ciphertext. Input values are never modified. Any failure returns
+// a nil slice, never partially released data. Nil input remains nil.
 func (r *Reader[T]) ReleaseMany(ctx context.Context, values []T) ([]T, error) {
 	if _, err := r.descriptor(); err != nil {
 		return nil, err
