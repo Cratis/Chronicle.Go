@@ -20,6 +20,8 @@
       href: events/constraints.md
     - name: Reading events
       href: events/reading-events.md
+    - name: Revise, redact, and close history
+      href: events/history-revision.md
     - name: Seeding events
       href: events/seeding.md
     - name: Unit of work
