@@ -9,11 +9,15 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 )
 
 type observerStream interface{ Run(context.Context) error }
 type observerPlan struct {
 	id              string
+	logger          *slog.Logger
+	operation       string
 	open            func(context.Context, *generation) (observerStream, error)
 	reportOpenError func(context.Context, error) // Runs on the owned worker after readiness, without locks.
 	oneShot         bool                         // Read-model changes have no durable cursor: never silently resume.
@@ -130,7 +134,7 @@ func (s *storeObservers) run(ctx context.Context, g *generation, plan observerPl
 			// The stream reports its terminal outcome through its error handler.
 			return
 		}
-		slog.WarnContext(ctx, "observer stream ended; resubscribing", "observer", plan.id, "error", err)
+		diagnostics.Log(ctx, plan.logger, slog.LevelWarn, "observer stream ended; resubscribing", plan.operation, "resubscribe", err)
 		if wait(ctx, 2*time.Second) != nil {
 			return
 		}

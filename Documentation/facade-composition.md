@@ -13,7 +13,7 @@ one call and return only a prepared client.
 
 1. Register events, models and definition factories in a Chronicle registry.
 2. Call `chronicle.CaptureClient(options...)`. Set all client configuration here,
-   including any append-origin resolver.
+   including any append-origin resolver and `chronicle.WithLogger(logger)`.
 3. Register `p.Client()` using `dependencyinjection.BindValue(&bindings, p.Client())`.
    This is an explicit **borrowed** singleton, not an owned constructor result.
 4. Register application collaborators, then build the provider. Do not open a
@@ -82,6 +82,70 @@ cancellation, closure or cleanup failure prevent publication.
 State diagnostics contain only fixed operation/category text. Preparation errors
 use the existing payload-free `PreparationError`; panic payloads are discarded.
 See [definition factory errors and ownership](definition-factories.md).
+
+## Use one application-owned logger
+
+Pass `chronicle.WithLogger(logger)` to capture your application’s `*slog.Logger`
+for SDK lifecycle, preparation and observer diagnostics. The last client logger
+option wins; a final nil (including a typed nil) fails configuration validation.
+Without the option, `CaptureClient` captures `slog.Default()` at that call, not
+later at `Prepare` or reconnect. `NewClient` and `NewClientContext` capture and
+prepare immediately. Options and selected registries are frozen at capture;
+reusing an option slice afterward cannot replace that client's logger or handler
+identity. Their underlying state and output destinations remain application-owned,
+not snapshotted.
+
+The pristine `slog.Default()` handler writes through `log.Default()`'s current
+writer. Changing that writer affects an already captured logger. In particular,
+`slog.SetDefault(customLogger)` installs a standard-log bridge to the custom
+handler, so diagnostics through the captured pristine logger can reach that new
+handler (with the original record rendered as message text). By contrast, a
+custom logger selected before capture retains its handler identity across later
+`slog.SetDefault` calls. For strict destination isolation, pass `WithLogger` an
+explicit logger whose handler and writer remain stable; Chronicle does not
+replace the pristine default with an SDK-owned handler.
+
+`reactors.WithLogger`, `reducers.WithLogger` and
+`reactors.WithReadModelLogger` override the client fallback for their artifact,
+including subscription recovery. An explicit choice remains explicit even when
+its pointer equals the default logger. Each distinct registry compiles once per
+client; store bindings and reconnect reuse those immutable plans.
+
+Loggers and handlers are borrowed, never closed by Chronicle. Chronicle does not
+call `slog.SetDefault`. Your handler must support concurrent synchronous calls,
+honor cancellation, and avoid reentering client lifecycle methods or blocking
+shutdown. Chronicle contains handler panics without logging their values or
+recursively calling the same handler; it cannot make an arbitrary blocking
+handler harmless. A logging handler called on SDK-owned work must not call
+`Client.Close`: joining that work from its own callback can deadlock. These are
+cooperative callback limits, not a guarantee of harmless caller blocking. Handler
+panics do not change dispatch, commit or acknowledgment outcomes.
+
+SDK-owned records carry fixed operation, stage and bounded category strings.
+They omit payloads, credentials, tokens, principals, raw metadata, source IDs,
+partition keys, correlation IDs and arbitrary error text. Classification inspects
+only exact trusted identities/types; it does not invoke application error
+formatting, traversal or gRPC status hooks. Wrapped or unknown errors use the
+coarse `failure` category. Even logical artifact names are omitted: choose
+non-sensitive names if you add them in your own logging. Fields already attached
+to your logger, attributes added or changed by a borrowed handler, mutable writer
+state, handler context inspection and application-written logs are your
+responsibility. This contract does not redact returned error graphs, explicit
+`WithReadModelErrorHandler` callbacks or kernel exception-message wire fields.
+
+The option configures SDK diagnostics, not constructor dependency injection.
+If a factory needs `*slog.Logger`, capture it in a closure or bind it explicitly
+in your provider; the container-free resolver does not fabricate a zero logger.
+The [compiled worker example](../example_logging_test.go) uses a constructor
+closure and one logger without a container. Run it with:
+
+```sh
+go test -run ExampleWithLogger .
+```
+
+This is Go-specific `slog` routing, not full C# `ILogger`/`ILoggerFactory` DI parity
+or a generic logging adapter. Logging framework bridges remain separate recipes;
+they add no dependencies to the root SDK.
 
 ## Close the client, join preparation, then close the provider
 

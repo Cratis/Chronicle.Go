@@ -3,7 +3,12 @@
 
 package chronicle
 
-import "context"
+import (
+	"context"
+	"log/slog"
+
+	"github.com/cratis/chronicle.go/internal/diagnostics"
+)
 
 // Close immediately cancels client-owned work and joins it. Repeated calls return
 // the same cleanup result. Borrowed channels and token sources are never closed.
@@ -47,6 +52,7 @@ func (c *Client) beginShutdown(graceful bool) {
 			c.cancel()
 			c.work.Wait()
 			c.balancer.Close()
+			diagnostics.Log(c.life, c.config.logger, slog.LevelInfo, "client closed", "client", "close", c.closeError)
 			close(c.closeDone)
 		}()
 	})

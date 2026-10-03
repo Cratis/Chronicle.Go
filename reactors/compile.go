@@ -7,11 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"slices"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/discovery"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -55,6 +57,9 @@ type Plan struct {
 	catalog        *events.Catalog
 	sideEffects    []SideEffectHandler
 }
+
+// Logger returns the frozen borrowed diagnostic logger. Chronicle never closes it.
+func (p *Plan) Logger() *slog.Logger { return p.declaration.config.logger }
 
 // Shadow diagnoses a method hidden by C# richest-signature/name precedence.
 type Shadow struct {
@@ -174,7 +179,7 @@ func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readm
 				}
 				if previous, exists := handlers[id]; exists {
 					p.shadows = append(p.shadows, Shadow{descriptor.Ref(), previous.name, method.Name})
-					d.config.logger.Warn("reactor handler shadowed", "reactor", d.Identifier(), "event", id, "winner", previous.name, "hidden", method.Name)
+					diagnostics.Log(context.Background(), d.config.logger, slog.LevelWarn, "reactor handler shadowed", "reactor", "compile", nil)
 					continue
 				}
 				handlers[id] = handler

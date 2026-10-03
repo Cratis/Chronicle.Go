@@ -7,12 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"time"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/identities"
 	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/discovery"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/metadata"
@@ -88,7 +90,7 @@ func (p *Plan) activate(ctx context.Context, preserveIdentity bool) (lease *Leas
 	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			err = fmt.Errorf("reducer activation panic: %v", recovered)
+			err = &diagnostics.PanicError{}
 		}
 		if err != nil {
 			cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -128,7 +130,7 @@ func (l *Lease) Invoke(ctx context.Context, event Event, current any) (state any
 	defer func() {
 		if p := recover(); p != nil {
 			state = nil
-			err = fmt.Errorf("reducer fold panic: %v", p)
+			err = &diagnostics.PanicError{}
 		}
 	}()
 	if l.resources.Closed() {
@@ -201,6 +203,11 @@ func (l *Lease) Invoke(ctx context.Context, event Event, current any) (state any
 // identity is used unless WithCallerIdentity is supplied. Nil options are ignored.
 func (p *Plan) Reduce(ctx context.Context, batch []Event, initial any, options ...ReduceOption) (result Result) {
 	result.LastSuccessful = events.Unavailable
+	defer func() {
+		if result.Err != nil {
+			diagnostics.Log(ctx, p.Logger(), slog.LevelError, "reducer operation failed", "reducer", "reduce", result.Err)
+		}
+	}()
 	config := reduceConfig{}
 	for _, option := range options {
 		if option != nil {
@@ -217,7 +224,7 @@ func (p *Plan) Reduce(ctx context.Context, batch []Event, initial any, options .
 	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			result.Err = fmt.Errorf("reducer batch panic: %v", recovered)
+			result.Err = &diagnostics.PanicError{}
 		}
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		err := lease.Close(cleanup)
