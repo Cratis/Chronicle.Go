@@ -132,12 +132,23 @@ type effectAction struct {
 	handlers []SideEffectHandler
 }
 
+// EffectRecorder is an optional Runtime extension for scenario adapters. It
+// replaces effect execution, not method discovery or return-type validation.
+// Recording proves only what the handler returned, never transport acceptance.
+// Production runtimes should not implement this interface.
+type EffectRecorder interface {
+	RecordEffect(context.Context, SideEffectContext, any) error
+}
+
 func (l *Lease) handleEffect(ctx context.Context, value any, invocation Invocation, runtime Runtime, onceOnly bool) error {
 	if nilLike(value) {
 		return nil
 	}
 	effectContext := SideEffectContext{Invocation: invocation, Reactor: l.instance, Runtime: runtime, Events: l.plan.catalog,
 		Replay: invocation.Context.ObservationState&events.ObservationReplay != 0, OnceOnly: onceOnly, Replayable: l.plan.IsReplayable()}
+	if recorder, ok := runtime.(EffectRecorder); ok {
+		return recorder.RecordEffect(ctx, effectContext, value)
+	}
 	actions, err := l.classifyEffect(value, effectContext, true)
 	if err != nil {
 		return err

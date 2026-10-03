@@ -114,7 +114,7 @@ func (r *Reactor) handle(ctx context.Context, batch *contracts.EventsToObserve) 
 		if failure != nil {
 			return result
 		}
-		deliveryCtx := invocationContext(ctx, r.plan.Identifier(), ec)
+		deliveryCtx := ReactorInvocationContext(ctx, r.plan.Identifier(), ec)
 		if r.plan.PerEvent() {
 			lease, failure = r.plan.Activate(deliveryCtx)
 			if failure != nil {
@@ -150,7 +150,10 @@ func (r *Reactor) decode(appended *contracts.AppendedEvent) (events.Context, any
 	}
 	return DecodeContent(descriptor, ec, []byte(appended.Content), generations)
 }
-func invocationContext(ctx context.Context, id reactors.ID, ec events.Context) context.Context {
+
+// ReactorInvocationContext applies the production identity and causation scope.
+// Scenario adapters share it rather than defining test-only ambient semantics.
+func ReactorInvocationContext(ctx context.Context, id reactors.ID, ec events.Context) context.Context {
 	ctx = metadata.WithCorrelation(ctx, ec.CorrelationID)
 	actor := identities.System()
 	actor.OnBehalfOf = &ec.CausedBy
