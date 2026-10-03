@@ -10,17 +10,26 @@ import (
 	"testing"
 )
 
+func TestOrderProjectionSnippetsMatchCompiledExample(t *testing.T) {
+	checkProjectionSnippets(t, "examples/projections/orders.go", "Documentation/projections/orders.md", []string{"orders-events", "orders-model-bound", "orders-fluent"})
+}
+
 func TestProjectionSnippetsMatchCompiledExample(t *testing.T) {
-	source, err := os.ReadFile("examples/projections/main.go")
+	checkProjectionSnippets(t, "examples/projections/main.go", "Documentation/projections/index.md", []string{"model-bound", "fluent"})
+}
+
+func checkProjectionSnippets(t *testing.T, sourcePath, pagePath string, names []string) {
+	t.Helper()
+	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, err := os.ReadFile("Documentation/projections/index.md")
+	page, err := os.ReadFile(pagePath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	remaining := string(page)
-	for _, name := range []string{"model-bound", "fluent"} {
+	for _, name := range names {
 		_, snippet, found := strings.Cut(remaining, "```go\n")
 		if !found {
 			t.Fatal("missing snippet", name)

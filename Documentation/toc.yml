@@ -25,7 +25,11 @@
 - name: Read models
   href: read-models/index.md
 - name: Projections
-  href: projections/index.md
+  items:
+    - name: Overview
+      href: projections/index.md
+    - name: Orders with children and joins
+      href: projections/orders.md
 - name: Parity and limitations
   href: parity.md
 - name: Releases
