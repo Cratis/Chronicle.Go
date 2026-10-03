@@ -18,6 +18,92 @@ C# exposes `IsSuccess` and `Errors` without a disposition. Go classifies errors-
 
 A result includes correlation, whether concurrency checking actually ran, every constraint's name/type/message/details/type ID/position, all append error codes, and a client-independent observer completion target. Waiting for observers is not implemented yet; append success means persistence, not completed side effects.
 
+## Observe command-attributable append attempts
+
+Use `unsubscribe := sequence.OnAppend(func(eventsequences.AppendNotification))`
+to observe local append results on that exact handle; `defer unsubscribe()` releases
+the callback. This is **not** a durable event subscription, global interception or
+an observer-completion signal. Other handles, processes and clients do not notify it.
+
+Given a sequence handle and the command's nonzero `correlation`, collect attempts
+with a callback like this (imports: `sync` and `eventsequences`):
+
+```go
+var mu sync.Mutex
+var attempts []eventsequences.AppendNotification
+unsubscribe := sequence.OnAppend(func(n eventsequences.AppendNotification) {
+    if n.CorrelationID != correlation {
+        return
+    }
+    mu.Lock()
+    defer mu.Unlock()
+    attempts = append(attempts, n)
+})
+defer unsubscribe()
+```
+
+Use the same correlation in the handlers' append context. Read `attempts` under
+`mu` after command-owned appends have returned; disposal does not join callbacks.
+
+Each notification contains:
+
+- `CorrelationID`: the effective **request** correlation, including an explicit
+  append override or generated ID. It remains available when the response is lost.
+- `Operation`: store, namespace, sequence and distinct exact event types.
+- `Events`: original input order, source, type and generation, normalized route,
+  and a position only when committed. Zero is a valid position. No event payload
+  or mutable caller-owned event value is retained.
+- `Result`: the unchanged disposition and complete violations/error codes, as a
+  `BatchResult` even for one event. Its correlation remains the kernel's response
+  correlation; use the notification's top-level correlation for attribution.
+- `Err`: the original operation error. A nil error alone does not mean success;
+  inspect `Result.Disposition` and `Result.Err()`.
+
+`Append`, `AppendMany`, `AppendBatch`, their metadata wrappers, and
+`AppendPreparedBatch` deliver once per nonempty request, including named-tag
+variants, known rejections and unknown outcomes. Notifications start only after
+local preparation succeeds and the request is handed to the RPC client. Local
+validation/serialization/scope-resolution failures do not notify: callers must
+still check returned errors. Eventless checks do not notify either.
+
+[Unit-of-work](unit-of-work.md) staging does not notify. A nonempty commit uses
+`AppendPreparedBatch` and notifies **before** the unit's completion callback;
+rollback, empty completion and repeated commit do not emit accepted events. Never
+infer a notification's disposition from `IsCompleted` or a callback having run.
+
+### Callback ownership and disposal
+
+Callbacks run synchronously in subscription order before the append returns,
+without internal locks held. They may subscribe, unsubscribe or append again;
+bound recursive appends yourself. A subscription added during delivery receives
+future deliveries, not the current one. Concurrent appends may invoke the same
+callback concurrently and have no cross-operation ordering. Protect shared state;
+slow callbacks delay the append caller.
+
+Each callback owns its notification's collections, maps and positions; changing
+those cannot alter another callback or the append result. Error objects are
+borrowed read-only. A panic becomes `AppendCallbackPanicError`, joined with any
+append error, while other subscribers still receive the original result. A
+committed result stays committed: notification failure does not authorize retry.
+
+Unsubscribe is idempotent and safe during delivery, including from the callback
+itself. It prevents new callback admissions but **does not wait** for already
+admitted callbacks. Join command-owned append calls before disposing and releasing
+command state. Keep callback state concurrency-safe while shared-handle appends
+may still be running; the callback closure remains alive for admitted deliveries.
+
+For Arc.Go-style command tracking, set `metadata.WithCorrelation` before invoking
+handlers, subscribe to their same sequence handle, filter `n.CorrelationID`, and
+retain `Committed`, `Rejected` and `Unknown` separately. A later empty transaction
+completion cannot erase an immediate unknown outcome. To observe only immediate
+writes, unsubscribe before the transaction owner commits and inspect its retained
+result separately, as C# Arc does. Subscribe to each explicitly used sequence;
+there is no process-wide interception.
+
+[ExampleSequence_OnAppend](../../eventsequences/example_notifications_test.go)
+is an executable command-scoped example with a lost acknowledgment. Run it without
+a kernel using `go test ./eventsequences -run '^ExampleSequence_OnAppend$'`.
+
 ## Choose a concurrency expectation
 
 | Expectation | Behavior |
@@ -75,4 +161,4 @@ Use `WithRoute`, `WithOccurred`, `WithSubject`, `WithTags`, `WithNamedTags` and 
 
 Named tags retain exact name/value pairs. A name must be nonblank; an empty value is valid. Identical records are coalesced without flattening values to strings or losing distinct values under one name.
 
-For more than one event, use [atomic batches](batches.md). Use [ReadHistory](reading-events.md) to protect earlier loaded state. Transactions, append notifications, constraint declarations, enrichment hooks and field-derived routing/subjects are not yet implemented. Use only the supported options; unimplemented field tags fail explicitly. See [parity and limitations](../parity.md).
+For more than one event, use [atomic batches](batches.md). Use [ReadHistory](reading-events.md) to protect earlier loaded state. Enrichment hooks and field-derived routing/subjects are not yet implemented; use explicit [units of work](unit-of-work.md), [constraint declarations](constraints.md) and the scoped append notifications above. Use only the supported options; unimplemented field tags fail explicitly. See [parity and limitations](../parity.md).

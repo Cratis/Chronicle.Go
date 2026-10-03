@@ -17,8 +17,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Sequence is an immutable concurrency-safe handle. Obtain it from EventStore;
-// it does not own the client and cannot outlive the client's Close.
+// Sequence is a concurrency-safe handle with immutable coordinates and local
+// subscriptions. It must not be copied. Obtain it from EventStore; it does not
+// own the client and cannot outlive the client's Close.
 type Sequence struct {
 	store       metadata.StoreName
 	namespace   metadata.Namespace
@@ -26,6 +27,7 @@ type Sequence struct {
 	catalog     *events.Catalog
 	service     sequences.EventSequencesClient
 	concurrency ConcurrencyPolicy
+	appends     appendSubscriptions
 }
 
 // New creates a low-level sequence over a caller-owned connection and registered
@@ -52,7 +54,7 @@ func (s *Sequence) ID() events.SequenceID { return s.id }
 // results, not operation errors. Any post-dispatch failure is conservatively
 // OutcomeUnknownError. The SDK never retries writes. Caller-owned event data must
 // not be mutated concurrently with this call.
-func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any, options ...AppendOption) (AppendResult, error) {
+func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any, options ...AppendOption) (result AppendResult, err error) {
 	if err := ctx.Err(); err != nil {
 		return AppendResult{}, err
 	}
@@ -87,6 +89,9 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 		return AppendResult{}, err
 	}
 	ctx = metadata.WithCorrelation(ctx, wire.Correlation(request.CorrelationId))
+	defer func() {
+		err = joinNotificationError(err, s.notifySingle(source, descriptor.Ref(), config.route, wire.Correlation(request.CorrelationId), result, err))
+	}()
 	var envelope *sequences.CommandResult_AppendResponse
 	if len(config.named) == 0 {
 		envelope, err = s.service.Append(ctx, request)
@@ -110,7 +115,7 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	if err = wire.RequireMessage(envelope, "Response"); err != nil {
 		return AppendResult{}, &OutcomeUnknownError{Cause: err}
 	}
-	result, err := s.result(envelope.Response, descriptor.Ref())
+	result, err = s.result(envelope.Response, descriptor.Ref())
 	if err != nil {
 		return AppendResult{}, &OutcomeUnknownError{Cause: err}
 	}
