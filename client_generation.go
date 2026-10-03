@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type generation struct {
@@ -69,7 +70,7 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 		var conn *grpc.ClientConn
 		conn, err = grpc.NewClient("dns:///"+address, grpc.WithTransportCredentials(credentials.NewTLS(c.tls)),
 			grpc.WithDisableRetry(), grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 60 * time.Second, Timeout: 30 * time.Second}),
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024), grpc.MaxCallSendMsgSize(100*1024*1024)))
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(c.config.maxReceiveMessageSize), grpc.MaxCallSendMsgSize(c.config.maxSendMessageSize)))
 		if err != nil {
 			g.cancel()
 			if g.oauth != nil {
@@ -80,6 +81,12 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 		g.raw, g.closer = conn, conn
 	}
 	g.transport = &generationTransport{generation: g}
+	if c.config.maxSendMessageSizeSet {
+		g.transport.callOptions = append(g.transport.callOptions, grpc.MaxCallSendMsgSize(c.config.maxSendMessageSize))
+	}
+	if c.config.maxReceiveMessageSizeSet {
+		g.transport.callOptions = append(g.transport.callOptions, grpc.MaxCallRecvMsgSize(c.config.maxReceiveMessageSize))
+	}
 	return g, nil
 }
 
@@ -97,6 +104,18 @@ func (c *Client) establish(ctx context.Context, g *generation) error {
 			return &CompatibilityError{ServerVersion: response.ServerVersion, Details: append([]string(nil), response.Incompatibilities...)}
 		}
 		g.decisions = decision.Supported(response.ServerVersion, response.ServerProtocolVersion)
+	}
+	if c.config.skipKeepAlive {
+		// Compatibility is anonymous on the kernel. A protected, read-only RPC
+		// verifies credentials without registering a fabricated logical session.
+		response, err := service.GetConnectedClients(ctx, &emptypb.Empty{})
+		if err != nil {
+			return fmt.Errorf("chronicle: skipped-session readiness probe: %w", err)
+		}
+		if response == nil {
+			return ErrProtocol
+		}
+		return ctx.Err()
 	}
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -140,6 +159,13 @@ func drainStream(stream grpc.ServerStreamingClient[clients.ConnectionKeepAlive])
 }
 
 func (c *Client) runGeneration(g *generation) error {
+	if c.config.skipKeepAlive {
+		registered := make(chan struct{})
+		go func() { defer close(registered); c.replayRegistrations(g) }()
+		<-g.ctx.Done()
+		<-registered
+		return g.ctx.Err()
+	}
 	heartbeat := make(chan struct{}, 1)
 	received := make(chan error, 1)
 	registered := make(chan struct{})

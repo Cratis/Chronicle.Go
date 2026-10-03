@@ -21,7 +21,7 @@ func WithSRVResolver(resolver SRVResolver) ClientOption {
 // WithKeepAliveTimeout sets the maximum silence between kernel heartbeats, default
 // five seconds. It must be positive. HTTP/2 pings additionally use 60s/30s like C#.
 func WithKeepAliveTimeout(timeout time.Duration) ClientOption {
-	return func(c *clientConfig) { c.keepAliveTimeout = timeout }
+	return func(c *clientConfig) { c.keepAliveTimeout, c.keepAliveTimeoutSet = timeout, true }
 }
 
 // RegistrationRetry configures bounded, idempotent registration passes. Defaults

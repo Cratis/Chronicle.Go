@@ -23,7 +23,19 @@ import (
 // Credential values and token response bodies are never included.
 type AuthenticationError = connection.AuthenticationError
 
-type generationTransport struct{ generation *generation }
+type generationTransport struct {
+	generation  *generation
+	callOptions []grpc.CallOption // Frozen client-wide overrides, including borrowed channels.
+}
+
+func (t *generationTransport) options(options []grpc.CallOption) []grpc.CallOption {
+	if len(t.callOptions) == 0 {
+		return options
+	}
+	// Append without changing caller-owned storage. Client bounds take precedence
+	// over service-local options and apply to every unary and streaming RPC.
+	return append(append([]grpc.CallOption(nil), options...), t.callOptions...)
+}
 
 func authorize(ctx context.Context, source TokenSource) (context.Context, error) {
 	md, _ := metadata.FromOutgoingContext(ctx)
@@ -69,7 +81,7 @@ func (t *generationTransport) Invoke(ctx context.Context, method string, args, r
 	if err = decision.ValidateDispatch(ctx); err != nil {
 		return &faults.BeforeDispatch{Cause: err}
 	}
-	err = t.generation.raw.Invoke(ctx, method, args, reply, options...)
+	err = t.generation.raw.Invoke(ctx, method, args, reply, t.options(options)...)
 	invalidateRejectedToken(t.generation.tokens, err)
 	if err != nil && ctx.Err() != nil {
 		return errors.Join(err, ctx.Err())
@@ -82,7 +94,7 @@ func (t *generationTransport) NewStream(ctx context.Context, desc *grpc.StreamDe
 	if err != nil {
 		return nil, err
 	}
-	stream, err := t.generation.raw.NewStream(ctx, desc, method, options...)
+	stream, err := t.generation.raw.NewStream(ctx, desc, method, t.options(options)...)
 	if err != nil {
 		invalidateRejectedToken(t.generation.tokens, err)
 		return nil, err
