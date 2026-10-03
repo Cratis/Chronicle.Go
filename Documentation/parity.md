@@ -218,7 +218,7 @@ Naming references: Chronicle `2e31b0dfba489159b3db323238f16d0f277056b4`,
 `d2accc4a79b6bcf2708213c97093ab5ba6c06381`,
 `Source/DotNET/Fundamentals/Serialization/{DefaultNamingPolicy,CamelCaseNamingPolicy,AcronymFriendlyJsonCamelCaseNamingPolicy}.cs`,
 `Strings/StringExtensions.cs` and `Fundamentals.Specs/Strings/for_ToCamelCase/when_converting.cs`.
-Shared Go dependency: Fundamentals.Go `0fd6b51d12e47b1ecd1d7c9b5524d0350d01c216`,
+Shared Go dependency: Fundamentals.Go `v0.1.0`,
 Go 1.26; no dependency-injection integration is introduced.
 
 | Surface | Status and Go behavior | Evidence / boundary |

@@ -1,5 +1,5 @@
-github.com/cratis/fundamentals.go v0.0.0-20261002221826-0fd6b51d12e4 h1:cN323+1L2EJI3rAhqNpZ0hTOnD2/z/Jfr6ZnkN/AUIU=
-github.com/cratis/fundamentals.go v0.0.0-20261002221826-0fd6b51d12e4/go.mod h1:upTRXscJLeH63NqzzY51bPvvsgjtDpfug6a6VAaT2fI=
+github.com/cratis/fundamentals.go v0.1.0 h1:SMabIppmBRcOnrV1YdmLqKw2v59mb4+wDX78UZuAyOM=
+github.com/cratis/fundamentals.go v0.1.0/go.mod h1:upTRXscJLeH63NqzzY51bPvvsgjtDpfug6a6VAaT2fI=
 github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
 github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=

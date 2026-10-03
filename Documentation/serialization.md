@@ -85,7 +85,7 @@ Existing `google/uuid.UUID` and `time.Time` event shapes remain supported.
 
 A domain concept implements `concepts.Concept[T]` plus value-receiver JSON/text
 marshalers and pointer-receiver JSON/text unmarshalers. See Fundamentals'
-[concept authoring contract](https://github.com/Cratis/Fundamentals.Go/blob/0fd6b51d12e47b1ecd1d7c9b5524d0350d01c216/Documentation/concepts.md).
+[concept authoring contract](https://github.com/Cratis/Fundamentals.Go/blob/v0.1.0/Documentation/concepts.md).
 Named primitives without custom codecs still work without a marker.
 
 Registration calls `concepts.Underlying` on type metadata, never `ConceptValue`
