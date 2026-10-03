@@ -5,6 +5,7 @@ package chronicletest
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
@@ -85,6 +86,24 @@ func TestProjectionScenarioUsesFrozenNamingPlan(t *testing.T) {
 			if err != nil || !value.Exists || value.Value != want {
 				t.Errorf("Instance = %+v, %v; want %+v", value, err, want)
 			}
+			t.Run("independent ID is not a missing key alias", func(t *testing.T) {
+				response.data = `{"ID":"external"}`
+				values, err := s.Instances(t.Context())
+				if values != nil || !errors.Is(err, ErrFidelityUnavailable) {
+					t.Errorf("keyless replay = %+v, %v; want missing-key rejection", values, err)
+				}
+				selected, err := s.InstanceFor(t.Context(), "external")
+				if selected.Exists || !errors.Is(err, ErrFidelityUnavailable) {
+					t.Errorf("external-key selection = %+v, %v", selected, err)
+				}
+			})
+			t.Run("genuine sink alias is normalized first", func(t *testing.T) {
+				response.data = `{"_id":"person","ID":"external"}`
+				values, err := s.Instances(t.Context())
+				if err != nil || len(values) != 1 || values["person"] != want {
+					t.Errorf("sink-key replay = %+v, %v; want %+v", values, err, want)
+				}
+			})
 		})
 	}
 }
