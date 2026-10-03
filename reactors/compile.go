@@ -43,6 +43,7 @@ type constructor = artifacts.Constructor
 // paths. Build it with Compile; reconnect reuses it without rediscovery.
 type Plan struct {
 	declaration    Declaration
+	sourceStore    string
 	handlers       map[events.TypeID]call
 	replayHandlers map[events.TypeID]call
 	descriptors    map[events.TypeID]events.Descriptor
@@ -238,7 +239,10 @@ func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readm
 		}
 		p.middlewares = append(p.middlewares, compiled)
 	}
-	return p, nil
+	if err := p.inferSource(); err != nil {
+		return fail("", nil, err)
+	}
+	return p.ForStore(""), nil
 }
 func matchingEvents(typ reflect.Type, catalog *events.Catalog) []events.Descriptor {
 	return discovery.Events(typ, catalog)

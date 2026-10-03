@@ -44,8 +44,9 @@ func catalogRegistry(t *testing.T) *Registry {
 func TestCatalogsMatchConnectedStoreAndBindProducer(t *testing.T) {
 	r := catalogRegistry(t)
 	kernel := &supervisedKernel{
-		readModels:  &readModelKernel{register: func(context.Context, *modelcontracts.RegisterManyRequest) error { return nil }},
-		projections: &projectionKernel{register: func(context.Context, *projectioncontracts.RegisterRequest) error { return nil }},
+		subscriptions: &automaticSubscriptionKernel{},
+		readModels:    &readModelKernel{register: func(context.Context, *modelcontracts.RegisterManyRequest) error { return nil }},
+		projections:   &projectionKernel{register: func(context.Context, *projectioncontracts.RegisterRequest) error { return nil }},
 	}
 	client, ctx := supervisionClient(t, kernel, WithRegistry(r), WithNamingPolicy(serialization.CamelCase))
 	for _, name := range []StoreName{"origin", "consumer"} {

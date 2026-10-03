@@ -42,6 +42,12 @@
   href: reactors.md
 - name: Reducers
   href: reducers.md
+- name: External integrations
+  items:
+    - name: Subscriptions, webhooks and services
+      href: integrations/index.md
+    - name: Capture declarations
+      href: integrations/captures.md
 - name: Testing with scenarios
   href: testing-with-scenarios.md
 - name: Parity and limitations

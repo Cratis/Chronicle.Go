@@ -157,7 +157,8 @@ func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, w
 	}
 	// Seeding must follow observer registration sends even during background
 	// replay. Without seeds, retain the nonblocking observer startup path.
-	waitReady = waitReady || !s.seedDefinition().IsEmpty()
+	hasExternalSubscriptions := len(s.externalSubscriptions()) > 0
+	waitReady = waitReady || !s.seedDefinition().IsEmpty() || hasExternalSubscriptions
 	if err := s.startReactors(ctx, g, waitReady); err != nil {
 		outcome.Failure = err
 		outcome.RetryPending = ctx.Err() == nil && g.ctx.Err() == nil
@@ -169,6 +170,16 @@ func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, w
 		outcome.RetryPending = ctx.Err() == nil && g.ctx.Err() == nil
 		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "reducers", Failure: err})
 		return outcome, &RegistrationError{Outcome: outcome}
+	}
+	// C# registers external subscriptions after every observer and before
+	// read-model reactors and seeding. Do not use the barrier transport here.
+	if hasExternalSubscriptions {
+		err := s.registerExternalSubscriptions(ctx, g)
+		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "external-subscriptions", Failure: err})
+		if err != nil {
+			outcome.Failure, outcome.RetryPending = err, retryRegistration(err)
+			return outcome, &RegistrationError{Outcome: outcome}
+		}
 	}
 	if err := s.startReadModelReactors(ctx, g, waitReady); err != nil {
 		outcome.Failure = err
@@ -198,7 +209,7 @@ func (c *Client) replayRegistrations(g *generation) {
 				return
 			}
 			outcome := g.registrations.For(registrationKey(store.name, store.namespace)).Snapshot()
-			if !outcome.HasRun || outcome.RetryPending || store.needsSeedRegistration(g) {
+			if !outcome.HasRun || outcome.RetryPending || store.needsSeedRegistration(g) || store.needsExternalSubscriptionRegistration(g) {
 				// Ordinary replay starts observer workers without waiting. Seeded
 				// stores must await their registration before dispatching seed data.
 				_, _ = store.registerWithReadiness(g.ctx, g, false)

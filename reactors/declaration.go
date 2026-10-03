@@ -28,23 +28,25 @@ type Declaration struct {
 	explicit bool
 }
 type configuration struct {
-	id            ID
-	sequence      events.SequenceID
-	perEvent      bool
-	replayable    bool
-	tags          []string
-	filterTags    []string
-	sourceType    events.SourceType
-	streamType    events.StreamType
-	streamID      events.StreamID
-	replayMethods []string
-	onceMethods   []string
-	sideEffects   []SideEffectHandler
-	middlewares   []any
-	handlers      []Handler
-	key           func(context.Context, any, events.Context) (readmodels.Key, error)
-	logger        *slog.Logger
-	invalid       bool
+	id               ID
+	sequence         events.SequenceID
+	sequenceExplicit bool
+	sourceStore      string
+	perEvent         bool
+	replayable       bool
+	tags             []string
+	filterTags       []string
+	sourceType       events.SourceType
+	streamType       events.StreamType
+	streamID         events.StreamID
+	replayMethods    []string
+	onceMethods      []string
+	sideEffects      []SideEffectHandler
+	middlewares      []any
+	handlers         []Handler
+	key              func(context.Context, any, events.Context) (readmodels.Key, error)
+	logger           *slog.Logger
+	invalid          bool
 }
 
 // Option configures a reactor. Scalar options are last-wins; middleware and
@@ -56,7 +58,14 @@ func WithID(id ID) Option { return func(c *configuration) { c.id = id } }
 
 // WithEventSequence selects a sequence; the default is the event log.
 func WithEventSequence(id events.SequenceID) Option {
-	return func(c *configuration) { c.sequence = id }
+	return func(c *configuration) { c.sequence = id; c.sequenceExplicit = true }
+}
+
+// WithSourceStore overrides event-origin inference, like C# [EventStore] on an
+// observer. It selects inbox-<store> even in that store. Combining it with an
+// explicit sequence is invalid. For ordinary origin metadata use events.WithSourceStore.
+func WithSourceStore(store string) Option {
+	return func(c *configuration) { c.sourceStore = store; c.invalid = c.invalid || strings.TrimSpace(store) == "" }
 }
 
 // PerEvent opts into a fresh scope, artifact and middleware chain for each event.
@@ -137,7 +146,7 @@ func define(typ reflect.Type, factory any, explicit bool, id ID, options []Optio
 		}
 		option(&c)
 	}
-	if strings.TrimSpace(string(c.id)) == "" || strings.TrimSpace(string(c.sequence)) == "" || strings.TrimSpace(string(c.streamType)) == "" || (c.sourceType != "" && strings.TrimSpace(string(c.sourceType)) == "") || c.invalid {
+	if strings.TrimSpace(string(c.id)) == "" || strings.TrimSpace(string(c.sequence)) == "" || strings.TrimSpace(string(c.streamType)) == "" || (c.sourceType != "" && strings.TrimSpace(string(c.sourceType)) == "") || c.invalid || (c.sourceStore != "" && c.sequenceExplicit) {
 		return Declaration{}, invalid("invalid reactor options")
 	}
 	for _, value := range append(append([]string(nil), c.tags...), c.filterTags...) {
