@@ -7,9 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/cratis/chronicle.go/internal/connection"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -157,6 +159,7 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 			startup = nil
 		}
 		if err == nil {
+			diagnostics.Log(c.life, c.config.logger, slog.LevelInfo, "client connected", "client", "connect", nil)
 			attempt = 0
 			err = c.runGeneration(g)
 		}
@@ -168,9 +171,14 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 		if g != nil {
 			c.retire(g)
 		}
-		if terminalConnectionError(err) || c.life.Err() != nil {
+		if c.life.Err() != nil {
 			return
 		}
+		diagnostics.Log(c.life, c.config.logger, slog.LevelWarn, "client connection ended", "client", "connect", err)
+		if terminalConnectionError(err) {
+			return
+		}
+		diagnostics.Log(c.life, c.config.logger, slog.LevelInfo, "client reconnect scheduled", "client", "reconnect", nil)
 		attempt++
 		if connection.Wait(c.life, connection.Backoff(attempt, time.Second, 30*time.Second)) != nil {
 			return

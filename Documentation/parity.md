@@ -46,6 +46,16 @@ as `requested > 0 ? requested : 10`; the SDK does not duplicate those defaults.
 Zero is not a request for zero answers or a zero-confidence override. C# performs
 no confidence range/finiteness validation, so Go forwards those values unchanged.
 
+## Client diagnostic routing
+
+| C# authority | Go surface and status | Evidence and limits |
+| --- | --- | --- |
+| `DotNET/ChronicleClient.cs:105–129` at `2e31b0dfba489159b3db323238f16d0f277056b4`, optional `ILoggerFactory` | **Go-specific**: `chronicle.WithLogger(*slog.Logger)` captures a borrowed logger at `CaptureClient` (immediately for `NewClientContext`); scalar last-wins and nil validation; per-client logger/handler identity capture, not destination-state capture | `TestClientLoggerCapturePrecedenceAndArtifactOverride`, `TestClientLoggerDefaultIsCapturedAfterDeclarationAndBeforePreparation`, `TestClientLoggerValidationAndImmediateCapture`, `TestClientLoggersIsolateSharedRegistryConcurrentFailures`; explicit reactor/reducer/read-model logger overrides survive pointer equality, store binding and reconnect. `TestClientLoggerPristineDefaultBridge` uses a fresh subprocess and actual preparation failure to demonstrate that the captured pristine default follows the standard logger's current writer and a later custom-default bridge. Strict destination isolation requires an explicit stable handler/writer. No full C# logging DI parity or framework adapter dependency |
+| Observer and lifecycle diagnostics / C# client logger collaborators | **Go-specific** bounded SDK records: fixed operation/stage/category only, no arbitrary error formatting/traversal or sensitive metadata; handler panics contained without changing operational outcomes | `TestClientLoggerReconnectRetainsCaptureAndRedactsStatus`, `TestObserverResubscriptionUsesFrozenArtifactRoute`, `TestClientPreparationLoggingDoesNotInspectCauseOrPanic`, `TestArtifactLoggingContainsPanicValuesAndReporterPanics`, `TestDiagnosticsNeverInspectArbitraryErrors`, `TestLoggingHandlerPanicsDoNotEscape`, `ExampleWithLogger`; `TestClientLoggingAfterHookPanicPreservesRuntimeEffectAndCheckpoint` verifies the actual returned-effect append RPC and exact success checkpoint despite after-hook failure and handler panic. `TestClientLoggingReplayFailureRetainsArtifactRouteAndGeneration` verifies notifier-failure resubscription on the same generation, explicit override/client fallback and custom-handler identity across later default changes, with recording and panicking handlers. These use the production runtime over bufconn, not a live kernel; no exactly-once guarantee is implied beyond controlled invocations. Borrowed handlers are never closed. Callers own concurrency, cooperative handler lifetime (no self-joining client Close), handler-added fields/mutable state, application logs and explicit error reporters. Kernel exception-message fields and returned error graphs are outside the log-redaction contract |
+| Constructor dependencies / C# service provider | **Go-specific**: the diagnostic option does not bind `*slog.Logger`; explicit constructor closures or provider bindings remain required | `TestLoggerOptionIsNotAConstructorService`; the container-free resolver rejects zero logger construction. Provider API and root dependency graph are unchanged |
+
+See [Use one application-owned logger](facade-composition.md#use-one-application-owned-logger).
+
 ## Baselines and evidence
 
 C# reference: `Cratis/Chronicle` revision `2e31b0dfba489159b3db323238f16d0f277056b4`, paths below relative to `Source/Clients/`. Generated contracts independently pin Chronicle **19.29.4**, commit `ae5e00a8abaa688138b2c2f689e2b4659cccb4fd`. Real-kernel evidence uses **19.29.4-development**, including test-owned TLS/TCP connection interruption and recovery against a running kernel. Whole-kernel restart and a real multi-node deployment remain unverified. SDK release numbers are independent of protocol versions.
@@ -579,7 +589,7 @@ This slice compares `DotNET/ChronicleClient.cs`, `ChronicleOptions.cs`, `EventSt
 | Readiness and outcomes | `Registration`, `WaitForRegistration`, `RegisterAll`, `Lifecycle.IsConnected` | `WaitForRegistration(ctx)` returns a generation/pass outcome; `Ready(ctx)` separates connection health from artifact readiness. Only implemented store/namespace/event-type/read-model/constraint stages are represented, in C# `RegisterAllArtifacts` order (event types and read models before constraints); runtime `RegisterAll`/registry extension is deferred |
 | Failed store creation | Evicts a failed lazy task from the name/namespace cache | Retains the immutable handle but never caches failure as successful readiness; later passes and reconnect can recover it. No failed task permanently poisons admission |
 | Disposal | `Dispose()` cancels owned connection lifetime and disposes the supplied connection | `Close()` cancels/joins only owned resources; `CloseContext` bounds joining and `Shutdown` adds deadline-bounded RPC draining. Borrowed channels are never disposed |
-| Remaining option/lifecycle surface | Default sink, `EvictEventStores`, lifecycle event hooks, process/software metadata and custom balancer | Not implemented in this slice. Handles persist until client close and no public connection-event callbacks are exposed. [#62](https://github.com/Cratis/Chronicle.Go/issues/62) remains open for sink defaults, eviction, lifecycle hooks and custom balancing |
+| Remaining option/lifecycle surface | `EvictEventStores`, lifecycle event hooks, process/software metadata and custom balancer | Not implemented in this slice. Handles persist until client close and no public connection-event callbacks are exposed. [#62](https://github.com/Cratis/Chronicle.Go/issues/62) remains open for eviction, lifecycle hooks and custom balancing; sink default evidence is recorded below |
 
 ## Client transport options
 
@@ -638,6 +648,35 @@ registration workers still belong to their generation; cancellation, `Close`,
 `CloseContext` and `Shutdown` join client-owned work as usual. Prefer skipped
 sessions for short-lived one-shot clients. TLS verification, credential ownership
 and the no-append-retry contract are unchanged; no idle-ping guarantee is added.
+
+## Client default sink selection
+
+Authority: C# `2e31b0dfba489159b3db323238f16d0f277056b4`,
+`DotNET/ChronicleOptions.cs:DefaultSinkTypeId`,
+`DotNET/ReadModels/ReadModels.cs:GetSinkTypeIdFor` and
+`Kernel/Concepts/Sinks/WellKnownSinkTypes.cs`. The provider identities are strings
+`MongoDB`, `SQL`, `InMemory` and `None`; UUIDs identify provider configurations.
+C# defaults to MongoDB, with passive read models/projections selecting None.
+
+| Surface | Status / Go contract | Executable evidence and limits |
+| --- | --- | --- |
+| Materialized client default | **Implemented**: `WithDefaultSinkType(kind readmodels.SinkType)`, MongoDB omitted; MongoDB/SQL/InMemory accepted, last wins | `TestDefaultSinkSelectionIsDetachedAndStoreReplacementIsNotMerged`, `ExampleWithDefaultSinkType`; selected default and every per-store replacement resolve independently, nil remains empty. Catalog access performs no I/O |
+| Model override/configuration | **Go-specific** existing `readmodels.WithSink` takes precedence, even explicit MongoDB equal to the declaration default; canonical configuration UUIDs are retained | `TestExplicitSinkSurvivesNamingAndDefaultCopies`, `TestDefaultSinkCSharpHandDerivedWireGoldens`; goldens are hand-derived from the pinned C# contract, not captured C# runtime output |
+| Passive producer precedence | **Implemented**, with **Go-specific** strict conflict validation: inherited materialized defaults become None; explicit materialized selections conflict with passive producers; explicit None remains valid with passive semantics | `TestDefaultSinkPassiveProducerPrecedenceAndExplicitConflicts`; C# has no corresponding per-model sink option in `GetSinkTypeIdFor`. Existing Go explicit-sink intent is retained rather than silently ignored |
+| Global None/unknown default | **Partial**, **Go-specific** restriction: rejected with `ErrInvalidConfiguration` at capture before preparation | `TestDefaultSinkRejectsUnknownAndNoneBeforePreparation`, `TestCaptureInvalidSinkRunsNoSchemaFactoryOrServiceCallbacks`; C# accepts global `SinkTypeId.None` and registers that selection for non-passive models, allowing immediate projection instead of materialized reads. This is working C# behavior, not an inert declaration. Go restricts None to passive producers; callers using the C# global option must explicitly declare passive producers in Go |
+| Frozen compilation and reconnect | **Implemented**: detached sink resolution preserves original declaration identity, schema/generation, codec/classification and initial-state snapshots; producer plans bind the final catalog | `TestDefaultSinkFactoryProducerPlansUseFinalCatalogWithoutRepreparation`, `TestFactoryCodecsSurviveNamingInitialStateStoreBindingAndReconnect`, `TestDefaultSinkCopyPreservesFrozenClassificationAndSchema`, `TestDefaultSinkRegistrationFrozenReconnectAndOriginalTypedHandle`; shared registry preparation runs once per client epoch and reconnect bytes are stable |
+| Kernel-backed materialization | **Partial** backend qualification on 19.29.4-development | `TestKernelClientDefaultSinkMongoAndExplicitMongoOverrideSQL` covers unchanged MongoDB default and a MongoDB model overriding a SQL client default. It materializes MongoDB only. SQL/InMemory registration and wire selection are not proof of live backend reads; neither backend is provisioned by this fixture |
+| Decision agreement | **Go-specific** fail-closed check, not expanded decision capability | `TestDecisionSinkDefaultRequiresActualServerProfileBeforeFolding`, `TestDecisionAgreementRechecksServerShapeAndKey`; actual server sink type/configuration and projection active/rewindable flags must match the admitted definition before and after folding. A sink mismatch returns no token; this is not full mapping equality or live SQL qualification |
+
+`TestCaptureSinkDefaultsFreezeOptionsRegistriesCodecsAndFactoryModels` covers
+Capture → Prepare with SQL/InMemory defaults, explicit MongoDB and passive None,
+shared and replacement registry snapshots, retained options/services, frozen
+codec initial state and final catalog/producer identity. Capture validates the
+sink without preparation callbacks; Prepare never rereads options or registries.
+
+No namespace override, database dependency ownership or client driver is added.
+Sink selection is store-wide and does not configure kernel backend providers.
+This is only the default-sink slice of #62, not lifecycle/options completion.
 
 ## Unit-of-work migration
 

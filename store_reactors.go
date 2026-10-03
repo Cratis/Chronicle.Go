@@ -25,7 +25,7 @@ func (s *EventStore) reactorPlans() []*reactors.Plan {
 func (s *EventStore) startReactors(ctx context.Context, g *generation, waitReady bool) error {
 	var plans []observerPlan
 	for _, plan := range s.reactorPlans() {
-		plans = append(plans, observerPlan{id: string(plan.Identifier()), open: func(ctx context.Context, g *generation) (observerStream, error) {
+		plans = append(plans, observerPlan{id: string(plan.Identifier()), logger: plan.Logger(), operation: "reactor", open: func(ctx context.Context, g *generation) (observerStream, error) {
 			return observerruntime.Open(ctx, g.transport, g.id, s.name, s.namespace, plan, reactorStoreRuntime{s})
 		}})
 	}

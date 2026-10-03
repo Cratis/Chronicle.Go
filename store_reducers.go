@@ -25,7 +25,7 @@ func (s *EventStore) startReducers(ctx context.Context, g *generation, waitReady
 	s.readModelChanges.BindGeneration(g.ctx)
 	var plans []observerPlan
 	for _, plan := range s.reducerPlans() {
-		plans = append(plans, observerPlan{id: string(plan.Identifier()), open: func(ctx context.Context, g *generation) (observerStream, error) {
+		plans = append(plans, observerPlan{id: string(plan.Identifier()), logger: plan.Logger(), operation: "reducer", open: func(ctx context.Context, g *generation) (observerStream, error) {
 			runtime, err := observerruntime.OpenReducer(ctx, g.transport, g.id, s.name, s.namespace, plan)
 			if err == nil {
 				runtime.OnChange = func(key string, value json.RawMessage) {

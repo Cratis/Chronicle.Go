@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -46,6 +47,7 @@ type configuration struct {
 	handlers         []Handler
 	key              func(context.Context, any, events.Context) (readmodels.Key, error)
 	logger           *slog.Logger
+	loggerSet        bool
 	invalid          bool
 }
 
@@ -86,10 +88,11 @@ func WithReadModelKey(resolve func(context.Context, any, events.Context) (readmo
 	return func(c *configuration) { c.key = resolve; c.invalid = c.invalid || resolve == nil }
 }
 
-// WithLogger selects diagnostics for shadowed handlers and after-hook failures.
-// The default is slog.Default; Chronicle never changes the global logger.
+// WithLogger selects borrowed diagnostics for this reactor, overriding the client
+// fallback. Nil is invalid; handlers follow chronicle.WithLogger's concurrency,
+// ownership and redaction contract. Standalone declarations capture slog.Default.
 func WithLogger(logger *slog.Logger) Option {
-	return func(c *configuration) { c.logger = logger; c.invalid = c.invalid || logger == nil }
+	return func(c *configuration) { c.logger, c.loggerSet = logger, true; c.invalid = c.invalid || logger == nil }
 }
 
 // WithHandler adds an explicit typed callback. Duplicate event bindings are errors,
@@ -155,6 +158,15 @@ func define(typ reflect.Type, factory any, explicit bool, id ID, options []Optio
 		}
 	}
 	return Declaration{typ: typ, factory: factory, config: c, explicit: explicit}, nil
+}
+
+// WithClientDiagnostics is a module-private binding seam. It returns a detached
+// declaration with the client fallback, preserving an explicit WithLogger choice.
+func (d Declaration) WithClientDiagnostics(config diagnostics.Configuration) Declaration {
+	if !d.config.loggerSet {
+		d.config.logger = config.Logger
+	}
+	return d
 }
 
 // Identifier returns the persisted observer identity.

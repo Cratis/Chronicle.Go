@@ -16,6 +16,7 @@ import (
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -51,6 +52,7 @@ type configuration struct {
 	handlers         []Handler
 	replay           ReplayCallbacks
 	logger           *slog.Logger
+	loggerSet        bool
 	invalid          bool
 }
 
@@ -114,9 +116,11 @@ func WithEventStreamType(typ events.StreamType) Option {
 	return func(c *configuration) { c.streamType = typ }
 }
 
-// WithLogger selects shadowed-method diagnostics; default slog.Default.
+// WithLogger selects borrowed diagnostics for this reducer, overriding the client
+// fallback. Nil is invalid; handlers follow chronicle.WithLogger's concurrency,
+// ownership and redaction contract. Standalone declarations capture slog.Default.
 func WithLogger(logger *slog.Logger) Option {
-	return func(c *configuration) { c.logger = logger; c.invalid = c.invalid || logger == nil }
+	return func(c *configuration) { c.logger, c.loggerSet = logger, true; c.invalid = c.invalid || logger == nil }
 }
 
 // WithHandler adds a typed callback. Conflicts with discovered methods fail.
@@ -177,6 +181,15 @@ func define(typ reflect.Type, model readmodels.Descriptor, factory any, explicit
 		}
 	}
 	return Declaration{typ, model, factory, c, explicit}, nil
+}
+
+// WithClientDiagnostics is a module-private binding seam. It returns a detached
+// declaration with the client fallback, preserving an explicit WithLogger choice.
+func (d Declaration) WithClientDiagnostics(config diagnostics.Configuration) Declaration {
+	if !d.config.loggerSet {
+		d.config.logger = config.Logger
+	}
+	return d
 }
 
 // Identifier returns the persisted observer identity.

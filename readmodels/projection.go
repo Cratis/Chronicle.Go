@@ -37,7 +37,7 @@ func BindProjection(d Descriptor, id string, sequence events.SequenceID, passive
 		return Descriptor{}, invalid("model and projection event sequences conflict")
 	}
 	if passive {
-		if config.sink.Type != MongoDB && config.sink.Type != NoSink {
+		if config.sinkExplicit && config.sink.Type != NoSink {
 			return Descriptor{}, invalid("passive projection cannot use this sink")
 		}
 		if config.sink.ConfigurationID != "00000000-0000-0000-0000-000000000000" {

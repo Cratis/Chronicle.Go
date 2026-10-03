@@ -97,6 +97,9 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 }
 
 func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) {
+	if config.loggerSet && config.logger == nil {
+		return ConnectionString{}, nil, fmt.Errorf("%w: nil logger", ErrInvalidConfiguration)
+	}
 	if err := config.naming.Validate(); err != nil {
 		return ConnectionString{}, nil, err
 	}

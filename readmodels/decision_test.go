@@ -17,6 +17,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/decision"
+	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/transactions"
 	"google.golang.org/grpc"
@@ -121,7 +122,9 @@ func (f *decisionFixture) Invoke(ctx context.Context, _ string, request, reply a
 func (f *decisionFixture) respond(request any) proto.Message {
 	switch request := request.(type) {
 	case *contracts.GetDefinitionsRequest:
-		return &contracts.GetDefinitionsResponse{ReadModels: []*contracts.ReadModelDefinition{{Type: &contracts.ReadModelType{Identifier: "person", Generation: 1}, Schema: f.model.Descriptor().Schema(), ObserverType: contracts.ReadModelObserverType_Projection, ObserverIdentifier: "people"}}}
+		sink := f.model.Descriptor().Sink()
+		configuration, _ := metadata.ParseCorrelationID(sink.ConfigurationID)
+		return &contracts.GetDefinitionsResponse{ReadModels: []*contracts.ReadModelDefinition{{Type: &contracts.ReadModelType{Identifier: "person", Generation: 1}, Schema: f.model.Descriptor().Schema(), Sink: &contracts.SinkDefinition{TypeId: string(sink.Type), ConfigurationId: wire.Guid(configuration)}, ObserverType: contracts.ReadModelObserverType_Projection, ObserverIdentifier: "people"}}}
 	case *projections.GetAllDefinitionsRequest:
 		return &projections.IEnumerable_ProjectionDefinition{Items: []*projections.ProjectionDefinition{proto.CloneOf(f.catalog.Projections[0])}}
 	case *sequences.TailSequenceNumberRequest:
@@ -479,7 +482,7 @@ func TestDecisionFailuresAwaitCleanupAndReturnNoToken(t *testing.T) {
 }
 
 func TestDecisionAgreementRechecksServerShapeAndKey(t *testing.T) {
-	for _, change := range []string{"observer", "duplicate-model", "missing-projection", "key", "parent", "all", "types", "hierarchy", "mapping-only"} {
+	for _, change := range []string{"observer", "sink", "sink-configuration", "missing-sink", "active", "rewindable", "duplicate-model", "missing-projection", "key", "parent", "all", "types", "hierarchy", "mapping-only"} {
 		t.Run(change, func(t *testing.T) {
 			f := newDecisionFixture(t)
 			folds := 0
@@ -491,6 +494,12 @@ func TestDecisionAgreementRechecksServerShapeAndKey(t *testing.T) {
 					response := f.respond(request).(*contracts.GetDefinitionsResponse)
 					if folds > 0 {
 						switch change {
+						case "sink":
+							response.ReadModels[0].Sink.TypeId = string(SQL)
+						case "sink-configuration":
+							response.ReadModels[0].Sink.ConfigurationId.Lo = 1
+						case "missing-sink":
+							response.ReadModels[0].Sink = nil
 						case "observer":
 							response.ReadModels[0].ObserverIdentifier = "other"
 						case "duplicate-model":
@@ -504,6 +513,10 @@ func TestDecisionAgreementRechecksServerShapeAndKey(t *testing.T) {
 					response := f.respond(request).(*projections.IEnumerable_ProjectionDefinition)
 					if folds > 0 {
 						switch change {
+						case "active":
+							response.Items[0].IsActive = !response.Items[0].IsActive
+						case "rewindable":
+							response.Items[0].IsRewindable = !response.Items[0].IsRewindable
 						case "missing-projection":
 							response.Items = nil
 						case "parent":

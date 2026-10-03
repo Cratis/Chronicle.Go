@@ -6,12 +6,13 @@ package reactors
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log/slog"
 	"slices"
 	"time"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 )
 
 // Replay selects exported methods that replace ordinary handlers during replay.
@@ -85,12 +86,15 @@ func (p *Plan) NotifyReplay(ctx context.Context, state ReplayState, partition ev
 	var resources *artifacts.Lease
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			err = fmt.Errorf("replay notification panic: %v", recovered)
+			err = &diagnostics.PanicError{}
 		}
 		if resources != nil {
 			cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 			err = errors.Join(err, resources.Close(cleanup))
 			cancel()
+		}
+		if err != nil {
+			diagnostics.Log(ctx, p.Logger(), slog.LevelError, "reactor replay notification failed", "reactor", "replay", err)
 		}
 	}()
 	resources, err = artifacts.Open(ctx, p.services)
@@ -99,7 +103,7 @@ func (p *Plan) NotifyReplay(ctx context.Context, state ReplayState, partition ev
 		instance, err = resources.Construct(ctx, p.factory)
 	}
 	if err != nil {
-		p.declaration.config.logger.ErrorContext(ctx, "reactor replay notification activation failed", "reactor", p.Identifier(), "error", err)
+		diagnostics.Log(ctx, p.Logger(), slog.LevelError, "reactor replay notification activation failed", "reactor", "replay_activate", err)
 		return nil
 	}
 	if notifier, ok := instance.(ReplayNotifier); ok {

@@ -12,6 +12,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
+	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/serialization"
 	"google.golang.org/grpc"
 )
@@ -53,6 +54,14 @@ func checkDecisionAgreement(ctx context.Context, conn grpc.ClientConnInterface, 
 	}
 	model, projection := matches[0], producers[0]
 	if model.GetType().GetGeneration() != uint32(admitted.descriptor.Generation()) {
+		return refused
+	}
+	sink := admitted.descriptor.Sink()
+	configuration, err := metadata.ParseCorrelationID(sink.ConfigurationID)
+	if err != nil || model.Sink == nil || model.Sink.TypeId != string(sink.Type) || wire.Correlation(model.Sink.ConfigurationId) != configuration {
+		return refused
+	}
+	if projection.IsActive != admitted.projection.IsActive || projection.IsRewindable != admitted.projection.IsRewindable {
 		return refused
 	}
 	// A locally plain model is not proof the latest server schema is plain.
