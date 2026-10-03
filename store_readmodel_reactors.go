@@ -19,7 +19,7 @@ func (s *EventStore) readModelReactorPlans() []*reactors.ReadModelPlan {
 func (s *EventStore) startReadModelReactors(ctx context.Context, g *generation, waitReady bool) error {
 	var plans []observerPlan
 	for _, plan := range s.readModelReactorPlans() {
-		plans = append(plans, observerPlan{id: string(plan.Identifier()), oneShot: true, reportOpenError: plan.Report, open: func(ctx context.Context, g *generation) (observerStream, error) {
+		plans = append(plans, observerPlan{id: string(plan.Identifier()), logger: plan.Logger(), operation: "read_model_reactor", oneShot: true, reportOpenError: plan.Report, open: func(ctx context.Context, g *generation) (observerStream, error) {
 			// The generation transport avoids recursively entering registration from
 			// the watch ready barrier. Scope/effects still use the public store runtime.
 			service, err := readmodels.New(s.name, s.namespace, s.readModels.Catalog(), g.transport, readmodels.WithReductionChanges(&s.readModelChanges))

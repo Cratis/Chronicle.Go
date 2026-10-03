@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"reflect"
 	"sync"
 
@@ -55,6 +56,10 @@ func (defaultFactory) Contains(t reflect.Type) bool {
 	}
 	// The SDK client has identity and lifecycle ownership; zero construction (or
 	// a value copy) cannot supply a usable borrowed client to an artifact.
+	if base == reflect.TypeFor[slog.Logger]() {
+		// A zero logger has no handler. Diagnostic options do not supply services.
+		return false
+	}
 	if base.PkgPath() == "github.com/cratis/chronicle.go" && base.Name() == "Client" {
 		return false
 	}

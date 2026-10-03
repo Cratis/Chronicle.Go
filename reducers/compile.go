@@ -10,11 +10,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"slices"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/discovery"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -45,6 +47,9 @@ type Plan struct {
 	hash        string
 	replay      map[ReplayState]bool
 }
+
+// Logger returns the frozen borrowed diagnostic logger. Chronicle never closes it.
+func (p *Plan) Logger() *slog.Logger { return p.declaration.config.logger }
 
 // Shadow describes a handler hidden by richest-signature then ordinal precedence.
 type Shadow struct {
@@ -162,7 +167,7 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 				}
 				if previous, exists := p.folds[id]; exists {
 					p.shadows = append(p.shadows, Shadow{descriptor.Ref(), previous.name, method.Name})
-					d.config.logger.Warn("reducer fold shadowed", "reducer", d.Identifier(), "event", id, "winner", previous.name, "hidden", method.Name)
+					diagnostics.Log(context.Background(), d.config.logger, slog.LevelWarn, "reducer fold shadowed", "reducer", "compile", nil)
 					continue
 				}
 				p.folds[id], p.descriptors[id] = f, descriptor

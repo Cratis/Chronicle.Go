@@ -8,10 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	reactorcontracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	contracts "github.com/cratis/chronicle.go/contracts/observation/reducers"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/reducers"
@@ -84,11 +86,15 @@ func (r *Reducer) Run(ctx context.Context) error {
 func (r *Reducer) handle(ctx context.Context, operation *contracts.ReduceOperationMessage) (result *contracts.ReducerResult) {
 	result = &contracts.ReducerResult{Partition: operation.Partition, State: contracts.ObservationState_Success, LastSuccessfulObservation: uint64(events.Unavailable)}
 	var failure error
+	failureLogged := false
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			failure = fmt.Errorf("reducer operation panic: %v", recovered)
+			failure = &diagnostics.PanicError{}
 		}
 		if failure != nil {
+			if !failureLogged {
+				diagnostics.Log(ctx, r.plan.Logger(), slog.LevelError, "reducer operation failed", "reducer", "observe", failure)
+			}
 			result.State = contracts.ObservationState_Failed
 			result.ReadModelState = ""
 			result.ExceptionMessages = []string{failure.Error()}
@@ -121,6 +127,7 @@ func (r *Reducer) handle(ctx context.Context, operation *contracts.ReduceOperati
 	folded := r.plan.Reduce(ctx, batch, initial)
 	result.LastSuccessfulObservation = uint64(folded.LastSuccessful)
 	failure = folded.Err
+	failureLogged = failure != nil // Reduce already records its operation failure.
 	if failure != nil || folded.State == nil {
 		return result
 	}

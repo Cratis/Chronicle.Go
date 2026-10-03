@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"slices"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/internal/connection"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -49,7 +51,7 @@ type ClientPreparation struct {
 // or selector callbacks. Arbitrary ClientOption functions themselves still execute.
 // Immutable descriptor plans and borrowed callbacks keep their existing ownership.
 func CaptureClient(options ...ClientOption) (*ClientPreparation, error) {
-	config := clientConfig{uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
+	config := clientConfig{logger: slog.Default(), uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
 		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize,
 		keepAliveTimeout: 5 * time.Second, reactorRetryWait: connection.Wait, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
 	for _, option := range options {
@@ -69,6 +71,16 @@ func CaptureClient(options ...ClientOption) (*ClientPreparation, error) {
 			return declarations
 		}
 		declarations := captureRegistry(registry)
+		logging := diagnostics.Configuration{Logger: config.logger}
+		for i, declaration := range declarations.reactors {
+			declarations.reactors[i] = declaration.WithClientDiagnostics(logging)
+		}
+		for i, declaration := range declarations.reducers {
+			declarations.reducers[i] = declaration.WithClientDiagnostics(logging)
+		}
+		for i, declaration := range declarations.readModelReactors {
+			declarations.readModelReactors[i] = declaration.WithClientDiagnostics(logging)
+		}
 		captured[registry] = declarations
 		p.selected = append(p.selected, declarations)
 		return declarations
@@ -171,7 +183,6 @@ func (p *ClientPreparation) Prepare(ctx context.Context, scopes reactors.ScopeFa
 	})
 	// Publication is all-or-nothing, after every scope and owned result is closed.
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	err = artifacts.Protect("client", "publish", func() error {
 		var closedErr error
 		if c.closed || c.life.Err() != nil {
@@ -185,6 +196,8 @@ func (p *ClientPreparation) Prepare(ctx context.Context, scopes reactors.ScopeFa
 	})
 	if err != nil {
 		c.preparation, c.preparationError = preparationFailed, err
+		c.mu.Unlock()
+		diagnostics.Log(preparationCtx, c.config.logger, slog.LevelError, "client preparation failed", "client", "prepare", err)
 		return nil, err
 	}
 	frozen := compiled[p.defaults]
@@ -200,6 +213,7 @@ func (p *ClientPreparation) Prepare(ctx context.Context, scopes reactors.ScopeFa
 	}
 	c.config.reactorServices = runtimeServices
 	c.preparation = preparationSucceeded
+	c.mu.Unlock()
 	return c, nil
 }
 

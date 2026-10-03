@@ -15,6 +15,7 @@ import (
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -28,6 +29,9 @@ type readModelConfig struct {
 	window       *readmodels.Window
 	handlers     []ReadModelHandler
 	onError      func(context.Context, error)
+	onErrorSet   bool
+	logger       *slog.Logger
+	loggerSet    bool
 	watch        []readmodels.WatchOption
 }
 
@@ -49,9 +53,17 @@ func Materialized(window *readmodels.Window) ReadModelOption {
 // WithReadModelErrorHandler reports activation, dispatch, cleanup, effect and
 // terminal watch failures. It must honor cancellation and must not block on client
 // shutdown from inside itself. Calls are serial per reactor, outside internal locks.
-// Nil is invalid. Without this option errors are logged through slog.Default.
+// Nil is invalid. Without this option errors use the captured diagnostic logger.
+// Explicit callbacks receive original errors and own their redaction decisions.
 func WithReadModelErrorHandler(handler func(context.Context, error)) ReadModelOption {
-	return func(c *readModelConfig) { c.onError = handler }
+	return func(c *readModelConfig) { c.onError, c.onErrorSet = handler, true }
+}
+
+// WithReadModelLogger selects a borrowed diagnostic logger, overriding the client
+// fallback. Nil is invalid; handlers follow chronicle.WithLogger's ownership,
+// concurrency and redaction contract. Standalone declarations capture slog.Default.
+func WithReadModelLogger(logger *slog.Logger) ReadModelOption {
+	return func(c *readModelConfig) { c.logger, c.loggerSet = logger, true }
 }
 
 // WithReadModelWatchOptions configures the bounded watch feeding this reactor.
@@ -89,6 +101,15 @@ type ReadModelDeclaration struct {
 	config  readModelConfig
 }
 
+// WithClientDiagnostics is a module-private binding seam. It returns a detached
+// declaration with the client fallback, preserving an explicit logger choice.
+func (d ReadModelDeclaration) WithClientDiagnostics(config diagnostics.Configuration) ReadModelDeclaration {
+	if !d.config.loggerSet {
+		d.config.logger = config.Logger
+	}
+	return d
+}
+
 // Identifier returns the local registration identity.
 func (d ReadModelDeclaration) Identifier() ID { return d.config.id }
 
@@ -116,16 +137,14 @@ func DefineReadModelHandlers[M any](id ID, model readmodels.Model[M], handlers [
 	return defineReadModel(nil, model.Descriptor(), nil, id, append(initial, options...))
 }
 func defineReadModel(typ reflect.Type, model readmodels.Descriptor, factory any, id ID, options []ReadModelOption) (ReadModelDeclaration, error) {
-	config := readModelConfig{id: id, onError: func(ctx context.Context, err error) {
-		slog.ErrorContext(ctx, "read-model reactor failed (not retried)", "error", err)
-	}}
+	config := readModelConfig{id: id, logger: slog.Default()}
 	for _, option := range options {
 		if option == nil {
 			return ReadModelDeclaration{}, invalid("nil read-model reactor option")
 		}
 		option(&config)
 	}
-	if model.GoType() == nil || strings.TrimSpace(string(config.id)) == "" || config.onError == nil {
+	if model.GoType() == nil || strings.TrimSpace(string(config.id)) == "" || (config.onErrorSet && config.onError == nil) || config.logger == nil {
 		return ReadModelDeclaration{}, invalid("model, reactor ID and error handler required")
 	}
 	return ReadModelDeclaration{typ, factory, model, config}, nil
@@ -147,6 +166,9 @@ type ReadModelPlan struct {
 	calls       []modelCall
 	effects     *Plan
 }
+
+// Logger returns the frozen borrowed diagnostic logger. Chronicle never closes it.
+func (p *ReadModelPlan) Logger() *slog.Logger { return p.declaration.config.logger }
 
 // Identifier returns the local reactor identity.
 func (p *ReadModelPlan) Identifier() ID { return p.declaration.Identifier() }
@@ -216,7 +238,7 @@ func CompileReadModel(d ReadModelDeclaration, catalog *events.Catalog, models *r
 			return nil, invalid("nil side-effect handler")
 		}
 	}
-	p.effects = &Plan{catalog: catalog, sideEffects: slices.Clone(effects), declaration: Declaration{config: configuration{id: d.config.id, sequence: model.EventSequence(), streamType: events.AllStreamTypes, logger: slog.Default()}}}
+	p.effects = &Plan{catalog: catalog, sideEffects: slices.Clone(effects), declaration: Declaration{config: configuration{id: d.config.id, sequence: model.EventSequence(), streamType: events.AllStreamTypes, logger: d.config.logger, loggerSet: d.config.loggerSet}}}
 	if d.typ != nil {
 		for _, entry := range []struct {
 			name string
@@ -305,11 +327,26 @@ func (p *ReadModelPlan) addCall(name string, fn reflect.Value, receiver bool, ki
 func (p *ReadModelPlan) Report(ctx context.Context, err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			slog.ErrorContext(ctx, "read-model error reporter panicked")
+			diagnostics.Log(ctx, p.Logger(), slog.LevelError, "read-model error reporter panicked", "read_model_reactor", "report", &diagnostics.PanicError{})
 		}
 	}()
-	p.declaration.config.onError(ctx, fmt.Errorf("read-model reactor %q: %w", p.Identifier(), err))
+	if p.declaration.config.onError != nil {
+		p.declaration.config.onError(ctx, &readModelFailure{reactor: p.Identifier(), cause: err})
+		return
+	}
+	diagnostics.Log(ctx, p.Logger(), slog.LevelError, "read-model reactor failed (not retried)", "read_model_reactor", "dispatch", err)
 }
+
+// readModelFailure adds local identity without eagerly formatting an application error.
+type readModelFailure struct {
+	reactor ID
+	cause   error
+}
+
+func (e *readModelFailure) Error() string {
+	return fmt.Sprintf("read-model reactor %q: %v", e.reactor, e.cause)
+}
+func (e *readModelFailure) Unwrap() error { return e.cause }
 
 // Dispatch invokes all matching callbacks serially, with one scope/activation per
 // callback (C# ReadModelReactors.Dispatch), then effects and cleanup. Failures are
@@ -337,7 +374,7 @@ func (p *ReadModelPlan) dispatch(ctx context.Context, handler modelCall, change 
 	var lease *artifacts.Lease
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			err = fmt.Errorf("read-model dispatch panic: %v", recovered)
+			err = &diagnostics.PanicError{}
 		}
 		if lease != nil {
 			err = errors.Join(err, lease.Close(ctx))

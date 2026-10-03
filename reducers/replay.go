@@ -7,10 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"time"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/discovery"
 	"github.com/cratis/chronicle.go/internal/faults"
 )
@@ -140,6 +142,11 @@ func (c ReplayCallbacks) values() []any {
 // activation failure is deliberately stricter than C#'s log-and-ignore behavior.
 // Notifications have no result acknowledgement. Unknown states fail before I/O.
 func (p *Plan) NotifyReplay(ctx context.Context, state ReplayState, partition events.SourceID) (err error) {
+	defer func() {
+		if err != nil {
+			diagnostics.Log(ctx, p.Logger(), slog.LevelError, "reducer replay notification failed", "reducer", "replay", err)
+		}
+	}()
 	if state < BeginReplay || state > EndReplayPartition {
 		return fmt.Errorf("%w: unknown reducer replay state %d", faults.ErrProtocol, state)
 	}
@@ -154,7 +161,7 @@ func (p *Plan) NotifyReplay(ctx context.Context, state ReplayState, partition ev
 	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			err = fmt.Errorf("reducer replay notification panic: %v", recovered)
+			err = &diagnostics.PanicError{}
 		}
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		if failure := lease.Close(cleanup); failure != nil {

@@ -46,6 +46,16 @@ as `requested > 0 ? requested : 10`; the SDK does not duplicate those defaults.
 Zero is not a request for zero answers or a zero-confidence override. C# performs
 no confidence range/finiteness validation, so Go forwards those values unchanged.
 
+## Client diagnostic routing
+
+| C# authority | Go surface and status | Evidence and limits |
+| --- | --- | --- |
+| `DotNET/ChronicleClient.cs:105–129` at `2e31b0dfba489159b3db323238f16d0f277056b4`, optional `ILoggerFactory` | **Go-specific**: `chronicle.WithLogger(*slog.Logger)` captures a borrowed logger at `CaptureClient` (immediately for `NewClientContext`); scalar last-wins and nil validation; immutable per-client artifact fallback | `TestClientLoggerCapturePrecedenceAndArtifactOverride`, `TestClientLoggerDefaultIsCapturedAfterDeclarationAndBeforePreparation`, `TestClientLoggerValidationAndImmediateCapture`, `TestClientLoggersIsolateSharedRegistryConcurrentFailures`; explicit reactor/reducer/read-model logger overrides survive pointer equality, store binding and reconnect. No full C# logging DI parity or framework adapter dependency |
+| Observer and lifecycle diagnostics / C# client logger collaborators | **Go-specific** bounded SDK records: fixed operation/stage/category only, no arbitrary error formatting/traversal or sensitive metadata; handler panics contained without changing operational outcomes | `TestClientLoggerReconnectRetainsCaptureAndRedactsStatus`, `TestObserverResubscriptionUsesFrozenArtifactRoute`, `TestClientPreparationLoggingDoesNotInspectCauseOrPanic`, `TestArtifactLoggingContainsPanicValuesAndReporterPanics`, `TestDiagnosticsNeverInspectArbitraryErrors`, `TestLoggingHandlerPanicsDoNotEscape`, `ExampleWithLogger`; borrowed handlers are never closed. Callers own concurrency, cooperative handler lifetime, attached fields, application logs and explicit error reporters. No kernel/runtime verification claim; kernel exception-message fields and returned error graphs are outside the log-redaction contract |
+| Constructor dependencies / C# service provider | **Go-specific**: the diagnostic option does not bind `*slog.Logger`; explicit constructor closures or provider bindings remain required | `TestLoggerOptionIsNotAConstructorService`; the container-free resolver rejects zero logger construction. Provider API and root dependency graph are unchanged |
+
+See [Use one application-owned logger](facade-composition.md#use-one-application-owned-logger).
+
 ## Baselines and evidence
 
 C# reference: `Cratis/Chronicle` revision `2e31b0dfba489159b3db323238f16d0f277056b4`, paths below relative to `Source/Clients/`. Generated contracts independently pin Chronicle **19.29.4**, commit `ae5e00a8abaa688138b2c2f689e2b4659cccb4fd`. Real-kernel evidence uses **19.29.4-development**, including test-owned TLS/TCP connection interruption and recovery against a running kernel. Whole-kernel restart and a real multi-node deployment remain unverified. SDK release numbers are independent of protocol versions.

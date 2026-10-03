@@ -6,13 +6,14 @@ package reactors
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log/slog"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/discovery"
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -81,7 +82,7 @@ func (p *Plan) Activate(ctx context.Context) (lease *Lease, err error) {
 	l := &Lease{plan: p}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			err = fmt.Errorf("activation panic: %v", recovered)
+			err = &diagnostics.PanicError{}
 		}
 		if err != nil {
 			err = errors.Join(err, l.Close(ctx))
@@ -134,11 +135,11 @@ func (l *Lease) Invoke(ctx context.Context, content any, eventContext events.Con
 	invocation := Invocation{delivery, eventContext, content, l.scope}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			err = fmt.Errorf("reactor invocation panic: %v", recovered)
+			err = &diagnostics.PanicError{}
 		}
 		for _, middleware := range l.middlewares {
 			if afterErr := safeHook(ctx, middleware.After, invocation); afterErr != nil {
-				l.plan.declaration.config.logger.ErrorContext(ctx, "reactor after middleware failed", "reactor", delivery.Reactor, "error", afterErr)
+				diagnostics.Log(ctx, l.plan.Logger(), slog.LevelError, "reactor after middleware failed", "reactor", "after", afterErr)
 			}
 		}
 	}()
@@ -216,7 +217,7 @@ func (l *Lease) Invoke(ctx context.Context, content any, eventContext events.Con
 func safeHook(ctx context.Context, hook func(context.Context, Invocation) error, invocation Invocation) (err error) {
 	defer func() {
 		if p := recover(); p != nil {
-			err = fmt.Errorf("middleware panic: %v", p)
+			err = &diagnostics.PanicError{}
 		}
 	}()
 	return hook(ctx, invocation)

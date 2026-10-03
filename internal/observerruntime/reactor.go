@@ -9,12 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
 	contracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/identities"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
@@ -80,7 +82,7 @@ func (r *Reactor) handle(ctx context.Context, batch *contracts.EventsToObserve) 
 	var lease *reactors.Lease
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			failure = fmt.Errorf("reactor batch panic: %v", recovered)
+			failure = &diagnostics.PanicError{}
 		}
 		if lease != nil {
 			// Cleanup gets a bounded cancellation-independent budget, but never escapes
@@ -94,6 +96,7 @@ func (r *Reactor) handle(ctx context.Context, batch *contracts.EventsToObserve) 
 			}
 		}
 		if failure != nil {
+			diagnostics.Log(ctx, r.plan.Logger(), slog.LevelError, "reactor batch failed", "reactor", "observe", failure)
 			result.State = contracts.ObservationState_Failed
 			result.ExceptionMessages = []string{failure.Error()}
 		}

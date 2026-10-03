@@ -6,6 +6,7 @@ package chronicle
 import (
 	"context"
 	"crypto/tls"
+	"log/slog"
 	"time"
 
 	"github.com/cratis/chronicle.go/eventsequences"
@@ -35,6 +36,8 @@ type TokenInvalidator interface {
 type ClientOption func(*clientConfig)
 
 type clientConfig struct {
+	logger                                          *slog.Logger
+	loggerSet                                       bool
 	uri                                             string
 	tls                                             *tls.Config
 	tokenSource                                     TokenSource
@@ -58,6 +61,21 @@ type clientConfig struct {
 	reactorServices                                 reactorScopeFactory
 	reactorServicesSet                              bool
 	reactorRetryWait                                func(context.Context, time.Duration) error
+}
+
+// WithLogger selects the borrowed logger for SDK lifecycle and observer diagnostics.
+// The last option wins; a final nil logger is invalid. Without this option,
+// CaptureClient captures slog.Default (also used immediately by NewClientContext).
+// Explicit artifact loggers override this fallback. Loggers/handlers are never
+// closed, and Chronicle never calls slog.SetDefault. Handlers must support
+// concurrent, synchronous calls and honor cancellation without blocking shutdown
+// or reentering client lifecycle methods. Handler panics are contained, but
+// arbitrary blocking handlers cannot be made harmless. SDK records contain only
+// fixed operation/stage/category fields, not arbitrary errors or metadata.
+// Handler-added fields and context inspection remain the caller's responsibility.
+// This option does not register a *slog.Logger service for artifact constructors.
+func WithLogger(logger *slog.Logger) ClientOption {
+	return func(c *clientConfig) { c.logger, c.loggerSet = logger, true }
 }
 
 // WithAppendOriginResolver selects a borrowed metadata-only callback for local
