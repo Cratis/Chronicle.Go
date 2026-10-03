@@ -6,6 +6,7 @@
 package integration_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -33,6 +34,11 @@ type DerivedItem struct {
 	ID     string                 `json:"id" chronicle:"key"`
 	Member derivedfixtures.Member `json:"member"`
 }
+type DerivedCollection struct {
+	ID      string                   `json:"id"`
+	Members []derivedfixtures.Member `chronicle:"set(MembersChanged)"`
+}
+
 type DerivedCatalog struct {
 	ID      string                   `json:"id"`
 	Members []derivedfixtures.Member `chronicle:"set(MembersChanged)"`
@@ -56,6 +62,10 @@ func TestKernelDerivedCodecsCollectionsOrdinaryChildrenAndReplay(t *testing.T) {
 				t.Fatal(err)
 			}
 			model, err := chronicle.RegisterReadModel[DerivedCatalog](registry, readmodels.WithCodecs(codecs))
+			if err != nil {
+				t.Fatal(err)
+			}
+			collectionModel, err := chronicle.RegisterReadModel[DerivedCollection](registry, readmodels.WithCodecs(codecs))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -111,24 +121,29 @@ func TestKernelDerivedCodecsCollectionsOrdinaryChildrenAndReplay(t *testing.T) {
 			updated := derivedfixtures.RobotValue{Count: 84}
 			appendSuccessfully(t, fixture.ctx, store, "go", DerivedItemAdded{ItemID: "line", OrderID: "go", Member: updated})
 			awaitProjection(t, fixture.ctx, reader, "go", func(value DerivedCatalog) bool { return len(value.Items) == 1 && value.Items[0].Member == updated })
-			replayed, err := store.ReadModels().ReplayProjection(fixture.ctx, model.Identifier(), 4)
+			// The merged replay policy rejects relationships, even when live
+			// concrete child updates work. Do not bypass it to exercise codecs.
+			if result, err := store.ReadModels().ReplayProjection(fixture.ctx, model.Identifier(), 4); !errors.Is(err, chronicle.ErrUnsupported) || result != nil {
+				t.Fatalf("relationship replay must refuse: %v", err)
+			}
+			replayed, err := store.ReadModels().ReplayProjection(fixture.ctx, collectionModel.Identifier(), 4)
 			if err != nil {
 				t.Fatal(err)
 			}
-			d, _ := artifacts.ReadModels.LookupIdentifier(model.Identifier())
+			d, _ := artifacts.ReadModels.LookupIdentifier(collectionModel.Identifier())
 			found := false
 			for _, raw := range replayed {
 				value, err := d.Unmarshal(raw)
 				if err != nil {
 					t.Fatal(err)
 				}
-				catalog := value.(*DerivedCatalog)
-				if catalog.ID == "go" {
-					found = len(catalog.Items) == 1 && catalog.Items[0].Member == updated && reflect.DeepEqual(catalog.Members, original.Members)
+				collection := value.(*DerivedCollection)
+				if collection.ID == "go" {
+					found = reflect.DeepEqual(collection.Members, original.Members)
 				}
 			}
 			if !found {
-				t.Fatal("replay lost derived child or collection")
+				t.Fatal("replay lost derived collection")
 			}
 		})
 	}

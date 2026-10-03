@@ -146,6 +146,9 @@ compiled representations agree. Ordinary concrete child objects may contain
 these values. This does **not** implement `children` on interface elements,
 derivative inference or automatic discriminator stamping for newly constructed
 children; those belong to [#27](https://github.com/Cratis/Chronicle.Go/issues/27).
+Live concrete-child updates do not imply replay support: the current replay and
+snapshot APIs refuse relationship projections. Relationship-free projections can
+replay copied derived collections through their frozen codec plans.
 
 `Field.Derivatives()` exposes detached, variant-qualified fields for future
 compilers. Variant properties are never flattened into ambiguous `FieldAt` paths,
