@@ -125,20 +125,35 @@ inspectable with `errors.Is`/`errors.As`.
 
 The optional `services` adapter also sanitizes Fundamentals.Go provider errors.
 It creates fresh `dependencyinjection.Error` diagnostics with copied type-key paths,
-known operation names and stable failure categories. `Panic` is always nil, and a
-panic-bearing node's original `Cause` is discarded, even if it is an error value.
-Independent ordinary failures in a joined tree remain inspectable. Non-panic
-provider causes retain plain error leaves (including typed errors and cancellation
-sentinels), but application wrappers and their cached text are replaced, so wrapper
-identity is not preserved. Custom `As`/`Is` hooks are neither called nor forwarded.
+known operation names and stable failure categories. All original provider fields
+are captured before inspecting children. `Panic` is always nil, and a panic-bearing
+node's original `Cause` is discarded, even if it is an error value. Both original
+`Kind` and `Cause`, including those inside error-valued panic payloads, are inspected
+for panic aliases before any safe leaf is retained.
+
+The admitted graph consists of exact provider diagnostics, recognized standard
+`errors.Join` and `fmt.Errorf` wrappers, and ordinary comparable error leaves
+without `Unwrap`, `As`, or `Is` hooks. In Go 1.26/1.27 the recognized wrapper types
+are `*errors.joinError`, `*fmt.wrapError`, and `*fmt.wrapErrors`; new wrapper forms
+are unsupported until reviewed. Standard wrapper identity and cached text are
+replaced. Only non-nil pointer leaves retain ordinary identity (including typed
+errors and pointer-identity cancellation sentinels such as `context.Canceled`).
+They remain inspectable with `errors.Is`/`errors.As` only within an admitted graph
+and only when they are not reachable from any known panic payload or original
+panic cause; value leaves without pointer identity receive controlled diagnostics.
 Unknown category/operation metadata is replaced with controlled diagnostics.
 
-Error-tree inspection runs under a separate recovery boundary, never inside a
-recovery defer. Cycles, more than 64 levels or 256 visited nodes, and unsupported
-inspection hooks produce payload-free failure diagnostics. A panic in `Unwrap`
-is discarded too; it cannot prevent cleanup of an already returned partial scope.
-As with preparation callbacks, an application `Unwrap` must return synchronously;
-these traversal limits cannot interrupt a blocking method.
+Application `Unwrap`, `As`, and `Is` hooks are neither invoked nor forwarded: an
+opaque hook anywhere, even inside a panic payload, rejects the entire provider
+error graph with the fixed diagnostic `chronicle services: provider error
+diagnostics unavailable`. Cycles, unsupported noncomparable values, ambiguous
+panic identities without pointer identity, or traversal-limit exhaustion also
+reject the entire snapshot rather than preserving earlier siblings or partial
+provider metadata. Inspection permits at most 64 levels and 256 rooted edges;
+the root, nil child slots, provider `Kind`/`Cause` fields, and repeated references
+all consume edge budget. Inspection runs under a separate recovery boundary and
+cannot prevent cleanup of an already returned partial scope. These restrictions
+change diagnostic preservation, not the failed operation's outcome.
 
 Any preparation or cleanup failure returns no client and publishes no partial
 local catalog. Application side effects already performed cannot be rolled back.

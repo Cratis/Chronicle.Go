@@ -22,8 +22,8 @@ const (
 // A panic payload can also be an ordinary sibling (in either order), so sanitizing
 // individual branches independently cannot decide which identities are safe.
 func sanitizeError(err error) (result error) {
-	// Custom Unwrap is the only application hook used during inspection. If it
-	// panics, the unfinished graph might hide aliases of any leaf: discard it all.
+	// Only known standard-library Unwrap methods are called. Contain any
+	// unexpected inspection failure without retaining an unfinished snapshot.
 	defer func() {
 		if recover() != nil {
 			result = &dependencyinjection.Error{Operation: "inspect diagnostics", Kind: dependencyinjection.ErrCallbackPanicked}
@@ -42,6 +42,9 @@ func sanitizeError(err error) (result error) {
 	}
 	for _, payload := range walker.quarantineRoots {
 		walker.quarantine(payload)
+	}
+	if walker.ambiguous {
+		return errUnsafeDiagnostic
 	}
 	return walker.rebuild(snapshot, false)
 }
@@ -126,7 +129,8 @@ func (w *diagnosticWalker) capture(err error, depth int) *diagnosticNode {
 	}
 	value := reflect.ValueOf(err)
 	if value.Kind() == reflect.Pointer && value.IsNil() {
-		return node
+		w.incomplete = true
+		return nil
 	}
 	if !value.Comparable() {
 		// Unsupported value identities could hide aliases or cycles.
@@ -134,25 +138,32 @@ func (w *diagnosticWalker) capture(err error, depth int) *diagnosticNode {
 		return nil
 	}
 	if diagnostic, ok := err.(*dependencyinjection.Error); ok {
-		kind := safeKind(diagnostic.Kind)
+		// Snapshot ALL original fields and copy retained metadata before visiting
+		// any child. Never reread the mutable provider diagnostic after descent.
+		original := *diagnostic
+		node.pathTooLong = len(original.Path) > maxDiagnosticDepth
+		if !node.pathTooLong {
+			original.Path = slices.Clone(original.Path)
+		} else {
+			original.Path = nil
+		}
+		kind := safeKind(original.Kind)
 		node.category = kind
-		node.pathTooLong = len(diagnostic.Path) > maxDiagnosticDepth
-		node.diagnostic = &dependencyinjection.Error{Operation: safeOperation(diagnostic.Operation), Key: diagnostic.Key, Kind: kind}
-		if len(diagnostic.Path) <= maxDiagnosticDepth {
-			node.diagnostic.Path = slices.Clone(diagnostic.Path)
+		node.diagnostic = &dependencyinjection.Error{
+			Operation: safeOperation(original.Operation), Key: original.Key, Path: original.Path, Kind: kind,
 		}
 		// Fundamentals Error.Unwrap exposes BOTH original Kind and Cause.
 		// Capture them even when output category selection rejects the Kind.
-		node.kind = w.capture(diagnostic.Kind, depth+1)
-		node.cause = w.capture(diagnostic.Cause, depth+1)
+		node.kind = w.capture(original.Kind, depth+1)
+		node.cause = w.capture(original.Cause, depth+1)
 		node.children = []*diagnosticNode{node.kind, node.cause}
-		if diagnostic.Panic != nil || kind == dependencyinjection.ErrCallbackPanicked {
+		if original.Panic != nil || kind == dependencyinjection.ErrCallbackPanicked {
 			node.panicked = true
 			// Discover first; quarantine complete original topology before rebuild.
-			if payload := referenceIdentity(diagnostic.Panic); payload.ptr != 0 {
+			if payload := referenceIdentity(original.Panic); payload.ptr != 0 {
 				w.quarantined[payload.ptr] = true
 			}
-			if payload, ok := diagnostic.Panic.(error); ok {
+			if payload, ok := original.Panic.(error); ok {
 				captured := w.capture(payload, depth+1)
 				node.children = append(node.children, captured)
 				w.quarantineRoots = append(w.quarantineRoots, captured)
@@ -167,6 +178,10 @@ func (w *diagnosticWalker) capture(err error, depth int) *diagnosticNode {
 	}
 	switch tree := err.(type) {
 	case interface{ Unwrap() []error }:
+		if !standardDiagnosticTopology(err) {
+			w.incomplete = true
+			return nil
+		}
 		children := tree.Unwrap()
 		// Check the entire list before allocating or iterating: even nil slots
 		// consume inspection budget, and refusal discards the whole snapshot.
@@ -185,19 +200,42 @@ func (w *diagnosticWalker) capture(err error, depth int) *diagnosticNode {
 			}
 		}
 	case interface{ Unwrap() error }:
-		if w.remaining == 0 {
+		if !standardDiagnosticTopology(err) || w.remaining == 0 {
 			w.incomplete = true
 			return nil
 		}
 		node.children = []*diagnosticNode{w.capture(tree.Unwrap(), depth+1)}
 	case interface{ As(any) bool }, interface{ Is(error) bool }:
-		// Never keep a wrapper with hidden inspection hooks.
+		// An opaque hook can conceal aliases or mutate uncaptured siblings.
+		// Reject the whole snapshot without invoking or forwarding it.
+		w.incomplete = true
+		return nil
 	default:
 		if identity.ptr != 0 {
 			node.leaf = err
 		}
 	}
 	return node
+}
+
+// standardDiagnosticTopology admits only the concrete join/fmt wrapper types
+// whose Unwrap methods return stored fields in supported Go 1.26/1.27. Package
+// path plus named pointer type prevents application lookalikes from qualifying;
+// new standard-library wrapper forms remain unsupported until explicitly reviewed.
+func standardDiagnosticTopology(err error) bool {
+	typ := reflect.TypeOf(err)
+	if typ.Kind() != reflect.Pointer {
+		return false
+	}
+	typ = typ.Elem()
+	switch typ.PkgPath() {
+	case "errors":
+		return typ.Name() == "joinError"
+	case "fmt":
+		return typ.Name() == "wrapError" || typ.Name() == "wrapErrors"
+	default:
+		return false
+	}
 }
 
 func (w *diagnosticWalker) quarantine(node *diagnosticNode) {

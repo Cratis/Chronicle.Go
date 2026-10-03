@@ -19,9 +19,12 @@ import (
 // is preserved for NewClient parameter validation. The caller owns the provider;
 // close Chronicle before closing it. Client-lifetime collaborators should use
 // Singleton bindings, not an operation scope retained for the client's lifetime.
-// Provider errors are sanitized: panic payloads/causes and custom error wrappers
-// are discarded. Known service diagnostics and plain ordinary causes remain
-// inspectable; application As/Is hooks are never invoked or forwarded.
+// Provider errors are sanitized: panic payloads/causes are discarded. Inspection
+// admits provider diagnostics, standard errors.Join/fmt wrappers, and comparable
+// ordinary leaves without Unwrap/As/Is hooks. Safe non-nil pointer leaves retain
+// identity unless reachable from a known panic payload/cause. Opaque inspection hooks,
+// ambiguous panic identities, cycles, or traversal limits discard the entire
+// diagnostic graph; application inspection hooks are never called or forwarded.
 func WithServices(factory dependencyinjection.ScopeFactory) chronicle.ClientOption {
 	if factory == nil || (reflect.ValueOf(factory).Kind() == reflect.Pointer && reflect.ValueOf(factory).IsNil()) {
 		return chronicle.WithServices(nil)
