@@ -95,9 +95,9 @@ registration contract has no tags field: static labels are carried by append
 requests, not invented registration metadata. Event source/stream classifications
 remain explicit append or observer options, not event-field routing tags.
 
-`pii` and `encrypted(...)` are recognized only to reject them with an unsupported
-security-declaration error until the [compliance slice](https://github.com/Cratis/Chronicle.Go/issues/35).
-A subject tag is identity metadata, not encryption.
+`pii`, `compliance-details(...)` and `encrypted(...)` feed the shared
+[compliance schema pipeline](../compliance.md), including nested/type metadata
+through `events.WithProtection`. A subject tag is identity metadata, not encryption.
 
 ## JSON and schema rules
 
