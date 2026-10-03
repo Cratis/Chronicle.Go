@@ -5,7 +5,6 @@ package readmodels
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/cratis/chronicle.go/internal/faults"
 )
@@ -29,8 +28,13 @@ func decodeDecision[T any](raw Instance[json.RawMessage], descriptor Descriptor)
 			instance = Instance[T]{}
 			err = &DecisionCodecPanicError{}
 		}
-		var codecPanic *CodecPanicError
-		if errors.As(err, &codecPanic) {
+		// Only inspect our own wrappers: traversing arbitrary causes here can
+		// invoke an application's As/Unwrap methods after the recovery boundary.
+		codecError := err
+		if release, ok := err.(*ReleaseError); ok {
+			codecError = release.Cause
+		}
+		if _, ok := codecError.(*CodecPanicError); ok {
 			instance, err = Instance[T]{}, &DecisionCodecPanicError{}
 		}
 	}()
