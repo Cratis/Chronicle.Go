@@ -29,6 +29,7 @@ type declaration struct {
 	id                                         string
 	sequence                                   events.SequenceID
 	passive, notRewindable, noAuto, modelBound bool
+	autoSet                                    bool
 	aliases                                    map[string]events.Descriptor
 	subscriptions                              []subscription
 	joins                                      []joinDeclaration
@@ -124,10 +125,11 @@ func NotRewindable() Option { return func(d *declaration) { d.notRewindable = tr
 func Passive() Option { return func(d *declaration) { d.passive = true } }
 
 // NoAutoMap disables automatic payload mapping for this node.
-func NoAutoMap() Option { return func(d *declaration) { d.noAuto = true } }
+func NoAutoMap() Option { return func(d *declaration) { d.noAuto, d.autoSet = true, true } }
 
-// AutoMap enables automatic payload mapping (the default).
-func AutoMap() Option { return func(d *declaration) { d.noAuto = false } }
+// AutoMap enables automatic payload mapping (the root default). Fluent children
+// and nested nodes inherit unless explicitly configured.
+func AutoMap() Option { return func(d *declaration) { d.noAuto, d.autoSet = false, true } }
 
 // BindEvent binds a refactoring-safe event handle to an @alias used in tags.
 // An alias must be a simple identifier and can only be declared once.

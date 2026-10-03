@@ -45,6 +45,8 @@ type definition struct {
 }
 type nodeDefinition struct {
 	noAuto           bool
+	ownNoAuto        bool
+	inheritAuto      bool
 	keyField         string
 	exclusions       []string
 	from             []fromDefinition
@@ -141,7 +143,9 @@ func (d Definition) KernelDefinition() *contracts.ProjectionDefinition {
 
 func encodeNode(data *nodeDefinition) *contracts.ChildrenDefinition {
 	auto := contracts.AutoMap_Enabled
-	if data.noAuto {
+	if data.inheritAuto {
+		auto = contracts.AutoMap_Inherit
+	} else if data.noAuto {
 		auto = contracts.AutoMap_Disabled
 	}
 	result := &contracts.ChildrenDefinition{IdentifiedBy: data.identifiedBy, AutoMap: auto, All: &contracts.FromEveryDefinition{Properties: encodeWrites(data.all), IncludeChildren: data.includeChildren}, NoAutoMapProperties: slices.Clone(data.exclusions)}

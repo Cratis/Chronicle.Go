@@ -6,13 +6,14 @@ package main
 import (
 	"testing"
 
+	contracts "github.com/cratis/chronicle.go/contracts/projections"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/protobuf/proto"
 )
 
-func TestOrderExamplesHaveIdenticalDefinitions(t *testing.T) {
+func TestOrderExamplesPreserveTheirAutoMapDefaults(t *testing.T) {
 	placed, err := events.Define[OrderPlaced]()
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +50,14 @@ func TestOrderExamplesHaveIdenticalDefinitions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(bound.KernelDefinition(), fluent.KernelDefinition()) {
-		t.Fatal("example front ends differ")
+	boundWire, fluentWire := bound.KernelDefinition(), fluent.KernelDefinition()
+	if boundWire.Children["lines"].AutoMap != contracts.AutoMap_Enabled || fluentWire.Children["lines"].AutoMap != contracts.AutoMap_Inherit {
+		t.Fatal("example front ends lost their AutoMap defaults")
+	}
+	// Inherit resolves to the Enabled root at runtime. The fluent example
+	// explicitly maps identity rather than relying on ChildrenFrom conventions.
+	fluentWire.Children["lines"].AutoMap = contracts.AutoMap_Enabled
+	if !proto.Equal(boundWire, fluentWire) {
+		t.Fatal("example front ends differ beyond their AutoMap defaults")
 	}
 }

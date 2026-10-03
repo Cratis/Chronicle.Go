@@ -31,7 +31,10 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 	if d.err != nil {
 		return nil, d.err
 	}
-	n := &nodeDefinition{noAuto: inheritedNoAuto || d.noAuto, identifiedBy: identifiedBy, children: map[string]*nodeDefinition{}, nested: map[string]*nodeDefinition{}}
+	n := &nodeDefinition{noAuto: inheritedNoAuto || d.noAuto, ownNoAuto: d.noAuto, inheritAuto: parentFields != nil && !d.modelBound && !d.autoSet, identifiedBy: identifiedBy, children: map[string]*nodeDefinition{}, nested: map[string]*nodeDefinition{}}
+	if !d.modelBound {
+		n.noAuto = d.noAuto
+	}
 	if nested {
 		n.identifiedBy = "*NotSet*"
 	}
@@ -226,7 +229,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			}
 			for _, creator := range creators {
 				from := ensure(creator.event)
-				if n.noAuto || explicitIdentity || hasWrite(from.writes, n.identifiedBy) || strings.EqualFold(n.identifiedBy, from.key.text) && n.keyField != n.identifiedBy {
+				if !d.modelBound || from.key.kind == compositeExpression || n.noAuto || explicitIdentity || hasWrite(from.writes, n.identifiedBy) || strings.EqualFold(n.identifiedBy, from.key.text) && n.keyField != n.identifiedBy {
 					continue
 				}
 				e := from.key
@@ -268,6 +271,13 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 		}
 		if err := c.addGlobal(n, g, fields, false); err != nil {
 			return nil, err
+		}
+	}
+	if parentFields == nil {
+		for _, removal := range n.removals {
+			if removal.join {
+				c.result.diagnostics = append(c.result.diagnostics, Diagnostic{Message: "kernel ignores root RemovedWithJoin: root removal via join is not supported (Chronicle#4263)", Replacement: Provenance{Directive: "RemovedWithJoin", Event: removal.event, Offset: -1}})
+			}
 		}
 	}
 	for _, join := range n.joins {
@@ -467,8 +477,8 @@ func (c *compiler) compileChild(n *nodeDefinition, child childDeclaration, field
 			return invalid("child identity descriptor has wrong type")
 		}
 	}
-	// Fluent From on a collection is its explicit creator declaration too. Parent
-	// conventions apply identically, while model-bound member updates stay scoped.
+	// Only model-bound ChildrenFrom declarations supply creators for parent
+	// inference and identity mappings. Fluent From retains its empty parent key.
 	d := cloneDeclaration(child.data)
 	if !d.modelBound {
 		if registered := c.declaration.nodes[typ]; registered != nil {
@@ -476,20 +486,14 @@ func (c *compiler) compileChild(n *nodeDefinition, child childDeclaration, field
 				return err
 			}
 			c.usedNodes[typ] = true
-			d.noAuto = d.noAuto || registered.noAuto
+			if !d.autoSet && registered.autoSet {
+				d.noAuto, d.autoSet = registered.noAuto, true
+			}
 			d.subscriptions = append(slices.Clone(registered.subscriptions), d.subscriptions...)
 			d.removals = append(slices.Clone(registered.removals), d.removals...)
 		}
 	}
-	if !d.modelBound && !child.nested {
-		for i := range d.subscriptions {
-			if d.subscriptions[i].parent.kind == emptyExpression {
-				d.subscriptions[i].parent = c.inferParent(fields, d.subscriptions[i].event.Fields(), d.subscriptions[i].key, Provenance{Path: child.path, Directive: "children", Offset: -1})
-			}
-		}
-		creators = slices.Clone(d.subscriptions)
-	}
-	compiled, err := c.compileNode(d, local, fields, n.noAuto, child.nested, child.identifiedBy, creators)
+	compiled, err := c.compileNode(d, local, fields, n.ownNoAuto, child.nested, child.identifiedBy, creators)
 	if err != nil {
 		return err
 	}

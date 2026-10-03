@@ -157,7 +157,7 @@ func advancedFluent(t *testing.T) projections.Declaration {
 	return d
 }
 
-func TestBothFrontEndsMatchCSharpAdvancedGolden(t *testing.T) {
+func TestFrontEndsMatchTheirCSharpAdvancedShapes(t *testing.T) {
 	catalog := advancedEvents(t)
 	data, err := os.ReadFile("testdata/advanced.json")
 	if err != nil {
@@ -167,17 +167,25 @@ func TestBothFrontEndsMatchCSharpAdvancedGolden(t *testing.T) {
 	if err = protojson.Unmarshal(data, expected); err != nil {
 		t.Fatal(err)
 	}
-	for _, declaration := range []projections.Declaration{advancedBound(t), advancedFluent(t)} {
+	for i, declaration := range []projections.Declaration{advancedBound(t), advancedFluent(t)} {
+		want := proto.Clone(expected).(*contracts.ProjectionDefinition)
+		if i == 1 {
+			// C# fluent Children/Nested default to Inherit; only model-bound
+			// ChildrenFrom synthesizes an identity mapping.
+			want.Children["items"].AutoMap = contracts.AutoMap_Inherit
+			want.Children["items"].From[0].Value.Properties = nil
+			want.Nested["address"].AutoMap = contracts.AutoMap_Inherit
+		}
 		definition := compileCatalog(t, declaration, catalog)
 		actual := definition.KernelDefinition()
-		if !proto.Equal(actual, expected) {
-			t.Fatalf("got %s\nwant %s", protojson.Format(actual), protojson.Format(expected))
+		if !proto.Equal(actual, want) {
+			t.Fatalf("got %s\nwant %s", protojson.Format(actual), protojson.Format(want))
 		}
-		actual.Children["items"].From[0].Value.Properties["id"] = "corrupted"
+		actual.Children["items"].From[0].Value.Properties = map[string]string{"id": "corrupted"}
 		actual.Join[0].Value.Properties["customerName"] = "corrupted"
 		actual.Nested["address"].RemovedWith = nil
 		actual.All.Properties["observed"] = "corrupted"
-		if !proto.Equal(definition.KernelDefinition(), expected) {
+		if !proto.Equal(definition.KernelDefinition(), want) {
 			t.Fatal("mutable node definition")
 		}
 	}

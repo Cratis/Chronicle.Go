@@ -66,8 +66,11 @@ also demonstrates removal, nested clears, scalar clears and global timestamps.
 ## Fluent equivalent
 
 Use the same event handles with an untagged mapping model. `Line` retains its
-identity tag. Each callback is executed once and copied; it is not a runtime
-handler. Add the built declaration to the registry just as above.
+identity tag. Fluent children do not synthesize the model-bound identity write:
+map `lineId` to `id` explicitly. Each callback is executed once and copied; it is
+not a runtime handler. Add the built declaration to the registry just as above.
+The model-bound child emits AutoMap `Enabled`; the fluent child emits `Inherit`,
+which resolves to the enabled root here. Their wire definitions are not identical.
 
 ```go
 type FluentOrder struct {
@@ -85,7 +88,9 @@ func fluentOrder(model readmodels.Model[FluentOrder], placed events.Type[OrderPl
         projections.Add(from, projections.Path[FluentOrder, int32]("total"), projections.Path[LineAdded, int32]("amount"))
     })
     projections.Children(builder, projections.Path[FluentOrder, []Line]("lines"), func(child *projections.Builder[Line]) {
-        projections.From(child, added, nil,
+        projections.From(child, added, func(from *projections.FromBuilder[Line, LineAdded]) {
+            projections.Map(from, projections.Path[Line, string]("id"), projections.Path[LineAdded, string]("lineId"))
+        },
             projections.UsingKey(projections.Path[LineAdded, string]("lineId")),
             projections.UsingParentKey(projections.Path[LineAdded, string]("orderId")))
     }, projections.IdentifiedBy(projections.Path[Line, string]("id")))
@@ -104,19 +109,28 @@ go test ./examples/projections
 
 ## Choose identities deliberately
 
-If `identified-by` is absent, discovery tries the child's `key` field, a
+For model-bound children, if `identified-by` is absent, discovery tries the child's `key` field, a
 case-insensitive Go `Id` field, a serialized property matching the event key,
 then `$eventSourceId`. Go has no constructor-parameter attributes; the C# first
 public constructor's `Key` step has no Go equivalent.
 
-If `parent-key` is absent, discovery selects the first event field whose
+For model-bound children, if `parent-key` is absent, discovery selects the first event field whose
 **declared type** equals the parent's Go `ID` type, excluding the child key.
 Multiple matches retain C# declaration-order precedence and produce a diagnostic.
 Distinct domain ID concepts are not equated through their underlying strings.
 Use explicit keys when multiple string or UUID properties could match.
 
-Child-only subscriptions remain child-scoped. Parent `NoAutoMap()` propagates to
-children and nested objects; exclusions remain local. Use
+Fluent `From` without `UsingParentKey` emits an empty parent key, not an inferred
+event property. The kernel defaults that empty key to `$eventSourceId`. Fluent
+children emit no convention identity write, even with `IdentifiedBy`; supply
+`Map` when the identity field differs from the event property. Composite child
+keys in either front end do not synthesize a scalar identity mapping.
+
+Child-only subscriptions remain child-scoped. Model-bound AutoMap checks the node
+and its immediate parent's own `NoAutoMap()` setting, not every ancestor: a
+NoAutoMap root disables its children but not grandchildren whose parent has no
+own NoAutoMap setting. Fluent children and nested objects default to `Inherit`;
+explicit `AutoMap()` or `NoAutoMap()` overrides inheritance. Exclusions remain local. Use
 `WithNodes(Node[Line](FromEvent(updated, ...)))` for child type-level options and
 `Node[Address](ClearWith(cleared))` for a reusable nested clear. Aliases and
 `WithNodes` belong on the root. No separate read-model registration is needed.
@@ -151,6 +165,7 @@ children and nested objects; exclusions remain local. Use
   prior remove/re-add. A child identified by `GroupId`, as in the C# integration
   scenario, does work. Do not rewrite client definitions to MongoDB's `_id` name;
   the API and wire encoding remain sink-independent.
+  Compilation diagnoses root `RemovedWithJoin` while retaining its wire definition.
   The kernel explicitly does **not** support root join removals
   ([Chronicle#4263](https://github.com/Cratis/Chronicle/issues/4263)) or nested-object
   join removals (diagnosed in

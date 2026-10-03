@@ -66,7 +66,9 @@ func fluentOrder(model readmodels.Model[FluentOrder], placed events.Type[OrderPl
 		projections.Add(from, projections.Path[FluentOrder, int32]("total"), projections.Path[LineAdded, int32]("amount"))
 	})
 	projections.Children(builder, projections.Path[FluentOrder, []Line]("lines"), func(child *projections.Builder[Line]) {
-		projections.From(child, added, nil,
+		projections.From(child, added, func(from *projections.FromBuilder[Line, LineAdded]) {
+			projections.Map(from, projections.Path[Line, string]("id"), projections.Path[LineAdded, string]("lineId"))
+		},
 			projections.UsingKey(projections.Path[LineAdded, string]("lineId")),
 			projections.UsingParentKey(projections.Path[LineAdded, string]("orderId")))
 	}, projections.IdentifiedBy(projections.Path[Line, string]("id")))

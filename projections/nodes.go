@@ -128,7 +128,8 @@ func IdentifiedBy[C, V any](field Field[C, V]) ChildOption {
 }
 
 // Children declares a collection node. V must be a slice/array of C or *C.
-// Child From subscriptions stay child-scoped, and inherit the parent's NoAutoMap.
+// Child From subscriptions stay child-scoped. AutoMap defaults to Inherit;
+// parent keys and identity mappings require explicit fluent declarations.
 // The callback runs once and is snapshotted, including all recursive builders.
 func Children[M, C, V any](b *Builder[M], field Field[M, V], define func(*Builder[C]), options ...ChildOption) {
 	child := &Builder[C]{data: newDeclaration(readmodels.Descriptor{}, nil)}

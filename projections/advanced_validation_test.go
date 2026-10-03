@@ -205,7 +205,7 @@ func TestAdvancedFluentValidationAndSnapshots(t *testing.T) {
 		t.Fatal(err)
 	}
 	wire := mustCompile(t, d, mustEvent[ItemAdded](t).Descriptor()).KernelDefinition()
-	if len(wire.Children["items"].From) != 1 || wire.Children["items"].AutoMap.String() != "Enabled" {
+	if len(wire.Children["items"].From) != 1 || wire.Children["items"].AutoMap.String() != "Inherit" {
 		t.Fatal("retained builder changed snapshot")
 	}
 }
