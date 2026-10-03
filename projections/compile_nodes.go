@@ -34,6 +34,9 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 	if d.err != nil {
 		return nil, d.err
 	}
+	if parentFields != nil && (d.initialState != "" || len(d.labels) != 0) {
+		return nil, invalid("initial values and labels belong to the root projection")
+	}
 	n := &nodeDefinition{noAuto: inheritedNoAuto || d.noAuto, ownNoAuto: d.noAuto, inheritAuto: parentFields != nil && !d.modelBound && !d.autoSet, identifiedBy: identifiedBy, children: map[string]*nodeDefinition{}, nested: map[string]*nodeDefinition{}}
 	if !d.modelBound {
 		n.noAuto = d.noAuto

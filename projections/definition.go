@@ -47,6 +47,8 @@ type definition struct {
 	entering               []fromDefinition
 	sequenceExplicit       bool
 	sourceStore            string
+	initialState           string
+	labels                 []string
 	nodeDefinition
 	provenance  []Provenance
 	diagnostics []Diagnostic
@@ -159,7 +161,7 @@ func (d Definition) KernelDefinition() *contracts.ProjectionDefinition {
 	node := encodeNode(&data.nodeDefinition)
 	return &contracts.ProjectionDefinition{
 		Identifier: data.id, ReadModel: string(data.model.Identifier()), EventSequenceId: string(data.sequence),
-		IsActive: !data.passive, IsRewindable: !data.notRewindable, InitialModelState: "{}",
+		IsActive: !data.passive, IsRewindable: !data.notRewindable, InitialModelState: data.initialState, Tags: slices.Clone(data.labels),
 		AutoMap: node.AutoMap, All: node.All, NoAutoMapProperties: node.NoAutoMapProperties,
 		From: node.From, Join: node.Join, Children: node.Children, Nested: node.Nested,
 		RemovedWith: node.RemovedWith, RemovedWithJoin: node.RemovedWithJoin, SubscribesToAllEvents: data.subscribesAll,

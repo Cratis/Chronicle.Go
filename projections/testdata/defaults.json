@@ -1,0 +1,15 @@
+{
+  "EventSequenceId": "event-log",
+  "Identifier": "Example.DefaultProjection",
+  "ReadModel": "Example.DefaultModel",
+  "IsActive": true,
+  "IsRewindable": true,
+  "InitialModelState": "{\"Address\":{\"City\":\"Bergen\"},\"Amount\":0,\"Enabled\":false,\"Id\":\"\",\"Items\":[],\"Lookup\":{\"one\":{\"City\":\"Oslo\"}},\"Name\":\"\",\"Number\":0,\"external_name\":\"\"}",
+  "Tags": ["accounts", "read", "Read"],
+  "From": [{
+    "Key": {"Id": "DefaultEvent", "Generation": 1},
+    "Value": {"Key": "$eventSourceId", "Properties": {}}
+  }],
+  "All": {},
+  "AutoMap": "Enabled"
+}

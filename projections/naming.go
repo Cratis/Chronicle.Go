@@ -22,6 +22,14 @@ func (d Definition) Rebind(model readmodels.Descriptor, before, after *events.Ca
 	}
 	copy := *d.data
 	copy.model = model
+	state, err := model.RebindJSON([]byte(d.data.initialState), d.Model())
+	if err != nil {
+		return Definition{}, err
+	}
+	copy.initialState, err = prepareInitialState(model, string(state))
+	if err != nil {
+		return Definition{}, err
+	}
 	r := rebinder{before: before, after: after}
 	copy.nodeDefinition = r.node(d.data.nodeDefinition, d.Model().Fields(), model.Fields())
 	copy.provenance = slices.Clone(copy.provenance)

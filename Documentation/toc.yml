@@ -40,6 +40,8 @@
   items:
     - name: Overview
       href: projections/index.md
+    - name: Initial values and labels
+      href: projections/defaults.md
     - name: Orders with children and joins
       href: projections/orders.md
     - name: Variants and shared handlers

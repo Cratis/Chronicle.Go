@@ -10,7 +10,8 @@ Both forms support scalar mappings, arithmetic, global mappings, children, event
 joins, nested objects and removals. See [orders with children and joins](orders.md)
 for their model-bound and fluent equivalents. See [variants](variants.md) for
 mutually exclusive lifecycle shapes, shared handlers, recursive children and
-ad-hoc projection queries.
+ad-hoc projection queries. See [initial values and labels](defaults.md) for
+initial model state and artifact metadata.
 
 ## Model-bound declarations
 
@@ -184,6 +185,8 @@ are last-wins, so a later constant key overrides an earlier property key.
 | `NoAutoMap()` / `AutoMap()` | Enabled by default |
 | `NotRewindable()` | Rewindable by default |
 | `Passive()` | Active by default; passive disables observation and selects the `None` sink for immediate reads |
+| `WithInitialValues(value)` / `WithInitialValue(path,value)` | `{}` by default; typed model/scalar snapshots, including explicit scalar nulls |
+| `WithLabels(labels...)` | No labels by default; copied, first-occurrence deduplicated artifact metadata, never event filters |
 
 An explicit `NewBuilder` ID wins over `WithIdentifier`. Discovered projections also
 inherit the model's observer ID and event sequence. Explicit conflicting producer
@@ -226,8 +229,8 @@ Definitions register after event types and read models, share the store-level
 registration barrier, and replay from frozen snapshots on reconnect. Adding to a
 registry after `NewClient` does not alter that client. Definitions expose a
 `Hash()` of their finalized wire shape, stable only within one build. Do not
-persist it across upgrades; neither the kernel nor C# uses a client hash. Runtime registry extension, initial-value
-authoring and derived-child codecs remain unimplemented. Inbox sequences now
+persist it across upgrades; neither the kernel nor C# uses a client hash. Runtime
+registry extension and derived-child codecs remain unimplemented. Inbox sequences now
 [provision external subscriptions](../integrations/index.md); see
 [variants, recursive children and queries](variants.md) and the
 [attribute parity map](../parity.md) for the remaining boundaries.
