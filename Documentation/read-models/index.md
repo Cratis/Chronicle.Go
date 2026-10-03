@@ -3,7 +3,7 @@ title: Read models
 description: Register model schemas and read typed or raw state without confusing absence with a zero value.
 ---
 
-Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the client. A model describes state produced by a projection or reducer; **registration alone does not create an instance**. This page covers catalog registration, one-shot reads, watches, materialized windows, projection sessions and release. [Projection authoring](../projections/index.md), history and [decision reads](decision-reads.md) are separate capabilities.
+Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the client. A model describes state produced by a projection or reducer; **registration alone does not create an instance**. This page covers catalog registration, one-shot reads, watches, materialized windows, projection sessions and release. [Projection authoring](../projections/index.md), [collections and history](collections-and-history.md), and [decision reads](decision-reads.md) have their own references.
 
 ## Registration reference
 

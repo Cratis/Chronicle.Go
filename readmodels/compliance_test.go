@@ -108,7 +108,8 @@ func TestAllOneShotReadPathsFailClosedOnRelease(t *testing.T) {
 					return &contracts.GetInstanceByKeyResponse{ReadModel: `{"id":"owner","name":"ciphertext"}`, LastHandledEventSequenceNumber: uint64(events.Unavailable)}, nil
 				},
 				replay: func(context.Context, *contracts.GetAllInstancesRequest) (*contracts.GetAllInstancesResponse, error) {
-					return &contracts.GetAllInstancesResponse{Instances: []string{`{"id":"owner","name":"ciphertext"}`}}, nil
+					// Replay is released by the kernel, not Compliance.Release on the client.
+					return nil, errors.New("PRIVATE kernel release failed")
 				},
 				release: func(context.Context, *compliance.ReleaseRequest) (*compliance.ReleaseResponse, error) {
 					return &compliance.ReleaseResponse{HasError: true, Error: "PRIVATE"}, nil
@@ -146,7 +147,7 @@ func TestAllOneShotReadPathsFailClosedOnRelease(t *testing.T) {
 					t.Fatal("unsafe replay")
 				}
 			}
-			if !errors.Is(err, readmodels.ErrRelease) || strings.Contains(err.Error(), "PRIVATE") {
+			if err == nil || (path != "replay" && !errors.Is(err, readmodels.ErrRelease)) || strings.Contains(err.Error(), "PRIVATE") {
 				t.Fatalf("release identity: %v", err)
 			}
 		})

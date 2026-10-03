@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cratis/chronicle.go/contracts/compliance"
+	"github.com/cratis/chronicle.go/contracts/readmodelexplorer"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/grpc"
@@ -24,10 +25,17 @@ import (
 type modelKernel struct {
 	contracts.UnimplementedReadModelsServer
 	compliance.UnimplementedComplianceServer
+	readmodelexplorer.UnimplementedReadModelExplorerServer
+	options   []readmodels.ServiceOption
+	snapshots func(context.Context, *readmodelexplorer.AllSnapshotsForReadModelRequest) (*readmodelexplorer.QueryResult_IEnumerable_ReadModelSnapshotResponse, error)
 	get       func(context.Context, *contracts.GetInstanceByKeyRequest) (*contracts.GetInstanceByKeyResponse, error)
 	release   func(context.Context, *compliance.ReleaseRequest) (*compliance.ReleaseResponse, error)
 	dehydrate func(context.Context, *contracts.DehydrateSessionRequest) (*emptypb.Empty, error)
 	replay    func(context.Context, *contracts.GetAllInstancesRequest) (*contracts.GetAllInstancesResponse, error)
+}
+
+func (k *modelKernel) AllSnapshotsForReadModel(ctx context.Context, r *readmodelexplorer.AllSnapshotsForReadModelRequest) (*readmodelexplorer.QueryResult_IEnumerable_ReadModelSnapshotResponse, error) {
+	return k.snapshots(ctx, r)
 }
 
 func (k *modelKernel) GetAllInstances(ctx context.Context, r *contracts.GetAllInstancesRequest) (*contracts.GetAllInstancesResponse, error) {
@@ -69,6 +77,7 @@ func serviceFixture(t *testing.T, k *modelKernel, descriptors ...readmodels.Desc
 	server := grpc.NewServer()
 	contracts.RegisterReadModelsServer(server, k)
 	compliance.RegisterComplianceServer(server, k)
+	readmodelexplorer.RegisterReadModelExplorerServer(server, k)
 	served := make(chan struct{})
 	go func() {
 		defer close(served)
@@ -92,7 +101,7 @@ func serviceFixture(t *testing.T, k *modelKernel, descriptors ...readmodels.Desc
 	if err != nil {
 		t.Fatal(err)
 	}
-	service, err := readmodels.New("store", "tenant-a", catalog, conn)
+	service, err := readmodels.New("store", "tenant-a", catalog, conn, k.options...)
 	if err != nil {
 		t.Fatal(err)
 	}

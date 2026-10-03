@@ -9,9 +9,8 @@ import (
 	"fmt"
 	"math"
 
-	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
+	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
-	"github.com/cratis/chronicle.go/internal/wire"
 )
 
 // KeyProperty returns the serialized root ID property, or empty when undeclared.
@@ -41,26 +40,21 @@ func (s *Service) ReplayProjection(ctx context.Context, model Identifier, eventC
 	if eventCount == 0 {
 		return []json.RawMessage{}, nil
 	}
-	response, err := s.client.GetAllInstances(ctx, &contracts.GetAllInstancesRequest{EventStore: string(s.store), Namespace: string(s.namespace), ReadModelIdentifier: string(model), EventSequenceId: string(d.EventSequence()), EventCount: eventCount})
+	// Existing adapters may own producer admission themselves. Reject a known
+	// unsupported shape, but preserve legacy admission for unknown producers.
+	// New GetAll/GetSnapshots require affirmative fidelity evidence instead.
+	if s.replayValidator != nil {
+		if _, err := s.replayValidator(ctx, d); err != nil {
+			return nil, err
+		}
+	}
+	collection, err := s.readCollection(ctx, d, events.Count(eventCount))
 	if err != nil {
-		return nil, wire.RPCError(err)
+		return nil, readFailure(err)
 	}
-	if response == nil {
-		return nil, faults.ErrProtocol
-	}
-	result := make([]json.RawMessage, len(response.Instances))
-	for i, instance := range response.Instances {
-		if !validDocument([]byte(instance)) {
-			return nil, faults.ErrProtocol
-		}
-		released, err := s.Release(ctx, model, json.RawMessage(instance))
-		if err != nil {
-			return nil, err
-		}
-		result[i], err = normalizeID(released, d)
-		if err != nil {
-			return nil, err
-		}
+	result := make([]json.RawMessage, len(collection.Instances))
+	for i, instance := range collection.Instances {
+		result[i] = instance.Value
 	}
 	return result, nil
 }

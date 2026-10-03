@@ -65,6 +65,49 @@ Statuses: **Implemented** means the named behavior has executable regression evi
 
 The Kotlin and TypeScript client comparisons informed vocabulary and transport translation, not behavioral authority. Unlike TypeScript's plaintext/certificate URI conveniences, unsupported options are rejected. The canonical descriptor and public package ownership follow the cross-language contract publication convention without a separate Go module.
 
+## Read-model collections and history
+
+C# baseline: `ReadModels.cs:262–328,397–449` and `Reducers.cs:259–350` under
+`Source/Clients/DotNET` at `2e31b0dfba489159b3db323238f16d0f277056b4`.
+Release ownership and capability boundaries use **v19.29.4**:
+`Source/Kernel/Grpc/ReadModels/ReadModels.cs`,
+`Source/Kernel/Core/ReadModels/MaterializedReadModelStore.cs`,
+`Source/Kernel/Core/ReadModelExplorer/ReadModelSnapshotReader.cs`, and
+`Source/Kernel/Core/Projections/Projection.cs`.
+
+- **Implemented:** raw/typed collections, default versus explicit Unlimited
+  routing, globally bounded generation-aware reducer folds, and source-ID root
+  projection snapshots. `TestKernelModelHistoryProjectionCollectionsAndCorrelationGroups`
+  proves materialized absence/deletion, bounded/passive replay, namespace isolation,
+  A/B/A global grouping, first-event occurrence and ambiguous `{}` deletion history.
+  `TestKernelModelHistoryReducerCollectionRoutingAndDeletion` separates materialized
+  default reads from active/passive local folds and checks deletion/present zero.
+- **Go-specific safety differences:** zero avoids I/O/activation; finite values above
+  MaxInt32 fail rather than clamp; reducer snapshots fail before RPC instead of
+  adopting the kernel's unconditional empty result. Nonempty defaults and unproven
+  custom/relationship-key replay are refused (`TestProjectionHistoryRefusesDefaultsAndCustomKeysWithoutRPC`).
+  No local evaluator/default overlay or decision guard is inferred.
+- **Verified release ownership:** materialized collections release using model
+  lineage in the kernel; collection replay releases its resulting models;
+  snapshots release contributing events before projecting; local reducers fold
+  released history. No second client decrypt on those paths.
+  `TestKernelModelHistoryReleaseOwnershipAndErasure` covers all collection routes,
+  snapshot state/contributions and keyed passive folds before and after erasure.
+  The legacy `PassiveReader` signature/release contract remains available;
+  `WithReleasedPassiveReader` explicitly selects plaintext instead.
+- **Decode and lifetime evidence:** `TestCollectionAndSnapshotsUseFrozenNamingAndPointerConcepts`,
+  `TestCollectionRejectsLateErrorsWithoutPartialProgress`,
+  `TestSnapshotsRejectLateFailuresAndEnvelopeFailures`, and
+  `TestModelHistoryCodecsCanCloseClientAndLateCancellationDiscardsEverything`.
+  The raw response owns its metadata; no IDs, revision or generation copies absent
+  from the snapshot wire are fabricated. Unknown Go event types stay raw.
+- **Limits:** complete matching history is fetched before local truncation, not
+  paged/bounded on the wire. Counts are not positions or freshness proofs; progress
+  is reported independently. `Snapshot.Instance` has no invented existence or
+  last-handled marker. Catalog-only producers cannot establish replay fidelity.
+
+See the [collection/history reference](read-models/collections-and-history.md).
+
 ## Audited event history operations
 
 References: C# `2e31b0dfba489159b3db323238f16d0f277056b4`, paths relative to
@@ -175,7 +218,7 @@ server encryption certificate; ordinary Go tests remain container-free.
 | Source-identity prohibition and category conflicts / `PIIMetadataProvider`, `EncryptedMetadataProvider:42–71` | **Go-specific safety correction**: always reject protected `events.SourceID`, including nested/type/provider paths; reject inherited PII + Encrypted | `TestProtectionAlwaysRejectsEventSourceIdentity`, `TestProtectionConflictsFailBeforeRegistration`, `TestSecurityAndIgnoredEventTagsFailClosed`. C103's direct-member short circuit does not bypass Go's guard. An unrelated string field named ID is not an EventSourceId type |
 | Event subject / `SubjectResolver` | **Implemented** for declared scalar/concept subjects: override → explicit resolver → tag → source, no event ID fallback | Existing `TestFirstAppendPolicyAndSubjectsAcrossAllPaths` and declared-subject tests; the kernel lifecycle fixture uses an owner different from its source |
 | Model subject and lineage / `ReadModels/ReadModelSubjectResolver`, kernel `ReadModels/ReadModelsCompliance` | **Go-specific** raw lineage preservation and grouping; configured/tagged subject → case-insensitive Go ID, not projection Key | `TestTaggedSubjectFallsBackToIDButNotProjectionKey`, `TestReadModelReleaseMultipleSubjectGroups`, `TestReadModelReleaseNumericSubjects`, `TestReleasePreservesStoredLineageAgainstUnexpectedReplyFields`, `TestReleaseSendsDeclaredBookkeepingButKeepsUndeclaredFieldsLocal`, `TestKernelRawDocumentReleasePreservesBookkeeping`; only schema-declared fields enter the Release RPC, while raw lineage and sink bookkeeping survive locally. The kernel fixture reconstructs a sink envelope from a materialized instance and uses real release, not direct MongoDB access. Zero UUID remains its string, numeric token spelling is exact. Nested subject tags are rejected rather than inventing per-element ownership |
-| All model read paths / `ReadModelReleaser`, `ReadModels`, `MaterializedReadModels` | **Go-specific fail closed**: one-shot, session, replay, watches/windows and read-model reactor feeds use the same release pipeline | `TestAllOneShotReadPathsFailClosedOnRelease`, `TestWatchAndMaterializedReleaseOrderedAndFailClosed`, `TestSubjectIndependentReleaseAndCollections`, `TestReadModelReleaseFailsClosed`; `ReleaseMany` never returns partial results. Mixed-scope documents cannot use independent metadata to excuse missing PII ownership |
+| Model release boundaries / `ReadModelReleaser`, `ReadModels`, `MaterializedReadModels` | **Go-specific fail closed**: explicit release, legacy one-shot/session adapters and watches/windows retain the release pipeline; new collection/history routes and store-owned passive reads validate already released state without a second decrypt | `TestAllOneShotReadPathsFailClosedOnRelease`, `TestWatchAndMaterializedReleaseOrderedAndFailClosed`, `TestSubjectIndependentReleaseAndCollections`, `TestReadModelReleaseFailsClosed`; `ReleaseMany` never returns partial results. Mixed-scope documents cannot use independent metadata to excuse missing PII ownership |
 | Event history and typed decode / kernel `Events/EventCompliance`, `Sequences/EventSequenceQuerying` | **Implemented** for supported protected shapes: kernel releases history before `events.Decode`; no second client-side cipher implementation | `TestKernelComplianceSubjectKeyLifecycle`, nested fixture; decoder performs no I/O and cannot release arbitrary caller-supplied ciphertext. Protected event-generation migrations retain the separate upstream boundary [Chronicle#4456](https://github.com/Cratis/Chronicle/issues/4456) |
 | Erasure and namespace-wide reach / `Compliance/GDPR/PIIManager`, kernel `Compliance/GDPR/PIIManager:39–99` | **Implemented**: `store.Compliance().ErasePII` / `DeleteEncryptionKeyFor`, unchanged compliance RPC | `TestLifecycleUsesNamespaceScopedKernelContracts`, `TestKernelComplianceSubjectKeyLifecycle`; repeated erasure, second store, other-namespace survival, shredded events and read models. Cross-store forwarding is not yet provisioned by this client; no multi-silo cache-eviction claim |
 | Write fence and replacement-key authorization / same PII manager and kernel key storage | **Implemented**: failures propagate without append retries; `AllowNewEncryptionKeyFor` is explicit and cannot recover old ciphertext | Lifecycle kernel fixture rejects writes in both stores, permits another namespace and reauthorizes new writes while old content remains shredded. Wire has no stable typed `EncryptionKeyErased` detail; existing append/transport identities remain inspectable |
@@ -253,7 +296,7 @@ that the wider #33 collection/history inventory is complete.
 | Selected-store callback/effect sequence / `EventStore`, `ReducerTypeExtensions`, `ReadModelReactors` (client revision above) | **Go-specific** sequence-aware callback context and side-effect delivery; read-model reactor plans bind to the same selected-store model as reducers/projections | `TestReadModelReactorsBindCallbackAndEffectMetadataToSelectedStore`; origin-store `event-log` versus external-store `inbox-orders` for materialized callback contexts and both materialized/change side-effect deliveries, default/store registries, immutable compiled plans. C# synthesized contexts do not carry a sequence ID; Go's additional sequence metadata must match the selected model |
 | Local reducer feed / `ReducerObservers`, `ReadModelReactors.DetermineChangeType` | **Implemented**: production fold notifications, first-seen Added in reactors | `TestReadModelReactorInfersFirstSeenLocalReducerAddition`, `TestLocalReducerWatchReleaseRemovalAndGenerationIsolation`; local Watch remains Modified/Removed, reactors forget removed keys. Local readiness is not a server acknowledgement or proof of sink persistence |
 | Reactor lifetime and tenant isolation / `ReadModelReactors.Start/Stop` | **Implemented**: generation-owned shared observer lifecycle and unregister joins | `TestReadModelReactorGenerationRetiresAndNamespacesStayIsolated`, `TestReadModelReactorStartupReporterCanReenterSameStore`, convention runtime test; startup failure completes readiness before reporting on the owned worker; no callback under internal locks, cancellation joins cooperative workers. New generations start fresh watches; no missed-change recovery claim |
-| C80 all-instance/event-count reads and correlation-grouped history / `ReadModels.GetInstances`, `GetSnapshotsById` | **Partial**: existing bounded `Service.ReplayProjection`; paged sink reads now available separately | `TestProjectionReplayIsBoundedAndNormalizesKeysWithoutPartialResults`; general typed GetAll and snapshot-history APIs remain unimplemented in #33. Materialized windows do not substitute for historical snapshots |
+| C80 all-instance/event-count reads and correlation-grouped history / `ReadModels.cs:262–328,397–449`, `Reducers.cs:259–350` at the baseline revision | **Partial**: raw/typed `GetAll`, `Collection[T]`, `events.Count/UnlimitedCount`, `GetSnapshots`, `Snapshot[T]`; bounded active/passive local reducer folds | `TestCollectionCountsRoutingAndReportedProgress`, `TestReducerCollectionsGloballyBoundHistoricalFoldsAndKeepActualPositions`, `TestSnapshotsOwnCompleteContributionContextWithoutInventingPresence`, `TestKernelModelHistoryProjectionCollectionsAndCorrelationGroups`, `TestKernelModelHistoryReducerCollectionRoutingAndDeletion`. Zero means no I/O, every explicit reducer count folds locally, finite overflow is rejected rather than clamped. Reducer snapshots, nonempty projection defaults and unproven key/relationship replay fail explicitly; see [collection/history limits](read-models/collections-and-history.md) |
 
 ## Event-level model-bound declarations
 

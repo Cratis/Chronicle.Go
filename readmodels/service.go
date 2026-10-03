@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/cratis/chronicle.go/contracts/compliance"
+	"github.com/cratis/chronicle.go/contracts/readmodelexplorer"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/decision"
@@ -29,8 +30,13 @@ type Service struct {
 	catalog          *Catalog
 	client           contracts.ReadModelsClient
 	materialized     contracts.MaterializedReadModelsClient
+	explorer         readmodelexplorer.ReadModelExplorerClient
 	compliance       compliance.ComplianceClient
 	passive          PassiveReader
+	passiveReleased  bool
+	collectionReader ReducerCollectionReader
+	replayValidator  ProjectionReplayValidator
+	snapshotEvents   map[events.TypeRef]events.Descriptor
 	reductionChanges *ReductionChanges
 	decisions        decision.Provider
 }
@@ -41,7 +47,7 @@ func New(store metadata.StoreName, namespace metadata.Namespace, catalog *Catalo
 	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || catalog == nil || conn == nil || (reflect.ValueOf(conn).Kind() == reflect.Pointer && reflect.ValueOf(conn).IsNil()) {
 		return nil, invalid("store, namespace, catalog and transport required")
 	}
-	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), materialized: contracts.NewMaterializedReadModelsClient(conn), compliance: compliance.NewComplianceClient(conn)}
+	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), materialized: contracts.NewMaterializedReadModelsClient(conn), explorer: readmodelexplorer.NewReadModelExplorerClient(conn), compliance: compliance.NewComplianceClient(conn)}
 	service.decisions, _ = conn.(decision.Provider)
 	for _, option := range options {
 		if option == nil {
@@ -100,7 +106,11 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 			return Instance[json.RawMessage]{}, err
 		}
 		if result.Exists {
-			result.Value, err = s.Release(ctx, d.Identifier(), result.Value)
+			if s.passiveReleased {
+				result.Value, err = releasedDocument(ctx, d, result.Value)
+			} else {
+				result.Value, err = s.Release(ctx, d.Identifier(), result.Value)
+			}
 			if err != nil {
 				return Instance[json.RawMessage]{}, err
 			}
