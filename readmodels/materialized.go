@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/internal/faults"
@@ -92,6 +93,11 @@ func materializedReleaseProfile(d Descriptor) error {
 		return unsupported
 	}
 	for name := range d.definition.protected {
+		// MongoDB drops key changes and upserts with the original plaintext
+		// key. Classifying that key cannot establish persisted protection.
+		if materializedIdentityAlias(name) {
+			return unsupported
+		}
 		property := schema.Properties[name]
 		if string(property["type"]) != `"string"` {
 			return unsupported
@@ -123,11 +129,17 @@ func materializedReleaseProfile(d Descriptor) error {
 	return nil
 }
 
+// materializedIdentityAlias matches MongoDB's root key convention using frozen
+// serialized names, not Go fields. _id is exact; id is case-insensitive.
+func materializedIdentityAlias(name string) bool {
+	return name == "_id" || strings.EqualFold(name, "id")
+}
+
 // GetInstances reads the exact requested window. Nil means 0/50. Results own
 // their JSON. The kernel releases stored values; the SDK validates the final
 // representation without decrypting again. Protected windows are limited to
-// MongoDB root string PII and namespace-encrypted properties; other classified
-// profiles fail with ErrUnsupported before RPC.
+// MongoDB root string PII and namespace-encrypted properties excluding sink
+// identity aliases; other classified profiles fail with ErrUnsupported before RPC.
 func (m *MaterializedService) GetInstances(ctx context.Context, model Identifier, window *Window) ([]json.RawMessage, error) {
 	d, err := materializedDescriptor(m.service, model)
 	if err != nil {

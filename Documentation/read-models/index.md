@@ -148,7 +148,8 @@ kernel may coalesce intermediate snapshots under load. Validation and decoding
 preserve receive order.
 
 Protected windows admit only MongoDB root string PII and namespace-encrypted
-properties. Type and provider declarations must compile to that same scalar schema;
+properties, excluding classified sink identity aliases (`_id` and case-insensitive
+`id`). Type and provider declarations must compile to that same scalar schema;
 nested, nullable, collection, other encryption-scope and other sink profiles fail
 with `ErrUnsupported` before RPC. Missing classified roots or invalid final values
 fail without returning a partial window. A string's shape alone is not proof of
