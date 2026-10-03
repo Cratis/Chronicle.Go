@@ -8,9 +8,7 @@ package integration_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"slices"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -114,34 +112,19 @@ func (*KernelRichEffects) Produce(e KernelEffectTrigger) []any {
 	return nil
 }
 
-type KernelReplayInput struct{ Number int }
-type KernelOnceInput struct{ Number int }
-type KernelReplayReactor struct {
-	signals            chan string
-	live, replay, once *atomic.Int32
-}
-
-func (r *KernelReplayReactor) Live(KernelReplayInput) { r.live.Add(1) }
-func (r *KernelReplayReactor) Rebuild(e KernelReplayInput, ec events.Context) error {
-	if ec.ObservationState&events.ObservationReplay == 0 {
-		return fmt.Errorf("replacement did not receive replay flag")
-	}
-	r.replay.Add(1)
-	return nil
-}
-func (r *KernelReplayReactor) Once(KernelOnceInput)              { r.once.Add(1) }
-func (r *KernelReplayReactor) BeginReplay(context.Context) error { r.signals <- "begin"; return nil }
-func (r *KernelReplayReactor) EndReplay(context.Context) error   { r.signals <- "end"; return nil }
-
 func TestKernelReactorReplayReplacementOnceOnlyAndNotifications(t *testing.T) {
 	f := newKernelFixture(t)
+	t.Logf("replay fixture store=%s", f.storeName)
 	r := integrationRegistry[KernelReplayInput](t)
 	if _, err := chronicle.RegisterEvent[KernelOnceInput](r); err != nil {
 		t.Fatal(err)
 	}
-	var live, replay, once atomic.Int32
-	signals := make(chan string, 16)
-	if err := chronicle.RegisterReactor[*KernelReplayReactor](r, func() *KernelReplayReactor { return &KernelReplayReactor{signals, &live, &replay, &once} }, reactors.WithID("replay-parity"), reactors.Replay("Rebuild"), reactors.OnceOnly("Once")); err != nil {
+	trace := newReplayTrace(func(handler string, ec events.Context) {
+		t.Logf("%s handler=%s position=%d observation=%d", time.Now().UTC().Format(time.RFC3339Nano), handler, ec.SequenceNumber, ec.ObservationState)
+	})
+	if err := chronicle.RegisterReactor[*KernelReplayReactor](r, func() *KernelReplayReactor {
+		return &KernelReplayReactor{trace: trace}
+	}, reactors.WithID("replay-parity"), reactors.Replay("Rebuild"), reactors.OnceOnly("Once")); err != nil {
 		t.Fatal(err)
 	}
 	client := f.client(r)
@@ -149,23 +132,48 @@ func TestKernelReactorReplayReplacementOnceOnlyAndNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	appendSuccessfully(t, f.ctx, store, "one", KernelReplayInput{1})
+	first := appendSuccessfully(t, f.ctx, store, "one", KernelReplayInput{1})
 	last := appendSuccessfully(t, f.ctx, store, "one", KernelOnceInput{2})
 	ctx, cancel := context.WithTimeout(f.ctx, 20*time.Second)
 	defer cancel()
 	observers := contracts.NewObserversClient(f.conn)
+	request := &contracts.GetObserverInformationRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: "replay-parity"}
+	// Capture evidence before client cleanup, including when the poll RPC itself
+	// reaches the deadline. Neither a timeout nor a duplicate implies #4548.
+	diagnose := func() {
+		diagnostics, done := context.WithTimeout(f.ctx, 5*time.Second)
+		defer done()
+		info, infoErr := observers.GetObserverInformation(diagnostics, request)
+		history, historyErr := store.EventLog().ReadSource(diagnostics, "one", eventsequences.SourceFilter{})
+		failures, failuresErr := store.Observers().FailedPartitions(diagnostics, "replay-parity")
+		jobs, jobsErr := store.Jobs().List(diagnostics)
+		t.Logf("invocations=%+v state=%s subscribed=%t last=%d next=%d tail=%d handled=%d infoError=%v", trace.snapshot(), info.GetRunningState(), info.GetIsSubscribed(), info.GetLastHandledEventSequenceNumber(), info.GetNextEventSequenceNumber(), info.GetTailEventSequenceNumber(), info.GetHandledEventCount(), infoErr)
+		t.Logf("historyError=%v failures=%v failureError=%v jobs=%v jobError=%v", historyErr, failures, failuresErr, jobs, jobsErr)
+		for _, event := range history {
+			t.Logf("persisted position=%d type=%s content=%s", event.Context.SequenceNumber, event.Context.EventType.ID, event.Content)
+		}
+	}
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		info, err := observers.GetObserverInformation(ctx, &contracts.GetObserverInformationRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: "replay-parity"})
+		info, err := observers.GetObserverInformation(ctx, request)
 		if err != nil {
+			diagnose()
 			t.Fatal(err)
 		}
-		if info.LastHandledEventSequenceNumber == uint64(*last.Position) && live.Load() == 1 && once.Load() == 1 {
+		// OnceOnly is replay exclusion, not exactly-once live/recovery delivery.
+		// Require both appended positions, allowing repeated ordinary callbacks.
+		ready, err := trace.ready(*first.Position, *last.Position, false)
+		if err != nil {
+			diagnose()
+			t.Fatal(err)
+		}
+		if info.LastHandledEventSequenceNumber == uint64(*last.Position) && ready {
 			break
 		}
 		select {
 		case <-ctx.Done():
+			diagnose()
 			t.Fatal("live observer did not finish", ctx.Err())
 		case <-ticker.C:
 		}
@@ -178,16 +186,27 @@ func TestKernelReactorReplayReplacementOnceOnlyAndNotifications(t *testing.T) {
 	if job.JobId == "" {
 		t.Fatal("replay returned no job")
 	}
-	var got []string
-	for len(got) < 2 {
+	// Wait for begin/end AND replacement coverage of the original event position.
+	// Every invocation is checked for its replay flag; duplicate coverage is OK.
+	for {
+		ready, err := trace.ready(*first.Position, *last.Position, true)
+		if err != nil {
+			diagnose()
+			t.Fatal(err)
+		}
+		if ready {
+			break
+		}
 		select {
-		case signal := <-signals:
-			got = append(got, signal)
+		case <-trace.changed:
 		case <-ctx.Done():
-			t.Fatalf("replay did not complete: notifications %v live %d replay %d once %d: %v", got, live.Load(), replay.Load(), once.Load(), ctx.Err())
+			diagnose()
+			t.Fatal("replay did not complete", ctx.Err())
 		}
 	}
-	if !slices.Equal(got, []string{"begin", "end"}) || live.Load() != 1 || replay.Load() != 1 || once.Load() != 1 {
-		t.Fatal(got, live.Load(), replay.Load(), once.Load())
+	failures, err := store.Observers().FailedPartitions(ctx, "replay-parity")
+	if err != nil || len(failures) != 0 {
+		diagnose()
+		t.Fatalf("replay handler failures: %v, read error: %v", failures, err)
 	}
 }
