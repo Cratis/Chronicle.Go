@@ -26,6 +26,7 @@ type Registry struct {
 	reactors           []reactorDeclaration
 	reducers           []reducers.Declaration
 	reactorMiddlewares []any
+	reactorSideEffects []reactorSideEffectHandler
 }
 
 // NewRegistry returns an empty registry; there is no global discovery or init hook.

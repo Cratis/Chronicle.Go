@@ -28,19 +28,23 @@ type Declaration struct {
 	explicit bool
 }
 type configuration struct {
-	id          ID
-	sequence    events.SequenceID
-	perEvent    bool
-	replayable  bool
-	tags        []string
-	filterTags  []string
-	sourceType  events.SourceType
-	streamType  events.StreamType
-	middlewares []any
-	handlers    []Handler
-	key         func(context.Context, any, events.Context) (readmodels.Key, error)
-	logger      *slog.Logger
-	invalid     bool
+	id            ID
+	sequence      events.SequenceID
+	perEvent      bool
+	replayable    bool
+	tags          []string
+	filterTags    []string
+	sourceType    events.SourceType
+	streamType    events.StreamType
+	streamID      events.StreamID
+	replayMethods []string
+	onceMethods   []string
+	sideEffects   []SideEffectHandler
+	middlewares   []any
+	handlers      []Handler
+	key           func(context.Context, any, events.Context) (readmodels.Key, error)
+	logger        *slog.Logger
+	invalid       bool
 }
 
 // Option configures a reactor. Scalar options are last-wins; middleware and
@@ -133,8 +137,13 @@ func define(typ reflect.Type, factory any, explicit bool, id ID, options []Optio
 		}
 		option(&c)
 	}
-	if strings.TrimSpace(string(c.id)) == "" || strings.TrimSpace(string(c.sequence)) == "" || c.invalid {
+	if strings.TrimSpace(string(c.id)) == "" || strings.TrimSpace(string(c.sequence)) == "" || strings.TrimSpace(string(c.streamType)) == "" || (c.sourceType != "" && strings.TrimSpace(string(c.sourceType)) == "") || c.invalid {
 		return Declaration{}, invalid("invalid reactor options")
+	}
+	for _, value := range append(append([]string(nil), c.tags...), c.filterTags...) {
+		if strings.TrimSpace(value) == "" {
+			return Declaration{}, invalid("blank reactor tag or filter")
+		}
 	}
 	return Declaration{typ: typ, factory: factory, config: c, explicit: explicit}, nil
 }
@@ -149,18 +158,21 @@ func (d Declaration) GoType() reflect.Type { return d.typ }
 type Handler struct {
 	function any
 	event    reflect.Type
+	replay   bool
+	onceOnly bool
 }
 
 // On declares an error-returning callback. Capture explicitly owned collaborators
 // in its closure; Chronicle does not dispose captured resources.
 func On[E any](handler func(context.Context, E) error) Handler {
-	return Handler{handler, reflect.TypeFor[E]()}
+	return Handler{function: handler, event: reflect.TypeFor[E]()}
 }
 
-// Returning declares a callback whose non-nil result is appended to the event log.
-// E and F must be registered events (or pointers); error suppresses the append.
+// Returning declares a callback whose non-nil result is processed as a side effect.
+// E must be registered; F must be an event, supported collection/wrapper or a
+// custom handler-claimed result. An error suppresses all returned effects.
 func Returning[E, F any](handler func(context.Context, E) (F, error)) Handler {
-	return Handler{handler, reflect.TypeFor[E]()}
+	return Handler{function: handler, event: reflect.TypeFor[E]()}
 }
 
 func invalid(message string) error {

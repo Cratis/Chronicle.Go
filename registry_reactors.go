@@ -12,6 +12,7 @@ import (
 )
 
 type reactorDeclaration = reactors.Declaration
+type reactorSideEffectHandler = reactors.SideEffectHandler
 type reactorPlan = reactors.Plan
 type reactorScopeFactory = reactors.ScopeFactory
 type reactorCatalogs struct {
@@ -66,6 +67,22 @@ func RegisterReactorMiddleware(registry *Registry, factory any) error {
 	return nil
 }
 
+// RegisterReactorSideEffectHandler borrows an extension for all reactors in this
+// registry, for example Arc's returned-command executor. It runs in registration
+// order before per-reactor extensions. All matching handlers run, including the
+// built-in event handler; this is not an override. Instances must be concurrency-
+// safe and are never closed. NewClient snapshots registrations without executing
+// effects; later registrations do not affect an existing client.
+func RegisterReactorSideEffectHandler(registry *Registry, handler reactors.SideEffectHandler) error {
+	if registry == nil || nilValue(handler) {
+		return fmt.Errorf("%w: registry and side-effect handler required", ErrInvalidConfiguration)
+	}
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	registry.reactorSideEffects = append(registry.reactorSideEffects, handler)
+	return nil
+}
+
 func addReactor(registry *Registry, declaration reactors.Declaration) error {
 	if registry == nil {
 		return fmt.Errorf("%w: nil registry", ErrInvalidConfiguration)
@@ -95,9 +112,9 @@ func WithServices(factory reactors.ScopeFactory) ClientOption {
 	return func(c *clientConfig) { c.reactorServices = factory; c.reactorServicesSet = true }
 }
 
-func compileReactors(snapshot *registrySnapshot, declarations []reactorDeclaration, services reactorScopeFactory, middlewares []any) error {
+func compileReactors(snapshot *registrySnapshot, declarations []reactorDeclaration, services reactorScopeFactory, middlewares []any, sideEffects []reactorSideEffectHandler) error {
 	for _, declaration := range declarations {
-		plan, err := reactors.CompileWithMiddleware(declaration, snapshot.events, snapshot.models, services, middlewares)
+		plan, err := reactors.CompileWithExtensions(declaration, snapshot.events, snapshot.models, services, middlewares, sideEffects)
 		if err != nil {
 			return err
 		}

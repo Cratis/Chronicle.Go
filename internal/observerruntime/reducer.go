@@ -48,11 +48,11 @@ func OpenReducer(ctx context.Context, conn grpc.ClientConnInterface, connectionI
 // Run processes one complete fold and cleanup before acknowledging it. Replay
 // notifications have no handshake; user replay hooks remain out of scope.
 func (r *Reducer) Run(ctx context.Context) error {
-	return runStream(ctx, r.stream.Recv, func(ctx context.Context, operation *contracts.ReduceOperationMessage) *contracts.ReducerResult {
+	return runStream(ctx, r.stream.Recv, func(ctx context.Context, operation *contracts.ReduceOperationMessage) (*contracts.ReducerResult, error) {
 		if operation.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
-			return nil
+			return nil, nil
 		}
-		return r.handle(ctx, operation)
+		return r.handle(ctx, operation), nil
 	}, func(result *contracts.ReducerResult) error {
 		return r.stream.Send(&contracts.ReducerMessage{Content: &contracts.OneOf_RegisterReducer_ReducerResult{Value1: result}})
 	})

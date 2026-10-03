@@ -42,7 +42,7 @@ func registerConfirmOrders(registry *chronicle.Registry, gateway ReservationGate
 	}
 	return chronicle.RegisterReactor[*ConfirmOrders](registry,
 		func() *ConfirmOrders { return &ConfirmOrders{reservations: gateway} },
-		reactors.WithID("confirm-orders"))
+		reactors.WithID("confirm-orders"), reactors.OnceOnly("Reserve"))
 }
 
 // end-convention

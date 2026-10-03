@@ -57,11 +57,12 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 // Run processes batches sequentially until cancellation or stream failure. Effects
 // are never retried here. The kernel controls failure recovery and resume position.
 func (r *Reactor) Run(ctx context.Context) error {
-	return runStream(ctx, r.stream.Recv, func(ctx context.Context, batch *contracts.EventsToObserve) *contracts.ReactorResult {
+	return runStream(ctx, r.stream.Recv, func(ctx context.Context, batch *contracts.EventsToObserve) (*contracts.ReactorResult, error) {
 		if batch.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
-			return nil
+			ctx = reactors.WithBatch(ctx, reactors.Batch{Reactor: r.plan.Identifier(), Store: r.store, Namespace: r.namespace, Sequence: r.plan.EventSequence()})
+			return nil, r.plan.NotifyReplay(ctx, reactors.ReplayState(batch.ReplayState), events.SourceID(batch.Partition))
 		}
-		return r.handle(ctx, batch)
+		return r.handle(ctx, batch), nil
 	}, func(result *contracts.ReactorResult) error {
 		return r.stream.Send(&contracts.ReactorMessage{Content: &contracts.OneOf_RegisterReactor_ReactorResult{Value1: result}})
 	})

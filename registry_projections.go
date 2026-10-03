@@ -49,6 +49,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 	var reactorDeclarations []reactorDeclaration
 	var reducerDeclarations []reducers.Declaration
 	var reactorMiddlewares []any
+	var reactorSideEffects []reactorSideEffectHandler
 	snapshot := registrySnapshot{}
 	if registry != nil {
 		registry.mu.Lock()
@@ -58,6 +59,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 		reactorDeclarations = slices.Clone(registry.reactors)
 		reducerDeclarations = slices.Clone(registry.reducers)
 		reactorMiddlewares = slices.Clone(registry.reactorMiddlewares)
+		reactorSideEffects = slices.Clone(registry.reactorSideEffects)
 		snapshot.constraints = slices.Clone(registry.constraints)
 		registry.mu.Unlock()
 	}
@@ -145,7 +147,7 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 			return registrySnapshot{}, err
 		}
 	}
-	err = compileReactors(&snapshot, reactorDeclarations, services, reactorMiddlewares)
+	err = compileReactors(&snapshot, reactorDeclarations, services, reactorMiddlewares, reactorSideEffects)
 	if err != nil {
 		return snapshot, err
 	}

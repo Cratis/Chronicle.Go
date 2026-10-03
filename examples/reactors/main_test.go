@@ -12,6 +12,7 @@ import (
 	"time"
 
 	chronicle "github.com/cratis/chronicle.go"
+	"github.com/cratis/chronicle.go/reactors"
 )
 
 type exampleGateway struct{}
@@ -28,6 +29,20 @@ func TestConventionRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = client.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRichEffectsAndCommandExtensionRegistration(t *testing.T) {
+	registry := chronicle.NewRegistry()
+	if err := registerOrderEffects(registry, func(context.Context, reactors.SideEffectContext, ReserveStock) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	client, err := chronicle.NewClient(chronicle.WithRegistry(registry))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Close(); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -4,9 +4,9 @@ description: Register closures or convention-based reactors, return events, and 
 ---
 
 Use a reactor to call an external service or append a follow-up event. Use a
-projection to populate a read model instead. This is the experimental **part 1**
-reactor API: ordinary delivery, basic returned events, middleware and scoped
-activation. [The parity map](parity.md#reactors-part-1) lists the remaining work.
+projection to populate a read model instead. This experimental API supports
+convention discovery, replay policies, returned effects and scoped activation.
+[The parity map](parity.md#reactors-part-2) identifies the remaining gaps.
 
 ## Plain Go first
 
@@ -82,7 +82,7 @@ func registerConfirmOrders(registry *chronicle.Registry, gateway ReservationGate
     }
     return chronicle.RegisterReactor[*ConfirmOrders](registry,
         func() *ConfirmOrders { return &ConfirmOrders{reservations: gateway} },
-        reactors.WithID("confirm-orders"))
+        reactors.WithID("confirm-orders"), reactors.OnceOnly("Reserve"))
 }
 ```
 
@@ -113,13 +113,72 @@ After the event, parameters resolve in this order:
    Materialized reads remain eventually consistent.
 4. A service from the batch scope.
 
-Handlers may return nothing, `error`, a registered event (or pointer), or
-`(event, error)`. A nil event means no effect. A non-nil error suppresses the
-returned event. Chronicle appends a returned event to **the event log**, even if
-the reactor observes another sequence, using the triggering source ID unless the
-reactor implements `EventSourceIDProvider`. Append rejection fails handling.
-Collections, targeted wrappers, custom effects and route/subject providers are
-not implemented in part 1.
+Handlers may return nothing, `error`, a supported effect, or `(effect, error)`.
+A nil result means no effect; a non-nil error suppresses all returned effects.
+Unsupported declared results fail at `NewClient`, before connection work.
+
+### Returning events and batches
+
+Return events rather than injecting an event log. These results append to **the
+event log**, even when the reactor observes another sequence:
+
+| Result | Operation |
+| --- | --- |
+| Registered event or pointer | One append |
+| Slice/array of registered events | One atomic `AppendMany`, in order |
+| `eventsequences.Entry` or pointer | Self-describing source, route, subject, tags, occurrence and causation |
+| Slice/array of entries | Ordered atomic `AppendBatch` |
+| `[]any` mixing bare events and entries | One atomic batch, preserving each entry's metadata |
+| `eventsequences.EventsWithConcurrencyScopes` | Ordered `Events` and explicit `Scopes` via `AppendBatch` |
+
+Bare events default to the triggering source ID. `EventSourceIDProvider`,
+`EventStreamIDProvider` and `SubjectProvider` on the activated reactor override
+source, stream ID and subject. `WithEventSourceType`, `WithEventStreamType` and
+`WithEventStreamID` supply static defaults; the stream ID provider wins over the
+option. Without a subject provider, normal event subject resolution applies.
+**Entries are self-describing:** reactor defaults never overwrite them.
+
+Empty collections are no-ops; nil elements and unregistered values fail handling.
+An empty concurrency batch still needs a protected scope. Classification precedes
+writes and the append APIs validate/serialize the complete event batch before I/O.
+Constraint, concurrency, authorization and transport failures prevent acknowledgement.
+No client effect retry is added. See the [compiled effects example](../examples/reactors/effects.go).
+
+### Replay without repeating external effects
+
+Use `reactors.OnceOnly()` to mark an entire observer not replayable. Use
+`reactors.OnceOnly("Reserve")` to skip only that exported handler during replay.
+For typed callbacks, use `reactors.Returning(...).OnceOnly()` or
+`reactors.On(...).OnceOnly()`.
+
+`reactors.Replay("Rebuild")` selects an exported replacement handler. During replay
+it runs **instead of** the ordinary handler for that event. Without a replacement,
+the ordinary handler runs unless marked OnceOnly. Replay-only handlers still
+contribute subscriptions. Typed callbacks use `.DuringReplay()`. All method names
+are validated at construction; `Replay...` and `Once...` name prefixes have no
+special meaning. If a replacement itself is OnceOnly, replay skips it without
+falling back to the live handler.
+
+OnceOnly is replay exclusion, **not deduplication**: recovering a failed partition
+can invoke the same ordinary handler again. Keep external effects idempotent.
+
+Implement `reactors.ReplayNotifier` for `BeginReplay`/`EndReplay` and
+`PartitionReplayNotifier` for partition notifications. Each notification gets a
+separate scope and artifact, never an event middleware chain or a reused batch
+instance. Activation failures are logged like C#; notification/cleanup errors
+terminate the stream and trigger its normal resubscription. Notifications have no
+acknowledgement message in the protocol.
+
+### Filters are not labels
+
+`WithEventTagFilter("a", "b")` admits events having either tag. Tags combine with
+source/stream filters using AND. `WithTags(...)` only labels the reactor; labels
+never filter. `WithEventStreamID` is output metadata, not an input filter.
+
+`WithEventSequence` and `WithEventLog` explicitly select the input sequence. This
+branch has no event source-store catalog metadata yet, so automatic external
+inbox inference awaits that metadata; selecting an inbox does not provision a
+subscription. See [#37](https://github.com/Cratis/Chronicle.Go/issues/37).
 
 ## Dependency injection is opt-in
 
@@ -177,6 +236,35 @@ must not close it, retain it or assume that a delivery joins a command's
 transaction. Delivery IDs support external idempotency records, not atomicity
 between an external effect and a Chronicle append.
 
+### Returned commands and custom effects
+
+Register a `reactors.SideEffectHandler` with
+`chronicle.RegisterReactorSideEffectHandler(registry, handler)` **before**
+`NewClient`, or use `reactors.WithSideEffectHandlers(...)` on one reactor.
+The [compiled command adapter](../examples/reactors/effects.go) demonstrates the
+extension without an Arc dependency. Arc can resolve its pipeline from the
+borrowed batch scope and return validation/authorization failures as errors.
+Do not execute returned commands in `After`: those errors are intentionally logged
+without failing handling.
+
+`CanHandleReturnType` participates in startup validation. `CanHandle` must only
+classify: every matching handler is selected before any append or execution.
+`Handle` receives `SideEffectContext`, including delivery identity, event context,
+reactor instance, store-local catalog, borrowed scope and `Replay`, `OnceOnly`,
+`Replayable` policy. Handlers are borrowed, concurrency-safe instances; Chronicle
+does not dispose them. Registrations freeze separately for each store catalog.
+
+All matching extensions run in registration order, even if an earlier extension
+returns an error; errors are joined and fail handling before acknowledgement.
+The built-in event handler also runs when it matches. A handler can claim an entire
+collection. Otherwise a collection of custom/mixed items is fully classified
+before any item runs, then executed in order, stopping after a failed item. A
+`[]Command` return is admitted when the command element type is claimed. Unknown
+elements of `[]any` fail before any effects. Lazy or recursively nested collections
+need an extension claiming that shape. Pure event collections remain atomic;
+command/event mixtures and external operations **are not one transaction**.
+Already completed effects can repeat on recovery.
+
 ## Delivery, failure and shutdown
 
 Event types and read models register before constraints/projections; reactor
@@ -213,5 +301,9 @@ ignores cancellation cannot block reconnection or unrelated RPCs, but it can
 outlive its generation and overlap delivery on the new one. Honor cancellation
 and make effects idempotent. `CloseContext` bounds the caller's wait when user
 code ignores cancellation; a timeout means cleanup is still incomplete.
-Replay replacement/OnceOnly, read-model reactors, observer administration and
-completion/tail APIs remain outside this slice.
+Read-model reactors (`Added`/`Modified`/`Removed` watches) remain with
+[#33](https://github.com/Cratis/Chronicle.Go/issues/33). Observer administration,
+completion/tail waits and local append-result notifications remain in the
+observer follow-up (#13 of the plan). Historical payload selection works for the
+one registered descriptor per ID; simultaneous historical codecs remain with
+[#32](https://github.com/Cratis/Chronicle.Go/issues/32).
