@@ -48,7 +48,10 @@ func stockDeclarations() (*chronicle.Registry, readmodels.Model[Stock], error) {
 Both `ModelBound` and `NewBuilder` accept these options. Initial values use the
 registered model codec, including concepts, nested objects, explicit JSON names,
 and the client's frozen naming policy. Paths use declaration-time serialized names,
-just like mapping paths. Preparation copies the serialized state; later mutation
+just like mapping paths. Snapshots rebind by declared Go field identity; if naming
+changes embedded-field promotion and hides a supplied field, client construction
+fails rather than assigning its value to the field that shadows it.
+Preparation copies the serialized state; later mutation
 of a slice, map, pointer, builder, registry, or returned protobuf cannot change the
 submitted bytes or reconnect definition. Do not mutate inputs while preparing them.
 
@@ -59,9 +62,16 @@ submitted bytes or reconnect definition. Do not mutate inputs while preparing th
 | `WithLabels(labels...)` | Copied artifact metadata; calls accumulate, exact duplicates keep their first occurrence. Case and nonblank whitespace remain significant |
 
 Whole-model serialization preserves zero and false unless `omitempty`/`omitzero`
-requests omission. A non-nil empty slice/map supplies `[]`/`{}`; nil properties
-are omitted. The scalar-path option supplies an explicit zero despite omission
-flags, or explicit JSON `null` for a nil scalar pointer. Null roots, arbitrary JSON,
+requests omission. A non-nil empty slice/map supplies `[]`/`{}` in the definition;
+nil properties are omitted. For ordinary collection properties, these values can
+initialize materialized state. **Projection-owned child collections are different:**
+the kernel excludes child roots when applying initial state, so an `[]` initializer
+does not establish materialized child presence. Child events and mappings own it.
+
+The scalar-path option supplies an explicit zero despite omission flags, or explicit
+JSON `null` for a nil scalar pointer. Strings are JSON data, not projection-expression
+grammar: quotes, punctuation, `$null`, and Unicode remain literal values.
+Null roots, raw JSON initializers,
 foreign model types, collection-null initializers, invalid codecs, and nonfinite
 numbers are not accepted. Invalid declarations fail `Build`/`NewClient` before I/O.
 Labels must be nonblank UTF-8 without control characters; they are not trimmed.
@@ -69,8 +79,12 @@ Labels must be nonblank UTF-8 without control characters; they are not trimmed.
 ## Materialization and protection boundaries
 
 Registration alone creates no model instance. The kernel applies initial state
-when an event materializes it; subsequent mappings update existing state. Removal
-removes the instance, and a later creating event initializes it again. Do not use
+when an event materializes it; subsequent mappings update existing state. Ordinary
+AutoMap can overwrite an initialized property with the event's matching property.
+For an aggregate-only mapping, the pinned kernel suppresses name AutoMap: an
+increment changes its target while leaving the initialized name unchanged. Explicit
+property mappings still apply.
+Removal removes the instance, and a later creating event initializes it again. Do not use
 registration or successful append as a sink-completion signal.
 
 Initializer state is definition metadata, not an appended event. It does not pass
@@ -83,8 +97,12 @@ The pinned kernel's all-instance replay used by `ReadModelScenario` omits initia
 state. Scenarios with nonempty projection defaults fail with
 `ErrFidelityUnavailable`; use production materialized reads instead. Scenario
 support remains a [#38 follow-up](https://github.com/Cratis/Chronicle.Go/issues/38).
-Explicit observer replay and materialized read-back are separate from that scenario
-endpoint. Initial-value authoring does not promise history revision/redaction rewind
+Explicit observer replay is separate from that scenario endpoint. An accepted replay
+request or disappeared job does not prove completion, and unchanged materialized
+read-back may still be pre-replay state. The kernel witness requires successful
+terminal status for the exact replay job before comparing the resulting state;
+if that evidence disappears, replay completion remains unverified.
+Initial-value authoring does not promise history revision/redaction rewind
 semantics or automatically trigger replay when only defaults change.
 
 C# uses a whole-model callback; Go takes a typed value and snapshots it during
