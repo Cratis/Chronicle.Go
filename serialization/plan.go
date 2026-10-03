@@ -94,7 +94,12 @@ func compilePlan(typ reflect.Type, readModel bool, policies ...NamingPolicy) (*P
 	if err != nil {
 		return nil, err
 	}
-	return &Plan{root: root, schema: string(data), typ: typ}, nil
+	plan := &Plan{root: root, schema: string(data), typ: typ}
+	plan.schema, err = plan.ProtectedSchema()
+	if err != nil {
+		return nil, err
+	}
+	return plan, nil
 }
 
 // Schema returns the immutable JSON Schema string with the same property names as Marshal.

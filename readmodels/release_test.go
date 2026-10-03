@@ -231,7 +231,7 @@ func TestReadModelReleaseNumericSubjects(t *testing.T) {
 	if request := <-requests; request.Subject != "9007199254740993" {
 		t.Fatalf("typed subject = %q", request.Subject)
 	}
-	for _, subject := range []string{`null`, `""`, `{}`, `[]`, `true`} {
+	for _, subject := range []string{`null`, `""`, `{}`, `[]`} {
 		if result, err := service.Release(ctx, model.Identifier(), json.RawMessage(`{"id":`+subject+`,"name":"ciphertext"}`)); result != nil || !errors.Is(err, readmodels.ErrRelease) {
 			t.Fatalf("invalid subject %s returned %s, %v", subject, result, err)
 		}

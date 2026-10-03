@@ -97,8 +97,8 @@ func (b *CompositeKeyBuilder[K, E]) add(path string, typ reflect.Type, part keyP
 			return
 		}
 		for _, directive := range directives {
-			if directive.Name == "index" {
-				b.err = &DeclarationError{Artifact: reflect.TypeFor[K]().String(), GoField: field.GoField, Path: field.Path, Directive: directive.Name, Offset: directive.Offset, Message: "index directive on a composite key", Cause: invalid("unsupported composite key directive")}
+			if directive.Name == "index" || directive.Name == "subject" || directive.Name == "pii" || directive.Name == "encrypted" || directive.Name == "compliance-details" {
+				b.err = &DeclarationError{Artifact: reflect.TypeFor[K]().String(), GoField: field.GoField, Path: field.Path, Directive: directive.Name, Offset: directive.Offset, Message: "unsupported directive on a composite key", Cause: invalid("unsupported composite key directive")}
 				return
 			}
 		}

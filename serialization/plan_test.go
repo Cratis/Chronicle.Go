@@ -64,7 +64,7 @@ func TestSchemaAndSerializationShareNames(t *testing.T) {
 }
 
 type protected struct {
-	Email string `chronicle:"pii"`
+	Email string `chronicle:"pii(unknown=true)"`
 }
 type custom string
 

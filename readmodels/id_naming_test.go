@@ -73,8 +73,8 @@ func TestReadModelIDPathsRebindFromPlan(t *testing.T) {
 			t.Fatalf("payload: %s", data)
 		}
 	}
-	if _, err := Define[protectedModel](WithPII("Id")); !errors.Is(err, faults.ErrInvalidConfiguration) {
-		t.Fatalf("key PII: %v", err)
+	if _, err := Define[protectedModel](WithPII("Id")); err != nil {
+		t.Fatalf("plain string ID is not an event-source identity: %v", err)
 	}
 }
 

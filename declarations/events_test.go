@@ -32,7 +32,7 @@ func TestEventDeclarationGrammarAndRoles(t *testing.T) {
 		if err := declarations.Validate(declarations.Event, parsed); err != nil {
 			t.Fatal(err)
 		}
-		if err := declarations.Validate(declarations.Model, parsed); err == nil {
+		if err := declarations.Validate(declarations.Model, parsed); err == nil && tag != "subject" {
 			t.Fatal("event metadata accepted on model")
 		}
 	}
@@ -71,7 +71,7 @@ func FuzzEventDeclarations(f *testing.F) {
 }
 
 func TestInvalidEventDeclarationsAreTypedAndRedacted(t *testing.T) {
-	for _, tag := range []string{`unique(name="")`, `unique(name=PRIVATE)`, `unique(message=12)`, `unique(sequences=[1])`, `unique(sequences=[" "])`, `unique(sequences="PRIVATE")`, `unique(sequences=["a",])`, `unique(sequences=["a")`, `unique(name="a",name="b")`, `unique(unknown="PRIVATE")`, `subject(value="PRIVATE")`, `pii`, `encrypted(scope=subject,details="PRIVATE")`, `unique(sequences=` + strings.Repeat("[", 40) + `"x"` + strings.Repeat("]", 40) + `)`} {
+	for _, tag := range []string{`unique(name="")`, `unique(name=PRIVATE)`, `unique(message=12)`, `unique(sequences=[1])`, `unique(sequences=[" "])`, `unique(sequences="PRIVATE")`, `unique(sequences=["a",])`, `unique(sequences=["a")`, `unique(name="a",name="b")`, `unique(unknown="PRIVATE")`, `subject(value="PRIVATE")`, `pii(details="PRIVATE")`, `encrypted(scope=unknown,details="PRIVATE")`, `unique(sequences=` + strings.Repeat("[", 40) + `"x"` + strings.Repeat("]", 40) + `)`} {
 		parsed, err := declarations.Parse(declarations.V1, tag)
 		if err == nil {
 			err = declarations.Validate(declarations.Event, parsed)

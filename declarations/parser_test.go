@@ -35,7 +35,7 @@ func TestTagGrammarPreservesScalarsReferencesAndOffsets(t *testing.T) {
 	}
 }
 func TestMalformedTagsFailWithRedactedTypedErrors(t *testing.T) {
-	for _, tag := range []string{`set()`, `set(E,from=a,from=b)`, `set(E,secret="PRIVATE")`, `set(E,from="PRIVATE")`, `value(E,value=PRIVATE)`, `value(E,value="PRIVATE"`, `value(E,value="PRIVATE\q")`, `set(E,from=$eventSourceId)`, `set(id("x",0))`, `set(id("x",1.5))`, `set(go("x",2))`, `set(@)`, `set(E);`, `set(E) set(F)`, `set(E,from=name,E)`, `key(E)`, `pii`, `children(E,unknown=id)`, `add(E,key=id)`, `encrypted(scope=subject)`, `set(E,from=x..y)`} {
+	for _, tag := range []string{`set()`, `set(E,from=a,from=b)`, `set(E,secret="PRIVATE")`, `set(E,from="PRIVATE")`, `value(E,value=PRIVATE)`, `value(E,value="PRIVATE"`, `value(E,value="PRIVATE\q")`, `set(E,from=$eventSourceId)`, `set(id("x",0))`, `set(id("x",1.5))`, `set(go("x",2))`, `set(@)`, `set(E);`, `set(E) set(F)`, `set(E,from=name,E)`, `key(E)`, `pii(value="PRIVATE")`, `children(E,unknown=id)`, `add(E,key=id)`, `encrypted(scope=invalid)`, `set(E,from=x..y)`} {
 		t.Run(tag, func(t *testing.T) {
 			directives, err := declarations.Parse(declarations.V1, tag)
 			if err == nil {
