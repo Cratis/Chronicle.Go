@@ -3,28 +3,42 @@
 
 package reactors
 
-import (
-	"slices"
-
-	"github.com/cratis/chronicle.go/events"
-)
+import "github.com/cratis/chronicle.go/events"
 
 // WithEventLog explicitly selects the local event log.
 func WithEventLog() Option { return WithEventSequence(events.EventLog) }
 
 // WithTags sets artifact labels only; labels never filter deliveries. Inputs are
-// copied, the last option wins, and blank labels are rejected.
+// copied and deduplicated in first-seen order, the last option wins, and blank
+// labels are rejected.
 func WithTags(tags ...string) Option {
-	labels := slices.Clone(tags)
+	labels := distinctTags(tags)
 	return func(c *configuration) { c.tags = labels }
 }
 
 // WithEventTagFilter selects events having any supplied tag (OR). Source type,
 // stream type and tag categories combine with AND in the kernel. Empty clears
-// the filter, blank tags are invalid, input is copied, and the last option wins.
+// the filter, blank tags are invalid, input is copied and deduplicated in
+// first-seen order, and the last option wins.
 func WithEventTagFilter(tags ...string) Option {
-	filters := slices.Clone(tags)
+	filters := distinctTags(tags)
 	return func(c *configuration) { c.filterTags = filters }
+}
+
+func distinctTags(tags []string) []string {
+	if tags == nil {
+		return nil
+	}
+	result := make([]string, 0, len(tags))
+	seen := make(map[string]struct{}, len(tags))
+	for _, tag := range tags {
+		if _, ok := seen[tag]; ok {
+			continue
+		}
+		seen[tag] = struct{}{}
+		result = append(result, tag)
+	}
+	return result
 }
 
 // WithEventSourceType sets the observer filter and bare returned-event source

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"slices"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	chronicle "github.com/cratis/chronicle.go"
 	contracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/reactors"
 )
 
@@ -47,6 +49,10 @@ func (h *OrderedCommands) Handle(_ context.Context, c reactors.SideEffectContext
 	return nil
 }
 
+type UnserializableEffectEvent struct {
+	Value float64 `json:"value"`
+}
+
 func TestCustomEffectCollectionPreflightAndDeterministicExecution(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
@@ -57,10 +63,22 @@ func TestCustomEffectCollectionPreflightAndDeterministicExecution(t *testing.T) 
 	}{
 		{"ordered", []any{ReturnedCommand{1}, ReturnedCommand{2}}, 0, []string{"classify-1", "classify-2", "execute-1", "execute-2"}, true},
 		{"unknown later element", []any{ReturnedCommand{1}, "not claimed"}, 0, []string{"classify-1"}, false},
+		{"unregistered entry", []any{ReturnedCommand{1}, eventsequences.Entry{Source: "x", Event: struct{ Unregistered string }{}}}, 0, []string{"classify-1"}, false},
+		{"nil entry event", []any{ReturnedCommand{1}, eventsequences.Entry{Source: "x"}}, 0, []string{"classify-1"}, false},
+		{"typed nil entry event", []any{ReturnedCommand{1}, eventsequences.Entry{Source: "x", Event: (*ReactorOutput)(nil)}}, 0, []string{"classify-1"}, false},
+		{"empty entry source", []any{ReturnedCommand{1}, eventsequences.Entry{Event: ReactorOutput{1}}}, 0, []string{"classify-1"}, false},
+		{"blank entry source", []any{ReturnedCommand{1}, eventsequences.Entry{Source: " ", Event: ReactorOutput{1}}}, 0, []string{"classify-1"}, false},
+		{"invalid concurrency batch entry", []any{ReturnedCommand{1}, eventsequences.EventsWithConcurrencyScopes{Events: []eventsequences.Entry{{Source: "x", Event: ReactorOutput{1}}, {Source: "x", Event: struct{ Unregistered string }{}}}}}, 0, []string{"classify-1"}, false},
+		{"unserializable bare event", []any{ReturnedCommand{1}, UnserializableEffectEvent{math.NaN()}}, 0, []string{"classify-1"}, false},
+		{"unserializable entry", []any{ReturnedCommand{1}, eventsequences.Entry{Source: "x", Event: UnserializableEffectEvent{math.NaN()}}}, 0, []string{"classify-1"}, false},
+		{"unserializable concurrency batch", []any{ReturnedCommand{1}, eventsequences.EventsWithConcurrencyScopes{Events: []eventsequences.Entry{{Source: "x", Event: UnserializableEffectEvent{math.NaN()}}}}}, 0, []string{"classify-1"}, false},
 		{"stop after rejection", []any{ReturnedCommand{1}, ReturnedCommand{2}, ReturnedCommand{3}}, 2, []string{"classify-1", "classify-2", "classify-3", "execute-1", "execute-2"}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := reactorRegistry(t)
+			if _, err := chronicle.RegisterEvent[UnserializableEffectEvent](r); err != nil {
+				t.Fatal(err)
+			}
 			var trace []string
 			if err := chronicle.RegisterReactorSideEffectHandler(r, &OrderedCommands{trace: &trace, failAt: tc.failAt}); err != nil {
 				t.Fatal(err)

@@ -27,15 +27,17 @@ func TestPlanRegistrationMetadataAndDetachedTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Part 2 authoring options will populate these fields. Keep their transport
-	// contract independent of OnceOnly handler/replay behavior in this slice.
-	declaration, err := DefineHandler("metadata", func(context.Context, metadataEvent) error { return nil }, func(c *configuration) {
+	labels := []string{"artifact", "second", "artifact", "second"}
+	filters := []string{"event", "other", "event", "other"}
+	options := []Option{WithTags("replaced"), WithEventTagFilter("replaced"), WithTags(labels...), WithEventTagFilter(filters...)}
+	labels[0] = "mutated"
+	filters[0] = "mutated"
+	options = append(options, func(c *configuration) {
 		c.replayable = false
-		c.tags = []string{"artifact"}
-		c.filterTags = []string{"event"}
 		c.sourceType = "customer"
 		c.streamType = "orders"
 	})
+	declaration, err := DefineHandler("metadata", func(context.Context, metadataEvent) error { return nil }, options...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +50,7 @@ func TestPlanRegistrationMetadataAndDetachedTags(t *testing.T) {
 	}
 	plan.Tags()[0] = "mutated"
 	plan.FilterTags()[0] = "mutated"
-	if !slices.Equal(plan.Tags(), []string{"artifact"}) || !slices.Equal(plan.FilterTags(), []string{"event"}) {
-		t.Fatal("plan exposes mutable tags")
+	if !slices.Equal(plan.Tags(), []string{"artifact", "second"}) || !slices.Equal(plan.FilterTags(), []string{"event", "other"}) {
+		t.Fatal("plan tags were not deduplicated or detached", plan.Tags(), plan.FilterTags())
 	}
 }

@@ -116,8 +116,8 @@ func (*EffectMetadataReactor) GetSubject() *events.Subject {
 
 func TestReactorMetadataProvidersAndFiltersVersusLabels(t *testing.T) {
 	r := reactorRegistry(t)
-	labels := []string{"label"}
-	filters := []string{"filtered", "other"}
+	labels := []string{"label", "label"}
+	filters := []string{"filtered", "other", "filtered", "other"}
 	options := []reactors.Option{reactors.WithID("metadata"), reactors.WithTags(labels...), reactors.WithEventTagFilter(filters...), reactors.WithEventSourceType("source-type"), reactors.WithEventStreamType("stream-type"), reactors.WithEventStreamID("configured-stream"), reactors.WithEventSequence("external-inbox"), reactors.OnceOnly()}
 	labels[0] = "mutated"
 	filters[0] = "mutated"

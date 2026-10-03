@@ -8,9 +8,11 @@ import (
 	"errors"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/faults"
 )
 
 // EventStreamIDProvider overrides WithEventStreamID for bare returned events.
@@ -140,6 +142,26 @@ func (l *Lease) handleEffect(ctx context.Context, value any, invocation Invocati
 	if err != nil {
 		return err
 	}
+	// Use the store's serialization plans rather than PrepareBatch: Runtime
+	// supports borrowed appenders that need not expose a Sequence handle.
+	// Finish preparing every built-in action before executing any custom effect.
+	for _, action := range actions {
+		if !action.builtin {
+			continue
+		}
+		for _, entry := range action.events.entries {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			descriptor, ok := l.plan.catalog.Lookup(entry.Event)
+			if !ok {
+				return faults.ErrNotRegistered
+			}
+			if _, err := descriptor.Marshal(entry.Event); err != nil {
+				return err
+			}
+		}
+	}
 	for _, action := range actions {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -165,7 +187,10 @@ func (l *Lease) classifyEffect(value any, ec SideEffectContext, collection bool)
 	if nilLike(value) {
 		return nil, invalid("nil item in effect collection")
 	}
-	effect, builtin := l.classifyEvents(value, ec.Context)
+	effect, builtin, err := l.classifyEvents(value, ec.Context)
+	if err != nil {
+		return nil, err
+	}
 	action := effectAction{value: value, events: effect, builtin: builtin}
 	for _, handler := range l.plan.sideEffects {
 		if handler.CanHandle(ec, value) {
@@ -190,13 +215,14 @@ func (l *Lease) classifyEffect(value any, ec SideEffectContext, collection bool)
 	return actions, nil
 }
 
-func (l *Lease) classifyEvents(value any, ec events.Context) (eventEffect, bool) {
+func (l *Lease) classifyEvents(value any, ec events.Context) (eventEffect, bool, error) {
 	v := reflect.ValueOf(value)
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 	if batch, ok := v.Interface().(eventsequences.EventsWithConcurrencyScopes); ok {
-		return eventEffect{entries: slices.Clone(batch.Events), scopes: slices.Clone(batch.Scopes), batch: true}, true
+		effect := eventEffect{entries: slices.Clone(batch.Events), scopes: slices.Clone(batch.Scopes), batch: true}
+		return effect, true, l.validateEffectEntries(effect.entries)
 	}
 	effect := eventEffect{bare: true, single: true}
 	values := []any{value}
@@ -209,7 +235,7 @@ func (l *Lease) classifyEvents(value any, ec events.Context) (eventEffect, bool)
 	}
 	for _, item := range values {
 		if nilLike(item) {
-			return eventEffect{}, false
+			return eventEffect{}, false, nil
 		}
 		iv := reflect.ValueOf(item)
 		if iv.Kind() == reflect.Pointer {
@@ -221,7 +247,7 @@ func (l *Lease) classifyEvents(value any, ec events.Context) (eventEffect, bool)
 			continue
 		}
 		if _, ok := l.plan.catalog.Lookup(item); !ok {
-			return eventEffect{}, false
+			return eventEffect{}, false, nil
 		}
 		effect.entries = append(effect.entries, eventsequences.Entry{Event: item})
 	}
@@ -245,8 +271,24 @@ func (l *Lease) classifyEvents(value any, ec events.Context) (eventEffect, bool)
 		entry.Event = effect.entries[i].Event
 		effect.entries[i] = entry
 	}
-	return effect, true
+	return effect, true, l.validateEffectEntries(effect.entries)
 }
+
+func (l *Lease) validateEffectEntries(entries []eventsequences.Entry) error {
+	for _, entry := range entries {
+		if nilLike(entry.Event) {
+			return invalid("nil event in effect entry")
+		}
+		if strings.TrimSpace(string(entry.Source)) == "" {
+			return invalid("source is required for effect entry")
+		}
+		if _, ok := l.plan.catalog.Lookup(entry.Event); !ok {
+			return faults.ErrNotRegistered
+		}
+	}
+	return nil
+}
+
 func (l *Lease) effectDefaults(ec events.Context) eventsequences.Entry {
 	c := l.plan.declaration.config
 	entry := eventsequences.Entry{Source: ec.SourceID, Route: eventsequences.Route{SourceType: c.sourceType, StreamType: c.streamType, StreamID: c.streamID}}
