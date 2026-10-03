@@ -17,19 +17,34 @@ import (
 // Descriptors use the client's naming policy and store-bound producer metadata,
 // exactly as EventStore does. This performs no I/O, creates no namespace or
 // observers, and invokes no constructors. It is safe for concurrent use, including
-// after Close; catalogs describe frozen configuration, not server registration.
-// A blank store name returns ErrInvalidConfiguration.
+// after Close following successful preparation; catalogs describe frozen
+// configuration, not server registration. Before preparation it returns
+// ErrNotPrepared (or ErrClosed). A blank prepared store name is invalid.
 func (c *Client) Catalogs(store StoreName) (*events.Catalog, *readmodels.Catalog, error) {
-	snapshot, err := c.selectedStoreSnapshot(store)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.requirePreparedLocked("catalogs", true); err != nil {
+		return nil, nil, err
+	}
+	snapshot, err := c.selectedStoreSnapshotLocked(store)
 	if err != nil {
 		return nil, nil, err
 	}
 	return snapshot.events, snapshot.models, nil
 }
 
-// selectedStoreSnapshot binds the already compiled registry; it never compiles
-// declarations again. Both offline catalogs and connected handles use this path.
 func (c *Client) selectedStoreSnapshot(store StoreName) (registrySnapshot, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.requirePreparedLocked("catalogs", true); err != nil {
+		return registrySnapshot{}, err
+	}
+	return c.selectedStoreSnapshotLocked(store)
+}
+
+// selectedStoreSnapshotLocked binds the already compiled registry; it never compiles
+// declarations again. Callers hold c.mu and have checked preparation readiness.
+func (c *Client) selectedStoreSnapshotLocked(store StoreName) (registrySnapshot, error) {
 	if strings.TrimSpace(string(store)) == "" {
 		return registrySnapshot{}, fmt.Errorf("%w: store must be nonblank", ErrInvalidConfiguration)
 	}

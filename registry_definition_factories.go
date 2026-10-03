@@ -55,6 +55,10 @@ type migrationFactoryDeclaration struct {
 // resolved services and the provider are borrowed. The temporary scope is closed
 // after define, including on error. Callbacks must be synchronous and must not
 // retain the borrowed resolver or resolve this client's store/sequence facades.
+// CaptureClient permits *Client only through an explicit borrowed binding of its
+// exact identity; it remains unprepared during callbacks. Client values and SDK
+// facade artifact results are prohibited. Provider-internal graphs and hidden
+// closure dependencies remain the application's responsibility.
 func RegisterProjectionFactory[P any](registry *Registry, id string, model readmodels.Descriptor, factory any, define func(context.Context, P) (projections.Declaration, error)) error {
 	if registry == nil || strings.TrimSpace(id) == "" || model.GoType() == nil || define == nil {
 		return invalidFactory("projection metadata and callback required")
@@ -192,9 +196,9 @@ func definitionDependency(typ reflect.Type) error {
 	return nil
 }
 
-func compileDefinitionFactory(family string, declaration definitionFactory, services artifacts.ScopeFactory) (constructor artifacts.Constructor, err error) {
+func compileDefinitionFactory(family string, declaration definitionFactory, services artifacts.ScopeFactory, check func(reflect.Type) error) (constructor artifacts.Constructor, err error) {
 	err = artifacts.Protect(family, "validate", func() error {
-		if err := definitionDependency(declaration.typ); err != nil {
+		if err := definitionResult(declaration.typ); err != nil {
 			return err
 		}
 		var compileErr error
@@ -202,25 +206,19 @@ func compileDefinitionFactory(family string, declaration definitionFactory, serv
 		if compileErr != nil {
 			return compileErr
 		}
-		return constructor.ValidateDependencies(definitionDependency)
+		constructor = constructor.WithResultValidation(definitionResult)
+		return constructor.ValidateDependencies(check)
 	})
 	return constructor, err
 }
 
-func prepareDefinitionFactories(ctx context.Context, captured *registryDeclarations, services artifacts.ScopeFactory) (*registryDeclarations, error) {
-	if nilValue(services) {
-		services = artifacts.DefaultScopeFactory()
-	}
+func prepareDefinitionFactories(ctx context.Context, captured *registryDeclarations, plans registryFactoryPlans) (*registryDeclarations, error) {
 	result := *captured
 	result.projections = slices.Clone(captured.projections)
 	result.constraints = slices.Clone(captured.constraints)
 	result.migrations = slices.Clone(captured.migrations)
-	for _, declaration := range captured.projectionFactories {
-		constructor, err := compileDefinitionFactory("projection", declaration.definitionFactory, services)
-		if err != nil {
-			return nil, err
-		}
-		err = artifacts.Prepare(ctx, "projection", services, constructor, definitionDependency, func(value any) error {
+	for i, declaration := range captured.projectionFactories {
+		err := artifacts.Prepare(ctx, "projection", plans.services, plans.projections[i], plans.check, func(value any) error {
 			output, err := declaration.define(ctx, value)
 			if err != nil {
 				return err
@@ -235,12 +233,8 @@ func prepareDefinitionFactories(ctx context.Context, captured *registryDeclarati
 			return nil, err
 		}
 	}
-	for _, declaration := range captured.constraintFactories {
-		constructor, err := compileDefinitionFactory("constraint", declaration.definitionFactory, services)
-		if err != nil {
-			return nil, err
-		}
-		err = artifacts.Prepare(ctx, "constraint", services, constructor, definitionDependency, func(value any) error {
+	for i, declaration := range captured.constraintFactories {
+		err := artifacts.Prepare(ctx, "constraint", plans.services, plans.constraints[i], plans.check, func(value any) error {
 			output, err := declaration.define(ctx, value)
 			if err != nil {
 				return err
@@ -267,12 +261,8 @@ func prepareDefinitionFactories(ctx context.Context, captured *registryDeclarati
 			return nil, err
 		}
 	}
-	for _, declaration := range captured.migrationFactories {
-		constructor, err := compileDefinitionFactory("migration", declaration.definitionFactory, services)
-		if err != nil {
-			return nil, err
-		}
-		err = artifacts.Prepare(ctx, "migration", services, constructor, definitionDependency, func(value any) error {
+	for i, declaration := range captured.migrationFactories {
+		err := artifacts.Prepare(ctx, "migration", plans.services, plans.migrations[i], plans.check, func(value any) error {
 			output, err := declaration.define(ctx, value)
 			if err != nil {
 				return err

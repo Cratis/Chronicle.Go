@@ -7,30 +7,26 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"maps"
 	"math"
 	"reflect"
-	"slices"
-	"strings"
 	"sync"
-	"time"
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
-	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/projections"
-	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
-	"github.com/cratis/chronicle.go/reducers"
 	"github.com/cratis/chronicle.go/seeding"
 )
 
 // Client owns a generation supervisor and frozen registries. Construct with
-// NewClient or Dial; the zero value is not usable. It is safe for concurrent use.
+// NewClient, Dial or CaptureClient; the zero value is not usable. Do not copy it.
+// It is safe for concurrent use; a captured identity requires successful Prepare.
 type Client struct {
 	mu               sync.Mutex
 	closed           bool
+	preparation      preparationState
+	preparationError error
 	closeOnce        sync.Once
 	closeDone        chan struct{}
 	closeError       error
@@ -83,121 +79,21 @@ func NewClient(options ...ClientOption) (*Client, error) {
 // NewClientContext is NewClient with a context for definition preparation and
 // optional scoped construction. The context is not retained by the client.
 func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, error) {
+	if nilValue(ctx) {
+		return nil, fmt.Errorf("%w: nil preparation context", ErrInvalidConfiguration)
+	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	config := clientConfig{uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
-		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize,
-		keepAliveTimeout: 5 * time.Second, reactorRetryWait: connection.Wait, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
-	for _, option := range options {
-		if option == nil {
-			return nil, fmt.Errorf("%w: nil client option", ErrInvalidConfiguration)
-		}
-		option(&config)
-	}
-	uri, tlsConfig, err := validateConfig(config)
+	p, err := CaptureClient(options...)
 	if err != nil {
 		return nil, err
 	}
-	// Capture every selected declaration epoch before any application preparation.
-	// Shared registry references use one capture and one compilation, even if a
-	// callback later changes that registry for a future client.
-	names := slices.Sorted(maps.Keys(config.stores))
-	captured := make(map[*Registry]*registryDeclarations)
-	var selected []*registryDeclarations
-	capture := func(registry *Registry) *registryDeclarations {
-		if declarations, ok := captured[registry]; ok {
-			return declarations
-		}
-		declarations := captureRegistry(registry)
-		captured[registry] = declarations
-		selected = append(selected, declarations)
-		return declarations
-	}
-	defaults := capture(config.registry)
-	for _, name := range names {
-		if strings.TrimSpace(string(name)) == "" {
-			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
-		}
-		capture(config.stores[name])
-	}
-	if config.skipKeepAlive {
-		for _, declarations := range captured {
-			if declarations.hasObservers() {
-				return nil, fmt.Errorf("%w: SkipKeepAlive cannot run reactors, reducers or read-model reactors; kernel subscriptions require a logical connection session", ErrInvalidConfiguration)
-			}
-		}
-	}
-	for _, declarations := range selected {
-		if err := artifacts.Protect("registry", "metadata", func() error { return validateDefinitionMetadata(declarations) }); err != nil {
-			return nil, err
-		}
-	}
-	// Finish every selected base schema before any definition constructor or
-	// composition callback can change application configuration for another store.
-	schemas := make(map[*registryDeclarations]registrySchemas)
-	for _, declarations := range selected {
-		prepared, err := prepareRegistrySchemas(declarations, config.naming)
-		if err != nil {
-			return nil, err
-		}
-		schemas[declarations] = prepared
-	}
-	compiled := make(map[*registryDeclarations]registrySnapshot)
-	compile := func(declarations *registryDeclarations) (registrySnapshot, error) {
-		if frozen, ok := compiled[declarations]; ok {
-			return frozen, nil
-		}
-		frozen, err := compilePreparedRegistry(ctx, declarations, schemas[declarations], config.reactorServices, config.validateEventTypes)
-		if err == nil {
-			compiled[declarations] = frozen
-		}
-		return frozen, err
-	}
-	frozen, err := compile(defaults)
+	client, err := p.Prepare(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, joinClose(err, p.Client().Close())
 	}
-	c := &Client{config: config, uri: uri, tls: tlsConfig, catalog: frozen.events, constraints: frozen.constraints,
-		catalogs: make(map[StoreName]*events.Catalog), storeConstraints: make(map[StoreName][]constraints.Definition), stores: make(map[storeKey]*EventStore),
-		readModelCatalog: frozen.models, readModelCatalogs: make(map[StoreName]*readmodels.Catalog),
-		projections: frozen.projections, storeProjections: make(map[StoreName][]projections.Definition),
-		seeds: frozen.seeds, storeSeeds: make(map[StoreName]seeding.Definition),
-		changed: make(chan struct{}), closeDone: make(chan struct{}),
-		reactors:          reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)},
-		readModelReactors: readModelReactorCatalogs{defaults: frozen.readModelReactors, stores: make(map[StoreName][]*reactors.ReadModelPlan)},
-		reducers:          reducerCatalogs{defaults: frozen.reducers, stores: make(map[StoreName][]*reducers.Plan)}}
-	for _, name := range names {
-		frozen, err := compile(captured[config.stores[name]])
-		if err != nil {
-			return nil, err
-		}
-		c.catalogs[name], c.storeConstraints[name] = frozen.events, frozen.constraints
-		c.readModelCatalogs[name], c.storeProjections[name] = frozen.models, frozen.projections
-		c.reactors.stores[name] = frozen.reactors
-		c.readModelReactors.stores[name] = frozen.readModelReactors
-		c.reducers.stores[name] = frozen.reducers
-		c.storeSeeds[name] = frozen.seeds
-	}
-	if config.skipKeepAlive {
-		if len(c.reactors.defaults)+len(c.reducers.defaults)+len(c.readModelReactors.defaults) != 0 {
-			return nil, fmt.Errorf("%w: SkipKeepAlive cannot run reactors, reducers or read-model reactors; kernel subscriptions require a logical connection session", ErrInvalidConfiguration)
-		}
-		for _, name := range slices.Sorted(maps.Keys(config.stores)) {
-			if len(c.reactors.stores[name])+len(c.reducers.stores[name])+len(c.readModelReactors.stores[name]) != 0 {
-				return nil, fmt.Errorf("%w: SkipKeepAlive cannot run reactors, reducers or read-model reactors; kernel subscriptions require a logical connection session", ErrInvalidConfiguration)
-			}
-		}
-	}
-	c.config.registry, c.config.stores = nil, nil
-	c.config.skipCompatibility = config.skipCompatibility || uri.skipCompatibility
-	if c.config.resolver == nil {
-		c.config.resolver = connection.Resolver(uri.nameServer)
-	}
-	c.balancer = connection.NewBalancer(uri.loadBalancer, tlsConfig)
-	c.life, c.cancel = context.WithCancel(context.Background())
-	c.transport = &clientTransport{client: c}
-	return c, nil
+	return client, nil
 }
 
 func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) {
