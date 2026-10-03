@@ -21,6 +21,9 @@ var ErrSelectorPanicked = errors.New("chronicle services: store selector panicke
 // (the same diagnostic grammar as WithServices), standard context cancellation,
 // ErrSelectorPanicked, or chronicle.ErrInvalidConfiguration for blank coordinates.
 // Retrying selection requires a new scope. Its zero value is a generic failure.
+// The wrapper is snapshotted and rebuilt at adapted service boundaries; safe cause
+// identities remain inspectable. Do not mutate returned error graphs concurrently
+// with inspection (including overwriting an exported SelectorError value).
 type SelectorError struct{ cause error }
 
 // Error returns fixed, payload-free text.

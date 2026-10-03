@@ -100,7 +100,12 @@ failure, panic or owner cancellation requires a **new scope** to select again.
 `SelectorError` formats only fixed text. Its cause follows the adapter's sanitized
 diagnostic grammar; direct context errors remain inspectable, blank names expose
 `ErrInvalidConfiguration`, and recovered panics expose `ErrSelectorPanicked`, never
-their payload. Sensitive coordinate values are not included in diagnostics.
+their payload. Adapted reactor/factory scopes preserve `errors.As` access to a
+rebuilt `SelectorError` and `errors.Is` access to safe ordinary causes and context
+sentinels. Panic-alias quarantine applies across the complete bounded error graph,
+including causes wrapped by `SelectorError`. Do not mutate a returned error graph
+concurrently with inspection. Sensitive coordinate values are not included in
+diagnostics.
 
 Selectors must only read metadata: **do not resolve services or call the SDK from a
 selector**, including via a retained/global scope. Declared dependency cycles and
