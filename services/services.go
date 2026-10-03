@@ -36,13 +36,15 @@ type scopeFactory struct {
 
 func (f scopeFactory) NewScope(ctx context.Context) (reactors.Scope, error) {
 	scope, err := f.factory.NewScope(ctx)
-	if err != nil {
-		return nil, err
-	}
 	if scope == nil || (reflect.ValueOf(scope).Kind() == reflect.Pointer && reflect.ValueOf(scope).IsNil()) {
+		if err != nil {
+			return nil, err
+		}
 		return nil, dependencyinjection.ErrInvalidScope
 	}
-	return adaptedScope{scope}, nil
+	// A failed open may still own resources. Preserve that scope for the lease
+	// to release; never close provider-resolved artifacts separately.
+	return adaptedScope{scope}, err
 }
 
 type catalogFactory struct {

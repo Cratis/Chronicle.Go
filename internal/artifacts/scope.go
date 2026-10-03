@@ -94,9 +94,12 @@ func (s *defaultScope) Close(ctx context.Context) error {
 func closeValue(ctx context.Context, value any) (err error) {
 	defer func() {
 		if p := recover(); p != nil {
-			err = fmt.Errorf("artifact cleanup panic: %v", p)
+			err = &panicError{value: p}
 		}
 	}()
+	if closer, ok := value.(interface{ CloseContext(context.Context) error }); ok {
+		return closer.CloseContext(ctx)
+	}
 	if closer, ok := value.(interface{ Close(context.Context) error }); ok {
 		return closer.Close(ctx)
 	}
