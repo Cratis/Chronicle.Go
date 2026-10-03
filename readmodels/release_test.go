@@ -30,6 +30,8 @@ func TestReadModelReleaseFailsClosed(t *testing.T) {
 		{name: "kernel error", response: &compliance.ReleaseResponse{HasError: true, Error: "sensitive", Payload: `{"name":"ciphertext"}`}, identity: chronicle.ErrProtocol},
 		{name: "inconsistent error", response: &compliance.ReleaseResponse{Error: "sensitive", Payload: `{}`}, identity: chronicle.ErrProtocol},
 		{name: "missing payload", response: &compliance.ReleaseResponse{}, identity: chronicle.ErrProtocol},
+		{name: "omitted protected property", response: &compliance.ReleaseResponse{Payload: `{"id":"owner"}`}, identity: chronicle.ErrProtocol},
+		{name: "empty release object", response: &compliance.ReleaseResponse{Payload: `{}`}, identity: chronicle.ErrProtocol},
 		{name: "null", response: &compliance.ReleaseResponse{Payload: "null"}, identity: chronicle.ErrProtocol},
 		{name: "wrong shape", response: &compliance.ReleaseResponse{Payload: `{"count":"sensitive"}`}, identity: chronicle.ErrProtocol},
 		{name: "unsupported", rpc: status.Error(codes.Unimplemented, "unavailable"), identity: chronicle.ErrUnsupported},

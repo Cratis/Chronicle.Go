@@ -41,8 +41,10 @@ func (e *ReleaseError) Unwrap() []error { return []error{ErrRelease, e.Cause} }
 // schema. Top-level properties are released in groups selected by __subjects,
 // falling back to the resolved default subject. Persisted lineage is preserved. Missing
 // subjects, kernel release errors and invalid replies fail closed. Unprotected
-// documents are copied without a release RPC. Never release an already-released
-// value a second time; Get's kernel path already performs release.
+// documents are copied without a release RPC. Get's kernel path already performs
+// release. Watches/windows additionally verify release before delivery, matching
+// C# materialized reads: 19.29.4's supported string PII handler passes plaintext
+// through unchanged. Release failure never falls back to the original document.
 func (s *Service) Release(ctx context.Context, model Identifier, document json.RawMessage) (json.RawMessage, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -109,6 +111,17 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 		released, err := s.releaseSlice(ctx, d, group, payload)
 		if err != nil {
 			return nil, err
+		}
+		// Never merge a partial reply over retained ciphertext. Unprotected
+		// bookkeeping may be omitted, but each protected root that was sent
+		// must be replaced by the release response.
+		for _, path := range d.definition.config.pii {
+			root := strings.Split(path, ".")[0]
+			if _, sent := groups[group][root]; sent {
+				if _, returned := released[root]; !returned {
+					return nil, &ReleaseError{Cause: faults.ErrProtocol}
+				}
+			}
 		}
 		for name, value := range released {
 			fields[name] = value

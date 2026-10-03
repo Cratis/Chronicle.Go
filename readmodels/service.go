@@ -23,12 +23,14 @@ import (
 // Service is a concurrency-safe namespace-bound reader. It borrows its transport
 // and catalog. Use EventStore.ReadModels; New is for adapters and test transports.
 type Service struct {
-	store      metadata.StoreName
-	namespace  metadata.Namespace
-	catalog    *Catalog
-	client     contracts.ReadModelsClient
-	compliance compliance.ComplianceClient
-	passive    PassiveReader
+	store            metadata.StoreName
+	namespace        metadata.Namespace
+	catalog          *Catalog
+	client           contracts.ReadModelsClient
+	materialized     contracts.MaterializedReadModelsClient
+	compliance       compliance.ComplianceClient
+	passive          PassiveReader
+	reductionChanges *ReductionChanges
 }
 
 // New constructs a service without I/O. The caller owns the channel and any
@@ -37,7 +39,7 @@ func New(store metadata.StoreName, namespace metadata.Namespace, catalog *Catalo
 	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || catalog == nil || conn == nil || (reflect.ValueOf(conn).Kind() == reflect.Pointer && reflect.ValueOf(conn).IsNil()) {
 		return nil, invalid("store, namespace, catalog and transport required")
 	}
-	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), compliance: compliance.NewComplianceClient(conn)}
+	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), materialized: contracts.NewMaterializedReadModelsClient(conn), compliance: compliance.NewComplianceClient(conn)}
 	for _, option := range options {
 		if option == nil {
 			return nil, invalid("nil service option")
