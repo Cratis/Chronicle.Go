@@ -37,6 +37,17 @@ func HasMappings(model readmodels.Descriptor) bool {
 // It performs no I/O, evaluates no user callbacks and publishes no partial result.
 // Registry users get the same validation atomically during NewClient.
 func Compile(declaration Declaration, catalog *events.Catalog) (Definition, error) {
+	definitions, err := CompileGroup([]Declaration{declaration}, catalog)
+	if err != nil {
+		return Definition{}, err
+	}
+	if len(definitions) != 1 {
+		return Definition{}, invalid("standalone global handler requires CompileGroup")
+	}
+	return definitions[0], nil
+}
+
+func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definition, error) {
 	if declaration.data == nil {
 		return Definition{}, invalid("projection declaration required")
 	}
@@ -54,18 +65,43 @@ func Compile(declaration Declaration, catalog *events.Catalog) (Definition, erro
 	if err != nil {
 		return locate(err)
 	}
-	compiled := &definition{id: d.id, model: bound, sequence: d.sequence, passive: d.passive, notRewindable: d.notRewindable}
+	compiled := &definition{id: d.id, model: bound, sequence: d.sequence, passive: d.passive, notRewindable: d.notRewindable, variant: d.variant, sequenceExplicit: d.sequenceExplicit}
 	for _, event := range d.aliases {
 		if err = validateEvent(catalog, event); err != nil {
 			return locate(err)
 		}
 	}
-	c := compiler{result: compiled, catalog: catalog, declaration: d, usedNodes: map[reflect.Type]bool{}}
-	node, err := c.compileNode(d, d.model.Fields(), nil, false, false, "", nil)
+	c := compiler{result: compiled, catalog: catalog, declaration: d, usedNodes: map[reflect.Type]bool{}, active: map[reflect.Type]bool{d.model.GoType(): true}, ancestorCreators: map[events.TypeRef]int{}}
+	node, err := c.compileNode(d, d.model.Fields(), nil, false, false, "", nil, false)
 	if err != nil {
 		return locate(err)
 	}
 	compiled.nodeDefinition = *node
+	if d.variantKey != "" {
+		field, ok := serialization.FieldAt(d.model.Fields(), d.variantKey)
+		if !ok || field.Type != d.variantKeyType || field.Nullable || field.Collection || field.Scalar == serialization.NotScalar {
+			return locate(invalid("variant key requires a non-nullable scalar model field"))
+		}
+		if compiled.keyField != "" && compiled.keyField != d.variantKey {
+			return locate(invalid("conflicting variant keys"))
+		}
+		compiled.keyField = d.variantKey
+	}
+	for _, entering := range d.entering {
+		if err := c.validateSubscription(entering); err != nil {
+			return locate(err)
+		}
+		if compiled.passive && entering.key.kind != sourceExpression {
+			return locate(invalid("passive key redirection is not supported by immediate instance reads"))
+		}
+		if entering.parent.kind != emptyExpression {
+			return locate(invalid("EntersOn does not accept a parent key"))
+		}
+		if slices.ContainsFunc(compiled.entering, func(e fromDefinition) bool { return e.event == entering.event.Ref() }) {
+			return locate(invalid("duplicate entering event"))
+		}
+		compiled.entering = append(compiled.entering, fromDefinition{event: entering.event.Ref(), key: entering.key})
+	}
 	if len(c.usedNodes) != len(d.nodes) {
 		return locate(invalid("WithNodes contains an unreachable node declaration"))
 	}
@@ -76,7 +112,26 @@ func Compile(declaration Declaration, catalog *events.Catalog) (Definition, erro
 			return locate(err)
 		}
 	}
-	if !compiled.subscribesAll && !hasSubscriptions(&compiled.nodeDefinition) {
+	if d.globalFor != nil && !compiled.noAuto {
+		// Normally AutoMap stays kernel-owned. A GlobalFor is never sent to the
+		// kernel: materialize its matching From properties before the narrow merge.
+		for i := range compiled.from {
+			from := &compiled.from[i]
+			event, _ := catalog.LookupRef(from.event)
+			for _, field := range serialization.RootFields(d.model.Fields()) {
+				if hasWrite(from.writes, field.Path) || slices.Contains(compiled.exclusions, field.Path) {
+					continue
+				}
+				if source, ok := serialization.FieldAt(event.Fields(), field.Path); ok && scalarCompatible(field, source, d.model.Fields(), event.Fields()) {
+					w := write{path: field.Path, expression: expression{kind: pathExpression, text: field.Path}, provenance: Provenance{FrontEnd: "convention", Directive: "global-automap", Path: field.Path, Offset: -1, Event: event.Ref()}}
+					if err := addWrite(compiled, from, w, d.model.Fields(), event.Fields(), false); err != nil {
+						return locate(err)
+					}
+				}
+			}
+		}
+	}
+	if d.globalFor == nil && d.variant == nil && !compiled.subscribesAll && !hasSubscriptions(&compiled.nodeDefinition) {
 		return locate(invalid("projection must subscribe to at least one registered event"))
 	}
 	return Definition{data: compiled}, nil
@@ -163,7 +218,7 @@ func validateEvent(catalog *events.Catalog, event events.Descriptor) error {
 		return invalid("event handle is empty")
 	}
 	registered, ok := catalog.LookupRef(event.Ref())
-	if !ok || registered.GoType() != event.GoType() || registered.Schema() != event.Schema() {
+	if !ok || registered.GoType() != event.GoType() || registered.Schema() != event.Schema() || registered.SourceStore() != event.SourceStore() {
 		return invalid("event handle does not belong to the frozen store catalog")
 	}
 	return nil

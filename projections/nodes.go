@@ -12,6 +12,7 @@ import (
 
 func declarationSubscriptions(d *declaration) []subscription {
 	result := append([]subscription(nil), d.subscriptions...)
+	result = append(result, d.entering...)
 	for _, j := range d.joins {
 		result = append(result, j.subscription)
 	}

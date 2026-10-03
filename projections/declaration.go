@@ -29,7 +29,11 @@ type declaration struct {
 	id                                         string
 	sequence                                   events.SequenceID
 	passive, notRewindable, noAuto, modelBound bool
-	autoSet                                    bool
+	autoSet, sequenceExplicit                  bool
+	variant, globalFor                         reflect.Type
+	variantKey                                 string
+	variantKeyType                             reflect.Type
+	entering                                   []subscription
 	aliases                                    map[string]events.Descriptor
 	subscriptions                              []subscription
 	joins                                      []joinDeclaration
@@ -76,6 +80,7 @@ func newDeclaration(model readmodels.Descriptor, options []Option) *declaration 
 	if typ := model.GoType(); typ != nil {
 		d.id = typ.PkgPath() + "." + typ.Name()
 		d.sequence = model.EventSequence()
+		d.sequenceExplicit = model.HasExplicitEventSequence()
 		if _, id := model.Observer(); id != "" {
 			d.id = id
 		}
@@ -112,7 +117,7 @@ func WithIdentifier(id string) Option { return func(d *declaration) { d.id = id 
 
 // WithEventSequence selects the source sequence (default the model's sequence).
 func WithEventSequence(sequence events.SequenceID) Option {
-	return func(d *declaration) { d.sequence = sequence }
+	return func(d *declaration) { d.sequence, d.sequenceExplicit = sequence, true }
 }
 
 // WithEventLog explicitly selects the event log.
@@ -205,6 +210,7 @@ func UsingConstantKey(value string) FromOption {
 func cloneDeclaration(d *declaration) *declaration {
 	copy := *d
 	copy.aliases = maps.Clone(d.aliases)
+	copy.entering = slices.Clone(d.entering)
 	copy.subscriptions = slices.Clone(d.subscriptions)
 	for i := range copy.subscriptions {
 		copy.subscriptions[i].writes = slices.Clone(d.subscriptions[i].writes)

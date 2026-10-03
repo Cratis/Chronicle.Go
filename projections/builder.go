@@ -122,7 +122,12 @@ func (b *Builder[M]) Build() (Declaration, error) {
 	if err != nil {
 		return Declaration{}, err
 	}
-	if _, err = Compile(declaration, catalog); err != nil {
+	if declaration.IsGlobal() {
+		_, err = compileOrdinary(declaration, catalog)
+	} else {
+		_, err = Compile(declaration, catalog)
+	}
+	if err != nil {
 		return Declaration{}, err
 	}
 	return declaration, nil

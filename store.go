@@ -14,6 +14,7 @@ import (
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
+	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -57,8 +58,9 @@ type EventStore struct {
 	constraints []constraints.Definition
 	log         *eventsequences.Sequence
 
-	readModels *readmodels.Service
-	reactors   storeReactors
+	projectionSnapshot []projections.Definition
+	readModels         *readmodels.Service
+	reactors           storeReactors
 }
 
 // Name returns the logical store name.

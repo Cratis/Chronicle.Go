@@ -16,18 +16,20 @@ import (
 )
 
 type compiler struct {
-	result      *definition
-	catalog     *events.Catalog
-	declaration *declaration
-	globals     []boundGlobal
-	usedNodes   map[reflect.Type]bool
+	result           *definition
+	catalog          *events.Catalog
+	declaration      *declaration
+	globals          []boundGlobal
+	usedNodes        map[reflect.Type]bool
+	active           map[reflect.Type]bool
+	ancestorCreators map[events.TypeRef]int
 }
 type boundGlobal struct {
 	globalDeclaration
 	fields []serialization.Field
 }
 
-func (c *compiler) compileNode(d *declaration, fields, parentFields []serialization.Field, inheritedNoAuto, nested bool, identifiedBy string, creators []subscription) (*nodeDefinition, error) {
+func (c *compiler) compileNode(d *declaration, fields, parentFields []serialization.Field, inheritedNoAuto, nested bool, identifiedBy string, creators []subscription, recursive bool) (*nodeDefinition, error) {
 	if d.err != nil {
 		return nil, d.err
 	}
@@ -38,6 +40,18 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 	if nested {
 		n.identifiedBy = "*NotSet*"
 	}
+	childEvents, err := c.childEvents(fields)
+	if err != nil {
+		return nil, err
+	}
+	for ref := range childEvents {
+		c.ancestorCreators[ref]++
+	}
+	defer func() {
+		for ref := range childEvents {
+			c.ancestorCreators[ref]--
+		}
+	}()
 	froms := map[events.TypeRef]*fromDefinition{}
 	ensure := func(event events.Descriptor) *fromDefinition {
 		ref := event.Ref()
@@ -58,6 +72,16 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 		p := Provenance{FrontEnd: "typed", Directive: "FromEvent", Offset: -1, Event: sub.event.Ref()}
 		if err := c.validateSubscription(sub); err != nil {
 			return nil, declarationFailure(c.result.id, p, err)
+		}
+		if d.modelBound && parentFields != nil && !nested {
+			isCreator := slices.ContainsFunc(creators, func(s subscription) bool { return s.event.Ref() == sub.event.Ref() })
+			if recursive {
+				if !isCreator && (c.ancestorCreators[sub.event.Ref()] > 0 || sub.keySet && !sub.parentSet) {
+					continue
+				}
+			} else if !sub.keySet && childEvents[sub.event.Ref()] {
+				continue
+			}
 		}
 		if seen[sub.event.Ref()] {
 			return nil, declarationFailure(c.result.id, p, invalid("duplicate event subscription"))
@@ -114,8 +138,10 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			if !d.modelBound {
 				return nil, invalid("model mapping tags and fluent mappings cannot be mixed")
 			}
-			if err = c.boundChild(n, field, fields, directives); err != nil {
-				return nil, err
+			if !recursive {
+				if err = c.boundChild(n, field, fields, directives); err != nil {
+					return nil, err
+				}
 			}
 		}
 		for _, directive := range directives {
@@ -158,6 +184,9 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 					return nil, err
 				}
 				p.Event = event.Ref()
+				if parentFields != nil && !nested && !recursive && childEvents[event.Ref()] && (priority(directive.Name) >= 1 && priority(directive.Name) <= 6 || directive.Name == "clear") {
+					continue
+				}
 				if directive.Name == "remove" || directive.Name == "remove-join" {
 					if err = c.addRemoval(n, removalFromTag(directive, event), true); err != nil {
 						return fail(err)
@@ -493,7 +522,12 @@ func (c *compiler) compileChild(n *nodeDefinition, child childDeclaration, field
 			d.removals = append(slices.Clone(registered.removals), d.removals...)
 		}
 	}
-	compiled, err := c.compileNode(d, local, fields, n.ownNoAuto, child.nested, child.identifiedBy, creators)
+	recursive := c.active[typ] && d.modelBound
+	if !recursive {
+		c.active[typ] = true
+		defer delete(c.active, typ)
+	}
+	compiled, err := c.compileNode(d, local, fields, n.ownNoAuto, child.nested, child.identifiedBy, creators, recursive)
 	if err != nil {
 		return err
 	}
@@ -509,7 +543,7 @@ func validateNodeOptions(d *declaration) error {
 	if d.err != nil {
 		return d.err
 	}
-	if d.id != "" || d.passive || d.notRewindable || d.sequence != events.EventLog || len(d.nodes) > 0 || len(d.aliases) > 0 {
+	if d.id != "" || d.passive || d.notRewindable || d.sequence != events.EventLog || d.sequenceExplicit || d.variant != nil || d.globalFor != nil || len(d.entering) > 0 || d.variantKey != "" || len(d.nodes) > 0 || len(d.aliases) > 0 {
 		return invalid("root-only option on a node; register aliases and WithNodes on the root")
 	}
 	return nil
@@ -534,26 +568,10 @@ func nodeType(field serialization.Field, nested bool) (reflect.Type, error) {
 }
 
 func scopedFields(fields []serialization.Field, path string) []serialization.Field {
-	var result []serialization.Field
-	prefix := path + "."
-	for _, f := range fields {
-		if !strings.HasPrefix(f.Path, prefix) {
-			continue
-		}
-		f.Path = strings.TrimPrefix(f.Path, prefix)
-		f.Collection = false
-		for _, ancestor := range result {
-			if !strings.HasPrefix(f.Path, ancestor.Path+".") {
-				continue
-			}
-			typ := indirectType(ancestor.Type)
-			if typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array || typ.Kind() == reflect.Map {
-				f.Collection = true
-			}
-		}
-		result = append(result, f)
+	if field, ok := serialization.FieldAt(fields, path); ok {
+		return field.Fields()
 	}
-	return result
+	return nil
 }
 
 func (c *compiler) inferParent(parent, event []serialization.Field, key expression, p Provenance) expression {
