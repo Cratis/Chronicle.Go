@@ -144,6 +144,7 @@ type modelConfig struct {
 	generation         Generation
 	container, display string
 	sink               Sink
+	sinkExplicit       bool
 	observer           ObserverType
 	observerExplicit   bool
 	passive            bool
@@ -187,7 +188,9 @@ func WithContainerName(name string) ModelOption {
 func WithDisplayName(name string) ModelOption { return func(c *modelConfig) { c.display = name } }
 
 // WithSink replaces the default MongoDB/default-configuration sink.
-func WithSink(sink Sink) ModelOption { return func(c *modelConfig) { c.sink = sink } }
+func WithSink(sink Sink) ModelOption {
+	return func(c *modelConfig) { c.sink, c.sinkExplicit = sink, true }
+}
 
 // WithObserver associates a registered producer. It does not register that producer.
 func WithObserver(kind ObserverType, id string) ModelOption {

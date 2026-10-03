@@ -577,7 +577,7 @@ This slice compares `DotNET/ChronicleClient.cs`, `ChronicleOptions.cs`, `EventSt
 | Readiness and outcomes | `Registration`, `WaitForRegistration`, `RegisterAll`, `Lifecycle.IsConnected` | `WaitForRegistration(ctx)` returns a generation/pass outcome; `Ready(ctx)` separates connection health from artifact readiness. Only implemented store/namespace/event-type/read-model/constraint stages are represented, in C# `RegisterAllArtifacts` order (event types and read models before constraints); runtime `RegisterAll`/registry extension is deferred |
 | Failed store creation | Evicts a failed lazy task from the name/namespace cache | Retains the immutable handle but never caches failure as successful readiness; later passes and reconnect can recover it. No failed task permanently poisons admission |
 | Disposal | `Dispose()` cancels owned connection lifetime and disposes the supplied connection | `Close()` cancels/joins only owned resources; `CloseContext` bounds joining and `Shutdown` adds deadline-bounded RPC draining. Borrowed channels are never disposed |
-| Remaining option/lifecycle surface | Default sink, `EvictEventStores`, lifecycle event hooks, process/software metadata and custom balancer | Not implemented in this slice. Handles persist until client close and no public connection-event callbacks are exposed. [#62](https://github.com/Cratis/Chronicle.Go/issues/62) remains open for sink defaults, eviction, lifecycle hooks and custom balancing |
+| Remaining option/lifecycle surface | `EvictEventStores`, lifecycle event hooks, process/software metadata and custom balancer | Not implemented in this slice. Handles persist until client close and no public connection-event callbacks are exposed. [#62](https://github.com/Cratis/Chronicle.Go/issues/62) remains open for eviction, lifecycle hooks and custom balancing; sink default evidence is recorded below |
 
 ## Client transport options
 
@@ -636,6 +636,35 @@ registration workers still belong to their generation; cancellation, `Close`,
 `CloseContext` and `Shutdown` join client-owned work as usual. Prefer skipped
 sessions for short-lived one-shot clients. TLS verification, credential ownership
 and the no-append-retry contract are unchanged; no idle-ping guarantee is added.
+
+## Client default sink selection
+
+Authority: C# `2e31b0dfba489159b3db323238f16d0f277056b4`,
+`DotNET/ChronicleOptions.cs:DefaultSinkTypeId`,
+`DotNET/ReadModels/ReadModels.cs:GetSinkTypeIdFor` and
+`Kernel/Concepts/Sinks/WellKnownSinkTypes.cs`. The provider identities are strings
+`MongoDB`, `SQL`, `InMemory` and `None`; UUIDs identify provider configurations.
+C# defaults to MongoDB, with passive read models/projections selecting None.
+
+| Surface | Status / Go contract | Executable evidence and limits |
+| --- | --- | --- |
+| Materialized client default | **Implemented**: `WithDefaultSinkType(kind readmodels.SinkType)`, MongoDB omitted; MongoDB/SQL/InMemory accepted, last wins | `TestDefaultSinkSelectionIsDetachedAndStoreReplacementIsNotMerged`, `ExampleWithDefaultSinkType`; selected default and every per-store replacement resolve independently, nil remains empty. Catalog access performs no I/O |
+| Model override/configuration | **Go-specific** existing `readmodels.WithSink` takes precedence, even explicit MongoDB equal to the declaration default; canonical configuration UUIDs are retained | `TestExplicitSinkSurvivesNamingAndDefaultCopies`, `TestDefaultSinkCSharpHandDerivedWireGoldens`; goldens are hand-derived from the pinned C# contract, not captured C# runtime output |
+| Passive producer precedence | **Implemented**, with **Go-specific** strict conflict validation: inherited materialized defaults become None; explicit materialized selections conflict with passive producers; explicit None remains valid with passive semantics | `TestDefaultSinkPassiveProducerPrecedenceAndExplicitConflicts`; C# has no corresponding per-model sink option in `GetSinkTypeIdFor`. Existing Go explicit-sink intent is retained rather than silently ignored |
+| Global None/unknown default | **Partial**, **Go-specific** restriction: rejected with `ErrInvalidConfiguration` at capture before preparation | `TestDefaultSinkRejectsUnknownAndNoneBeforePreparation`, `TestCaptureInvalidSinkRunsNoSchemaFactoryOrServiceCallbacks`; C# accepts global `SinkTypeId.None` and registers that selection for non-passive models, allowing immediate projection instead of materialized reads. This is working C# behavior, not an inert declaration. Go restricts None to passive producers; callers using the C# global option must explicitly declare passive producers in Go |
+| Frozen compilation and reconnect | **Implemented**: detached sink resolution preserves original declaration identity, schema/generation, codec/classification and initial-state snapshots; producer plans bind the final catalog | `TestDefaultSinkFactoryProducerPlansUseFinalCatalogWithoutRepreparation`, `TestFactoryCodecsSurviveNamingInitialStateStoreBindingAndReconnect`, `TestDefaultSinkCopyPreservesFrozenClassificationAndSchema`, `TestDefaultSinkRegistrationFrozenReconnectAndOriginalTypedHandle`; shared registry preparation runs once per client epoch and reconnect bytes are stable |
+| Kernel-backed materialization | **Partial** backend qualification on 19.29.4-development | `TestKernelClientDefaultSinkMongoAndExplicitMongoOverrideSQL` covers unchanged MongoDB default and a MongoDB model overriding a SQL client default. It materializes MongoDB only. SQL/InMemory registration and wire selection are not proof of live backend reads; neither backend is provisioned by this fixture |
+| Decision agreement | **Go-specific** fail-closed check, not expanded decision capability | `TestDecisionSinkDefaultRequiresActualServerProfileBeforeFolding`, `TestDecisionAgreementRechecksServerShapeAndKey`; actual server sink type/configuration and projection active/rewindable flags must match the admitted definition before and after folding. A sink mismatch returns no token; this is not full mapping equality or live SQL qualification |
+
+`TestCaptureSinkDefaultsFreezeOptionsRegistriesCodecsAndFactoryModels` covers
+Capture → Prepare with SQL/InMemory defaults, explicit MongoDB and passive None,
+shared and replacement registry snapshots, retained options/services, frozen
+codec initial state and final catalog/producer identity. Capture validates the
+sink without preparation callbacks; Prepare never rereads options or registries.
+
+No namespace override, database dependency ownership or client driver is added.
+Sink selection is store-wide and does not configure kernel backend providers.
+This is only the default-sink slice of #62, not lifecycle/options completion.
 
 ## Unit-of-work migration
 

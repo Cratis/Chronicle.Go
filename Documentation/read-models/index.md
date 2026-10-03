@@ -15,7 +15,7 @@ Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the 
 | `WithContainerName(name)` | Case-preserving English plural of the simple type name: `Person` → `People`, `OrderSummary` → `OrderSummaries`. Independent of the identifier |
 | `WithDisplayName(name)` | Simple Go type name |
 | `WithGeneration(generation)` | One; must be positive. This selects the current schema, not a migration chain |
-| `WithSink(readmodels.Sink{...})` | `MongoDB`, all-zero configuration UUID. Supported types: `MongoDB`, `SQL`, `InMemory`, `NoSink`; configuration IDs use canonical UUID strings |
+| `WithSink(readmodels.Sink{...})` | Overrides the client default, including an explicit `MongoDB`. Supported types: `MongoDB`, `SQL`, `InMemory`, `NoSink`; configuration IDs use canonical UUID strings and default to all-zero |
 | `WithObserver(kind, id)` | `Projection`, empty producer ID. Associates a producer; does not register it |
 | `WithEventSequence(sequence)` | `event-log`; used for immediate reads and session cleanup |
 | `WithIndexes(paths...)` | None. Serialized dot paths can traverse nested objects and collection items |
@@ -36,6 +36,35 @@ Scalar options are last-wins. Collections are copied; duplicate index/PII paths,
 `WithRegistry` freezes declarations at `NewClient` time. `WithRegistryForStore` replaces the entire catalog for that store. Later registry changes do not alter existing clients. Duplicate Go model types or identifiers fail atomically.
 
 The store registers definitions after event types and before returning a ready handle. Reconnect replays them through the existing registration barrier. Definitions are store-wide; instance requests and sessions carry the selected namespace. Registration uses C#'s `Client` owner and `Code` source. Inspect `store.ReadModels().Catalog()` through `Descriptors`, `Lookup`, `LookupType` or `LookupIdentifier` without I/O.
+
+## Client default sink
+
+Pass `chronicle.WithDefaultSinkType(readmodels.SQL)` to `NewClient` to select
+SQL for models without `readmodels.WithSink`. Omitted means MongoDB; MongoDB,
+SQL and InMemory are the accepted materialized providers. Scalars are last-wins;
+unknown types, an empty type and `NoSink` fail with `ErrInvalidConfiguration`
+before factory preparation or network I/O. The option applies to the default
+registry and every per-store replacement, never an individual namespace.
+
+Precedence is passive producer → `NoSink`; otherwise explicit model `WithSink`
+→ client default → MongoDB. An explicit materialized sink conflicts with a
+passive producer, even when it is MongoDB. Explicit `NoSink` requires passive
+projection or reducer semantics; it is not a global materialized default.
+Provider configuration UUIDs remain per-model and are never replaced by the
+client default.
+
+Sink selection leaves model generation, schema, codec/classification snapshots
+and original typed handles unchanged. Two clients can reuse one registry with
+different defaults. `Client.Catalogs(store)` reports the same final definitions
+as the store handles, without I/O; reconnect reuses their frozen registration.
+See the compiling `ExampleWithDefaultSinkType` for offline selection and an
+explicit MongoDB override.
+
+These options select kernel-owned providers, not client database drivers or
+connection configuration. A successful registration does not prove that the
+server has a usable SQL or InMemory backend. The pinned kernel witness covers
+MongoDB materialization, including a MongoDB model overriding a SQL client
+default; live SQL and InMemory support are not qualified by that witness.
 
 ## One-shot reads
 

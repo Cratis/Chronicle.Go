@@ -68,7 +68,11 @@ func validateDefinitionMetadata(d *registryDeclarations) error {
 // prepareRegistrySchemas freezes every base plan before dependent factory or
 // composition callbacks. The client runs this phase for ALL captured registries
 // before compiling any one registry's definitions.
-func prepareRegistrySchemas(captured *registryDeclarations, policy serialization.NamingPolicy) (schemas registrySchemas, err error) {
+func prepareRegistrySchemas(captured *registryDeclarations, policy serialization.NamingPolicy) (registrySchemas, error) {
+	return prepareRegistrySchemasWithSink(captured, policy, readmodels.MongoDB)
+}
+
+func prepareRegistrySchemasWithSink(captured *registryDeclarations, policy serialization.NamingPolicy, sink readmodels.SinkType) (schemas registrySchemas, err error) {
 	err = artifacts.Protect("registry", "schemas", func() error {
 		eventTypes := make([]events.Descriptor, len(captured.descriptors))
 		for i, event := range captured.descriptors {
@@ -86,6 +90,10 @@ func prepareRegistrySchemas(captured *registryDeclarations, policy serialization
 		models := make([]readmodels.Descriptor, len(captured.readModels))
 		for i, model := range captured.readModels {
 			models[i], compileErr = model.WithNamingPolicy(policy)
+			if compileErr != nil {
+				return compileErr
+			}
+			models[i], compileErr = models[i].WithDefaultSinkType(sink)
 			if compileErr != nil {
 				return compileErr
 			}

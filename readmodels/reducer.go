@@ -38,7 +38,7 @@ func BindReducer(d Descriptor, id string, sequence events.SequenceID, passive bo
 	}
 	passive = passive || config.passive || config.sink.Type == NoSink
 	if passive {
-		if (config.sink.Type != MongoDB && config.sink.Type != NoSink) || config.sink.ConfigurationID != "00000000-0000-0000-0000-000000000000" {
+		if (config.sinkExplicit && config.sink.Type != NoSink) || config.sink.ConfigurationID != "00000000-0000-0000-0000-000000000000" {
 			return Descriptor{}, invalid("passive reducer cannot use a configured sink")
 		}
 		config.sink.Type = NoSink

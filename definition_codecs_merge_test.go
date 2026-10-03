@@ -120,7 +120,7 @@ func TestFactoryCodecsSurviveNamingInitialStateStoreBindingAndReconnect(t *testi
 					return nil
 				}},
 			}
-			client, ctx := supervisionClient(t, kernel, WithRegistry(registry), WithRegistryForStore("mirror", registry), WithNamingPolicy(policy), WithEventTypeGenerationValidation(true))
+			client, ctx := supervisionClient(t, kernel, WithRegistry(registry), WithRegistryForStore("mirror", registry), WithNamingPolicy(policy), WithEventTypeGenerationValidation(true), WithDefaultSinkType(readmodels.SQL))
 			member.Name, member.Nested.DisplayName, labels[0] = "mutated", "mutated", "mutated"
 			preparedCalls, classified := callbacks.Load(), classifiers.Load()
 			if preparedCalls != 6 || classified == 0 {
@@ -143,6 +143,9 @@ func TestFactoryCodecsSurviveNamingInitialStateStoreBindingAndReconnect(t *testi
 					t.Fatal("factory migration lost naming or historical endpoint", migrations)
 				}
 				projection := artifacts.Projections[0]
+				if projection.Model().Sink().Type != readmodels.SQL {
+					t.Fatal("factory codec model lost client sink default")
+				}
 				wantSequence := events.EventLog
 				if storeName == "mirror" {
 					wantSequence = "inbox-origin"

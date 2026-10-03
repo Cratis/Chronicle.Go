@@ -50,13 +50,16 @@ type ClientPreparation struct {
 // Immutable descriptor plans and borrowed callbacks keep their existing ownership.
 func CaptureClient(options ...ClientOption) (*ClientPreparation, error) {
 	config := clientConfig{uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
-		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize,
+		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize, defaultSinkType: readmodels.MongoDB,
 		keepAliveTimeout: 5 * time.Second, reactorRetryWait: connection.Wait, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
 	for _, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("%w: nil client option", ErrInvalidConfiguration)
 		}
 		option(&config)
+	}
+	if err := validateDefaultSinkType(config.defaultSinkType); err != nil {
+		return nil, err
 	}
 	uri, tlsConfig, err := validateConfig(config)
 	if err != nil {
@@ -221,7 +224,7 @@ func (p *ClientPreparation) compile(ctx context.Context, scopes, runtimeServices
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		prepared, err := prepareRegistrySchemas(declarations, p.client.config.naming)
+		prepared, err := prepareRegistrySchemasWithSink(declarations, p.client.config.naming, p.client.config.defaultSinkType)
 		if err != nil {
 			return nil, err
 		}
