@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"sync/atomic"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
@@ -46,6 +47,22 @@ type revisionProtectedContainer struct {
 	Names []string `chronicle:"encrypted(scope=namespace)"`
 }
 type revisionPlain struct{ Name string }
+type revisionSerializationProbe struct {
+	Value string
+	calls *atomic.Int32
+}
+
+func (p revisionSerializationProbe) IsZero() bool {
+	if p.calls != nil {
+		p.calls.Add(1)
+	}
+	return p.Value == ""
+}
+
+type revisionProtectedWithSerializationProbe struct {
+	Secret string                     `chronicle:"pii"`
+	Probe  revisionSerializationProbe `json:",omitzero"`
+}
 
 func revisionDescriptor[T any](t *testing.T, options ...events.TypeOption) events.Descriptor {
 	t.Helper()
@@ -98,6 +115,45 @@ func TestProtectedRevisionRejectsBeforeSerializationAndDispatch(t *testing.T) {
 				t.Fatalf("protected revision dispatched %d RPCs", calls.Load())
 			}
 		})
+	}
+}
+
+func TestProtectedRevisionNeverExecutesSerializerCallbacks(t *testing.T) {
+	var serializerCalls atomic.Int32
+	replacement := revisionProtectedWithSerializationProbe{
+		Secret: "synthetic-private",
+		Probe:  revisionSerializationProbe{Value: "ordinary", calls: &serializerCalls},
+	}
+	descriptor := revisionDescriptor[revisionProtectedWithSerializationProbe](t)
+	catalog, err := events.NewCatalog(descriptor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := serializerCalls.Load(); got != 0 {
+		t.Fatalf("catalog registration executed serializer %d times", got)
+	}
+	serializerCalls.Store(0)
+	sequence, calls := parityFixture(t, nil, catalog, eventsequences.ConcurrencyPolicy{})
+	var notifications atomic.Int32
+	defer sequence.OnAppend(func(eventsequences.AppendNotification) { notifications.Add(1) })()
+
+	assertProtectedRevisionRejected(t, sequence.Revise(testContext(t), 0, replacement))
+	if got := serializerCalls.Load(); got != 0 {
+		t.Errorf("protected revision executed serializer %d times", got)
+	}
+	if got := calls.Load(); got != 0 {
+		t.Errorf("protected revision dispatched %d RPCs", got)
+	}
+	if got := notifications.Load(); got != 0 {
+		t.Errorf("protected revision emitted %d append notifications", got)
+	}
+
+	// Positive control: this valid shape executes the callback when serialized.
+	if _, err := descriptor.Marshal(replacement); err != nil {
+		t.Fatal(err)
+	}
+	if got := serializerCalls.Load(); got != 1 {
+		t.Fatalf("serialization control executed callback %d times, want 1", got)
 	}
 }
 
