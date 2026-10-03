@@ -38,6 +38,8 @@ func (e *RegistrationError) Unwrap() error { return e.Outcome.Failure }
 // WaitForRegistration connects if necessary and joins or starts a required pass
 // for this namespace and current generation. Failures are explicit and retryable
 // on a later call; successful store-wide definitions are shared across namespaces.
+// A failed reactor Open is reported with its ID while subscription retries continue;
+// a later call observes successful readiness once Open recovers.
 func (s *EventStore) WaitForRegistration(ctx context.Context) (RegistrationOutcome, error) {
 	for {
 		g, attemptCtx, done, err := s.client.acquireReady(ctx)
@@ -145,12 +147,17 @@ func registrationKey(name StoreName, namespace Namespace) string {
 }
 
 func (s *EventStore) register(ctx context.Context, g *generation) (RegistrationOutcome, error) {
+	return s.registerWithReadiness(ctx, g, true)
+}
+
+func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, waitReady bool) (RegistrationOutcome, error) {
 	outcome := g.registrations.For(registrationKey(s.name, s.namespace)).Run(ctx, g.number, s.client.config.registrationRetry, retryRegistration, func(ctx context.Context) ([]ArtifactRegistration, error) { return s.registerStages(ctx, g) })
 	if outcome.Failure != nil {
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
-	if err := s.startReactors(ctx, g); err != nil {
+	if err := s.startReactors(ctx, g, waitReady); err != nil {
 		outcome.Failure = err
+		outcome.RetryPending = ctx.Err() == nil && g.ctx.Err() == nil
 		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "reactors", Failure: err})
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
@@ -169,8 +176,9 @@ func (c *Client) replayRegistrations(g *generation) {
 			}
 			outcome := g.registrations.For(registrationKey(store.name, store.namespace)).Snapshot()
 			if !outcome.HasRun || outcome.RetryPending {
-				// This worker owns retrying; a failed pass stays visible to readiness callers.
-				_, _ = store.register(g.ctx, g)
+				// Artifact replay must not wait for observer subscriptions. Explicit
+				// readiness callers report Open failures; observer workers own retries.
+				_, _ = store.registerWithReadiness(g.ctx, g, false)
 			}
 		}
 		select {

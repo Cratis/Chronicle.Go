@@ -5,6 +5,7 @@ package chronicle
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"reflect"
 	"sync"
@@ -19,12 +20,14 @@ import (
 type storeReactors struct {
 	mu      sync.Mutex
 	runs    map[reactors.ID]*reactorRun
+	retired map[reactors.ID]map[*reactorRun]struct{}
 	removed map[reactors.ID]bool
 }
 type reactorRun struct {
 	generation uint64
 	cancel     context.CancelFunc
 	ready      chan struct{}
+	openError  error // Protected by storeReactors.mu; cleared on a successful Open.
 	done       chan struct{}
 }
 
@@ -34,7 +37,7 @@ func (s *EventStore) reactorPlans() []*reactors.Plan {
 	}
 	return s.client.reactors.defaults
 }
-func (s *EventStore) startReactors(ctx context.Context, g *generation) error {
+func (s *EventStore) startReactors(ctx context.Context, g *generation, waitReady bool) error {
 	for _, plan := range s.reactorPlans() {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -46,6 +49,19 @@ func (s *EventStore) startReactors(ctx context.Context, g *generation) error {
 		}
 		run := s.reactors.runs[plan.Identifier()]
 		if run == nil || run.generation != g.number {
+			if run != nil {
+				select {
+				case <-run.done:
+				default:
+					if s.reactors.retired == nil {
+						s.reactors.retired = make(map[reactors.ID]map[*reactorRun]struct{})
+					}
+					if s.reactors.retired[plan.Identifier()] == nil {
+						s.reactors.retired[plan.Identifier()] = make(map[*reactorRun]struct{})
+					}
+					s.reactors.retired[plan.Identifier()][run] = struct{}{}
+				}
+			}
 			runCtx, cancel := context.WithCancel(g.ctx)
 			run = &reactorRun{generation: g.number, cancel: cancel, ready: make(chan struct{}), done: make(chan struct{})}
 			if s.reactors.runs == nil {
@@ -58,6 +74,9 @@ func (s *EventStore) startReactors(ctx context.Context, g *generation) error {
 			go s.runReactor(runCtx, g, plan, run)
 		}
 		s.reactors.mu.Unlock()
+		if !waitReady {
+			continue
+		}
 		// A caller owns only its readiness wait, never the subscription lifetime.
 		select {
 		case <-ctx.Done():
@@ -66,24 +85,47 @@ func (s *EventStore) startReactors(ctx context.Context, g *generation) error {
 			return g.ctx.Err()
 		case <-run.ready:
 		}
+		s.reactors.mu.Lock()
+		err := run.openError
+		removed := s.reactors.removed[plan.Identifier()]
+		s.reactors.mu.Unlock()
+		if err != nil && !removed {
+			return fmt.Errorf("chronicle: reactor %q subscription: %w", plan.Identifier(), err)
+		}
 	}
 	return nil
 }
 
 func (s *EventStore) runReactor(ctx context.Context, g *generation, plan *reactors.Plan, run *reactorRun) {
 	defer g.observers.Done()
-	defer close(run.done)
+	defer func() {
+		s.reactors.mu.Lock()
+		close(run.done)
+		delete(s.reactors.retired[plan.Identifier()], run)
+		if len(s.reactors.retired[plan.Identifier()]) == 0 {
+			delete(s.reactors.retired, plan.Identifier())
+		}
+		s.reactors.mu.Unlock()
+	}()
 	defer run.cancel()
 	var ready sync.Once
-	markReady := func() { ready.Do(func() { close(run.ready) }) }
+	markReady := func(err error) {
+		s.reactors.mu.Lock()
+		run.openError = err
+		ready.Do(func() { close(run.ready) })
+		s.reactors.mu.Unlock()
+	}
 	// Removal during Open releases readiness waiters without poisoning registration.
-	defer markReady()
+	defer markReady(nil)
 	for ctx.Err() == nil {
 		// Each failed attempt releases its stream before another is opened.
 		attempt, cancel := context.WithCancel(ctx)
 		stream, err := observerruntime.Open(attempt, g.transport, g.id, s.name, s.namespace, plan, reactorStoreRuntime{s})
+		if ctx.Err() == nil {
+			// Report the first Open outcome without stopping independent retries.
+			markReady(err)
+		}
 		if err == nil {
-			markReady()
 			err = stream.Run(attempt)
 		}
 		cancel()
@@ -97,10 +139,12 @@ func (s *EventStore) runReactor(ctx context.Context, g *generation, plan *reacto
 	}
 }
 
-// UnregisterReactor disconnects and joins this store/namespace's reactor. Unknown
-// IDs are ignored. It retains the removal across reconnect; it does not remove
-// persisted kernel state. A context error means cleanup is still joining. Do not
-// synchronously unregister this reactor from its own callback.
+// UnregisterReactor disconnects and joins this store/namespace's reactor across
+// current and retired generations. Unknown IDs are ignored. It retains the
+// removal across reconnect; it does not remove persisted kernel state. Reconnect
+// may overlap old and new generation delivery until old callbacks return, as in
+// C#. A context error means cleanup is still joining. Do not synchronously
+// unregister this reactor from its own callback.
 func (s *EventStore) UnregisterReactor(ctx context.Context, id reactors.ID) error {
 	known := false
 	for _, plan := range s.reactorPlans() {
@@ -117,18 +161,25 @@ func (s *EventStore) UnregisterReactor(ctx context.Context, id reactors.ID) erro
 		s.reactors.removed = make(map[reactors.ID]bool)
 	}
 	s.reactors.removed[id] = true
-	run := s.reactors.runs[id]
+	var runs []*reactorRun
+	if run := s.reactors.runs[id]; run != nil {
+		runs = append(runs, run)
+	}
+	for run := range s.reactors.retired[id] {
+		runs = append(runs, run)
+	}
 	s.reactors.mu.Unlock()
-	if run == nil {
-		return nil
+	for _, run := range runs {
+		run.cancel()
 	}
-	run.cancel()
-	select {
-	case <-run.done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
+	for _, run := range runs {
+		select {
+		case <-run.done:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
+	return nil
 }
 
 type reactorStoreRuntime struct{ store *EventStore }

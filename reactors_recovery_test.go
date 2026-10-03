@@ -94,6 +94,69 @@ func TestReactorIgnoringCancellationDoesNotBlockReconnect(t *testing.T) {
 	}
 }
 
+func TestReactorUnregisterJoinsRetiredGeneration(t *testing.T) {
+	for _, deadline := range []bool{false, true} {
+		name := "waits for handler"
+		if deadline {
+			name = "caller deadline bounds join"
+		}
+		t.Run(name, func(t *testing.T) {
+			registry := reactorRegistry(t)
+			entered, release, returned := make(chan struct{}), make(chan struct{}), make(chan struct{})
+			var once sync.Once
+			unblock := func() { once.Do(func() { close(release) }) }
+			defer unblock()
+			if err := chronicle.RegisterReactorHandler(registry, "slow", func(context.Context, ReactorInput) error {
+				close(entered)
+				<-release // Deliberately outlives the retired generation's cancellation.
+				close(returned)
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			kernel := &reactorKernel{endConnection: make(chan error, 1)}
+			_, store, ctx := reactorClient(t, kernel, registry)
+			first := receive(t, ctx, kernel.sessions)
+			first.batches <- batch(0)
+			receive(t, ctx, entered)
+			kernel.endConnection <- errors.New("connection lost")
+			second := receive(t, ctx, kernel.sessions)
+			if first.registration.ConnectionId == second.registration.ConnectionId {
+				t.Fatal("connection loss did not replace the generation")
+			}
+			if deadline {
+				caller, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+				defer cancel()
+				if err := store.UnregisterReactor(caller, "slow"); !errors.Is(err, context.DeadlineExceeded) {
+					t.Fatalf("retired callback was not joined: %v", err)
+				}
+			} else {
+				joined := make(chan error, 1)
+				go func() { joined <- store.UnregisterReactor(ctx, "slow") }()
+				receive(t, ctx, second.done) // Unregister canceled the current run.
+				select {
+				case err := <-joined:
+					t.Fatalf("unregister returned with a retired callback running: %v", err)
+				default:
+				}
+				unblock()
+				if err := receive(t, ctx, joined); err != nil {
+					t.Fatal(err)
+				}
+			}
+			unblock()
+			if err := store.UnregisterReactor(ctx, "slow"); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case <-returned:
+			default:
+				t.Fatal("unregister did not join the retired callback")
+			}
+		})
+	}
+}
+
 type registryHook struct {
 	name  string
 	trace *[]string

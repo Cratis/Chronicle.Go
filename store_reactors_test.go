@@ -6,6 +6,8 @@ package chronicle
 import (
 	"context"
 	"errors"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -136,14 +138,34 @@ func TestReactorUnregisterDuringOpenDoesNotPoisonRegistration(t *testing.T) {
 	}
 }
 
+type receivingReactorStream struct {
+	grpc.ClientStream
+	receiving chan struct{}
+	once      sync.Once
+}
+
+func (s *receivingReactorStream) RecvMsg(message any) error {
+	s.once.Do(func() { close(s.receiving) })
+	return s.ClientStream.RecvMsg(message)
+}
+
 func TestReactorOpenFailureRetriesOnSameGeneration(t *testing.T) {
 	var attempts atomic.Int32
 	waiting, resume := make(chan struct{}, 1), make(chan struct{})
+	receiving := make(chan struct{})
+	openError := status.Error(codes.Unavailable, "opening failed")
 	client, ctx, server := openingReactorClient(t, func(ctx context.Context, desc *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-		if method == contracts.Reactors_Observe_FullMethodName && attempts.Add(1) == 1 {
-			return nil, status.Error(codes.Unavailable, "opening failed")
+		if method != contracts.Reactors_Observe_FullMethodName {
+			return streamer(ctx, desc, conn, method, opts...)
 		}
-		return streamer(ctx, desc, conn, method, opts...)
+		if attempts.Add(1) == 1 {
+			return nil, openError
+		}
+		stream, err := streamer(ctx, desc, conn, method, opts...)
+		if err != nil {
+			return nil, err
+		}
+		return &receivingReactorStream{ClientStream: stream, receiving: receiving}, nil
 	}, WithReactorRetryWaitForTest(func(ctx context.Context, delay time.Duration) error {
 		if delay != 2*time.Second {
 			t.Errorf("delay = %v", delay)
@@ -165,13 +187,68 @@ func TestReactorOpenFailureRetriesOnSameGeneration(t *testing.T) {
 	if generation.ctx.Err() != nil {
 		t.Fatal("Open failure canceled the generation")
 	}
+	if err := receiveOpening(t, ctx, ready); !errors.Is(err, openError) {
+		t.Fatalf("first Open failure was not reported: %v", err)
+	}
+	client.mu.Lock()
+	store := client.stores[storeKey{name: "store", namespace: DefaultNamespace}]
+	client.mu.Unlock()
+	// No deadline: readiness must report the failed Open, not await recovery.
+	outcome, err := store.WaitForRegistration(context.Background())
+	var registrationError *RegistrationError
+	if !errors.As(err, &registrationError) || !errors.Is(err, openError) || outcome.IsSuccess() || !outcome.RetryPending || !strings.Contains(outcome.Failure.Error(), `"opening"`) {
+		t.Fatalf("missing reactor failure outcome: %+v %v", outcome, err)
+	}
+	if len(outcome.Artifacts) == 0 || !errors.Is(outcome.Artifacts[len(outcome.Artifacts)-1].Failure, openError) {
+		t.Fatalf("missing failed artifact: %+v", outcome.Artifacts)
+	}
 	close(resume)
 	registration := receiveOpening(t, ctx, server.registered)
-	if err := receiveOpening(t, ctx, ready); err != nil {
-		t.Fatal(err)
-	}
+	awaitSignal(t, ctx, receiving) // Run starts only after successful Open readiness.
 	if attempts.Load() != 2 || registration.ConnectionId != generation.id {
 		t.Fatal("Open did not retry on the same generation")
+	}
+	if outcome, err := store.WaitForRegistration(ctx); err != nil || !outcome.IsSuccess() {
+		t.Fatalf("recovered Open poisoned later readiness: %+v %v", outcome, err)
+	}
+}
+
+func TestReactorOpenDoesNotBlockBackgroundArtifactReplay(t *testing.T) {
+	registry := NewRegistry()
+	if _, err := RegisterEvent[lifecycleEvent](registry); err != nil {
+		t.Fatal(err)
+	}
+	if err := RegisterReactorHandler(registry, "blocked", func(context.Context, lifecycleEvent) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	var block atomic.Bool
+	entered := make(chan struct{})
+	kernel := &supervisedKernel{
+		reactors: &openingReactorServer{registered: make(chan *contracts.RegisterReactor, 8)},
+		streamInterceptor: func(ctx context.Context, desc *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			if method == contracts.Reactors_Observe_FullMethodName && block.Load() {
+				close(entered)
+				<-ctx.Done()
+				return nil, ctx.Err()
+			}
+			return streamer(ctx, desc, conn, method, opts...)
+		},
+	}
+	client, ctx := supervisionClient(t, kernel, WithRegistryForStore("a", registry))
+	for _, name := range []StoreName{"a", "b"} {
+		if _, err := client.EventStore(ctx, name); err != nil {
+			t.Fatal(err)
+		}
+		awaitSignal(t, ctx, kernel.registered)
+	}
+	block.Store(true)
+	kernel.endStream <- status.Error(codes.Unavailable, "restart")
+	awaitSignal(t, ctx, entered)
+	// Both stores' definitions must replay while a's Open is still blocked.
+	awaitSignal(t, ctx, kernel.registered)
+	awaitSignal(t, ctx, kernel.registered)
+	if kernel.registrations.Load() != 4 {
+		t.Fatalf("artifact replay stopped at reactor readiness: %d", kernel.registrations.Load())
 	}
 }
 
