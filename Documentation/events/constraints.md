@@ -5,6 +5,52 @@ description: Declare unique values and event-type lifecycles, release claims, an
 
 Use constraints when a value or event lifecycle must remain unique even when writers race. Chronicle checks the rule inside the append; a client-side lookup cannot replace it. Constraint APIs are experimental in the v0.x Go SDK.
 
+## Model-bound constraints
+
+Put `chronicle:"unique"` on a top-level event field, or specify
+`unique(name="email",message="Already used",sequences=["event-log"])` inside the
+Go struct tag (escape the inner quotes). Register the event normally; no
+`AddConstraint` call is needed for its tags. See the
+[event declaration example](event-types.md#model-bound-event-metadata).
+
+Declarations with the same name across registered events become one constraint.
+Names default to the **Go field name**, not the serialized name; use stable
+explicit names for cross-language events. Paths come from the same serialization
+plan as the payload, including JSON overrides and the client's naming policy.
+
+Same-name fields on one event form an ordered composite. This is a deliberate
+Go improvement: the referenced C# provider calls `On` repeatedly for that event,
+which its builder rejects. Go calls the existing builder once per event with all
+its fields; it does not add another uniqueness engine. A duplicate `unique`
+directive on a single field still fails.
+
+For per-source lifecycle uniqueness, register with
+`events.WithUnique(events.Unique{Name: "account-lifecycle", Message: "Already open"})`.
+The empty name defaults to the Go type name. Events sharing that name are mutually
+exclusive until a remover occurs. Only one type-level Unique declaration is allowed.
+Property and lifecycle constraints cannot share a name.
+
+Register a removal event with `events.WithRemoveConstraints("email", "account-lifecycle")`.
+Every matching remover is attached through `RemovedWith`; calls accumulate and
+duplicate names coalesce. Unknown names fail at `NewClient` rather than silently
+failing to release a claim. For explicitly built constraints, use `RemovedWith`
+directly instead.
+
+Sequence restrictions merge in declaration order; **any unrestricted declaration
+makes the whole constraint unrestricted**. Property messages use the first nonempty
+message in registration/field order. Lifecycle messages select the violating
+event's nonempty message, then the first nonempty message in that group; no message
+preserves kernel text. Blank sequence IDs fail rather than disappearing silently.
+
+`AddConstraint` continues to reject duplicate explicit names. An explicit definition
+colliding with a tag-derived name fails with `DeclarationError` at `NewClient`.
+Use `registry.ConfigureDeclaredConstraint(name, func(*constraints.Builder))` to
+explicitly compose a derived constraint with `IgnoreCasing`, scope, additional
+`On` events or `RemovedWith` events. The callback runs once per client snapshot,
+using declaration paths, then naming-policy rebinding applies to the result.
+Do not perform I/O or mutate the registry in that callback. Renaming the constraint,
+foreign event descriptors and unknown composition names fail atomically.
+
 ## Declare and register a unique value
 
 Register participating events first, build the definition, then call `Registry.AddConstraint` before constructing the client with `WithRegistry`. The client registers constraints after event types and waits for acknowledgement before returning a store or dispatching an append. Reconnection replays those registrations.
@@ -38,7 +84,7 @@ func declarations() (*chronicle.Registry, error) {
 }
 ```
 
-The example imports `chronicle`, `constraints`, and `events` from `github.com/cratis/chronicle.go`. Go has no attribute scanning or package-global registry. Both `WithRegistry` and `WithRegistryForStore` take frozen snapshots at `NewClient`; adding definitions later does not update an existing client. A store-specific registry replaces the default one, including constraints. `EventStore.Constraints()` returns a defensive copy of its definitions.
+The example imports `chronicle`, `constraints`, and `events` from `github.com/cratis/chronicle.go`. Go scans field declarations only on explicitly registered roots and has no package-global registry. Both `WithRegistry` and `WithRegistryForStore` take frozen snapshots at `NewClient`; adding definitions later does not update an existing client. A store-specific registry replaces the default one, including constraints. `EventStore.Constraints()` returns a defensive copy of its definitions.
 
 ## Choose the constraint kind
 

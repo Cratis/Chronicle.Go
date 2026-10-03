@@ -22,6 +22,14 @@ Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the 
 | `WithPII(paths...)` | None. Marks scalar string properties with kernel PII metadata; other protection shapes remain unsupported |
 | `WithSubjectProperty(path)` | No explicit subject property. Selects a top-level string property for release, falling back to the Go `ID` field |
 
+Use `chronicle:"index"` on a model field for the model-bound equivalent of
+`WithIndexes`. Tag paths and explicit paths accumulate into the same metadata;
+duplicates involving a tag fail with `DeclarationError` (explicit-only duplicates
+retain `ErrInvalidConfiguration`). Nested objects and
+collection items are traversed using serialization-plan names. Traversal stops
+recursive cycles per path, so two properties of the same nested type both retain
+their indexes. Index tags neither subscribe to events nor create a projection.
+
 Scalar options are last-wins. Collections are copied; duplicate index/PII paths, unknown paths, zero generations and blank required names fail. PII cannot protect the model key or subject. No public API requires a UUID dependency or a concept/date wrapper.
 
 `WithRegistry` freezes declarations at `NewClient` time. `WithRegistryForStore` replaces the entire catalog for that store. Later registry changes do not alter existing clients. Duplicate Go model types or identifiers fail atomically.
