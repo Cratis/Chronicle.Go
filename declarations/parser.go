@@ -296,9 +296,27 @@ func Validate(role Role, directives []Directive) error {
 			return failure("directive is not supported on this artifact role", true)
 		}
 		switch d.Name {
-		case "key", "no-auto", "not-projected":
+		case "key", "no-auto", "not-projected", "nested":
 			if len(d.Args) != 0 {
 				return failure("directive takes no arguments", false)
+			}
+		case "every", "all":
+			if len(d.Args) > 1 {
+				return failure("specify either from or context", false)
+			}
+			for _, a := range d.Args {
+				if (a.Name != "from" && a.Name != "context") || a.Value.Kind != Name || !Path(a.Value.Text) {
+					return failure("serialized property or context path required", false)
+				}
+			}
+		case "add", "subtract", "increment", "decrement", "count", "clear", "children", "join", "remove", "remove-join":
+			if len(d.Args) == 0 || d.Args[0].Name != "" || !eventReference(d.Args[0].Value) {
+				return failure("event reference required", false)
+			}
+			for _, a := range d.Args[1:] {
+				if !projectionArgument(d.Name, a) {
+					return failure("unknown or invalid projection argument", false)
+				}
 			}
 		case "set", "context", "value":
 			if len(d.Args) == 0 || d.Args[0].Name != "" {

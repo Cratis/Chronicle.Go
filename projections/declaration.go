@@ -31,12 +31,18 @@ type declaration struct {
 	passive, notRewindable, noAuto, modelBound bool
 	aliases                                    map[string]events.Descriptor
 	subscriptions                              []subscription
+	joins                                      []joinDeclaration
+	removals                                   []removalDeclaration
+	globals                                    []globalDeclaration
+	children                                   []childDeclaration
+	nodes                                      map[reflect.Type]*declaration
 	err                                        error
 }
 type subscription struct {
 	event               events.Descriptor
 	key, parent         expression
 	keyType, parentType reflect.Type
+	keySet, parentSet   bool
 	writes              []write
 	err                 error
 }
@@ -166,6 +172,7 @@ func UsingKey[E, V any](field Field[E, V]) FromOption {
 	return func(s *subscription) {
 		s.key = expression{kind: pathExpression, text: field.path}
 		s.keyType = reflect.TypeFor[V]()
+		s.keySet = true
 		if field.owner != s.event.GoType() {
 			s.key.kind = invalidExpression
 		}
@@ -177,6 +184,7 @@ func UsingParentKey[E, V any](field Field[E, V]) FromOption {
 	return func(s *subscription) {
 		s.parent = expression{kind: pathExpression, text: field.path}
 		s.parentType = reflect.TypeFor[V]()
+		s.parentSet = true
 		if field.owner != s.event.GoType() {
 			s.parent.kind = invalidExpression
 		}
@@ -188,6 +196,7 @@ func UsingConstantKey(value string) FromOption {
 	return func(s *subscription) {
 		s.key = expression{kind: literalExpression, text: value, literalKind: declarations.String}
 		s.keyType = nil
+		s.keySet = true
 	}
 }
 
@@ -198,6 +207,17 @@ func cloneDeclaration(d *declaration) *declaration {
 	for i := range copy.subscriptions {
 		copy.subscriptions[i].writes = slices.Clone(d.subscriptions[i].writes)
 	}
+	copy.joins = slices.Clone(d.joins)
+	for i := range copy.joins {
+		copy.joins[i].subscription.writes = slices.Clone(d.joins[i].subscription.writes)
+	}
+	copy.removals = slices.Clone(d.removals)
+	copy.globals = slices.Clone(d.globals)
+	copy.children = slices.Clone(d.children)
+	for i := range copy.children {
+		copy.children[i].data = cloneDeclaration(d.children[i].data)
+	}
+	copy.nodes = maps.Clone(d.nodes) // Node declarations are already immutable snapshots.
 	return &copy
 }
 func invalid(message string) error {

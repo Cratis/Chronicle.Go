@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -18,12 +19,13 @@ import (
 )
 
 // HasMappings reports whether a registered model bears subscription-producing
-// tags. A key or exclusion alone never creates an empty projection.
+// tags. A key, exclusion or Every alone never creates an empty projection.
 func HasMappings(model readmodels.Descriptor) bool {
 	for _, f := range model.Fields() {
 		directives, _ := declarations.Parse(declarations.V1, f.Tag)
 		for _, d := range directives {
-			if d.Name == "set" || d.Name == "context" || d.Name == "value" {
+			switch d.Name {
+			case "set", "context", "value", "add", "subtract", "increment", "decrement", "count", "clear", "children", "join", "remove", "remove-join", "all":
 				return true
 			}
 		}
@@ -52,119 +54,31 @@ func Compile(declaration Declaration, catalog *events.Catalog) (Definition, erro
 	if err != nil {
 		return locate(err)
 	}
-	compiled := &definition{id: d.id, model: bound, sequence: d.sequence, passive: d.passive, notRewindable: d.notRewindable, noAuto: d.noAuto}
-	fields := d.model.Fields()
+	compiled := &definition{id: d.id, model: bound, sequence: d.sequence, passive: d.passive, notRewindable: d.notRewindable}
 	for _, event := range d.aliases {
 		if err = validateEvent(catalog, event); err != nil {
 			return locate(err)
 		}
 	}
-	froms := map[events.TypeRef]*fromDefinition{}
-	ensure := func(event events.Descriptor) *fromDefinition {
-		ref := event.Ref()
-		if froms[ref] == nil {
-			froms[ref] = &fromDefinition{event: ref, key: expression{kind: sourceExpression}}
-		}
-		return froms[ref]
+	c := compiler{result: compiled, catalog: catalog, declaration: d, usedNodes: map[reflect.Type]bool{}}
+	node, err := c.compileNode(d, d.model.Fields(), nil, false, false, "", nil)
+	if err != nil {
+		return locate(err)
 	}
-	for _, sub := range d.subscriptions {
-		p := Provenance{FrontEnd: "typed", Directive: "FromEvent", Offset: -1, Event: sub.event.Ref()}
-		if sub.err != nil {
-			return Definition{}, declarationFailure(d.id, p, sub.err)
-		}
-		if err = validateEvent(catalog, sub.event); err != nil {
-			return Definition{}, declarationFailure(d.id, p, err)
-		}
-		if froms[sub.event.Ref()] != nil {
-			return Definition{}, declarationFailure(d.id, p, invalid("duplicate event subscription"))
-		}
-		if err = validateKey(sub.key, sub.keyType, sub.event.Fields(), false); err != nil {
-			return Definition{}, declarationFailure(d.id, p, err)
-		}
-		if err = validateKey(sub.parent, sub.parentType, sub.event.Fields(), true); err != nil {
-			return Definition{}, declarationFailure(d.id, p, err)
-		}
-		from := ensure(sub.event)
-		from.key, from.parent = sub.key, sub.parent
-		compiled.provenance = append(compiled.provenance, p)
-		for _, w := range sub.writes {
-			w.provenance.Event = sub.event.Ref()
-			if err = addWrite(compiled, from, w, fields, sub.event.Fields(), false); err != nil {
-				return Definition{}, err
-			}
+	compiled.nodeDefinition = *node
+	if len(c.usedNodes) != len(d.nodes) {
+		return locate(invalid("WithNodes contains an unreachable node declaration"))
+	}
+	// Model-bound globals deliberately share bare target names across all nodes,
+	// matching C#'s one root All dictionary, not derivative FromEvery groups.
+	for _, g := range c.globals {
+		if err = c.addGlobal(&compiled.nodeDefinition, g.globalDeclaration, g.fields, true); err != nil {
+			return locate(err)
 		}
 	}
-	for _, field := range fields {
-		directives, parseErr := declarations.Parse(declarations.V1, field.Tag)
-		if parseErr != nil {
-			return locate(parseErr)
-		} // plan validation normally makes this unreachable
-		// C# processes attribute families in set -> context -> value order, not in
-		// textual order. Within a family the last attribute wins, with a diagnostic.
-		slices.SortStableFunc(directives, func(a, b declarations.Directive) int { return cmp.Compare(priority(a.Name), priority(b.Name)) })
-		for _, directive := range directives {
-			p := Provenance{FrontEnd: "model-bound", GoField: field.GoField, Path: field.Path, Directive: directive.Name, Offset: directive.Offset}
-			if field.Collection || strings.Contains(field.Path, ".") {
-				return Definition{}, declarationFailure(d.id, p, invalid("nested-node declarations require the children/nested projection slice"))
-			}
-			switch directive.Name {
-			case "key":
-				if compiled.keyField != "" || field.Scalar == serialization.NotScalar || field.Nullable {
-					return Definition{}, declarationFailure(d.id, p, invalid("one non-nullable scalar key field is required"))
-				}
-				compiled.keyField = field.Path
-				compiled.provenance = append(compiled.provenance, p)
-			case "no-auto", "not-projected":
-				if !slices.Contains(compiled.exclusions, field.Path) {
-					compiled.exclusions = append(compiled.exclusions, field.Path)
-				}
-				compiled.provenance = append(compiled.provenance, p)
-			default:
-				if !d.modelBound {
-					return Definition{}, declarationFailure(d.id, p, invalid("model mapping tags and fluent mappings cannot be mixed"))
-				}
-				reference := directive.Args[0].Value
-				event, resolveErr := resolveEvent(catalog, d.aliases, reference)
-				if resolveErr != nil {
-					failure := declarationFailure(d.id, p, resolveErr)
-					failure.EventReference = referenceName(reference)
-					return Definition{}, failure
-				}
-				p.Event = event.Ref()
-				e := expression{kind: pathExpression, text: field.Name}
-				if directive.Name == "context" {
-					e.kind = contextExpression
-				}
-				if len(directive.Args) > 1 {
-					e.text = directive.Args[1].Value.Text
-				}
-				if directive.Name == "value" {
-					e = literalValue(directive.Args[1].Value)
-				}
-				w := write{path: field.Path, expression: e, provenance: p}
-				if err = addWrite(compiled, ensure(event), w, fields, event.Fields(), true); err != nil {
-					return Definition{}, err
-				}
-			}
-		}
-	}
-	if len(froms) == 0 {
+	if !compiled.subscribesAll && !hasSubscriptions(&compiled.nodeDefinition) {
 		return locate(invalid("projection must subscribe to at least one registered event"))
 	}
-	for _, from := range froms {
-		if d.passive && from.key.kind != sourceExpression {
-			return locate(invalid("passive key redirection is not supported by immediate instance reads"))
-		}
-		slices.SortFunc(from.writes, func(a, b write) int { return strings.Compare(a.path, b.path) })
-		compiled.from = append(compiled.from, *from)
-	}
-	slices.SortFunc(compiled.from, func(a, b fromDefinition) int {
-		if n := strings.Compare(string(a.event.ID), string(b.event.ID)); n != 0 {
-			return n
-		}
-		return cmp.Compare(a.event.Generation, b.event.Generation)
-	})
-	slices.Sort(compiled.exclusions)
 	return Definition{data: compiled}, nil
 }
 
@@ -180,36 +94,58 @@ func addWrite(d *definition, from *fromDefinition, w write, modelFields, eventFi
 	if err := validateExpression(w.expression, target, modelFields, eventFields, w.sourceType); err != nil {
 		return declarationFailure(d.id, w.provenance, err)
 	}
-	for i, previous := range from.writes {
+	return mergeWrite(d, &from.writes, w, overwrite)
+}
+
+func mergeWrite(d *definition, writes *[]write, w write, overwrite bool) error {
+	for i, previous := range *writes {
 		if previous.path != w.path {
 			continue
 		}
 		if !overwrite {
 			return declarationFailure(d.id, w.provenance, invalid("duplicate property write for event"))
 		}
-		d.diagnostics = append(d.diagnostics, Diagnostic{Message: "model-bound mapping shadows an earlier mapping (C# attribute-family precedence)", Previous: previous.provenance, Replacement: w.provenance})
-		from.writes[i] = w
+		d.diagnostics = append(d.diagnostics, Diagnostic{Message: "model-bound mapping shadows an earlier mapping (C# attribute-family precedence or shared bare-name global)", Previous: previous.provenance, Replacement: w.provenance})
+		(*writes)[i] = w
 		d.provenance = append(d.provenance, w.provenance)
 		return nil
 	}
-	from.writes = append(from.writes, w)
+	*writes = append(*writes, w)
 	d.provenance = append(d.provenance, w.provenance)
 	return nil
 }
+
 func priority(name string) int {
 	switch name {
 	case "set":
 		return 1
-	case "context":
+	case "add":
 		return 2
-	case "value":
+	case "subtract":
 		return 3
+	case "increment":
+		return 4
+	case "decrement":
+		return 5
+	case "count":
+		return 6
+	case "context":
+		return 7
+	case "value":
+		return 8
+	case "clear":
+		return 9
+	case "join":
+		return 10
+	case "every":
+		return 11
+	case "all":
+		return 12
 	default:
 		return 0
 	}
 }
 func declarationFailure(id string, p Provenance, err error) *DeclarationError {
-	// All compiler failures use controlled, literal-free messages.
 	var existing *DeclarationError
 	if errors.As(err, &existing) {
 		copy := *existing
@@ -280,4 +216,10 @@ func referenceName(v declarations.Value) string {
 		return v.Text + "(" + v.Args[0].Value.Text + ")"
 	}
 	return v.Text
+}
+func compareEvent(a, b events.TypeRef) int {
+	if n := strings.Compare(string(a.ID), string(b.ID)); n != 0 {
+		return n
+	}
+	return cmp.Compare(a.Generation, b.Generation)
 }

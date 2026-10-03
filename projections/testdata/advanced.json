@@ -1,0 +1,41 @@
+{
+  "Identifier": "Example.OrderProjection",
+  "ReadModel": "Example.Order",
+  "EventSequenceId": "event-log",
+  "IsActive": true,
+  "IsRewindable": true,
+  "InitialModelState": "{}",
+  "AutoMap": "Enabled",
+  "SubscribesToAllEvents": true,
+  "From": [
+    {"Key": {"Id": "added", "Generation": 1}, "Value": {"Key": "$eventSourceId", "Properties": {"quantity": "$add(amount)", "increases": "$increment", "count": "$count"}}},
+    {"Key": {"Id": "opened", "Generation": 1}, "Value": {"Key": "$eventSourceId"}},
+    {"Key": {"Id": "subtracted", "Generation": 1}, "Value": {"Key": "$eventSourceId", "Properties": {"quantity": "$subtract(amount)", "decreases": "$decrement", "note": "$null"}}}
+  ],
+  "Join": [
+    {"Key": {"Id": "customer-renamed", "Generation": 1}, "Value": {"On": "customerId", "Key": "$eventSourceId", "Properties": {"customerName": "name"}}}
+  ],
+  "Children": {
+    "items": {
+      "IdentifiedBy": "id",
+      "AutoMap": "Enabled",
+      "All": {},
+      "NoAutoMapProperties": ["internal"],
+      "From": [{"Key": {"Id": "item-added", "Generation": 1}, "Value": {"Key": "itemId", "ParentKey": "orderId", "Properties": {"id": "itemId"}}}],
+      "RemovedWith": [{"Key": {"Id": "item-removed", "Generation": 1}, "Value": {"Key": "itemId", "ParentKey": "orderId"}}],
+      "RemovedWithJoin": [{"Key": {"Id": "customer-removed", "Generation": 1}, "Value": {"Key": "$eventSourceId"}}]
+    }
+  },
+  "Nested": {
+    "address": {
+      "IdentifiedBy": "*NotSet*",
+      "AutoMap": "Enabled",
+      "All": {},
+      "From": [{"Key": {"Id": "address-changed", "Generation": 1}, "Value": {"Key": "$eventSourceId"}}],
+      "RemovedWith": [{"Key": {"Id": "address-cleared", "Generation": 1}, "Value": {"Key": "$eventSourceId"}}]
+    }
+  },
+  "All": {"Properties": {"observed": "$eventContext(occurred)", "updated": "$eventContext(occurred)"}, "IncludeChildren": true},
+  "RemovedWith": [{"Key": {"Id": "order-removed", "Generation": 1}, "Value": {"Key": "$eventSourceId", "ParentKey": "$eventSourceId"}}],
+  "RemovedWithJoin": [{"Key": {"Id": "customer-removed", "Generation": 1}, "Value": {"Key": "$eventSourceId"}}]
+}

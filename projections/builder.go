@@ -109,7 +109,7 @@ func (b *Builder[M]) Build() (Declaration, error) {
 	declaration := Declaration{data: cloneDeclaration(b.data)}
 	var descriptors []events.Descriptor
 	seen := map[reflect.Type]bool{}
-	for _, s := range declaration.data.subscriptions {
+	for _, s := range declarationSubscriptions(declaration.data) {
 		if s.event.GoType() == nil {
 			return Declaration{}, invalid("event handle required")
 		}

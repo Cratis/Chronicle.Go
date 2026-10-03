@@ -24,12 +24,25 @@ const (
 	literalExpression
 	nullExpression
 	invalidExpression
+	addExpression
+	subtractExpression
+	incrementExpression
+	decrementExpression
+	countExpression
+	compositeExpression
 )
 
 type expression struct {
 	kind        expressionKind
 	text        string
 	literalKind declarations.Kind
+	parts       []keyPart
+}
+
+type keyPart struct {
+	name       string
+	expression expression
+	sourceType reflect.Type
 }
 
 func literalValue(v declarations.Value) expression {
@@ -58,6 +71,22 @@ func (e expression) encode() string {
 		return "$value(" + text + ")"
 	case nullExpression:
 		return "$null"
+	case addExpression:
+		return "$add(" + e.text + ")"
+	case subtractExpression:
+		return "$subtract(" + e.text + ")"
+	case incrementExpression:
+		return "$increment"
+	case decrementExpression:
+		return "$decrement"
+	case countExpression:
+		return "$count"
+	case compositeExpression:
+		parts := make([]string, len(e.parts))
+		for i, part := range e.parts {
+			parts[i] = part.name + "=" + part.expression.encode()
+		}
+		return "$composite(" + strings.Join(parts, ",") + ")"
 	default:
 		return ""
 	}
@@ -67,6 +96,10 @@ func (e expression) encode() string {
 // Anchor it here: the kernel regex is unanchored and must never accept a partial
 // match or nested expression accidentally. JSON quoting is not kernel escaping.
 var kernelLiteral = regexp.MustCompile(`^[\p{L}\p{Mn}\p{Nd}\p{Pc} ._/:*+\-]*$`)
+
+// Add/Subtract embed the event provider in a stricter ASCII kernel regex.
+// Even an otherwise valid JSON path (e.g. amount_delta) may not fit it.
+var kernelArithmeticPath = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9.]*$`)
 
 func validateLiteral(e expression, target serialization.Field) error {
 	if e.kind == nullExpression {
@@ -233,6 +266,23 @@ func indirectType(typ reflect.Type) reflect.Type {
 }
 func validateExpression(e expression, target serialization.Field, modelFields, eventFields []serialization.Field, sourceType reflect.Type) error {
 	switch e.kind {
+	case addExpression, subtractExpression:
+		if !kernelArithmeticPath.MatchString(e.text) {
+			return invalid("arithmetic path cannot be represented by the kernel expression grammar")
+		}
+		if !numeric(target) {
+			return invalid("arithmetic requires a numeric target")
+		}
+		source, ok := serialization.FieldAt(eventFields, e.text)
+		if !ok || !numeric(source) {
+			return invalid("arithmetic requires a numeric event field")
+		}
+		e.kind = pathExpression
+		return validateExpression(e, target, modelFields, eventFields, sourceType)
+	case incrementExpression, decrementExpression, countExpression:
+		if !numeric(target) {
+			return invalid("arithmetic requires a numeric target")
+		}
 	case pathExpression:
 		source, ok := serialization.FieldAt(eventFields, e.text)
 		if !eventPropertyPath(e.text) || !ok || source.Collection {
@@ -270,7 +320,7 @@ func validateContext(path string, target serialization.Field) error {
 		if target.Scalar == serialization.String && target.Format == "date-time" {
 			return nil
 		}
-	case "eventSourceId", "correlationId":
+	case "eventSourceId", "EventSourceId", "correlationId":
 		if target.Scalar == serialization.String && (target.Format == "" || target.Format == "uuid") {
 			return nil
 		}
@@ -309,9 +359,36 @@ func validateKey(e expression, expected reflect.Type, fields []serialization.Fie
 		}
 	case sourceExpression:
 		return nil
+	case contextExpression:
+		if _, ok := contextField(e.text); ok {
+			return nil
+		}
+	case compositeExpression:
+		if len(e.parts) == 0 {
+			break
+		}
+		seen := map[string]bool{}
+		for _, part := range e.parts {
+			// The kernel composite parser splits commas without balancing nested
+			// expressions; nested composites cannot be represented faithfully.
+			if !declarations.Path(part.name) || seen[part.name] || part.expression.kind == compositeExpression {
+				return invalid("invalid or duplicate composite key part")
+			}
+			seen[part.name] = true
+			if err := validateKey(part.expression, part.sourceType, fields, false); err != nil {
+				return err
+			}
+		}
+		return nil
 	case literalExpression:
 		if e.literalKind == declarations.String && e.text != "" && representableLiteral(e.text) {
 			return nil
+		}
+		if e.literalKind == declarations.Boolean {
+			return validateLiteral(e, serialization.Field{Type: reflect.TypeFor[bool](), Scalar: serialization.Boolean})
+		}
+		if e.literalKind == declarations.Number {
+			return validateLiteral(e, serialization.Field{Type: reflect.TypeFor[int64](), Scalar: serialization.Integer})
 		}
 	case pathExpression:
 		field, ok := serialization.FieldAt(fields, e.text)
