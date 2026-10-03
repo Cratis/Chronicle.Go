@@ -34,15 +34,35 @@ type Diagnostic struct {
 // both front ends. Its zero value is invalid. Copies are safe for concurrent use.
 type Definition struct{ data *definition }
 type definition struct {
-	id                             string
-	model                          readmodels.Descriptor
-	sequence                       events.SequenceID
-	passive, notRewindable, noAuto bool
-	keyField                       string
-	exclusions                     []string
-	from                           []fromDefinition
-	provenance                     []Provenance
-	diagnostics                    []Diagnostic
+	id                     string
+	model                  readmodels.Descriptor
+	sequence               events.SequenceID
+	passive, notRewindable bool
+	subscribesAll          bool
+	nodeDefinition
+	provenance  []Provenance
+	diagnostics []Diagnostic
+}
+type nodeDefinition struct {
+	noAuto           bool
+	keyField         string
+	exclusions       []string
+	from             []fromDefinition
+	joins            []joinDefinition
+	removals         []removalDefinition
+	all              []write
+	includeChildren  bool
+	children, nested map[string]*nodeDefinition
+	identifiedBy     string
+}
+type joinDefinition struct {
+	fromDefinition
+	on string
+}
+type removalDefinition struct {
+	event       events.TypeRef
+	key, parent expression
+	join        bool
 }
 type fromDefinition struct {
 	event       events.TypeRef
@@ -109,17 +129,57 @@ func (d Definition) KernelDefinition() *contracts.ProjectionDefinition {
 		return nil
 	}
 	data := d.data
+	node := encodeNode(&data.nodeDefinition)
+	return &contracts.ProjectionDefinition{
+		Identifier: data.id, ReadModel: string(data.model.Identifier()), EventSequenceId: string(data.sequence),
+		IsActive: !data.passive, IsRewindable: !data.notRewindable, InitialModelState: "{}",
+		AutoMap: node.AutoMap, All: node.All, NoAutoMapProperties: node.NoAutoMapProperties,
+		From: node.From, Join: node.Join, Children: node.Children, Nested: node.Nested,
+		RemovedWith: node.RemovedWith, RemovedWithJoin: node.RemovedWithJoin, SubscribesToAllEvents: data.subscribesAll,
+	}
+}
+
+func encodeNode(data *nodeDefinition) *contracts.ChildrenDefinition {
 	auto := contracts.AutoMap_Enabled
 	if data.noAuto {
 		auto = contracts.AutoMap_Disabled
 	}
-	result := &contracts.ProjectionDefinition{Identifier: data.id, ReadModel: string(data.model.Identifier()), EventSequenceId: string(data.sequence), IsActive: !data.passive, IsRewindable: !data.notRewindable, InitialModelState: "{}", AutoMap: auto, All: &contracts.FromEveryDefinition{}, NoAutoMapProperties: slices.Clone(data.exclusions)}
+	result := &contracts.ChildrenDefinition{IdentifiedBy: data.identifiedBy, AutoMap: auto, All: &contracts.FromEveryDefinition{Properties: encodeWrites(data.all), IncludeChildren: data.includeChildren}, NoAutoMapProperties: slices.Clone(data.exclusions)}
 	for _, from := range data.from {
-		properties := make(map[string]string, len(from.writes))
-		for _, write := range from.writes {
-			properties[write.path] = write.expression.encode()
+		result.From = append(result.From, &contracts.KeyValuePair_EventType_FromDefinition{Key: encodeEvent(from.event), Value: &contracts.FromDefinition{Key: from.key.encode(), ParentKey: from.parent.encode(), Properties: encodeWrites(from.writes)}})
+	}
+	for _, join := range data.joins {
+		result.Join = append(result.Join, &contracts.KeyValuePair_EventType_JoinDefinition{Key: encodeEvent(join.event), Value: &contracts.JoinDefinition{On: join.on, Key: join.key.encode(), Properties: encodeWrites(join.writes)}})
+	}
+	for _, removal := range data.removals {
+		if removal.join {
+			result.RemovedWithJoin = append(result.RemovedWithJoin, &contracts.KeyValuePair_EventType_RemovedWithJoinDefinition{Key: encodeEvent(removal.event), Value: &contracts.RemovedWithJoinDefinition{Key: removal.key.encode()}})
+		} else {
+			result.RemovedWith = append(result.RemovedWith, &contracts.KeyValuePair_EventType_RemovedWithDefinition{Key: encodeEvent(removal.event), Value: &contracts.RemovedWithDefinition{Key: removal.key.encode(), ParentKey: removal.parent.encode()}})
 		}
-		result.From = append(result.From, &contracts.KeyValuePair_EventType_FromDefinition{Key: &contracts.EventType{Id: string(from.event.ID), Generation: uint32(from.event.Generation)}, Value: &contracts.FromDefinition{Key: from.key.encode(), ParentKey: from.parent.encode(), Properties: properties}})
+	}
+	if len(data.children) > 0 {
+		result.Children = make(map[string]*contracts.ChildrenDefinition, len(data.children))
+		for path, child := range data.children {
+			result.Children[path] = encodeNode(child)
+		}
+	}
+	if len(data.nested) > 0 {
+		result.Nested = make(map[string]*contracts.ChildrenDefinition, len(data.nested))
+		for path, child := range data.nested {
+			result.Nested[path] = encodeNode(child)
+		}
 	}
 	return result
+}
+
+func encodeWrites(writes []write) map[string]string {
+	properties := make(map[string]string, len(writes))
+	for _, w := range writes {
+		properties[w.path] = w.expression.encode()
+	}
+	return properties
+}
+func encodeEvent(event events.TypeRef) *contracts.EventType {
+	return &contracts.EventType{Id: string(event.ID), Generation: uint32(event.Generation)}
 }

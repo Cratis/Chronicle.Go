@@ -6,7 +6,9 @@ description: Declare model-bound or fluent mappings and read kernel-materialized
 Use a projection to populate a read model from events. Chronicle runs the mappings;
 your Go process declares them and reads the result. Start with model-bound tags.
 Use the fluent builder when keeping the mappings separately makes the model clearer.
-Both forms support basic mappings today; children, arithmetic, joins and variants
+Both forms support scalar mappings, arithmetic, global mappings, children, event
+joins, nested objects and removals. See [orders with children and joins](orders.md)
+for their model-bound and fluent equivalents. Variants and recursive schemas
 remain in the [projection series](https://github.com/Cratis/Chronicle.Go/issues/24).
 
 ## Model-bound declarations
@@ -113,9 +115,18 @@ field's actual type in `Path`; `Build` validates compatibility, not arbitrary co
 | `set(E,from=details.name)` | Assign an exact serialized event path |
 | `context(E,from=occurred)` | Assign a kernel EventContext scalar; also subscribes to E |
 | `value(E,value="active")` | Assign a typed JSON scalar literal |
-| `value(E,value=null)` | Clear a nullable scalar pointer with `$null` |
+| `value(E,value=null)` / `clear(E)` | Clear a nullable scalar pointer with `$null` |
+| `add(E,from=amount)` / `subtract(E,from=amount)` | Numeric running total; omitted `from` uses this field's serialized name |
+| `increment(E)` / `decrement(E)` / `count(E)` | Kernel `$increment`, `$decrement`, `$count`; optional `key=value("total")` |
+| `every(from=name)` / `every(context=occurred)` | Map existing subscriptions without discovering events |
+| `all(from=name)` / `all(context=occurred)` | Merge global mappings and subscribe to all events |
+| `children(E,key=itemId,identified-by=id,parent-key=orderId)` | Project a collection node; omitted keys invoke identity conventions |
+| `join(E,on=customerId,from=name)` | Enrich from an event after local mappings; omitted paths use the target name |
+| `nested;clear(E)` | Project a pointer-to-object node and remove it on E |
+| `remove(E,key=itemId,parent-key=orderId)` | Remove a collection child, or the containing instance on other fields |
+| `remove-join(E,key=itemId)` | Distinct join-removal contract; see [kernel limits](orders.md#joins-globals-and-removals) |
 | `key` | Mark model identity metadata; does not redirect event correlation |
-| `no-auto` | Exclude this root field from AutoMap; explicit mappings still work |
+| `no-auto` | Exclude this field from its node's AutoMap; explicit mappings still work |
 | `not-projected` | Exclude from AutoMap and record the intentionally unmapped field |
 
 Inside a Go tag, escape JSON string quotes as `\"`. Commas and semicolons inside
@@ -125,6 +136,9 @@ parentheses, quotes, newlines and characters above U+FFFF are rejected rather th
 misencoded. Property paths exactly equal to `true`, `True`, `false` or `False` are
 also rejected: the kernel resolves those as boolean literals, not event fields. `null`
 is not an empty string or zero value; use pointers for nullable scalars.
+Arithmetic embeds paths in a stricter kernel regex: ASCII letters/digits and dots,
+with an underscore permitted only as the first character. Even a legal JSON
+property such as `amount_delta` cannot be used inside `$add`/`$subtract`.
 
 Paths come exclusively from the serialization plan: explicit `json` spelling wins.
 The compiler does not recase paths. `json:"-"` and unexported fields cannot carry
@@ -148,7 +162,15 @@ Go rename tools do not rewrite tag strings; aliases keep event renames in Go cod
 
 `FromEvent(handle, options...)` and `From(builder, handle, callback, options...)`
 accept `UsingKey(Path[E,V]("accountId"))`,
-`UsingParentKey(Path[E,V]("parentId"))` and `UsingConstantKey("total")`.
+`UsingParentKey(Path[E,V]("parentId"))`, `UsingConstantKey("total")`,
+`UsingKeyFromContext("eventSourceId")` and `UsingParentKeyFromContext("namespace")`.
+Use `UsingCompositeKey(func(*CompositeKeyBuilder[K,E]))` with ordered `KeyPart`,
+`KeyPartFromContext`, `KeyPartFromSource` or `KeyPartValue` calls. Target parts use
+K's serialization plan (default spelling; explicit JSON tags recommended).
+`UsingCompositeParentKey` supplies the same form for a parent key. Tag keys accept
+`source`, `context(path)`, `value(scalar)` and
+`composite(part=path,other=context(namespace))`. Duplicate parts and nested
+composites fail because the kernel cannot represent them faithfully.
 The default key is `$eventSourceId`; parent key defaults to unset. Key settings
 are last-wins, so a later constant key overrides an earlier property key.
 
@@ -174,7 +196,8 @@ All declarations validate atomically at `NewClient`, before connection work.
 Inspect `*projections.DeclarationError` with `errors.As` for artifact, Go field,
 serialized path, directive and decoded tag byte offset. Error text omits literal
 contents. `Definition.Diagnostics()` reports model-bound shadowing: C# precedence
-is `set`, then `context`, then `value`; the last directive within a family wins.
+is `set`, `add`, `subtract`, `increment`, `decrement`, `count`, `context`,
+`value`, then `clear`; the last directive within a family wins.
 Fluent duplicate writes are errors instead.
 
 ## Run and read the model

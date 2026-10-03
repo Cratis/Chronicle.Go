@@ -35,7 +35,7 @@ func TestTagGrammarPreservesScalarsReferencesAndOffsets(t *testing.T) {
 	}
 }
 func TestMalformedTagsFailWithRedactedTypedErrors(t *testing.T) {
-	for _, tag := range []string{`set()`, `set(E,from=a,from=b)`, `set(E,secret="PRIVATE")`, `set(E,from="PRIVATE")`, `value(E,value=PRIVATE)`, `value(E,value="PRIVATE"`, `value(E,value="PRIVATE\q")`, `set(E,from=$eventSourceId)`, `set(id("x",0))`, `set(id("x",1.5))`, `set(go("x",2))`, `set(@)`, `set(E);`, `set(E) set(F)`, `set(E,from=name,E)`, `key(E)`, `pii`, `children(E)`, `add(E)`, `encrypted(scope=subject)`, `set(E,from=x..y)`} {
+	for _, tag := range []string{`set()`, `set(E,from=a,from=b)`, `set(E,secret="PRIVATE")`, `set(E,from="PRIVATE")`, `value(E,value=PRIVATE)`, `value(E,value="PRIVATE"`, `value(E,value="PRIVATE\q")`, `set(E,from=$eventSourceId)`, `set(id("x",0))`, `set(id("x",1.5))`, `set(go("x",2))`, `set(@)`, `set(E);`, `set(E) set(F)`, `set(E,from=name,E)`, `key(E)`, `pii`, `children(E,unknown=id)`, `add(E,key=id)`, `encrypted(scope=subject)`, `set(E,from=x..y)`} {
 		t.Run(tag, func(t *testing.T) {
 			directives, err := declarations.Parse(declarations.V1, tag)
 			if err == nil {
@@ -85,7 +85,7 @@ func TestTagRolesFailClosed(t *testing.T) {
 	}
 }
 func FuzzParse(f *testing.F) {
-	for _, seed := range []string{`set(E);context(@alias,from=occurred)`, `value(E,value="comma,semi;paren)")`, `set(go("a/b.Event"))`, `set(id("id",2))`, `key`, `value(E,value=null)`, `nested;clear(E)`, `value(E,value=-1.2e+3)`, `set(`, `set(Åpnet,from=navnØ)`} {
+	for _, seed := range []string{`set(E);context(@alias,from=occurred)`, `value(E,value="comma,semi;paren)")`, `set(go("a/b.Event"))`, `set(id("id",2))`, `key`, `value(E,value=null)`, `nested;clear(E)`, `value(E,value=-1.2e+3)`, `set(`, `set(Åpnet,from=navnØ)`, `children(E,key=composite(item=ItemID,source=source),parent-key=context(eventSourceId));remove(R,key=ItemID)`, `all(context=occurred);every(from=name)`} {
 		f.Add(seed)
 	}
 	f.Fuzz(func(t *testing.T, tag string) {
