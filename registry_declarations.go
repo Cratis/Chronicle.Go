@@ -38,7 +38,9 @@ func (r *Registry) ConfigureDeclaredConstraint(name string, configure func(*cons
 	return nil
 }
 
-func compileDeclaredConstraints(catalog *events.Catalog, explicit []constraints.Definition, compositions []constraintComposition) ([]constraints.Definition, error) {
+// prepareDeclaredConstraints executes application composition callbacks before
+// returning finalized definitions. This is preparation, not pure compilation.
+func prepareDeclaredConstraints(catalog *events.Catalog, explicit []constraints.Definition, compositions []constraintComposition) ([]constraints.Definition, error) {
 	derived, err := constraints.CompileDeclarations(catalog)
 	if err != nil {
 		return nil, err

@@ -68,6 +68,10 @@ func TestAllSelectedSchemasFreezeBeforeDefinitionCallbacks(t *testing.T) {
 			}
 			afterPrepare := calls
 			for range 2 {
+				view := client.storeRegistryOutputs["selected"].compose()
+				if view.events != client.catalogs["selected"] || view.models != client.readModelCatalogs["selected"] {
+					t.Fatal("composition rebuilt the frozen selected schemas")
+				}
 				artifacts, err := client.Artifacts("selected")
 				if err != nil {
 					t.Fatal(err)

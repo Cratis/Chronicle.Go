@@ -4,9 +4,12 @@
 package chronicle
 
 import (
+	"slices"
+
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/artifacts"
+	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/serialization"
 )
@@ -14,6 +17,43 @@ import (
 type registrySchemas struct {
 	events *events.Catalog
 	models *readmodels.Catalog
+}
+
+// registryAuthoringOutput retains original descriptor identities and finalized
+// definitions, including initial JSON and the complete projection relationship
+// graph. It is not a declaration capture: factories and composition callbacks
+// have finished, and these definitions must never be rebuilt from Go types.
+type registryAuthoringOutput struct {
+	events      *events.Catalog
+	models      *readmodels.Catalog
+	constraints []constraints.Definition
+	projections []projections.Definition
+}
+
+// registryPreparationOutput owns accepted authoring and naming-bound runtime
+// outputs. No preparation context, definition factory, seeder or temporary scoped
+// result is kept. Observer plans retain their existing runtime constructors,
+// callbacks and borrowed provider; composing views must reuse those plans, not
+// compile their declarations again. Direct runtime constraint messages also keep
+// their existing borrowed-callback contract.
+type registryPreparationOutput struct {
+	authoring registryAuthoringOutput
+	frozen    registrySnapshot
+}
+
+// compose makes a detached publication view without application code, catalog
+// construction, schema compilation or observer recompilation. Definitions own
+// immutable data and expose defensive accessors; only their containing slices
+// need copying. Catalogs, closed codec graphs, serialized seeds and observer
+// plans deliberately keep the exact identities accepted during preparation.
+func (output *registryPreparationOutput) compose() registrySnapshot {
+	snapshot := output.frozen
+	snapshot.constraints = slices.Clone(snapshot.constraints)
+	snapshot.projections = slices.Clone(snapshot.projections)
+	snapshot.reactors = slices.Clone(snapshot.reactors)
+	snapshot.reducers = slices.Clone(snapshot.reducers)
+	snapshot.readModelReactors = slices.Clone(snapshot.readModelReactors)
+	return snapshot
 }
 
 // validateDefinitionMetadata is callback-free admission against the captured

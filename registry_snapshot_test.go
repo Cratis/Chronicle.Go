@@ -325,7 +325,7 @@ func TestSharedRegistryIsCapturedAndCompiledOncePerClient(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-	if calls != 1 || client.catalog != client.catalogs["a"] || client.catalog != client.catalogs["z"] || len(client.reactors.defaults) != 0 || len(client.reactors.stores["a"])+len(client.reactors.stores["z"]) != 0 {
+	if calls != 1 || client.registryOutput != client.storeRegistryOutputs["a"] || client.registryOutput != client.storeRegistryOutputs["z"] || client.catalog != client.catalogs["a"] || client.catalog != client.catalogs["z"] || len(client.reactors.defaults) != 0 || len(client.reactors.stores["a"])+len(client.reactors.stores["z"]) != 0 {
 		t.Fatal("shared registry was recaptured or compiled more than once")
 	}
 }

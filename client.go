@@ -49,6 +49,10 @@ type Client struct {
 	nextGeneration   uint64
 	connectionError  error
 
+	// Retain finalized preparation independently of callback-bearing captures.
+	registryOutput       *registryPreparationOutput
+	storeRegistryOutputs map[StoreName]*registryPreparationOutput
+
 	readModelCatalog  *readmodels.Catalog
 	readModelCatalogs map[StoreName]*readmodels.Catalog
 	projections       []projections.Definition

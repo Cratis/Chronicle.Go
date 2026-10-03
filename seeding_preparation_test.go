@@ -59,8 +59,16 @@ func TestSeederInstancesAndConstructorsHaveExplicitOwnership(t *testing.T) {
 			if err := client.Close(); err != nil {
 				t.Fatal(err)
 			}
-			if closed != map[bool]int{false: 0, true: 1}[constructed] {
-				t.Fatal("client reclosed seeder")
+			for range 3 {
+				view := client.registryOutput.compose()
+				request := view.seeds.Contract("store")
+				if request.GlobalByEventSource[0].Entries[0].Content != `{"Name":"prepared"}` {
+					t.Fatal("composition lost frozen seed bytes")
+				}
+				request.GlobalByEventSource[0].Entries[0].Content = "{}"
+			}
+			if calls != 1 || closed != map[bool]int{false: 0, true: 1}[constructed] {
+				t.Fatal("composition or client close invoked seeder again")
 			}
 		})
 	}

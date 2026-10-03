@@ -60,28 +60,56 @@ func compileRegistry(ctx context.Context, captured *registryDeclarations, policy
 	if err != nil {
 		return registrySnapshot{}, err
 	}
-	return compilePreparedRegistry(ctx, captured, schemas, services, validateGenerations, plans)
-}
-
-func compilePreparedRegistry(ctx context.Context, captured *registryDeclarations, schemas registrySchemas, services reactorScopeFactory, validateGenerations bool, plans registryFactoryPlans) (snapshot registrySnapshot, err error) {
-	err = artifacts.Protect("registry", "compile", func() error {
-		prepared, prepareErr := prepareDefinitionFactories(ctx, captured, plans)
-		if prepareErr != nil {
-			return prepareErr
-		}
-		snapshot, prepareErr = compileRegistryDefinitions(ctx, prepared, schemas, services, validateGenerations, plans)
-		return prepareErr
-	})
+	output, err := prepareRegistryOutput(ctx, captured, schemas, services, validateGenerations, plans)
 	if err != nil {
 		return registrySnapshot{}, err
 	}
-	return snapshot, nil
+	return output.compose(), nil
 }
 
-func compileRegistryDefinitions(ctx context.Context, captured *registryDeclarations, schemas registrySchemas, services reactorScopeFactory, validateGenerations bool, plans registryFactoryPlans) (registrySnapshot, error) {
+// prepareRegistryOutput is the application-code boundary, including factories,
+// declared-constraint compositions, observer service-catalog queries and seeders.
+// Nothing is returned until all validation and temporary-resource cleanup succeeds.
+func prepareRegistryOutput(ctx context.Context, captured *registryDeclarations, schemas registrySchemas, services reactorScopeFactory, validateGenerations bool, plans registryFactoryPlans) (output *registryPreparationOutput, err error) {
+	err = artifacts.Protect("registry", "compile", func() error {
+		factories, err := prepareDefinitionFactories(ctx, captured, plans)
+		if err != nil {
+			return err
+		}
+		authoring, err := prepareRegistryDefinitions(captured, factories)
+		if err != nil {
+			return err
+		}
+		frozen, err := bindRegistryDefinitions(authoring, schemas, factories.migrations, validateGenerations)
+		if err != nil {
+			return err
+		}
+		if err := compileReactors(&frozen, captured.reactors, services, captured.reactorMiddlewares, captured.reactorSideEffects); err != nil {
+			return err
+		}
+		if err := compileReducers(&frozen, captured.reducers, services); err != nil {
+			return err
+		}
+		if err := compileReadModelReactors(&frozen, captured.readModelReactors, services, captured.reactorSideEffects); err != nil {
+			return err
+		}
+		frozen.seeds, err = prepareSeeders(ctx, frozen.events, captured.seeders, plans)
+		if err != nil {
+			return err
+		}
+		output = &registryPreparationOutput{authoring: authoring, frozen: frozen}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return output, nil
+}
+
+func prepareRegistryDefinitions(captured *registryDeclarations, factories *registryFactoryOutput) (registryAuthoringOutput, error) {
 	models := slices.Clone(captured.readModels)
-	declarations := slices.Clone(captured.projections)
-	snapshot := registrySnapshot{constraints: slices.Clone(captured.constraints)}
+	declarations := slices.Clone(factories.projections)
+	snapshot := registryAuthoringOutput{constraints: slices.Clone(factories.constraints)}
 	catalog, err := events.NewCatalog(captured.descriptors...)
 	if err != nil {
 		return snapshot, err
@@ -89,7 +117,7 @@ func compileRegistryDefinitions(ctx context.Context, captured *registryDeclarati
 	if err := catalog.ValidateDeclarations(); err != nil {
 		return snapshot, err
 	}
-	snapshot.constraints, err = compileDeclaredConstraints(catalog, snapshot.constraints, captured.constraintCompositions)
+	snapshot.constraints, err = prepareDeclaredConstraints(catalog, snapshot.constraints, captured.constraintCompositions)
 	if err != nil {
 		return snapshot, err
 	}
@@ -130,9 +158,20 @@ func compileRegistryDefinitions(ctx context.Context, captured *registryDeclarati
 	if err != nil {
 		return snapshot, err
 	}
-	// Authoring used original field names. Only bind producer metadata onto the
-	// already frozen named models; never re-evaluate their classification providers.
-	models = schemas.models.Descriptors()
+	snapshot.models = modelCatalog
+	return snapshot, nil
+}
+
+// bindRegistryDefinitions uses finalized authoring definitions and already frozen
+// schemas. It does not rebuild the projection graph or reevaluate classifiers.
+// Migration validation remains in its original position before observer admission.
+func bindRegistryDefinitions(authoring registryAuthoringOutput, schemas registrySchemas, migrations []events.MigrationDeclaration, validateGenerations bool) (registrySnapshot, error) {
+	snapshot := registrySnapshot{
+		constraints: slices.Clone(authoring.constraints),
+		projections: slices.Clone(authoring.projections),
+	}
+	models := schemas.models.Descriptors()
+	var err error
 	for _, compiled := range snapshot.projections {
 		for i, model := range models {
 			if model.Identifier() == compiled.Model().Identifier() {
@@ -144,7 +183,7 @@ func compileRegistryDefinitions(ctx context.Context, captured *registryDeclarati
 			}
 		}
 	}
-	snapshot.events, err = schemas.events.WithMigrations(captured.migrations, validateGenerations)
+	snapshot.events, err = schemas.events.WithMigrations(migrations, validateGenerations)
 	if err != nil {
 		return registrySnapshot{}, err
 	}
@@ -160,21 +199,10 @@ func compileRegistryDefinitions(ctx context.Context, captured *registryDeclarati
 	}
 	for i, projection := range snapshot.projections {
 		model, _ := snapshot.models.LookupIdentifier(projection.Model().Identifier())
-		snapshot.projections[i], err = projection.Rebind(model, catalog, snapshot.events)
+		snapshot.projections[i], err = projection.Rebind(model, authoring.events, snapshot.events)
 		if err != nil {
 			return registrySnapshot{}, err
 		}
 	}
-	err = compileReactors(&snapshot, captured.reactors, services, captured.reactorMiddlewares, captured.reactorSideEffects)
-	if err != nil {
-		return snapshot, err
-	}
-	if err = compileReducers(&snapshot, captured.reducers, services); err != nil {
-		return snapshot, err
-	}
-	if err = compileReadModelReactors(&snapshot, captured.readModelReactors, services, captured.reactorSideEffects); err != nil {
-		return snapshot, err
-	}
-	snapshot.seeds, err = prepareSeeders(ctx, snapshot.events, captured.seeders, plans)
-	return snapshot, err
+	return snapshot, nil
 }
