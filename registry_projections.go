@@ -47,35 +47,13 @@ type registrySnapshot struct {
 	seeds             seeding.Definition
 }
 
-func freezeRegistry(ctx context.Context, registry *Registry, policy serialization.NamingPolicy, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
-	var eventTypes []events.Descriptor
-	var migrations []events.MigrationDeclaration
-	var constraintCompositions []constraintComposition
-	var models []readmodels.Descriptor
-	var declarations []projections.Declaration
-	var reactorDeclarations []reactorDeclaration
-	var readModelReactorDeclarations []reactors.ReadModelDeclaration
-	var reducerDeclarations []reducers.Declaration
-	var seeders []seederDeclaration
-	var reactorMiddlewares []any
-	var reactorSideEffects []reactorSideEffectHandler
-	snapshot := registrySnapshot{}
-	if registry != nil {
-		registry.mu.Lock()
-		eventTypes = slices.Clone(registry.descriptors)
-		migrations = slices.Clone(registry.migrations)
-		models = slices.Clone(registry.readModels)
-		declarations = slices.Clone(registry.projections)
-		reactorDeclarations = slices.Clone(registry.reactors)
-		readModelReactorDeclarations = slices.Clone(registry.readModelReactors)
-		reducerDeclarations = slices.Clone(registry.reducers)
-		seeders = slices.Clone(registry.seeders)
-		reactorMiddlewares = slices.Clone(registry.reactorMiddlewares)
-		reactorSideEffects = slices.Clone(registry.reactorSideEffects)
-		snapshot.constraints = slices.Clone(registry.constraints)
-		constraintCompositions = slices.Clone(registry.constraintCompositions)
-		registry.mu.Unlock()
-	}
+// compileRegistry resolves only the captured declarations. No mutable Registry is
+// consulted here, including after constraint composition or seeder preparation.
+func compileRegistry(ctx context.Context, captured *registryDeclarations, policy serialization.NamingPolicy, services reactorScopeFactory, validateGenerations bool) (registrySnapshot, error) {
+	eventTypes := slices.Clone(captured.descriptors)
+	models := slices.Clone(captured.readModels)
+	declarations := slices.Clone(captured.projections)
+	snapshot := registrySnapshot{constraints: slices.Clone(captured.constraints)}
 	catalog, err := events.NewCatalog(eventTypes...)
 	if err != nil {
 		return snapshot, err
@@ -83,7 +61,7 @@ func freezeRegistry(ctx context.Context, registry *Registry, policy serializatio
 	if err := catalog.ValidateDeclarations(); err != nil {
 		return snapshot, err
 	}
-	snapshot.constraints, err = compileDeclaredConstraints(catalog, snapshot.constraints, constraintCompositions)
+	snapshot.constraints, err = compileDeclaredConstraints(catalog, snapshot.constraints, captured.constraintCompositions)
 	if err != nil {
 		return snapshot, err
 	}
@@ -92,7 +70,7 @@ func freezeRegistry(ctx context.Context, registry *Registry, policy serializatio
 	if err != nil {
 		return snapshot, err
 	}
-	for _, declaration := range reducerDeclarations {
+	for _, declaration := range captured.reducers {
 		model, ok := modelCatalog.LookupIdentifier(declaration.Model().Identifier())
 		if !ok || model != declaration.Model() {
 			return snapshot, &reducers.DeclarationError{Reducer: declaration.Identifier(), Cause: fmt.Errorf("%w: reducer model is not registered in this store", ErrInvalidConfiguration)}
@@ -144,7 +122,7 @@ func freezeRegistry(ctx context.Context, registry *Registry, policy serializatio
 	if err != nil {
 		return registrySnapshot{}, err
 	}
-	snapshot.events, err = snapshot.events.WithMigrations(migrations, validateGenerations)
+	snapshot.events, err = snapshot.events.WithMigrations(captured.migrations, validateGenerations)
 	if err != nil {
 		return registrySnapshot{}, err
 	}
@@ -171,16 +149,16 @@ func freezeRegistry(ctx context.Context, registry *Registry, policy serializatio
 			return registrySnapshot{}, err
 		}
 	}
-	err = compileReactors(&snapshot, reactorDeclarations, services, reactorMiddlewares, reactorSideEffects)
+	err = compileReactors(&snapshot, captured.reactors, services, captured.reactorMiddlewares, captured.reactorSideEffects)
 	if err != nil {
 		return snapshot, err
 	}
-	if err = compileReducers(&snapshot, reducerDeclarations, services); err != nil {
+	if err = compileReducers(&snapshot, captured.reducers, services); err != nil {
 		return snapshot, err
 	}
-	if err = compileReadModelReactors(&snapshot, readModelReactorDeclarations, services, reactorSideEffects); err != nil {
+	if err = compileReadModelReactors(&snapshot, captured.readModelReactors, services, captured.reactorSideEffects); err != nil {
 		return snapshot, err
 	}
-	snapshot.seeds, err = prepareSeeders(ctx, snapshot.events, seeders, services)
+	snapshot.seeds, err = prepareSeeders(ctx, snapshot.events, captured.seeders, services)
 	return snapshot, err
 }

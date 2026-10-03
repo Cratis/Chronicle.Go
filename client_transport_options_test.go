@@ -191,8 +191,9 @@ func TestSkipKeepAliveProbesRegistersAndSurvivesSilence(t *testing.T) {
 		var compatibility, probes, acks, ensures int
 		client, streams := skipMemoryClient(t, func(ctx context.Context, method string) error {
 			md, _ := metadata.FromOutgoingContext(ctx)
-			if md.Get("authorization")[0] != "Bearer external" {
-				t.Fatal("auth missing")
+			authorization := md.Get("authorization")
+			if len(authorization) != 1 || authorization[0] != "Bearer external" {
+				t.Fatalf("expected one matching authorization value; received %d values (credentials redacted)", len(authorization))
 			}
 			switch method {
 			case clients.ConnectionService_CheckCompatibility_FullMethodName:

@@ -71,7 +71,8 @@ func (c *Client) GoString() string { return c.String() }
 
 // NewClient validates and freezes configuration without network I/O. TLS validates
 // by default. Omitted credentials select Chronicle's public development credentials.
-// Registered seeders run synchronously once to prepare immutable definitions.
+// All selected registries are captured before application preparation. Registered
+// seeders run synchronously once per distinct registry to prepare immutable definitions.
 // Use NewClientContext when preparation scopes need caller cancellation.
 func NewClient(options ...ClientOption) (*Client, error) {
 	return NewClientContext(context.Background(), options...)
@@ -96,7 +97,45 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 	if err != nil {
 		return nil, err
 	}
-	frozen, err := freezeRegistry(ctx, config.registry, config.naming, config.reactorServices, config.validateEventTypes)
+	// Capture every selected declaration epoch before any application preparation.
+	// Shared registry references use one capture and one compilation, even if a
+	// callback later changes that registry for a future client.
+	names := slices.Sorted(maps.Keys(config.stores))
+	captured := make(map[*Registry]*registryDeclarations)
+	capture := func(registry *Registry) *registryDeclarations {
+		if declarations, ok := captured[registry]; ok {
+			return declarations
+		}
+		declarations := captureRegistry(registry)
+		captured[registry] = declarations
+		return declarations
+	}
+	defaults := capture(config.registry)
+	for _, name := range names {
+		if strings.TrimSpace(string(name)) == "" {
+			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
+		}
+		capture(config.stores[name])
+	}
+	if config.skipKeepAlive {
+		for _, declarations := range captured {
+			if declarations.hasObservers() {
+				return nil, fmt.Errorf("%w: SkipKeepAlive cannot run reactors, reducers or read-model reactors; kernel subscriptions require a logical connection session", ErrInvalidConfiguration)
+			}
+		}
+	}
+	compiled := make(map[*registryDeclarations]registrySnapshot)
+	compile := func(declarations *registryDeclarations) (registrySnapshot, error) {
+		if frozen, ok := compiled[declarations]; ok {
+			return frozen, nil
+		}
+		frozen, err := compileRegistry(ctx, declarations, config.naming, config.reactorServices, config.validateEventTypes)
+		if err == nil {
+			compiled[declarations] = frozen
+		}
+		return frozen, err
+	}
+	frozen, err := compile(defaults)
 	if err != nil {
 		return nil, err
 	}
@@ -109,12 +148,8 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 		reactors:          reactorCatalogs{defaults: frozen.reactors, stores: make(map[StoreName][]*reactorPlan)},
 		readModelReactors: readModelReactorCatalogs{defaults: frozen.readModelReactors, stores: make(map[StoreName][]*reactors.ReadModelPlan)},
 		reducers:          reducerCatalogs{defaults: frozen.reducers, stores: make(map[StoreName][]*reducers.Plan)}}
-	for _, name := range slices.Sorted(maps.Keys(config.stores)) {
-		registry := config.stores[name]
-		if strings.TrimSpace(string(name)) == "" {
-			return nil, fmt.Errorf("%w: empty registry store name", ErrInvalidConfiguration)
-		}
-		frozen, err := freezeRegistry(ctx, registry, config.naming, config.reactorServices, config.validateEventTypes)
+	for _, name := range names {
+		frozen, err := compile(captured[config.stores[name]])
 		if err != nil {
 			return nil, err
 		}
@@ -176,25 +211,6 @@ func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) 
 	}
 	if config.skipKeepAlive && config.keepAliveTimeoutSet {
 		return uri, nil, fmt.Errorf("%w: SkipKeepAlive conflicts with an explicit keepalive timeout", ErrInvalidConfiguration)
-	}
-	if config.skipKeepAlive {
-		// Reject before definition preparation invokes caller-owned seeders or
-		// scopes. Plans are checked again after freezing for concurrent admission.
-		registries := []*Registry{config.registry}
-		for _, name := range slices.Sorted(maps.Keys(config.stores)) {
-			registries = append(registries, config.stores[name])
-		}
-		for _, registry := range registries {
-			if registry == nil {
-				continue
-			}
-			registry.mu.Lock()
-			hasObservers := len(registry.reactors)+len(registry.reducers)+len(registry.readModelReactors) != 0
-			registry.mu.Unlock()
-			if hasObservers {
-				return uri, nil, fmt.Errorf("%w: SkipKeepAlive cannot run reactors, reducers or read-model reactors; kernel subscriptions require a logical connection session", ErrInvalidConfiguration)
-			}
-		}
 	}
 	policy := config.registrationRetry
 	if config.connectTimeout <= 0 || config.keepAliveTimeout <= 0 || policy.MaxAttempts < 1 || policy.MaxAttempts > 100 || policy.InitialDelay <= 0 || policy.MaximumDelay < policy.InitialDelay || policy.AttemptTimeout <= 0 {

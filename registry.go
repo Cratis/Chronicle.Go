@@ -5,6 +5,7 @@ package chronicle
 
 import (
 	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/cratis/chronicle.go/constraints"
@@ -32,6 +33,44 @@ type Registry struct {
 	seeders                []seederDeclaration
 	reactorMiddlewares     []any
 	reactorSideEffects     []reactorSideEffectHandler
+}
+
+// registryDeclarations owns detached collections of immutable declarations. Callback
+// and service instances remain borrowed; capturing never invokes application code.
+// Compilation must clone any collection it changes, preserving this admission epoch.
+type registryDeclarations struct {
+	descriptors            []events.Descriptor
+	migrations             []events.MigrationDeclaration
+	constraints            []constraints.Definition
+	constraintCompositions []constraintComposition
+	readModels             []readmodels.Descriptor
+	projections            []projections.Declaration
+	reactors               []reactorDeclaration
+	readModelReactors      []reactors.ReadModelDeclaration
+	reducers               []reducers.Declaration
+	seeders                []seederDeclaration
+	reactorMiddlewares     []any
+	reactorSideEffects     []reactorSideEffectHandler
+}
+
+func captureRegistry(registry *Registry) *registryDeclarations {
+	if registry == nil {
+		return &registryDeclarations{}
+	}
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	return &registryDeclarations{
+		descriptors: slices.Clone(registry.descriptors), migrations: slices.Clone(registry.migrations),
+		constraints: slices.Clone(registry.constraints), constraintCompositions: slices.Clone(registry.constraintCompositions),
+		readModels: slices.Clone(registry.readModels), projections: slices.Clone(registry.projections),
+		reactors: slices.Clone(registry.reactors), readModelReactors: slices.Clone(registry.readModelReactors),
+		reducers: slices.Clone(registry.reducers), seeders: slices.Clone(registry.seeders),
+		reactorMiddlewares: slices.Clone(registry.reactorMiddlewares), reactorSideEffects: slices.Clone(registry.reactorSideEffects),
+	}
+}
+
+func (d *registryDeclarations) hasObservers() bool {
+	return len(d.reactors)+len(d.reducers)+len(d.readModelReactors) != 0
 }
 
 // NewRegistry returns an empty registry; there is no global discovery or init hook.
