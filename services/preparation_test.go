@@ -43,7 +43,7 @@ func (s countedScope) Close(ctx context.Context) error { (*s.closed)++; return s
 
 func TestDefaultProviderPreparationDiscardsFactoryAndDisposalPanics(t *testing.T) {
 	for _, kind := range []string{"string", "object", "error"} {
-		for _, phase := range []string{"factory", "scope disposal", "partial result disposal", "define and disposal"} {
+		for _, phase := range []string{"factory", "scope disposal", "partial result disposal", "partial result panic alias", "define and disposal"} {
 			t.Run(kind+"/"+phase, func(t *testing.T) {
 				formatted, constructed, closed, defined := 0, 0, 0, 0
 				secret := &secretFailure{&formatted}
@@ -64,6 +64,10 @@ func TestDefaultProviderPreparationDiscardsFactoryAndDisposalPanics(t *testing.T
 					artifact := &preparedArtifact{close: func() error { closed++; panic(payload) }}
 					if phase == "partial result disposal" {
 						return artifact, ordinary
+					}
+					if phase == "partial result panic alias" {
+						artifact.close = func() error { closed++; panic(secret) }
+						return artifact, errors.Join(secret, ordinary)
 					}
 					return artifact, nil
 				}); err != nil {
@@ -102,10 +106,11 @@ func TestDefaultProviderPreparationDiscardsFactoryAndDisposalPanics(t *testing.T
 					t.Fatal("panic published a client or lost its category", err)
 				}
 				assertSafeProviderDiagnostics(t, err)
-				if errors.Is(err, secret) || formatted != 0 {
+				var leaked *secretFailure
+				if errors.Is(err, secret) || errors.As(err, &leaked) || formatted != 0 {
 					t.Fatal("panic error is still reachable or was formatted")
 				}
-				if phase == "partial result disposal" || phase == "define and disposal" {
+				if phase == "partial result disposal" || phase == "partial result panic alias" || phase == "define and disposal" {
 					var cause *ordinaryFailure
 					if !errors.Is(err, ordinary) || !errors.As(err, &cause) || cause != ordinary {
 						t.Fatal("joined ordinary failure lost", err)
@@ -115,7 +120,7 @@ func TestDefaultProviderPreparationDiscardsFactoryAndDisposalPanics(t *testing.T
 				switch phase {
 				case "factory":
 					wantClosed, wantDefined = 0, 0
-				case "partial result disposal":
+				case "partial result disposal", "partial result panic alias":
 					wantDefined = 0
 				}
 				if constructed != 1 || closed != wantClosed || defined != wantDefined || counted.opened != 1 || counted.closed != 1 {

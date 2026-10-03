@@ -18,99 +18,195 @@ const (
 	maxDiagnosticNodes = 256
 )
 
-// sanitizeError never retains a provider panic or an ancestor that could expose
-// it through formatting, As, Is or Unwrap. Only plain error leaves retain identity;
-// wrappers are rebuilt, not copied. Known provider metadata is copied explicitly.
-func sanitizeError(err error) error {
-	walker := diagnosticWalker{remaining: maxDiagnosticNodes, active: make(map[error]bool)}
-	return walker.clean(err, 0)
-}
-
-type diagnosticWalker struct {
-	remaining int
-	active    map[error]bool
-}
-
-func (w *diagnosticWalker) clean(err error, depth int) (result error) {
-	// Inspection can itself invoke application Unwrap code. Recovery only drops
-	// the value and constructs a constant diagnostic; it never inspects errors.
+// sanitizeError snapshots the complete bounded graph before retaining any leaves.
+// A panic payload can also be an ordinary sibling (in either order), so sanitizing
+// individual branches independently cannot decide which identities are safe.
+func sanitizeError(err error) (result error) {
+	// Custom Unwrap is the only application hook used during inspection. If it
+	// panics, the unfinished graph might hide aliases of any leaf: discard it all.
 	defer func() {
 		if recover() != nil {
 			result = &dependencyinjection.Error{Operation: "inspect diagnostics", Kind: dependencyinjection.ErrCallbackPanicked}
 		}
 	}()
-	if depth >= maxDiagnosticDepth || w.remaining == 0 {
+	walker := diagnosticWalker{
+		remaining: maxDiagnosticNodes, seen: make(map[diagnosticIdentity]*diagnosticNode),
+		active: make(map[diagnosticIdentity]bool), quarantined: make(map[uintptr]bool),
+		quarantinedNodes: make(map[*diagnosticNode]bool), rebuilt: make(map[*diagnosticNode]bool),
+	}
+	snapshot := walker.capture(err, 0)
+	if walker.incomplete {
+		// Truncation/cycles could conceal a panic alias. Do not preserve a leaf
+		// merely because it happened to occur before the inspection boundary.
 		return errUnsafeDiagnostic
 	}
-	w.remaining--
+	return walker.rebuild(snapshot)
+}
+
+type diagnosticIdentity struct {
+	typ reflect.Type
+	ptr uintptr
+}
+
+type diagnosticNode struct {
+	identity   diagnosticIdentity
+	leaf       error
+	diagnostic *dependencyinjection.Error
+	children   []*diagnosticNode
+}
+
+type diagnosticWalker struct {
+	remaining        int
+	seen             map[diagnosticIdentity]*diagnosticNode
+	active           map[diagnosticIdentity]bool
+	quarantined      map[uintptr]bool
+	quarantinedNodes map[*diagnosticNode]bool
+	rebuilt          map[*diagnosticNode]bool
+	incomplete       bool
+	ambiguous        bool
+}
+
+// referenceIdentity uses address identity, never structural comparison or an
+// application's Error/As/Is hooks. Value errors have no safe reference identity.
+func referenceIdentity(value any) diagnosticIdentity {
+	reflected := reflect.ValueOf(value)
+	if reflected.IsValid() && reflected.Kind() == reflect.Pointer && !reflected.IsNil() {
+		return diagnosticIdentity{typ: reflected.Type(), ptr: reflected.Pointer()}
+	}
+	return diagnosticIdentity{}
+}
+
+func (w *diagnosticWalker) capture(err error, depth int) *diagnosticNode {
 	if err == nil {
 		return nil
 	}
+	if depth >= maxDiagnosticDepth || w.remaining == 0 {
+		w.incomplete = true
+		return nil
+	}
+	w.remaining--
+	identity := referenceIdentity(err)
+	if identity.ptr != 0 {
+		if w.active[identity] {
+			w.incomplete = true
+			return nil
+		}
+		if existing, ok := w.seen[identity]; ok {
+			return existing
+		}
+		w.active[identity] = true
+		defer delete(w.active, identity)
+	}
+	node := &diagnosticNode{identity: identity}
+	if identity.ptr != 0 {
+		w.seen[identity] = node
+	}
 	value := reflect.ValueOf(err)
 	if value.Kind() == reflect.Pointer && value.IsNil() {
-		return errUnsafeDiagnostic
-	}
-	if value.Comparable() {
-		if w.active[err] {
-			return errUnsafeDiagnostic
-		}
-		w.active[err] = true
-		defer delete(w.active, err)
+		return node
 	}
 	if diagnostic, ok := err.(*dependencyinjection.Error); ok {
-		if diagnostic == nil {
-			return errUnsafeDiagnostic
-		}
 		kind := safeKind(diagnostic.Kind)
-		clean := &dependencyinjection.Error{
-			Operation: safeOperation(diagnostic.Operation), Key: diagnostic.Key,
-			Kind: kind,
-		}
+		node.diagnostic = &dependencyinjection.Error{Operation: safeOperation(diagnostic.Operation), Key: diagnostic.Key, Kind: kind}
 		if len(diagnostic.Path) <= maxDiagnosticDepth {
-			clean.Path = slices.Clone(diagnostic.Path)
+			node.diagnostic.Path = slices.Clone(diagnostic.Path)
 		}
 		if diagnostic.Panic != nil || kind == dependencyinjection.ErrCallbackPanicked {
-			// Cause/Kind can alias the recovered error too. Do not walk or retain
-			// any cause of a panic-bearing node, even an apparently ordinary one.
-			clean.Kind = dependencyinjection.ErrCallbackPanicked
-			if kind != nil && kind != errUnsafeDiagnostic && kind != dependencyinjection.ErrCallbackPanicked {
-				clean.Cause = kind
+			// Quarantine payloads AND original causes across the entire snapshot,
+			// including ancestors and ordinary siblings captured earlier or later.
+			if payload := referenceIdentity(diagnostic.Panic); payload.ptr != 0 {
+				w.quarantined[payload.ptr] = true
 			}
-			return clean
+			if payload, ok := diagnostic.Panic.(error); ok {
+				w.quarantine(w.capture(payload, depth+1))
+			}
+			w.quarantine(w.capture(diagnostic.Cause, depth+1))
+			if kind == errUnsafeDiagnostic {
+				w.quarantine(w.capture(diagnostic.Kind, depth+1))
+			}
+			node.diagnostic.Kind = dependencyinjection.ErrCallbackPanicked
+			if kind != nil && kind != errUnsafeDiagnostic && kind != dependencyinjection.ErrCallbackPanicked {
+				node.children = []*diagnosticNode{{leaf: kind}}
+			}
+			return node
 		}
-		clean.Cause = w.clean(diagnostic.Cause, depth+1)
+		node.children = []*diagnosticNode{w.capture(diagnostic.Cause, depth+1)}
 		if len(diagnostic.Path) > maxDiagnosticDepth {
-			clean.Cause = errors.Join(clean.Cause, errUnsafeDiagnostic)
+			node.children = append(node.children, &diagnosticNode{leaf: errUnsafeDiagnostic})
 		}
-		return clean
+		return node
 	}
-	// Never call application As/Is, nor retain wrappers with cached payload text
-	// or hidden diagnostics. Traverse Unwrap under the recovery boundary above.
 	switch tree := err.(type) {
 	case interface{ Unwrap() []error }:
-		children := tree.Unwrap()
-		var cleaned []error
-		for _, child := range children {
+		for _, child := range tree.Unwrap() {
 			if w.remaining == 0 {
-				cleaned = append(cleaned, errUnsafeDiagnostic)
+				w.incomplete = true
 				break
 			}
-			cleaned = append(cleaned, w.clean(child, depth+1))
+			node.children = append(node.children, w.capture(child, depth+1))
 		}
-		if joined := errors.Join(cleaned...); joined != nil {
-			return joined
-		}
-		return errUnsafeDiagnostic
 	case interface{ Unwrap() error }:
-		if child := w.clean(tree.Unwrap(), depth+1); child != nil {
-			return child
-		}
-		return errUnsafeDiagnostic
+		node.children = []*diagnosticNode{w.capture(tree.Unwrap(), depth+1)}
 	case interface{ As(any) bool }, interface{ Is(error) bool }:
-		return errUnsafeDiagnostic
+		// Never keep a wrapper with hidden inspection hooks.
 	default:
-		return err
+		if identity.ptr != 0 {
+			node.leaf = err
+		}
 	}
+	return node
+}
+
+func (w *diagnosticWalker) quarantine(node *diagnosticNode) {
+	if node == nil || w.quarantinedNodes[node] {
+		return
+	}
+	w.quarantinedNodes[node] = true
+	if node.identity.ptr == 0 {
+		// An error value without reference identity might contain hidden aliases.
+		w.ambiguous = true
+	} else {
+		w.quarantined[node.identity.ptr] = true
+	}
+	for _, child := range node.children {
+		w.quarantine(child)
+	}
+}
+
+func (w *diagnosticWalker) safeLeaf(err error) error {
+	identity := referenceIdentity(err)
+	if w.ambiguous || identity.ptr == 0 || w.quarantined[identity.ptr] {
+		return errUnsafeDiagnostic
+	}
+	return err
+}
+
+func (w *diagnosticWalker) rebuild(node *diagnosticNode) error {
+	if node == nil || w.rebuilt[node] {
+		return nil
+	}
+	// Emit a shared subtree only once. Recreating a DAG would make subsequent
+	// errors.Is/As and formatting potentially exponential despite bounded input.
+	w.rebuilt[node] = true
+	if node.leaf != nil {
+		return w.safeLeaf(node.leaf)
+	}
+	children := make([]error, 0, len(node.children))
+	for _, child := range node.children {
+		children = append(children, w.rebuild(child))
+	}
+	cause := errors.Join(children...)
+	if node.diagnostic != nil {
+		if node.diagnostic.Kind != nil {
+			node.diagnostic.Kind = w.safeLeaf(node.diagnostic.Kind)
+		}
+		node.diagnostic.Cause = cause
+		return node.diagnostic
+	}
+	if cause != nil {
+		return cause
+	}
+	return errUnsafeDiagnostic
 }
 
 // v0.1 provider categories are stable identities, never application messages.

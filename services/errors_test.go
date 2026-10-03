@@ -120,8 +120,10 @@ func TestSanitizerBoundsAndContainsHostileInspection(t *testing.T) {
 			ordinary := &ordinaryFailure{}
 			clean := sanitizeError(errors.Join(ordinary, tree))
 			assertSafeProviderDiagnostics(t, clean)
-			if !errors.Is(clean, ordinary) {
-				t.Fatal("independent ordinary cause lost")
+			// An incomplete graph or inspection panic can hide a payload alias
+			// of an earlier sibling. Only a completed snapshot can retain it.
+			if errors.Is(clean, ordinary) != (name == "panicking As") {
+				t.Fatal("ordinary identity retained without a complete snapshot")
 			}
 			if name == "panicking unwrap" {
 				if !errors.Is(clean, di.ErrCallbackPanicked) {
@@ -150,6 +152,66 @@ func TestSanitizerDiscardsPanicCauseEvenWithoutPayloadAndRejectsUnsafeMetadata(t
 		if !errors.Is(clean, di.ErrCallbackPanicked) || errors.Is(clean, secret) || formatted != 0 {
 			t.Fatal("retained or formatted panic cause")
 		}
+	}
+}
+
+func TestSanitizerQuarantinesPanicAliasesAcrossBothSiblingOrders(t *testing.T) {
+	for _, panicFirst := range []bool{false, true} {
+		for _, wrapped := range []bool{false, true} {
+			t.Run(fmt.Sprintf("panic-first=%t/wrapped=%t", panicFirst, wrapped), func(t *testing.T) {
+				formatted, calls := 0, 0
+				secret := &secretFailure{&formatted}
+				ordinary := &ordinaryFailure{}
+				var alias error = secret
+				if wrapped {
+					alias = &hostileDiagnostic{child: secret, calls: &calls}
+				}
+				panicNode := &di.Error{Kind: di.ErrCallbackPanicked, Panic: alias, Cause: alias}
+				children := []error{alias, panicNode, ordinary}
+				if panicFirst {
+					children[0], children[1] = children[1], children[0]
+				}
+				clean := sanitizeError(errors.Join(children...))
+				assertSafeProviderDiagnostics(t, clean)
+				var leaked *secretFailure
+				if errors.Is(clean, secret) || errors.Is(clean, alias) || errors.As(clean, &leaked) || formatted != 0 {
+					t.Fatal("panic payload remains reachable through an ordinary sibling")
+				}
+				if !errors.Is(clean, ordinary) || !errors.Is(clean, di.ErrCallbackPanicked) {
+					t.Fatal("distinct ordinary cause or panic category lost")
+				}
+				if wrapped && calls != 1 {
+					t.Fatal("error graph was inspected more than once", calls)
+				}
+			})
+		}
+	}
+}
+
+func TestSanitizerEmitsSharedDiagnosticSubtreesOnce(t *testing.T) {
+	ordinary := &ordinaryFailure{}
+	var tree error = ordinary
+	for range 40 {
+		tree = errors.Join(tree, tree)
+	}
+	clean := sanitizeError(tree)
+	if !errors.Is(clean, ordinary) || errors.Is(clean, errors.New("absent")) {
+		t.Fatal("shared diagnostic identity lost")
+	}
+	assertSafeProviderDiagnostics(t, clean)
+}
+
+type noncomparableFailure []byte
+
+func (noncomparableFailure) Error() string { panic("Error must not run") }
+
+func TestSanitizerDiscardsAmbiguousPanicIdentity(t *testing.T) {
+	secret := noncomparableFailure("secret panic payload")
+	clean := sanitizeError(errors.Join(secret, &di.Error{Kind: di.ErrCallbackPanicked, Panic: secret}))
+	assertSafeProviderDiagnostics(t, clean)
+	var leaked noncomparableFailure
+	if errors.As(clean, &leaked) || !errors.Is(clean, errUnsafeDiagnostic) {
+		t.Fatal("ambiguous panic identity was retained")
 	}
 }
 
