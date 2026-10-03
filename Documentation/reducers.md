@@ -97,8 +97,10 @@ cannot own multiple models, and two reducers cannot own the same model.
 
 Default identity is the full import path plus reducer type name, without a pointer
 marker. Use `WithID` to preserve identity across renames or share a C# identity.
-The default source is `event-log`; `WithEventSequence` or `WithEventLog` selects it
-explicitly. Automatic source-store/inbox inference is not implemented.
+Without source metadata, the default is `event-log`. `events.WithSourceStore`
+metadata selects the local log or an external inbox and provisions the shared
+subscription. `WithEventSequence` or `WithEventLog` selects explicitly and
+suppresses that inference. See [external integrations](integrations/index.md).
 
 ### Fingerprints, activity and filters
 

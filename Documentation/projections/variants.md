@@ -158,8 +158,10 @@ See the [per-attribute parity map](../parity.md#projections-part-3).
 sequence, a projection reads `event-log` in that store and `inbox-orders` elsewhere.
 Inference includes root, child, join and removal handlers after variant lowering;
 incompatible declared origins fail startup. `WithEventSequence`/`WithEventLog`,
-including explicit model settings, override inference. This selects a sequence
-only: **automatic inbox subscription provisioning is not implemented**.
+including explicit model settings, override inference. Registration provisions
+subscriptions for inbox sequences after all observers and before seeding. Like
+C#, even an explicitly selected `inbox-<store>` provisions. See
+[external integrations](../integrations/index.md).
 
 For an ad-hoc PDL query, use `store.QueryProjection(ctx, declaration)` or its
 historical alias `PreviewProjection`. An optional sequence defaults to

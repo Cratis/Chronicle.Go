@@ -175,10 +175,11 @@ acknowledgement message in the protocol.
 source/stream filters using AND. `WithTags(...)` only labels the reactor; labels
 never filter. `WithEventStreamID` is output metadata, not an input filter.
 
-`WithEventSequence` and `WithEventLog` explicitly select the input sequence. This
-branch has no event source-store catalog metadata yet, so automatic external
-inbox inference awaits that metadata; selecting an inbox does not provision a
-subscription. See [#37](https://github.com/Cratis/Chronicle.Go/issues/37).
+`WithEventSequence` and `WithEventLog` explicitly select the input sequence and
+suppress automatic subscriptions. Without them, `events.WithSourceStore` metadata
+selects the local log or an external inbox; registration provisions the shared
+subscription. See [external integrations](integrations/index.md) for precedence,
+observer-level source overrides and outbox publication.
 
 ## Dependency injection is opt-in
 
