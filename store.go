@@ -110,18 +110,18 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 	}
 	store := c.stores[key]
 	if store == nil {
-		catalog, definitions := c.catalog, c.constraints
-		if selected, ok := c.catalogs[key.name]; ok {
-			catalog, definitions = selected, c.storeConstraints[key.name]
-		}
-		store = &EventStore{client: c, name: key.name, namespace: key.namespace, catalog: catalog, constraints: definitions}
-		var err error
-		store.log, err = eventsequences.New(key.name, key.namespace, events.EventLog, catalog, &clientTransport{client: c, store: store})
+		snapshot, err := c.selectedStoreSnapshot(key.name)
 		if err != nil {
 			c.mu.Unlock()
 			return nil, err
 		}
-		if err = store.initializeReadModels(); err != nil {
+		store = &EventStore{client: c, name: key.name, namespace: key.namespace, catalog: snapshot.events, constraints: snapshot.constraints}
+		store.log, err = eventsequences.New(key.name, key.namespace, events.EventLog, snapshot.events, &clientTransport{client: c, store: store})
+		if err != nil {
+			c.mu.Unlock()
+			return nil, err
+		}
+		if err = store.initializeReadModelsFromSnapshot(snapshot); err != nil {
 			c.mu.Unlock()
 			return nil, err
 		}

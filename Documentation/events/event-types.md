@@ -28,6 +28,19 @@ fmt.Println(string(content))
 
 The output identifies `customer-registered`, generation `1`, with content `{"name":"Ada"}` because this example's `Name` field has an explicit `json:"name"` tag. `T` and `*T` append values resolve to the same declaration; nil event pointers fail. Register the non-pointer struct type.
 
+## Inspect catalogs without connecting
+
+`client.Catalogs(storeName)` returns immutable event and read-model catalogs without
+connecting, creating a namespace, activating constructors or starting observers.
+Use it to classify handler returns or inspect model ownership during application
+configuration. The descriptors match connected `EventStore` handles: client naming
+policy, producer identifiers and store-bound projection sequences are included.
+`WithRegistryForStore` replaces both default catalogs, rather than merging them.
+The store name must be nonblank; no namespace is needed. Catalogs remain readable
+after client shutdown and describe configuration, not server readiness.
+
+`ExampleClient_Catalogs` in the root tests is an executable offline example.
+
 ## Persisted identities and generations
 
 The default ID is the simple Go type name, matching C#'s simple-name convention. Prefer an explicit `events.WithID` for cross-language events so a refactor cannot rename stored history. IDs are strings, not necessarily UUIDs; comma-containing IDs are rejected because kernel tail filters use comma-separated IDs.
