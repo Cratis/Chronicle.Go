@@ -5,6 +5,19 @@ description: Implemented Go client contracts, executable evidence and deliberate
 
 Chronicle.Go targets the C# client's concepts and behavior, expressed through Go's explicit ownership, contexts and typed registration. This foundation is **not overall client parity or production lifecycle completeness**.
 
+## Runtime projection additions
+
+| C# authority | Go surface and status | Evidence and limits |
+| --- | --- | --- |
+| `DotNET/Projections/Projections.cs:363–405` and `DotNET.Specs/Projections/for_Projections/when_registering_explicitly` at `2e31b0dfba489159b3db323238f16d0f277056b4` | **Partial**: `EventStore.RegisterProjection(ctx, projections.Declaration)`, `ProjectionRegistration.Published` plus existing `RegistrationOutcome`; one new ordinary model and projection using known exact event generations | `TestRuntimeProjectionPublishesStoreRootAndRetainsOldReaders`, `TestRuntimeProjectionFalseWirePresence`, `TestRuntimeModelFailureRetriesCompleteModelsBeforeCumulativeProjections`, `TestKernelRuntimeProjectionAdditionRetainsDefinitionsAcrossReconnectAndNamespace`. Same-model replacement, passive/variant/global/protected/relationship/derived shapes and runtime registration of other artifact families remain unsupported. C# supports replacement; Go deliberately rejects it |
+| C# local composition followed by model/projection registration; no atomic remote transaction | **Go-specific**: per-client/store publication and destructive-flight fence; sticky `ErrDestructiveRegistrationUnknown` refuses later mutations, not ordinary acknowledged readiness | `TestRuntimeUnknownInitialFullSetPreservesReadyButRefusesAdd`, `TestRuntimePublishedCumulativeUnknownReturnsRealAcknowledgedOutcomeAndSentinel`, `TestRuntimeDestructiveDispositionIsRecordedBeforeFlightRelease`, `TestRuntimeQueuedFullSetSupersededBeforeAndInsideAuthorization`, `TestRuntimeConcurrentAddCannotDispatchObsoleteSubset`, `TestRuntimePublishedCancellationRetainsRootAndReportsActualStage`. Unknown requests cannot omit a later locally admitted addition; no remote quiescence, same-root idempotence or protection from independent clients is claimed |
+| Go decision-read evidence and immutable catalogs | **Go-specific**: store-wide fixed expected epochs stale issued/enrolled guards across namespaces; old ordinary readers remain coherent snapshots | `TestRuntimePublicationStalesAllNamespaceGuardsAndOldReaders`; `Declaration.IsVariant` preserves authoring identity even when wire definitions are identical (`TestVariantMetadataSurvivesIdenticalOrdinaryWireShape`). Tokens remain unauthenticated SDK evidence, not server revision or history/ABA fences |
+
+See [runtime registration](projections/runtime-registration.md) for retained-state,
+retry and error semantics. Earlier deferred-runtime entries below still apply to
+replacement, general registry mutation and other artifact families, not this
+bounded addition workflow.
+
 ## Registered derived codecs
 
 | C# authority | Go surface and status | Evidence and limits |
