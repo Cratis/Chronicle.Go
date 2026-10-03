@@ -1,0 +1,17 @@
+{
+  "module": "github.com/cratis/chronicle.go",
+  "go": "1.26",
+  "contracts": true,
+  "kernelIntegration": true,
+  "rootDependencies": [
+    "github.com/cratis/fundamentals.go",
+    "github.com/google/uuid",
+    "google.golang.org/grpc",
+    "google.golang.org/protobuf",
+    "golang.org/x/net",
+    "golang.org/x/sys",
+    "golang.org/x/text",
+    "google.golang.org/genproto/googleapis/rpc"
+  ],
+  "nested": []
+}

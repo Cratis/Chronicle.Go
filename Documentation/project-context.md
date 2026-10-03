@@ -37,8 +37,12 @@ unmanaged local additions shared with Arc.Go, not installer-managed files.
 
 ## Layout and commands
 
-Keep one root module, public packages grouped by capability, implementation-only
-helpers under `internal/`, and co-located `_test.go` files. Add directories only
+Keep one runtime root module, public packages grouped by capability,
+implementation-only helpers under `internal/`, and co-located `_test.go` files.
+The [explicit module allow-list](../.github/go-modules.json) currently lists only
+the root. Add real nested tooling, integrations or unpublished recipes only under
+[the module policy](module-policy.md), independently gated without runtime
+optional dependencies or a workspace. Add directories only
 when implemented; do not copy the C# `Source/` namespace layout. Public examples
 should compile. Product documentation belongs in `Documentation/`.
 
@@ -61,8 +65,13 @@ go generate ./...
 a no-op invocation is not generation verification. Review its diff and never
 hand-edit generated files. After authorized dependency changes, run `go mod tidy`
 and inspect `go.mod`/`go.sum`. Use `GOWORK=off` to verify independent consumption.
-The exact required gates and tool pins are in [CONTRIBUTING](../CONTRIBUTING.md)
-and `.github/workflows/`; these quick commands do not replace them.
+Run native policy validation from the repository root and the Go checks inside
+each listed module; root commands do not visit nested modules. Unpublished tool
+previews can pin fetchable pushed root pseudo-versions without replacements;
+publication requires a stable released root dependency and a separate reviewed
+publisher. The exact required gates and tool pins are in
+[CONTRIBUTING](../CONTRIBUTING.md) and `.github/workflows/`; these quick commands
+do not replace them.
 
 ## Release policy
 

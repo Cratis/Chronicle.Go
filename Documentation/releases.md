@@ -12,13 +12,13 @@ The merged PR body becomes the GitHub Release notes verbatim. Use the [contribut
 
 A push to main runs the Go and Markdown gates before preparing a release. The release action creates the immutable `vX.Y.Z` tag and GitHub Release only after its job succeeds. Dependent jobs read back the release and tag target, fetch the exact version through `proxy.golang.org`, verify the module archive, and request its pkg.go.dev page. Documentation rendering is asynchronous.
 
-There is no separate registry upload or Go publishing credential. GitHub tags are Go module versions; the workflow uses its scoped `GITHUB_TOKEN` for GitHub writes. Keep one root module and the canonical lowercase module path. Release source must build without a developer workspace, sibling checkout, secrets, or local replacements.
+There is no separate registry upload or Go publishing credential. GitHub tags are Go module versions; the workflow uses its scoped `GITHUB_TOKEN` for GitHub writes. Keep one runtime root module and the canonical lowercase module path. The [module manifest](../.github/go-modules.json) currently lists only that root; [module policy](module-policy.md) permits real future nested modules with independent gates. Unpublished tools may preview fetchable pushed root commits without replacements before the first root release; this is source testing, not package publication. Publication-eligible nested modules must instead pin a stable, publicly fetchable root tag. Release source must build without a developer workspace, sibling checkout, secrets, or local replacements.
 
 Wait for Publish to finish before merging another release-bound PR: GitHub concurrency can replace a pending run even when running jobs are not cancelled.
 
 ## Major versions
 
-`GO_RELEASE_MAJOR_CEILING` defaults to 0. Set it to 1 only for a maintainer-approved v1 launch and refresh the PR policy check. A major release must be reviewed and merged by a human. Values above 1 are rejected: Go v2+ requires a `/vN` module path, changed imports, and a separately reviewed release design. The current workflow does not publish prereleases or nested modules.
+`GO_RELEASE_MAJOR_CEILING` defaults to 0. Set it to 1 only for a maintainer-approved v1 launch and refresh the PR policy check. A major release must be reviewed and merged by a human. Values above 1 are rejected: Go v2+ requires a `/vN` module path, changed imports, and a separately reviewed release design. The current workflow does not publish prereleases or nested modules. Before a real nested publisher is added, require independent version/release-intent handling, protected `<directory>/v*` tags, pre-existing-tag/retry checks and a full fresh-cache proxy/installed-consumer check, following [the shared pattern and its pending live acceptance](module-policy.md#publication-prerequisites-and-provenance). A `publish` policy flag alone does not publish a module.
 
 ## Recovery
 

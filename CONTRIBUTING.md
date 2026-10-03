@@ -13,13 +13,19 @@ The [Cratis contribution guide](https://github.com/Cratis/.github/blob/main/cont
 
 ## Layout and setup
 
-The repository has one root module, `github.com/cratis/chronicle.go`, with package `chronicle`. Product documentation lives in `Documentation/`. Add packages and examples only as implementation needs them; use lowercase package directories, co-located `_test.go` files, and compiling `Example` tests for public usage.
+The runtime has one root module, `github.com/cratis/chronicle.go`, with package `chronicle`. The explicit [module allow-list](.github/go-modules.json) currently contains only that root; real nested tools, integrations or unpublished recipes can be added under the [module policy](Documentation/module-policy.md). Product documentation lives in `Documentation/`. Add packages and examples only as implementation needs them; use lowercase package directories, co-located `_test.go` files, and compiling `Example` tests for public usage.
 
 Install Go 1.26 or later, golangci-lint v2.14.0, actionlint v1.7.12, ShellCheck, and markdownlint-cli2. CI tests Go 1.26 and 1.27, including the latest patches; golangci-lint must be built with a Go version at least as new as the code it analyzes.
 
 ## Verify your change
 
-Run from the repository root, with each supported Go toolchain where applicable:
+Validate the native module policy from the repository root, then run the Go checks inside each listed module with each supported toolchain where applicable. Root tests do not traverse nested modules:
+
+```sh
+python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
+python3 -B .github/scripts/go_modules.py matrix
+python3 -B .github/scripts/go_modules.py dependencies
+```
 
 ```sh
 export GOWORK=off
@@ -31,8 +37,7 @@ go vet ./...
 go test -count=1 -timeout=2m ./...
 go test -race -count=1 -timeout=3m ./...
 golangci-lint run
-go mod tidy
-git diff --exit-code -- go.mod go.sum
+go mod tidy -diff
 actionlint -color
 npx markdownlint-cli2 '*.md' 'Documentation/**/*.md' 'examples/**/*.md' '.github/ISSUE_TEMPLATE/*.md' '.github/pull_request_template.md' '!AGENTS.md' '!CLAUDE.md'
 ```
@@ -44,7 +49,7 @@ go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
 govulncheck ./...
 ```
 
-Format handwritten Go source with `gofmt`; check all tracked Go files. Never hand-edit generated protobuf bindings. After `go mod tidy`, also check `git status --short -- go.mod go.sum` for untracked manifests. Commit `go.sum` when dependencies require it. Do not commit nested modules, local `replace` directives, or personal `go.work` files: released modules must build without sibling checkouts.
+Format handwritten Go source with `gofmt`; from the root, use `python3 -B .github/scripts/go_modules.py gofmt --module .` (or the listed nested directory) to check only that module's Git-visible Go files. Never hand-edit generated protobuf bindings. After authorized dependency changes, run `go mod tidy` and inspect `git status --short -- go.mod go.sum` inside the affected module. Commit its own `go.sum` when needed. Unlisted modules and repository workspaces are forbidden. All replacements are forbidden except the documented exact local-root replacement in expressly unpublished recipes; unpublished tool previews have no replacement exception. No nested publisher exists yet.
 
 Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Workflow lint invokes ShellCheck when it is available. Normal tests include parser/schema cases, real TLS/OAuth, bufconn RPCs, lifecycle and append behavior. The build gate also checks pinned contract generation and runs kernel integration tests. CodeQL runs separately in GitHub Actions.
 
