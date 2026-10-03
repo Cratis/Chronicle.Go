@@ -26,7 +26,7 @@ import (
 type Engine uint8
 
 const (
-	// Substitute uses a private bufconn server; only append/read storage is substituted.
+	// Substitute uses a private in-memory transport; only append/read storage is substituted.
 	Substitute Engine = iota
 	// Kernel uses the real server at Config.ConnectionString. Recommended for fidelity.
 	Kernel

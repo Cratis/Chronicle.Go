@@ -12,6 +12,7 @@ import (
 	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/clientoptions"
 )
 
 // EventScenario owns a production client and optionally a private substitute
@@ -40,13 +41,10 @@ func OpenEventScenario(ctx context.Context, config Config) (*EventScenario, erro
 			return nil, ErrKernelUnavailable
 		}
 	} else {
-		conn, closeTransport, err := substituteConnection()
-		if err != nil {
-			return nil, err
-		}
-		result.closeTransport = closeTransport
+		conn := substituteConnection()
+		result.closeTransport = conn.Close
 		result.fidelity = localFidelity()
-		options = append(options, chronicle.WithGRPCConnection(conn), chronicle.WithNoAuthentication(), chronicle.WithDefaultConcurrencyStrategy(uncheckedScenario{}))
+		options = append(options, clientoptions.Connection[chronicle.ClientOption](conn), chronicle.WithNoAuthentication(), chronicle.WithDefaultConcurrencyStrategy(uncheckedScenario{}))
 	}
 	result.Client, err = chronicle.NewClient(options...)
 	if err == nil && config.Engine == Substitute {
@@ -108,7 +106,7 @@ func (uncheckedScenario) GetScope(ctx context.Context, _ *eventsequences.Sequenc
 	return eventsequences.Scope{Expectation: eventsequences.NoCheck()}, ctx.Err()
 }
 
-// Close joins the client and substitute server once. Subsequent Close is a no-op.
+// Close joins the client and substitute transport once. Subsequent Close is a no-op.
 // Call only after operations have finished, as for all scenario mutation methods.
 func (s *EventScenario) Close() error {
 	if s.closed {

@@ -207,8 +207,8 @@ func (c *Client) retire(g *generation) {
 
 func (c *Client) joinRetired(g *generation) {
 	g.observers.Wait()
-	if g.owned {
-		if err := g.raw.Close(); err != nil {
+	if g.closer != nil {
+		if err := g.closer.Close(); err != nil {
 			c.mu.Lock()
 			c.closeError = errors.Join(c.closeError, fmt.Errorf("chronicle: close channel: %w", err))
 			c.mu.Unlock()

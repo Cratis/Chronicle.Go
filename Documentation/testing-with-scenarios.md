@@ -14,7 +14,7 @@ C#'s in-process fixtures, the Go substitute cannot load and run the C# kernel.
 | Scenario | Execution | What it does not prove |
 | --- | --- | --- |
 | `EventScenario`, `Kernel` | Production client registration, append and reads against a real server | Encryption support or multi-node behavior merely from a successful append |
-| `EventScenario`, `Substitute` (zero-value engine) | Production client over a private bufconn append/read store | Constraints, concurrency enforcement, hashing, schema migration/validation, encryption, authorization, persistence or observers |
+| `EventScenario`, `Substitute` (zero-value engine) | Production client over a private in-memory append/read transport | Constraints, concurrency enforcement, hashing, schema migration/validation, encryption, authorization, persistence or observers |
 | `ReadModelScenario[M]`, reducer | Production fold plan in-process, one scope per source | Kernel delivery, storage, retries, quarantine or compliance |
 | `ReadModelScenario[M]`, projection | Production compiler/encoder and real kernel bounded replay RPC | Materialized-sink catch-up, persistence or observer completion |
 | `ReactorScenario[R]` | Production discovery, scope activation, middleware and invoker; seeded read models and recording effects | Transport acceptance, durable checkpoints, retries, quarantine or exactly-once handling |
@@ -218,8 +218,10 @@ field identity. Naming does not change engine fidelity.
 The chosen boundary keeps production discovery and client execution shared while
 leaving projection evaluation and invariant enforcement in their owning kernel.
 An all-Go projection interpreter was rejected: it would be a second implementation
-whose passing tests could disagree with Chronicle. The bufconn transport instead
-has a deliberately small contract and rejects unsupported operations.
+whose passing tests could disagree with Chronicle. The in-memory transport instead
+dispatches directly to a deliberately small append/read substitute and rejects
+unsupported operations. It copies protobuf messages across this boundary but
+hosts no gRPC server and does not exercise HTTP/2.
 
 C# can load the real kernel into its process; Go cannot claim that fidelity from
 an in-memory map. Local scenarios therefore do not prove protection/key erasure,

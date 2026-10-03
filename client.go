@@ -118,7 +118,7 @@ func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) 
 	if config.reactorServicesSet && nilValue(config.reactorServices) {
 		return ConnectionString{}, nil, fmt.Errorf("%w: nil scope factory", ErrInvalidConfiguration)
 	}
-	if (config.tlsSet && config.tls == nil) || (config.borrowedSet && config.borrowed == nil) ||
+	if (config.tlsSet && config.tls == nil) || (config.borrowedSet && nilValue(config.borrowed)) ||
 		(config.tokenSet && nilValue(config.tokenSource)) || (config.resolverSet && nilValue(config.resolver)) {
 		return ConnectionString{}, nil, fmt.Errorf("%w: nil TLS, transport, resolver or token source", ErrInvalidConfiguration)
 	}

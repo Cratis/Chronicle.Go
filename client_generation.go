@@ -6,6 +6,7 @@ package chronicle
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 	"time"
@@ -24,8 +25,8 @@ type generation struct {
 	number        uint64
 	ctx           context.Context
 	cancel        context.CancelFunc
-	raw           *grpc.ClientConn
-	owned         bool
+	raw           grpc.ClientConnInterface
+	closer        io.Closer
 	tokens        TokenSource
 	oauth         *connection.OAuth
 	transport     *generationTransport
@@ -53,7 +54,7 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 	if err != nil {
 		return nil, err
 	}
-	g := &generation{raw: c.config.borrowed, owned: c.config.borrowed == nil, tokens: c.config.tokenSource}
+	g := &generation{raw: c.config.borrowed, tokens: c.config.tokenSource}
 	g.ctx, g.cancel = context.WithCancel(c.life)
 	c.nextGeneration++
 	g.number = c.nextGeneration
@@ -62,8 +63,9 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 		g.oauth = connection.NewOAuth(address, c.uri.clientID, c.uri.secret, c.tls)
 		g.tokens = g.oauth
 	}
-	if g.owned {
-		g.raw, err = grpc.NewClient("dns:///"+address, grpc.WithTransportCredentials(credentials.NewTLS(c.tls)),
+	if g.raw == nil {
+		var conn *grpc.ClientConn
+		conn, err = grpc.NewClient("dns:///"+address, grpc.WithTransportCredentials(credentials.NewTLS(c.tls)),
 			grpc.WithDisableRetry(), grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 60 * time.Second, Timeout: 30 * time.Second}),
 			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024), grpc.MaxCallSendMsgSize(100*1024*1024)))
 		if err != nil {
@@ -73,6 +75,7 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 			}
 			return nil, err
 		}
+		g.raw, g.closer = conn, conn
 	}
 	g.transport = &generationTransport{generation: g}
 	return g, nil

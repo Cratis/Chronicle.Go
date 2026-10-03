@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/clientoptions"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/serialization"
 	"google.golang.org/grpc"
@@ -43,7 +44,7 @@ type clientConfig struct {
 	registrationRetry                      RegistrationRetry
 	resolver                               SRVResolver
 	resolverSet                            bool
-	borrowed                               *grpc.ClientConn
+	borrowed                               grpc.ClientConnInterface
 	tlsSet, tokenSet, borrowedSet, uriSet  bool
 	validateEventTypes                     bool
 	concurrency                            eventsequences.ConcurrencyPolicy
@@ -104,6 +105,12 @@ func WithSkipCompatibilityCheck() ClientOption {
 // the channel already handles authentication. Client lifecycle checks still apply.
 func WithGRPCConnection(conn *grpc.ClientConn) ClientOption {
 	return func(c *clientConfig) { c.borrowed, c.borrowedSet = conn, true }
+}
+
+// BorrowConnection is the module-private option seam used by chronicletest.
+// clientConfig is private; external callers still use WithGRPCConnection.
+func (c *clientConfig) BorrowConnection(transport clientoptions.BorrowedTransport) {
+	c.borrowed, c.borrowedSet = transport.Connection, true
 }
 
 // WithEventTypeGenerationValidation enables kernel schema and migration-chain

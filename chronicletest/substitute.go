@@ -5,8 +5,6 @@ package chronicletest
 
 import (
 	"context"
-	"errors"
-	"net"
 	"slices"
 	"strconv"
 	"strings"
@@ -23,9 +21,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -42,38 +38,18 @@ type substituteKernel struct {
 	events map[sequenceKey][]*sequences.AppendedEventResponse
 }
 
-func substituteConnection() (*grpc.ClientConn, func() error, error) {
-	listener := bufconn.Listen(1024 * 1024)
-	server := grpc.NewServer()
+func substituteConnection() *substituteTransport {
+	transport := newSubstituteTransport()
 	kernel := &substituteKernel{events: map[sequenceKey][]*sequences.AppendedEventResponse{}}
-	clients.RegisterConnectionServiceServer(server, kernel)
-	eventstores.RegisterEventStoresServer(server, kernel)
-	eventtypes.RegisterEventTypesServer(server, kernel)
-	namespaces.RegisterNamespacesServer(server, kernel)
-	sequences.RegisterEventSequencesServer(server, kernel)
-	constraintcontracts.RegisterConstraintsServer(server, kernel)
-	modelcontracts.RegisterReadModelsServer(server, &substituteModels{})
-	projectioncontracts.RegisterProjectionsServer(server, &substituteProjections{})
-	done := make(chan error, 1)
-	go func() { done <- server.Serve(listener) }()
-	conn, err := grpc.NewClient("passthrough:///chronicle-scenario", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
-	closeTransport := func() error {
-		var closeErr error
-		if conn != nil {
-			closeErr = conn.Close()
-		}
-		server.Stop()
-		listenerErr := listener.Close()
-		serveErr := <-done
-		if errors.Is(serveErr, grpc.ErrServerStopped) {
-			serveErr = nil
-		}
-		return errors.Join(closeErr, listenerErr, serveErr)
-	}
-	if err != nil {
-		return nil, nil, errors.Join(err, closeTransport())
-	}
-	return conn, closeTransport, nil
+	clients.RegisterConnectionServiceServer(transport, kernel)
+	eventstores.RegisterEventStoresServer(transport, kernel)
+	eventtypes.RegisterEventTypesServer(transport, kernel)
+	namespaces.RegisterNamespacesServer(transport, kernel)
+	sequences.RegisterEventSequencesServer(transport, kernel)
+	constraintcontracts.RegisterConstraintsServer(transport, kernel)
+	modelcontracts.RegisterReadModelsServer(transport, &substituteModels{})
+	projectioncontracts.RegisterProjectionsServer(transport, &substituteProjections{})
+	return transport
 }
 func unsupported(layer string) error {
 	return status.Error(codes.Unimplemented, "substituted scenario does not implement "+layer+"; use a real kernel")
