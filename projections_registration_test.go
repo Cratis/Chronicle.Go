@@ -24,6 +24,7 @@ import (
 type projectionKernel struct {
 	contracts.UnimplementedProjectionsServer
 	register func(context.Context, *contracts.RegisterRequest) error
+	preview  func(context.Context, *contracts.PreviewProjectionRequest) (*contracts.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors, error)
 }
 
 func (k *projectionKernel) Register(ctx context.Context, r *contracts.RegisterRequest) (*emptypb.Empty, error) {
@@ -31,6 +32,10 @@ func (k *projectionKernel) Register(ctx context.Context, r *contracts.RegisterRe
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil
+}
+
+func (k *projectionKernel) Preview(ctx context.Context, r *contracts.PreviewProjectionRequest) (*contracts.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors, error) {
+	return k.preview(ctx, r)
 }
 
 type ProjectionOpened struct {

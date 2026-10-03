@@ -13,11 +13,14 @@ import (
 )
 
 // Projections returns a detached list of this store's immutable compiled
-// definitions. Query/preview and runtime registration are later projection slices.
+// definitions. Use QueryProjection for kernel-executed, unregistered PDL queries.
 func (s *EventStore) Projections() []projections.Definition {
 	return slices.Clone(s.projectionDefinitions())
 }
 func (s *EventStore) projectionDefinitions() []projections.Definition {
+	if s.projectionSnapshot != nil {
+		return s.projectionSnapshot
+	}
 	if definitions, ok := s.client.storeProjections[s.name]; ok {
 		return definitions
 	}

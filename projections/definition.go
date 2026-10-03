@@ -4,7 +4,11 @@
 package projections
 
 import (
+	"crypto/sha256"
+	"reflect"
 	"slices"
+
+	"google.golang.org/protobuf/proto"
 
 	contracts "github.com/cratis/chronicle.go/contracts/projections"
 	"github.com/cratis/chronicle.go/events"
@@ -39,6 +43,10 @@ type definition struct {
 	sequence               events.SequenceID
 	passive, notRewindable bool
 	subscribesAll          bool
+	variant                reflect.Type
+	entering               []fromDefinition
+	sequenceExplicit       bool
+	sourceStore            string
 	nodeDefinition
 	provenance  []Provenance
 	diagnostics []Diagnostic
@@ -122,6 +130,23 @@ func (d Definition) Diagnostics() []Diagnostic {
 		return nil
 	}
 	return slices.Clone(d.data.diagnostics)
+}
+
+// Hash returns a SHA-256 fingerprint of the finalized wire definition. Map keys
+// are encoded deterministically; timestamps and authoring provenance are absent.
+// Rebinding naming or a source store changes the hash when the wire shape changes.
+// Stability is limited to one build: protobuf deterministic encoding is not
+// guaranteed across binaries or dependency versions. Do not persist hashes across
+// upgrades. Neither the kernel nor C# uses this client-side convenience hash.
+func (d Definition) Hash() ([32]byte, error) {
+	if d.data == nil {
+		return [32]byte{}, invalid("definition required")
+	}
+	data, err := (proto.MarshalOptions{Deterministic: true}).Marshal(d.KernelDefinition())
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return sha256.Sum256(data), nil
 }
 
 // KernelDefinition is the one encoder for every front end. Each call returns an

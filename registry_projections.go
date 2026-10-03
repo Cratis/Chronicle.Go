@@ -78,6 +78,14 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 	}
 	claimed := make(map[readmodels.Identifier]bool)
 	for _, declaration := range declarations {
+		if declaration.IsGlobal() {
+			for _, model := range models {
+				if model.GoType() == declaration.Model().GoType() {
+					return snapshot, fmt.Errorf("%w: global handler must not be registered as a read model", ErrInvalidConfiguration)
+				}
+			}
+			continue
+		}
 		model := declaration.Model()
 		registered, ok := modelCatalog.LookupIdentifier(model.Identifier())
 		if !ok || registered != model {
@@ -90,17 +98,11 @@ func freezeRegistry(registry *Registry, policy serialization.NamingPolicy, servi
 			declarations = append(declarations, projections.ModelBoundDescriptor(model))
 		}
 	}
-	ids := map[string]bool{}
-	for _, declaration := range declarations {
-		if ids[declaration.Identifier()] {
-			return snapshot, fmt.Errorf("%w: duplicate projection identity", ErrInvalidConfiguration)
-		}
-		ids[declaration.Identifier()] = true
-		compiled, compileErr := projections.Compile(declaration, catalog)
-		if compileErr != nil {
-			return snapshot, compileErr
-		}
-		snapshot.projections = append(snapshot.projections, compiled)
+	snapshot.projections, err = projections.CompileGroup(declarations, catalog)
+	if err != nil {
+		return snapshot, err
+	}
+	for _, compiled := range snapshot.projections {
 		for i, model := range models {
 			if model.Identifier() == compiled.Model().Identifier() {
 				models[i] = compiled.Model()

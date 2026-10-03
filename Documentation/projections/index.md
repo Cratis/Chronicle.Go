@@ -8,8 +8,9 @@ your Go process declares them and reads the result. Start with model-bound tags.
 Use the fluent builder when keeping the mappings separately makes the model clearer.
 Both forms support scalar mappings, arithmetic, global mappings, children, event
 joins, nested objects and removals. See [orders with children and joins](orders.md)
-for their model-bound and fluent equivalents. Variants and recursive schemas
-remain in the [projection series](https://github.com/Cratis/Chronicle.Go/issues/24).
+for their model-bound and fluent equivalents. See [variants](variants.md) for
+mutually exclusive lifecycle shapes, shared handlers, recursive children and
+ad-hoc projection queries.
 
 ## Model-bound declarations
 
@@ -179,7 +180,7 @@ are last-wins, so a later constant key overrides an earlier property key.
 | Option | Default and effect |
 | --- | --- |
 | `WithIdentifier(id)` | Model observer ID when set, otherwise full Go model type name; choose a stable C# name for shared definitions |
-| `WithEventSequence(id)` / `WithEventLog()` | Model event sequence (default `event-log`); model reads use the same sequence |
+| `WithEventSequence(id)` / `WithEventLog()` | Explicit selection overrides source-store inference; model reads use the same sequence |
 | `NoAutoMap()` / `AutoMap()` | Enabled by default |
 | `NotRewindable()` | Rewindable by default |
 | `Passive()` | Active by default; passive disables observation and selects the `None` sink for immediate reads |
@@ -223,7 +224,10 @@ kernel; use a disposable kernel for repeat runs, not production credentials/data
 
 Definitions register after event types and read models, share the store-level
 registration barrier, and replay from frozen snapshots on reconnect. Adding to a
-registry after `NewClient` does not alter that client. Runtime registry extension,
-preview/query, initial-value authoring, recursive schemas and source-store inbox
-inference remain outside this slice. See the [attribute parity map](../parity.md)
-for the remaining boundaries.
+registry after `NewClient` does not alter that client. Definitions expose a
+`Hash()` of their finalized wire shape, stable only within one build. Do not
+persist it across upgrades; neither the kernel nor C# uses a client hash. Runtime registry extension, initial-value
+authoring, derived-child codecs and inbox subscription provisioning remain
+unimplemented. Source-store inference selects only a sequence; see
+[variants, recursive children and queries](variants.md) and the
+[attribute parity map](../parity.md) for the remaining boundaries.

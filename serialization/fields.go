@@ -38,6 +38,7 @@ type Field struct {
 	Format     string
 	Collection bool
 	Tag        string
+	plan       *node
 }
 
 // Fields returns owned metadata in declaration/traversal order. Names come from
@@ -47,12 +48,39 @@ func (p *Plan) Fields() []Field {
 		return nil
 	}
 	var fields []Field
-	collectFields(p.root, "", "", nil, false, &fields)
+	collectFields(p.root, "", "", nil, false, &fields, map[*node]bool{})
 	return fields
 }
-func collectFields(n *node, path, goPath string, index []int, collection bool, result *[]Field) {
+
+// Fields returns the object's (or collection element's) local metadata. Recursive
+// edges are bounded per traversal path, not globally; siblings remain independent.
+func (f Field) Fields() []Field {
+	if f.plan == nil {
+		return nil
+	}
+	n := f.plan
+	for n.item != nil {
+		n = n.item
+	}
+	if n.reference != nil {
+		n = n.reference
+	}
+	var fields []Field
+	collectFields(n, "", f.GoField, nil, false, &fields, map[*node]bool{})
+	return fields
+}
+
+func collectFields(n *node, path, goPath string, index []int, collection bool, result *[]Field, active map[*node]bool) {
+	if n.reference != nil {
+		n = n.reference
+	}
+	if active[n] {
+		return
+	}
+	active[n] = true
+	defer delete(active, n)
 	if n.item != nil {
-		collectFields(n.item, path, goPath, index, collection || n.typ.Kind() != reflect.Pointer, result)
+		collectFields(n.item, path, goPath, index, collection || n.typ.Kind() != reflect.Pointer, result, active)
 		return
 	}
 	for _, f := range n.fields {
@@ -63,8 +91,8 @@ func collectFields(n *node, path, goPath string, index []int, collection bool, r
 		}
 		indices := append(append([]int(nil), index...), f.index)
 		scalar, format := classify(f.value)
-		*result = append(*result, Field{GoField: fieldName, Index: indices, Name: f.name, Path: fieldPath, Type: f.value.typ, Nullable: f.value.typ.Kind() == reflect.Pointer, Scalar: scalar, Format: format, Collection: collection, Tag: f.tag})
-		collectFields(f.value, fieldPath, fieldName, indices, collection, result)
+		*result = append(*result, Field{GoField: fieldName, Index: indices, Name: f.name, Path: fieldPath, Type: f.value.typ, Nullable: f.value.typ.Kind() == reflect.Pointer, Scalar: scalar, Format: format, Collection: collection, Tag: f.tag, plan: f.value})
+		collectFields(f.value, fieldPath, fieldName, indices, collection, result, active)
 	}
 }
 func classify(n *node) (Scalar, string) {
@@ -116,6 +144,26 @@ func FieldAt(fields []Field, path string) (Field, bool) {
 			f.Index = append([]int(nil), f.Index...)
 			return f, true
 		}
+	}
+	// Resolve a finite caller-supplied path beyond a recursive metadata edge.
+	// Every step consumes a property segment, so cycles cannot loop indefinitely.
+	for _, parent := range RootFields(fields) {
+		if !strings.HasPrefix(path, parent.Path+".") {
+			continue
+		}
+		field, ok := FieldAt(parent.Fields(), strings.TrimPrefix(path, parent.Path+"."))
+		if !ok {
+			return Field{}, false
+		}
+		field.Path = parent.Path + "." + field.Path
+		field.GoField = parent.GoField + "." + field.GoField
+		field.Index = append(append([]int(nil), parent.Index...), field.Index...)
+		typ := parent.Type
+		for typ.Kind() == reflect.Pointer {
+			typ = typ.Elem()
+		}
+		field.Collection = field.Collection || parent.Collection || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array || typ.Kind() == reflect.Map
+		return field, true
 	}
 	return Field{}, false
 }

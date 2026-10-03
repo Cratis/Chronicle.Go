@@ -15,11 +15,12 @@ import (
 
 // Descriptor is immutable event schema and serialization metadata. Its zero value is invalid.
 type Descriptor struct {
-	typ     reflect.Type
-	ref     TypeRef
-	plan    *serialization.Plan
-	tags    []Tag
-	subject func(any) (Subject, bool)
+	typ         reflect.Type
+	ref         TypeRef
+	plan        *serialization.Plan
+	tags        []Tag
+	subject     func(any) (Subject, bool)
+	sourceStore string
 }
 
 // Ref returns the persisted identity and generation.
@@ -33,6 +34,10 @@ func (d Descriptor) Schema() string { return d.plan.Schema() }
 
 // Fields returns detached metadata from the shared serialization/schema plan.
 func (d Descriptor) Fields() []serialization.Field { return d.plan.Fields() }
+
+// SourceStore returns the declared origin store; empty means unspecified/local.
+// It affects observer inference, not append routing or subscription provisioning.
+func (d Descriptor) SourceStore() string { return d.sourceStore }
 
 // Tags returns a copy of static event tags.
 func (d Descriptor) Tags() []Tag { return append([]Tag(nil), d.tags...) }
@@ -56,6 +61,7 @@ type typeConfig struct {
 	id          TypeID
 	generation  Generation
 	tags        []Tag
+	sourceStore string
 	subjectType reflect.Type
 	subject     func(any) (Subject, bool)
 }
@@ -69,6 +75,12 @@ func WithID(id TypeID) TypeOption { return func(c *typeConfig) { c.id = id } }
 // rejects such registrations until migration authoring is supported.
 func WithGeneration(generation Generation) TypeOption {
 	return func(c *typeConfig) { c.generation = generation }
+}
+
+// WithSourceStore declares the origin store for projection inbox inference.
+// Empty resets to unspecified. This never reroutes appends or provisions an inbox.
+func WithSourceStore(name string) TypeOption {
+	return func(c *typeConfig) { c.sourceStore = name }
 }
 
 // WithTags sets static tags merged distinctly with append tags, in input order.
@@ -91,6 +103,9 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 		}
 		option(&config)
 	}
+	if config.sourceStore != "" && strings.TrimSpace(config.sourceStore) == "" {
+		return Type[T]{}, fmt.Errorf("%w: source store must be nonblank", faults.ErrInvalidConfiguration)
+	}
 	if strings.TrimSpace(string(config.id)) == "" || strings.Contains(string(config.id), ",") || config.generation == 0 {
 		return Type[T]{}, fmt.Errorf("%w: nonblank comma-free type ID and positive generation required", faults.ErrInvalidConfiguration)
 	}
@@ -104,7 +119,7 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 	if err := plan.ValidateRole(declarations.Event); err != nil {
 		return Type[T]{}, err
 	}
-	return Type[T]{descriptor: Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...), subject: config.subject}}, nil
+	return Type[T]{descriptor: Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...), subject: config.subject, sourceStore: config.sourceStore}}, nil
 }
 
 // Catalog is a frozen, concurrency-safe set of event descriptors. Use NewCatalog.

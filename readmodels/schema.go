@@ -60,9 +60,17 @@ func stringProperty(property map[string]any) bool {
 }
 
 func schemaProperty(root map[string]any, path string) map[string]any {
+	definitions, _ := root["definitions"].(map[string]any)
+	resolve := func(node map[string]any) map[string]any {
+		if ref, ok := node["$ref"].(string); ok && strings.HasPrefix(ref, "#/definitions/") {
+			node, _ = definitions[strings.TrimPrefix(ref, "#/definitions/")].(map[string]any)
+		}
+		return node
+	}
 	for _, part := range strings.Split(path, ".") {
+		root = resolve(root)
 		if items, ok := root["items"].(map[string]any); ok {
-			root = items
+			root = resolve(items)
 		}
 		properties, _ := root["properties"].(map[string]any)
 		root, _ = properties[part].(map[string]any)

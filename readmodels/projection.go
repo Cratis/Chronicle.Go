@@ -16,6 +16,11 @@ func (d Descriptor) Fields() []serialization.Field {
 	return d.definition.plan.Fields()
 }
 
+// HasExplicitEventSequence reports whether the model overrides source inference.
+func (d Descriptor) HasExplicitEventSequence() bool {
+	return d.definition != nil && d.definition.config.sequenceExplicit
+}
+
 // BindProjection returns a new descriptor associated with a compiled producer.
 // It is a registry-composition hook, not runtime registration. Explicit conflicting
 // observer/sequence settings fail; passive projections use None rather than a
