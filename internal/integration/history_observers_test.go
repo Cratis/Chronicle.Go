@@ -74,7 +74,7 @@ func TestKernelHistoryMutationsReplayProjectionsAndReactors(t *testing.T) {
 		t.Fatalf("%+v %v", renamed, err)
 	}
 	reader := readmodels.For(store.ReadModels(), model)
-	awaitProjection(t, f.ctx, reader, readmodels.Key(source), func(m ProjectionAccount) bool { return m.Name == "before" })
+	awaitInitialHistoryProjection(t, f, store, reader, source, string(model.Identifier()), observed)
 	awaitHistoryObservation(t, f.ctx, observed, "before", events.ObservationInitial)
 	if err = sequence.Revise(f.ctx, *renamed.Position, ProjectionAccountRenamed{Name: "revised"}); err != nil {
 		t.Fatal(err)
