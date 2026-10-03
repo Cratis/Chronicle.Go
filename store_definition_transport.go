@@ -68,28 +68,38 @@ func (t *definitionTransport) Invoke(ctx context.Context, method string, args, r
 		c.mu.Unlock()
 		break
 	}
-	err = g.raw.Invoke(ctx, method, args, reply, t.options(options)...)
-	// Validate the raw acknowledgement while the destructive flight is held,
-	// before context joining or token invalidation can obscure its disposition.
-	if err == nil {
-		ack, ok := reply.(*emptypb.Empty)
-		if !ok || ack == nil || len(ack.ProtoReflect().GetUnknown()) != 0 {
-			err = ErrProtocol
+	err = func() error {
+		defer g.work.Done()
+		defer c.work.Done()
+		known := false
+		if t.destructive {
+			defer func() {
+				// A panic has no acknowledged disposition. Latch uncertainty and
+				// release the flight atomically before propagating it unchanged.
+				c.mu.Lock()
+				if !known {
+					d.destructiveUnknown = true
+				}
+				d.flight = false
+				d.notifyLocked()
+				c.mu.Unlock()
+			}()
 		}
-	}
-	if t.destructive {
-		var before *faults.BeforeDispatch
-		known := err == nil || status.Code(err) == codes.InvalidArgument || errors.As(err, &before)
-		c.mu.Lock()
-		if !known {
-			d.destructiveUnknown = true
+		rawErr := g.raw.Invoke(ctx, method, args, reply, t.options(options)...)
+		// Validate the raw acknowledgement while the destructive flight is held,
+		// before context joining or token invalidation can obscure its disposition.
+		if rawErr == nil {
+			ack, ok := reply.(*emptypb.Empty)
+			if !ok || ack == nil || len(ack.ProtoReflect().GetUnknown()) != 0 {
+				rawErr = ErrProtocol
+			}
 		}
-		d.flight = false
-		d.notifyLocked()
-		c.mu.Unlock()
-	}
-	g.work.Done()
-	c.work.Done()
+		if t.destructive {
+			var before *faults.BeforeDispatch
+			known = rawErr == nil || status.Code(rawErr) == codes.InvalidArgument || errors.As(rawErr, &before)
+		}
+		return rawErr
+	}()
 	invalidateRejectedToken(g.tokens, err)
 	if err != nil && ctx.Err() != nil {
 		return errors.Join(err, ctx.Err())

@@ -103,11 +103,13 @@ func (t *generationTransport) Invoke(ctx context.Context, method string, args, r
 		c.work.Add(1)
 		c.mu.Unlock()
 	}
-	err = t.generation.raw.Invoke(ctx, method, args, reply, t.options(options)...)
-	if c := t.generation.client; c != nil {
-		t.generation.work.Done()
-		c.work.Done()
-	}
+	err = func() error {
+		if c := t.generation.client; c != nil {
+			defer t.generation.work.Done()
+			defer c.work.Done()
+		}
+		return t.generation.raw.Invoke(ctx, method, args, reply, t.options(options)...)
+	}()
 	invalidateRejectedToken(t.generation.tokens, err)
 	if err != nil && ctx.Err() != nil {
 		return errors.Join(err, ctx.Err())
