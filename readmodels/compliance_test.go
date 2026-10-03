@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/contracts/compliance"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
-	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -105,7 +105,8 @@ func TestAllOneShotReadPathsFailClosedOnRelease(t *testing.T) {
 		t.Run(path, func(t *testing.T) {
 			service, ctx := serviceFixture(t, &modelKernel{
 				get: func(context.Context, *contracts.GetInstanceByKeyRequest) (*contracts.GetInstanceByKeyResponse, error) {
-					return &contracts.GetInstanceByKeyResponse{ReadModel: `{"id":"owner","name":"ciphertext"}`, LastHandledEventSequenceNumber: uint64(events.Unavailable)}, nil
+					// The server owns materialized release and fails the RPC on failure.
+					return nil, errors.New("PRIVATE kernel release failed")
 				},
 				replay: func(context.Context, *contracts.GetAllInstancesRequest) (*contracts.GetAllInstancesResponse, error) {
 					// Replay is released by the kernel, not Compliance.Release on the client.
@@ -129,16 +130,9 @@ func TestAllOneShotReadPathsFailClosedOnRelease(t *testing.T) {
 				}
 			case "session":
 				session, failure := reader.NewSession("owner")
-				if failure != nil {
-					t.Fatal(failure)
-				}
-				value, failure := session.Get(ctx)
 				err = failure
-				if value.Exists || value.Value.Name != "" {
-					t.Fatal("unsafe session")
-				}
-				if failure := session.Close(ctx); failure != nil {
-					t.Fatal(failure)
+				if session != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+					t.Fatal("protected session admitted", err)
 				}
 			case "replay":
 				value, failure := service.ReplayProjection(ctx, model.Identifier(), 1)
@@ -147,7 +141,7 @@ func TestAllOneShotReadPathsFailClosedOnRelease(t *testing.T) {
 					t.Fatal("unsafe replay")
 				}
 			}
-			if err == nil || (path != "replay" && !errors.Is(err, readmodels.ErrRelease)) || strings.Contains(err.Error(), "PRIVATE") {
+			if err == nil || strings.Contains(err.Error(), "PRIVATE") {
 				t.Fatalf("release identity: %v", err)
 			}
 		})

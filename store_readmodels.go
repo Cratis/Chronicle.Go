@@ -30,7 +30,11 @@ func (s *EventStore) initializeReadModelsFromSnapshot(snapshot registrySnapshot)
 	s.reducerSnapshot = snapshot.reducers
 	s.readModelReactorSnapshot = snapshot.readModelReactors
 	s.initializeDecisions(snapshot)
-	service, err := readmodels.New(s.name, s.namespace, snapshot.models, &clientTransport{client: s.client, store: s}, readmodels.WithReleasedPassiveReader(s.readPassiveReducer), readmodels.WithReducerCollectionReader(s.readReducerCollection), readmodels.WithProjectionReplayValidator(s.validateProjectionReplay), readmodels.WithSnapshotEventCatalog(snapshot.events), readmodels.WithReductionChanges(&s.readModelChanges))
+	replayValidator, err := projectionReplayValidatorFor(snapshot)
+	if err != nil {
+		return err
+	}
+	service, err := readmodels.New(s.name, s.namespace, snapshot.models, &clientTransport{client: s.client, store: s}, readmodels.WithReleasedPassiveReader(s.readPassiveReducer), readmodels.WithReducerCollectionReader(s.readReducerCollection), readmodels.WithProjectionReplayValidator(replayValidator), readmodels.WithSnapshotEventCatalog(snapshot.events), readmodels.WithReductionChanges(&s.readModelChanges))
 	if err != nil {
 		return err
 	}

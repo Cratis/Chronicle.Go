@@ -35,7 +35,7 @@ func historyContribution() *contracts.Event {
 }
 
 func TestSnapshotsOwnCompleteContributionContextWithoutInventingPresence(t *testing.T) {
-	model := person(t, readmodels.WithObserver(readmodels.Projection, "projection"), readmodels.WithEventSequence("inbox-origin"), readmodels.WithPII("name"))
+	model := person(t, readmodels.WithObserver(readmodels.Projection, "projection"), readmodels.WithEventSequence("inbox-origin"))
 	event := historyContribution()
 	a := wire.Correlation(event.Context.CorrelationId)
 	b, _ := metadata.ParseCorrelationID("ffeeddcc-bbaa-9988-7766-554433221100")

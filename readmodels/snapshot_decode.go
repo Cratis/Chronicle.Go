@@ -18,7 +18,7 @@ import (
 )
 
 func (s *Service) snapshotEvent(model Descriptor, event *contracts.Event) (events.Appended, error) {
-	if event == nil || event.Context == nil || event.Context.EventType == nil || !json.Valid([]byte(event.Content)) {
+	if event == nil || event.Context == nil || event.Context.EventType == nil || !validDocument([]byte(event.Content)) {
 		return events.Appended{}, faults.ErrProtocol
 	}
 	c := event.Context

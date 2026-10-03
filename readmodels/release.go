@@ -41,8 +41,9 @@ func (e *ReleaseError) Unwrap() []error { return []error{ErrRelease, e.Cause} }
 // schema. Top-level properties are released in groups selected by __subjects,
 // falling back to the resolved default subject. Persisted lineage is preserved. Missing
 // subjects, kernel release errors and invalid replies fail closed. Unprotected
-// documents are copied without a release RPC. Every read path verifies release
-// before delivery: the kernel handlers pass already released values unchanged.
+// documents are copied without a release RPC. This API accepts unreleased sink
+// documents, not results from server-released reads. Release is not idempotent:
+// legitimate plaintext can resemble ciphertext and must not be released twice.
 // Namespace/global confidentiality does not require a subject. Subject-dependent
 // values without an owner fail closed, even in mixed-scope models.
 func (s *Service) Release(ctx context.Context, model Identifier, document json.RawMessage) (json.RawMessage, error) {
@@ -69,6 +70,9 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 // releaseDocument performs only RPC and raw-schema work. It never invokes an
 // application codec. Callers must validateReleasedDocument before delivery.
 func (s *Service) releaseDocument(ctx context.Context, d Descriptor, document json.RawMessage) (json.RawMessage, error) {
+	if !validDocument(document) {
+		return nil, &ReleaseError{Cause: faults.ErrProtocol}
+	}
 	if len(d.definition.protected) == 0 {
 		return append(json.RawMessage(nil), document...), nil
 	}
@@ -169,6 +173,9 @@ func (s *Service) releaseDocument(ctx context.Context, d Descriptor, document js
 // validateReleasedDocument invokes application codecs, so callers must not hold
 // a counted transport lease or an internal lock while validating.
 func validateReleasedDocument(d Descriptor, document json.RawMessage) error {
+	if !validDocument(document) {
+		return &ReleaseError{Cause: faults.ErrProtocol}
+	}
 	if len(d.definition.protected) == 0 {
 		return nil
 	}
@@ -188,7 +195,9 @@ func validateReleasedDocument(d Descriptor, document json.RawMessage) error {
 	if err != nil {
 		return &ReleaseError{Cause: faults.ErrProtocol}
 	}
-	if err := d.definition.plan.Unmarshal(protectedJSON, reflect.New(d.GoType()).Interface()); err != nil {
+	if err := readCodec(func() error {
+		return d.definition.plan.Unmarshal(protectedJSON, reflect.New(d.GoType()).Interface())
+	}); err != nil {
 		return &ReleaseError{Cause: err}
 	}
 	return nil

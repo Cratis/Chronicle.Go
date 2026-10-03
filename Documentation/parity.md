@@ -55,7 +55,7 @@ Statuses: **Implemented** means the named behavior has executable regression evi
 | Read-model catalog / `DotNET/ReadModels/{ReadModels,ReadModelTypeExtensions}`, `Sinks/WellKnownSinkTypes` | **Implemented** for explicit declarations, indexes, sink selection and registration replay: `RegisterReadModel[T]`, `readmodels.Model`, `Descriptor`, `Catalog`, `EventStore.ReadModels` | `TestReadModelRegistrationMatchesCSharpGolden`, `TestReadModelDefaultsAndCatalogIsolation`, `TestContainerNamesMatchCSharpDefaultNamingPolicy`, `TestReadModelRegistrySnapshotsAndConcurrentDuplicates`, `TestReadModelReplayBarrierAndNamespaceIsolation`, `TestReadModelRegistrationFailureDoesNotPublishReadiness`, `TestKernelReadModelRegistrationAndAbsence`, `TestPassiveReadModelRequiresObserver`, `TestReadModelPropertyOptionsAccumulate`, `TestGenericReadModelRequiresExplicitNames`; no automatic producer discovery |
 | One-shot model reads / `DotNET/ReadModels/{IReadModels,ReadModels,ReadModelJsonSerialization}` | **Implemented** for kernel-backed reads: typed `Reader[T].Get` and raw `Service.Get`, explicit `Exists` and `LastHandled` | `TestReadModelPresenceAndCollectionNormalization`, `TestReadModelErrorsAndUnsupportedKernel`, `TestReadModelValidationNeverDispatches`, `TestKernelReadModelRegistrationAndAbsence`; real-kernel evidence is registration plus absence. Presence is covered through bufconn; materializing state requires a projection/reducer |
 | Supported typed model decoding / `DotNET/ReadModels/ReadModels.cs:257–258`, `DotNET/ChronicleClient.cs:360–381` (baseline revision above) | **Implemented**: typed Get, sessions, injected value/pointer models and typed Release use the registered frozen descriptor plan, as do watches/windows | `TestTypedReadsUseFrozenNamingPlan`, `TestTypedNamingPlanPreservesMissingKeyAndDistinctID`, `TestTypedInjectionAbsenceNeverManufacturesState`, `TestReadModelPlanDoesNotReuseAnotherFieldsExactName`, `TestReleaseNeverUsesIndependentDeclaredIDAsSubject`, `TestReleaseAliasFilteringPreservesSubjectAndLineagePrecedence`, `TestReleaseExplicitSubjectCanSelectIndependentID`; root Go `ID` → `Id` remains distinct from `ExternalID` tagged `json:"ID"`, including missing/null fields and sink aliases. All three naming policies, concept codecs, collection nullability and fail-closed Release errors are covered. A missing/null/empty root ID never infers a protected-value subject from another declared ID field; explicit subjects and stored lineage retain precedence. Decode support does not imply the pinned kernel can register a projection schema containing both `Id` and `ID`; it rejects that shape |
-| Hydration sessions / `DotNET/ReadModels/{ReadModels,ReadModelSessionId}` | **Partial**: `Reader[T].NewSession`, `Session[T].Get`, `Close(ctx)` preserve coordinates and explicit cleanup | `TestReadModelSessionRetainsCoordinatesAndRetriesFailedCleanup`, `TestSessionCancellationStillRequiresDehydration`, `TestUnsupportedSessionsFailBeforeDispatch`; projection-backed transport only, no real-kernel session claim before projection authoring. Reducer sessions fail explicitly |
+| Hydration sessions / `DotNET/ReadModels/{ReadModels,ReadModelSessionId}` | **Partial**: `Reader[T].NewSession`, `Session[T].Get`, `Close(ctx)` preserve coordinates and explicit cleanup | `TestReadModelSessionRetainsCoordinatesAndRetriesFailedCleanup`, `TestSessionCancellationStillRequiresDehydration`, `TestUnsupportedSessionsFailBeforeDispatch`; projection-backed transport only. Reducer and classified projection sessions fail explicitly; the route-specific protection limits below also apply to passive/immediate Get |
 | Protected-value release / `DotNET/ReadModels/{ReadModelReleaser,ReadModelSubjectResolver}`, `Source/Kernel/Core/ReadModels/ReadModelsCompliance.cs` (repository root, baseline revision above) | **Partial**, **Go-specific** fail-closed behavior: `Reader[T].Release`, raw `Service.Release`, `WithPII`, `WithSubjectProperty` | `TestReadModelReleaseFailsClosed`, `TestReadModelReleaseSubjectAndNoMetadata`, `TestReadModelReleaseMultipleSubjectGroups`, `TestReadModelReleaseNumericSubjects`, `TestReadModelReleaseRejectsMalformedLineage`, `TestReadModelMetadataUsesSerializationPlan`; see the per-behavior compliance rows below for type/container classification, confidentiality, lifecycle APIs and kernel limitations |
 | Projection basic declarations / `DotNET/Projections/{ProjectionBuilderFor,Projections}`, `ModelBound/ModelBoundProjectionBuilder` | **Partial**: model-bound and fluent front ends, one immutable compiler/encoder, frozen catalog resolution, store registration and reconnect | `TestBothFrontEndsMatchCSharpBasicGolden`, `TestProjectionDiscoveryRegistrationAndFrozenReplay`, `TestProjectionStartupValidationIsAtomicAndStoreLocal`, `TestKernelProjectionMaterializesModelBoundAndPassiveReads`; attribute-by-attribute boundaries below |
 | Reducers / `DotNET/Reducers/*` | **Partial**: active and passive folds with explicit callbacks and convention discovery | Per-behavior evidence and limits in [Reducers](#reducers) below |
@@ -75,9 +75,9 @@ Release ownership and capability boundaries use **v19.29.4**:
 `Source/Kernel/Core/ReadModelExplorer/ReadModelSnapshotReader.cs`, and
 `Source/Kernel/Core/Projections/Projection.cs`.
 
-- **Implemented:** raw/typed collections, default versus explicit Unlimited
-  routing, globally bounded generation-aware reducer folds, and source-ID root
-  projection snapshots. `TestKernelModelHistoryProjectionCollectionsAndCorrelationGroups`
+- **Partial:** raw/typed collections, default versus explicit Unlimited
+  routing, globally bounded generation-aware reducer folds, and admitted source-ID
+  root projection snapshots. Classified projection replay/history is unsupported. `TestKernelModelHistoryProjectionCollectionsAndCorrelationGroups`
   proves materialized absence/deletion, bounded/passive replay, namespace isolation,
   A/B/A global grouping, first-event occurrence and ambiguous `{}` deletion history.
   `TestKernelModelHistoryReducerCollectionRoutingAndDeletion` separates materialized
@@ -86,25 +86,47 @@ Release ownership and capability boundaries use **v19.29.4**:
   MaxInt32 fail rather than clamp; reducer snapshots fail before RPC instead of
   adopting the kernel's unconditional empty result. Nonempty defaults and unproven
   custom/relationship-key replay are refused (`TestProjectionHistoryRefusesDefaultsAndCustomKeysWithoutRPC`).
+  Mixed ALL plus explicit event mappings also fails before RPC because the kernel
+  query drops types handled live; pure ALL with an empty type filter is characterized
+  by `TestKernelModelHistoryMixedAllReplayRefusalAndPureAll` (A/B/A).
+  [Chronicle#4562](https://github.com/Cratis/Chronicle/issues/4562) tracks that defect.
   No local evaluator/default overlay or decision guard is inferred.
-- **Verified release ownership:** materialized collections release using model
-  lineage in the kernel; collection replay releases its resulting models;
-  snapshots release contributing events before projecting; local reducers fold
-  released history. No second client decrypt on those paths.
-  `TestKernelModelHistoryReleaseOwnershipAndErasure` covers all collection routes,
-  snapshot state/contributions and keyed passive folds before and after erasure.
-  The legacy `PassiveReader` signature/release contract remains available;
+- **Route-specific release ownership:** materialized keyed/collection reads use
+  persisted model lineage; the SDK validates their final representation without a
+  second decrypt. Local reducers fold released history. Protected projection
+  collection replay, legacy replay, immediate Get, sessions and model history are
+  refused before RPC, for PII and every encryption scope. A default `Id` is not
+  recognized as a replay release subject; lowercase `id` still cannot reconstruct
+  per-event subjects. [Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561)
+  tracks the missing lineage. `TestKernelModelHistoryProtectedReleaseProfile`
+  witnesses default-Id ciphertext after erasure, source != subject session loss,
+  and legitimate cipher-shaped plaintext preserved by materialized reads.
+  Contributions on unclassified model history are released separately by the
+  kernel's event subject/schema before projection, including before/after erasure.
+  `TestKernelModelHistoryReleaseOwnershipAndErasure` covers admitted collection
+  routes and keyed passive folds. These witnesses are not general server security
+  assurance and do not complete #33's protected-history capability.
+  Explicit `Service.Release` remains an unreleased-document API with lineage
+  groups. Legacy `PassiveReader` retains that contract;
   `WithReleasedPassiveReader` explicitly selects plaintext instead.
 - **Decode and lifetime evidence:** `TestCollectionAndSnapshotsUseFrozenNamingAndPointerConcepts`,
   `TestCollectionRejectsLateErrorsWithoutPartialProgress`,
-  `TestSnapshotsRejectLateFailuresAndEnvelopeFailures`, and
+  `TestSnapshotsRejectLateFailuresAndEnvelopeFailures`,
+  `TestReadDocumentsRejectDuplicateMembersBeforePublication`,
+  `TestHistoryCodecFailuresArePayloadFreeAndAtomic`, and
   `TestModelHistoryCodecsCanCloseClientAndLateCancellationDiscardsEverything`.
+  Go rejects duplicate JSON names recursively before schema checks or publication;
+  ordinary unknown fields remain. Decoder panics discard results and never retain
+  panic payloads; ordinary codec causes remain inspectable behind fixed messages.
   The raw response owns its metadata; no IDs, revision or generation copies absent
   from the snapshot wire are fabricated. Unknown Go event types stay raw.
 - **Limits:** complete matching history is fetched before local truncation, not
   paged/bounded on the wire. Counts are not positions or freshness proofs; progress
   is reported independently. `Snapshot.Instance` has no invented existence or
   last-handled marker. Catalog-only producers cannot establish replay fidelity.
+  `TestProjectionReplayPolicyOwnsBoundReplacementAndInboxDefinitions` verifies
+  immutable admission from the actual selected store's bound definitions/models,
+  including replacement registries and inbox sequence binding.
 
 See the [collection/history reference](read-models/collections-and-history.md).
 

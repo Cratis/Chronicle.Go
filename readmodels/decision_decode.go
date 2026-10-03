@@ -28,6 +28,15 @@ func decodeDecision[T any](raw Instance[json.RawMessage], descriptor Descriptor)
 			instance = Instance[T]{}
 			err = &DecisionCodecPanicError{}
 		}
+		// Only inspect our own wrappers: traversing arbitrary causes here can
+		// invoke an application's As/Unwrap methods after the recovery boundary.
+		codecError := err
+		if release, ok := err.(*ReleaseError); ok {
+			codecError = release.Cause
+		}
+		if _, ok := codecError.(*CodecPanicError); ok {
+			instance, err = Instance[T]{}, &DecisionCodecPanicError{}
+		}
 	}()
 	if raw.Exists {
 		if err = validateReleasedDocument(descriptor, raw.Value); err != nil {
