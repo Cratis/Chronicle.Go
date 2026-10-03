@@ -15,6 +15,7 @@ import (
 	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/chronicletest"
 	"github.com/cratis/chronicle.go/constraints"
+	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
@@ -82,13 +83,52 @@ func TestKernelReadModelScenarioDiscoversProjectionAndRejectsAmbiguousInstance(t
 	}
 }
 func TestKernelReadModelScenarioInlineProjectionOverridesReducer(t *testing.T) {
-	registry, model, _ := reducerRegistry(t)
-	event, err := chronicle.RegisterEvent[AccountRenamed](registry)
+	registry, model, numbers := reducerRegistry(t)
+	event, err := events.Define[AccountOpened]()
 	if err != nil {
 		t.Fatal(err)
 	}
 	builder := projections.NewBuilder("inline-account", model)
-	projections.From(builder, event, func(from *projections.FromBuilder[Account, AccountRenamed]) {
+	projections.From(builder, event, func(from *projections.FromBuilder[Account, AccountOpened]) {
+		projections.Value(from, projections.Path[Account, string]("Name"), "inline")
+	}) // Default event-source key is supported by the safe replay profile.
+	declaration, err := builder.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := chronicletest.NewReadModelScenario[Account](t, kernelConfig(registry), chronicletest.ReadModelOptions[Account]{Projection: &declaration})
+	ctx := kernelContext(t)
+	chronicletest.RequireFidelity(t, s.Fidelity(), chronicletest.ProjectionExecution)
+	if err = s.Given(ctx, "source-account", AccountOpened{Name: "not-inline"}); err != nil {
+		t.Fatal(err)
+	}
+	instance, err := s.InstanceFor(ctx, readmodels.Key("source-account"))
+	if err != nil || !instance.Exists || instance.Value.Name != "inline" {
+		t.Fatalf("inline precedence/source key: %+v %v", instance, err)
+	}
+	if len(*numbers) != 0 {
+		t.Fatalf("overridden reducer ran: %v", *numbers)
+	}
+	// Both producers handle AccountOpened but produce different state. The
+	// original registry still folds through its reducer, not the inline fixture.
+	original := chronicletest.NewReadModelScenario[Account](t, chronicletest.Config{Registry: registry})
+	if err = original.Given(ctx, "source-account", AccountOpened{Name: "not-inline"}); err != nil {
+		t.Fatal(err)
+	}
+	reduced, err := original.InstanceFor(ctx, "source-account")
+	if err != nil || !reduced.Exists || reduced.Value.Name != "not-inline" {
+		t.Fatalf("original reducer registry mutated: %+v %v", reduced, err)
+	}
+}
+
+func TestKernelReadModelScenarioRefusesCustomKeyProjectionReplay(t *testing.T) {
+	registry, model, _ := reducerRegistry(t)
+	event, err := events.Define[AccountOpened]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	builder := projections.NewBuilder("custom-key-account", model)
+	projections.From(builder, event, func(from *projections.FromBuilder[Account, AccountOpened]) {
 		projections.Value(from, projections.Path[Account, string]("Name"), "inline")
 	}, projections.UsingConstantKey("catalog"))
 	declaration, err := builder.Build()
@@ -97,12 +137,17 @@ func TestKernelReadModelScenarioInlineProjectionOverridesReducer(t *testing.T) {
 	}
 	s := chronicletest.NewReadModelScenario[Account](t, kernelConfig(registry), chronicletest.ReadModelOptions[Account]{Projection: &declaration})
 	ctx := kernelContext(t)
-	if err = s.Given(ctx, "ignored-source", AccountRenamed{Name: "not-inline"}); err != nil {
+	if err = s.Given(ctx, "ignored-source", AccountOpened{Name: "not-inline"}); err != nil {
 		t.Fatal(err)
 	}
-	instance, err := s.InstanceFor(ctx, readmodels.Key("catalog"))
-	if err != nil || !instance.Exists || instance.Value.Name != "inline" {
-		t.Fatalf("inline precedence/custom key: %+v %v", instance, err)
+	// C# scenarios can select a custom projected key, but the 19.29.4 safe
+	// replay admission profile requires SOURCE keys. No partial map or guessed
+	// source-key instance may replace the requested custom-key result.
+	if instances, err := s.Instances(ctx); instances != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+		t.Fatalf("custom-key replay admitted: %+v %v", instances, err)
+	}
+	if instance, err := s.InstanceFor(ctx, "catalog"); instance.Exists || !errors.Is(err, chronicle.ErrUnsupported) {
+		t.Fatalf("custom-key selection admitted: %+v %v", instance, err)
 	}
 }
 func TestKernelEventScenarioEnforcesConstraints(t *testing.T) {
