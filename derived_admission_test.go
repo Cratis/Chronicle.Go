@@ -9,8 +9,10 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/derivedfixtures"
+	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -18,6 +20,35 @@ type classifiedUnusedVariant struct {
 	Secret string `chronicle:"pii"`
 }
 type derivedAdmissionEvent struct{ Value any }
+type derivedProtectedAdmissionModel struct {
+	ID     string
+	Member derivedfixtures.Member
+	Secret string
+}
+
+func TestDerivedProtectedModelsAreRejectedBeforeRegistryAdmission(t *testing.T) {
+	codecs, err := derivedfixtures.Codecs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, protection := range map[string]readmodels.ModelOption{
+		"family":            readmodels.WithPII("Member"),
+		"protected sibling": readmodels.WithPII("Secret"),
+		"unused variant":    readmodels.WithProtection(compliance.For[derivedfixtures.RobotValue](compliance.Classification{PII: true})),
+		"namespace":         readmodels.WithProtection(compliance.Property("Secret", compliance.Classification{Encrypted: true, Scope: compliance.Namespace})),
+		"global":            readmodels.WithProtection(compliance.Property("Secret", compliance.Classification{Encrypted: true, Scope: compliance.Global})),
+	} {
+		t.Run(name, func(t *testing.T) {
+			registry := NewRegistry()
+			if _, err := RegisterReadModel[derivedProtectedAdmissionModel](registry, readmodels.WithCodecs(codecs), protection); !errors.Is(err, ErrInvalidConfiguration) {
+				t.Fatal("protected family admitted", err)
+			}
+			if len(captureRegistry(registry).readModels) != 0 {
+				t.Fatal("invalid family left a partially registered model")
+			}
+		})
+	}
+}
 
 func TestDerivedAdmissionAndAppendRejectionDispatchNoRPC(t *testing.T) {
 	registry := NewRegistry()
