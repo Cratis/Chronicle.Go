@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"google.golang.org/grpc"
 )
@@ -49,6 +50,10 @@ func (c *Client) acquire(ctx context.Context) (*generation, context.Context, fun
 type clientTransport struct {
 	client *Client
 	store  *EventStore
+}
+
+func (t *clientTransport) AppendOriginResolver() eventsequences.AppendOriginResolver {
+	return t.client.config.appendOriginResolver
 }
 
 func (t *clientTransport) Invoke(ctx context.Context, method string, args, reply any, options ...grpc.CallOption) error {

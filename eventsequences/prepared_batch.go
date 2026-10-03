@@ -11,6 +11,7 @@ import (
 
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/appendorigin"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
@@ -151,13 +152,22 @@ func (b *PreparedBatch) GetEvents() []json.RawMessage {
 // atomic heterogeneous batch. No event is serialized again. The snapshot must
 // originate from s; commit metadata comes from the snapshot, not ctx. This low-
 // level method does not prevent repeated calls; transaction owners do.
-// Local notification origin comes from ctx at append time, not the snapshot.
+// Local notification origin is resolved from this append ctx, not the snapshot.
+// PrepareBatch never invokes the resolver; SDK-owned unit commits bypass it.
 func (s *Sequence) AppendPreparedBatch(ctx context.Context, snapshot *PreparedBatch) (BatchResult, error) {
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
 	}
 	if snapshot == nil || snapshot.sequence != s || s == nil {
 		return BatchResult{}, faults.ErrInvalidConfiguration
+	}
+	origin, owned := appendorigin.Unit[Origin](ctx, snapshot)
+	if !owned {
+		var err error
+		origin, err = s.resolveAppendOrigin(ctx)
+		if err != nil {
+			return BatchResult{Disposition: Rejected}, err
+		}
 	}
 	scopes, err := s.automaticBatchScopes(ctx, snapshot.entries, snapshot.explicit)
 	if err != nil {
@@ -170,5 +180,5 @@ func (s *Sequence) AppendPreparedBatch(ctx context.Context, snapshot *PreparedBa
 	if err != nil {
 		return BatchResult{}, err
 	}
-	return s.dispatchBatch(ctx, batch)
+	return s.dispatchBatch(ctx, batch, origin)
 }

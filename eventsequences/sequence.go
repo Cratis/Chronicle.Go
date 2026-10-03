@@ -22,20 +22,23 @@ import (
 // subscriptions. It must not be copied. Obtain it from EventStore; it does not
 // own the client and cannot outlive the client's Close.
 type Sequence struct {
-	store       metadata.StoreName
-	namespace   metadata.Namespace
-	id          events.SequenceID
-	catalog     *events.Catalog
-	service     sequences.EventSequencesClient
-	concurrency ConcurrencyPolicy
-	appends     appendSubscriptions
+	store                metadata.StoreName
+	namespace            metadata.Namespace
+	id                   events.SequenceID
+	catalog              *events.Catalog
+	service              sequences.EventSequencesClient
+	concurrency          ConcurrencyPolicy
+	appends              appendSubscriptions
+	appendOriginResolver AppendOriginResolver
 }
 
 // New creates a low-level sequence over a caller-owned connection and registered
 // catalog. Each call creates independent, handle-local append subscriptions; this
 // is the low-level escape hatch from EventStore's shared sequence handles. It does
 // not ensure registration or compatibility; prefer EventStore's handles, which
-// enforce those barriers. Invalid coordinates or nil dependencies fail.
+// enforce those barriers. It snapshots optional ConcurrencyPolicyProvider and
+// AppendOriginResolverProvider configuration once from conn, without invoking
+// the resolver. Invalid coordinates or nil dependencies fail.
 func New(store metadata.StoreName, namespace metadata.Namespace, id events.SequenceID, catalog *events.Catalog, conn grpc.ClientConnInterface) (*Sequence, error) {
 	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || strings.TrimSpace(string(id)) == "" || catalog == nil || conn == nil {
 		return nil, fmt.Errorf("%w: sequence coordinates, catalog and connection are required", faults.ErrInvalidConfiguration)
@@ -43,6 +46,9 @@ func New(store metadata.StoreName, namespace metadata.Namespace, id events.Seque
 	sequence := &Sequence{store: store, namespace: namespace, id: id, catalog: catalog, service: sequences.NewEventSequencesClient(conn)}
 	if provider, ok := conn.(ConcurrencyPolicyProvider); ok {
 		sequence.concurrency = provider.ConcurrencyPolicy()
+	}
+	if provider, ok := conn.(AppendOriginResolverProvider); ok {
+		sequence.appendOriginResolver = provider.AppendOriginResolver()
 	}
 	return sequence, nil
 }
@@ -60,6 +66,10 @@ func (s *Sequence) ID() events.SequenceID { return s.id }
 func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any, options ...AppendOption) (result AppendResult, err error) {
 	if err := ctx.Err(); err != nil {
 		return AppendResult{}, err
+	}
+	origin, err := s.resolveAppendOrigin(ctx)
+	if err != nil {
+		return AppendResult{Disposition: Rejected}, err
 	}
 	if strings.TrimSpace(string(source)) == "" || s.id == "" {
 		return AppendResult{}, fmt.Errorf("%w: source and sequence are required", faults.ErrInvalidConfiguration)
@@ -95,7 +105,7 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	dispatched := true
 	defer func() {
 		if dispatched {
-			err = joinNotificationError(err, s.notifySingle(OriginFrom(ctx), source, descriptor.Ref(), config.route, wire.Correlation(request.CorrelationId), result, err))
+			err = joinNotificationError(err, s.notifySingle(origin, source, descriptor.Ref(), config.route, wire.Correlation(request.CorrelationId), result, err))
 		}
 	}()
 	var envelope *sequences.CommandResult_AppendResponse
