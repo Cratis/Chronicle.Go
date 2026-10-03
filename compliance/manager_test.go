@@ -130,8 +130,9 @@ func TestLifecycleRejectsReservedKeysAndCancellationBeforeDispatch(t *testing.T)
 		},
 	})
 	for _, operation := range []func(context.Context, string) error{manager.ErasePII, manager.AllowNewEncryptionKeyFor} {
-		for _, id := range []string{"", "$chronicle-encrypted-value$subject$PRIVATE"} {
-			if err := operation(ctx, id); !errors.Is(err, faults.ErrInvalidConfiguration) || strings.Contains(err.Error(), "PRIVATE") {
+		for _, id := range []string{"", "$chronicle-encrypted-value$subject$PRIVATE", "$chronicle-encrypted-value$namespace$", "$chronicle-encrypted-value$global$"} {
+			var subject *compliance.InvalidSubjectError
+			if err := operation(ctx, id); !errors.Is(err, faults.ErrInvalidConfiguration) || !errors.As(err, &subject) || subject.Reserved != (id != "") || strings.Contains(err.Error(), "PRIVATE") {
 				t.Fatal(err)
 			}
 		}

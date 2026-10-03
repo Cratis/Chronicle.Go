@@ -86,7 +86,7 @@ func TestReadModelReleaseSubjectAndNoMetadata(t *testing.T) {
 		{`{"customerId":"id","subject":"","name":"ciphertext"}`, map[string]string{"id": `{"customerId":"id","subject":"","name":"ciphertext"}`}},
 		{`{"customerId":"id","__subject":"stored","__subjects":{"name":"nested"},"name":"ciphertext"}`, map[string]string{
 			"nested": `{"name":"ciphertext"}`,
-			"stored": `{"customerId":"id","__subject":"stored","__subjects":{"name":"nested"}}`,
+			"stored": `{"customerId":"id"}`,
 		}},
 	} {
 		if _, err = service.Release(ctx, model.Identifier(), json.RawMessage(tc.document)); err != nil {
@@ -153,7 +153,7 @@ func TestReadModelReleaseMultipleSubjectGroups(t *testing.T) {
 	groups := map[string]string{
 		"a-owner": `{"name":"ciphertext"}`,
 		"b-owner": `{"contact":{"email":"ciphertext"}}`,
-		"default": `{"id":"fallback","count":7,"__subject":"default","__subjects":{"name":"a-owner","contact":"b-owner"}}`,
+		"default": `{"id":"fallback","count":7}`,
 	}
 	for _, fail := range []bool{false, true} {
 		t.Run(map[bool]string{false: "merge", true: "failing later group"}[fail], func(t *testing.T) {

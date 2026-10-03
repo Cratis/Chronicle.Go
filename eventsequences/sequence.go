@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
@@ -140,6 +141,13 @@ func (s *Sequence) request(ctx context.Context, source events.SourceID, descript
 	if err := validateAppendMetadata(config.subject, config.occurred, config.named); err != nil {
 		return nil, err
 	}
+	subject := string(source)
+	if config.subject != nil {
+		subject = string(*config.subject)
+	}
+	if err := compliance.ValidateSubject(subject); err != nil {
+		return nil, err
+	}
 	if config.correlation == (metadata.CorrelationID{}) {
 		var err error
 		config.correlation, err = metadata.NewCorrelationID()
@@ -150,10 +158,6 @@ func (s *Sequence) request(ctx context.Context, source events.SourceID, descript
 	scope, err := s.resolveScope(ctx, source, config)
 	if err != nil {
 		return nil, err
-	}
-	subject := string(source)
-	if config.subject != nil {
-		subject = string(*config.subject)
 	}
 	ref := descriptor.Ref()
 	request := &sequences.AppendRequest{EventStore: string(s.store), Namespace: string(s.namespace), EventSequenceId: string(s.id), EventSourceId: string(source),

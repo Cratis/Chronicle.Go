@@ -105,8 +105,5 @@ func validateSubject(ctx context.Context, subject string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if subject == "" || strings.HasPrefix(subject, "$chronicle-encrypted-value$") {
-		return fmt.Errorf("%w: a nonempty PII subject identifier is required; confidentiality keys are not erasable", faults.ErrInvalidConfiguration)
-	}
-	return nil
+	return ValidateSubject(subject)
 }

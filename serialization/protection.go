@@ -86,6 +86,9 @@ func (p *Plan) ProtectedSchema(options ...compliance.Declaration) (string, error
 	if err := validateProtectionCategories(schema, c.definitions, false, false, map[categoryReference]bool{}); err != nil {
 		return "", err
 	}
+	if err := validateProtectionPlacement(schema, c.definitions, protectionPlacement{}, map[placementReference]bool{}); err != nil {
+		return "", err
+	}
 	data, err := json.Marshal(schema)
 	return string(data), err
 }
@@ -142,8 +145,10 @@ func (c *protectionCompiler) walk(n *node, inherited, member compliance.Classifi
 	}
 	contextPath := ""
 	for target := range c.paths {
-		if strings.HasPrefix(target, path+".") {
-			contextPath = path
+		if path == "" || strings.HasPrefix(target, path+".") {
+			// Distinguish even the root's pending overrides from a recursive
+			// occurrence with no overrides; otherwise they repeat every cycle.
+			contextPath = "." + path
 			break
 		}
 	}
@@ -162,10 +167,14 @@ func (c *protectionCompiler) walk(n *node, inherited, member compliance.Classifi
 		if err != nil {
 			return nil, err
 		}
-		for k, v := range item {
-			if k != "type" && k != "format" {
-				result[k] = v
-			}
+		// Rebuild from the protected child, not the original pointer schema:
+		// a property override can replace a recursive reference with inline fields.
+		clear(result)
+		maps.Copy(result, item)
+		if format, ok := result["format"].(string); ok {
+			result["format"] = strings.TrimSuffix(format, "?") + "?"
+		} else if kind, ok := result["type"].(string); ok {
+			result["type"] = []string{kind, "null"}
 		}
 		return result, nil
 	}
@@ -375,7 +384,10 @@ func validateProtectionCategories(node map[string]any, definitions map[string]an
 		}
 		active[key] = true
 		defer delete(active, key)
-		target, _ := definitions[strings.TrimPrefix(ref, "#/definitions/")].(map[string]any)
+		target, ok := definitions[strings.TrimPrefix(ref, "#/definitions/")].(map[string]any)
+		if !ok || !strings.HasPrefix(ref, "#/definitions/") {
+			return protectionError("unresolved protected schema reference")
+		}
 		if err := validateProtectionCategories(target, definitions, pii, encrypted, active); err != nil {
 			return err
 		}

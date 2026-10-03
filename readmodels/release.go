@@ -85,8 +85,17 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 			return nil, &ReleaseError{Cause: faults.ErrProtocol}
 		}
 	}
+	declared := make(map[string]bool)
+	for _, field := range serialization.RootFields(d.definition.plan.Fields()) {
+		declared[field.Name] = true
+	}
 	groups := make(map[string]map[string]json.RawMessage)
 	for name, value := range fields {
+		// The kernel rejects undeclared fields. Keep sink bookkeeping and
+		// lineage locally, but never send them through the schema walk.
+		if !declared[name] {
+			continue
+		}
 		propertySubject, ok := subjects[name]
 		if !ok {
 			propertySubject = subject

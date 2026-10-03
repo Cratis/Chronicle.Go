@@ -33,6 +33,11 @@ type PersonRegistered struct {
 `Owner` identifies whose data this event carries. It is not the actor, projection
 key or event source. Omit `subject` when the event source is already the person.
 Use an opaque surrogate identity; never classify `events.SourceID` as protected.
+Subjects beginning with `$chronicle-encrypted-value$` belong to the kernel's
+confidentiality key space and fail admission with `compliance.InvalidSubjectError`.
+This includes explicit, tagged/resolved and source-fallback subjects in single
+appends, batches, units of work and reactor effects, plus seed source IDs. The
+check also covers unclassified events whose subjects may reach protected models.
 
 | Declaration | Meaning |
 | --- | --- |
@@ -68,7 +73,11 @@ fail rather than silently doing nothing.
 - Composite object classification descends to its leaves without changing the
   object shape. Classified concepts retain their representation and metadata in
   pointers and collection items. An explicitly classified collection remains
-  coarse container protection, matching C#.
+  coarse container protection, matching C#. Protection beneath an unprotected
+  map, and classified collection-valued array elements, fail registration with
+  `declarations.DeclarationError`: the pinned kernel cannot apply that metadata.
+  Protect the whole map/outer collection property explicitly, or use supported
+  scalar items and declared object members. Metadata is never silently moved.
 - Member metadata takes precedence over declaring-type and value-type metadata.
   PII/confidentiality conflicts still fail; precedence cannot bypass that guard.
   Use `DetailsSet: true` to explicitly override an inherited rationale with an
@@ -130,6 +139,8 @@ projection replay, watches, materialized windows and read-model reactor delivery
 For an externally loaded model, use `reader.Release(ctx, value)` or
 `reader.ReleaseMany(ctx, values)`. Use `store.ReadModels().Release` for raw sink
 documents so stored `__subject` and per-root-property `__subjects` survive.
+Only schema-declared fields are sent to the Release RPC; lineage and undeclared
+sink bookkeeping stay local and are preserved in the returned document.
 
 Stored lineage wins over a configured or tagged subject, then the model's
 case-insensitive Go `ID` property supplies the fallback. A projection `key` marker

@@ -95,7 +95,8 @@ func WithOccurred(occurred time.Time) AppendOption {
 	return func(c *appendConfig) { c.occurred = &occurred }
 }
 
-// WithSubject overrides the source-derived compliance subject; empty subjects are invalid.
+// WithSubject overrides the source-derived compliance subject. Empty subjects and
+// the kernel's reserved confidentiality identifiers fail with compliance.InvalidSubjectError.
 func WithSubject(subject events.Subject) AppendOption {
 	return func(c *appendConfig) { c.subject = &subject }
 }

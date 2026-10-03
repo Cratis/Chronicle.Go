@@ -5,6 +5,7 @@ package readmodels_test
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"testing"
 	"time"
@@ -13,7 +14,9 @@ import (
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -35,7 +38,26 @@ func (k *modelKernel) GetInstanceByKey(ctx context.Context, r *contracts.GetInst
 	return k.get(ctx, r)
 }
 func (k *modelKernel) Release(ctx context.Context, r *compliance.ReleaseRequest) (*compliance.ReleaseResponse, error) {
+	if err := validateReleaseRequest(r); err != nil {
+		return nil, err
+	}
 	return k.release(ctx, r)
+}
+
+// Mirror the kernel's rejection of undeclared document fields instead of
+// accepting lineage/bookkeeping that the real schema manager cannot traverse.
+func validateReleaseRequest(r *compliance.ReleaseRequest) error {
+	var schema struct{ Properties map[string]json.RawMessage }
+	var payload map[string]json.RawMessage
+	if json.Unmarshal([]byte(r.Schema), &schema) != nil || json.Unmarshal([]byte(r.Payload), &payload) != nil {
+		return status.Error(codes.InvalidArgument, "invalid release request")
+	}
+	for name := range payload {
+		if _, declared := schema.Properties[name]; !declared {
+			return status.Error(codes.InvalidArgument, "undeclared release property")
+		}
+	}
+	return nil
 }
 func (k *modelKernel) DehydrateSession(ctx context.Context, r *contracts.DehydrateSessionRequest) (*emptypb.Empty, error) {
 	return k.dehydrate(ctx, r)
