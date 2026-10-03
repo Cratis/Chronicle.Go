@@ -263,8 +263,25 @@ child identity mappings, nested `*NotSet*`, All, joins and both removal contract
 | `Join<E>` / `JoinDefinitionExtensions`, `JoinBuilder` | **Implemented** for event joins on root/collection nodes: `join`, fluent `Join` | Advanced golden, `TestJoinFirstOnAndLocalWriteDiagnostics`, kernel initial/update join tests. First model-bound On wins; joins override local writes and produce overlap diagnostics. Go normalizes child joins by accepting an explicit On through either front end instead of C# fluent's prohibition |
 | `Nested` / `NestedDefinitionExtensions`, `NestedBuilder` | **Partial**: `nested` on object pointers, fluent `Nested`; node From/AutoMap/clears | Advanced golden, nested-node fixture and kernel test. Emits C# `PropertyPath.NotSet` as `*NotSet*`, not empty. Kernel 19.29.4 does not execute collections inside nested objects, join removals on nested objects, or nested-object joins under collection children; definitions preserve the contract but do not claim those effects |
 | `RemovedWith<E>` / `RemovedWithExtensions` | **Implemented**: `remove` on collection/other fields, root/node `RemovedWith`, fluent `Configure` | Advanced golden, `TestPropertyLevelGrandchildRemovalAndChildScopes`, kernel child and root removal tests. A collection tag targets that child, not its parent; other field placement removes the containing instance. Parent defaults to source, without child-creation inference |
-| `RemovedWithJoin<E>` / `RemovedWithExtensions`, `ProjectionBuilder` | **Partial**: `remove-join`, root/node `RemovedWithJoin` | Advanced golden and property-level grandchild fixture prove wire definitions. The additional kernel collection join-removal probe fails to remove the re-added child within 15 seconds; runtime parity is **unverified**, and the integration gate remains failing. Root/nested contract encoding is preserved, but the pinned kernel explicitly does not execute those removals. C# `ProjectionBuilderFor.Build` omits the accumulated root RemovedWithJoin dictionary; Go intentionally repairs the producer omission |
+| `RemovedWithJoin<E>` / `RemovedWithExtensions`, `ProjectionBuilder` | **Partial**: `remove-join`, root/node `RemovedWithJoin` | Advanced golden and property-level grandchild fixture prove wire definitions. The MongoDB sink in 19.29.4-development fails to translate child `id`/`Id` to `_id` in join-removal filters ([Chronicle#4538](https://github.com/Cratis/Chronicle/issues/4538)); the affected source-key and remove/re-add content-key probes explicitly skip with that issue, retaining their assertions. `TestKernelProjectionChildRemovedWithJoin/GroupId` executes the C# integration scenario with a non-ID child identifier. Root join removal is unsupported ([Chronicle#4263](https://github.com/Cratis/Chronicle/issues/4263)); nested join removal is also unwired ([Chronicle#4125](https://github.com/Cratis/Chronicle/issues/4125)). C# `ProjectionBuilderFor.Build` omits the accumulated root RemovedWithJoin dictionary; Go intentionally repairs the producer omission |
 | Working composite/context keys / `CompositeKeyBuilder`, per-event key builders | **Implemented** for ordered flat composite parts and scalar context: tag `composite(...)`, `context(path)`, fluent `UsingCompositeKey`, `UsingCompositeParentKey`, `KeyPart*`, `UsingKeyFromContext`, `UsingParentKeyFromContext` | `TestCompositeAndContextKeysMatchBothFrontEnds`, `TestAdvancedFluentValidationAndSnapshots`. Duplicate parts and nested composites fail; the kernel splits commas without balancing nested composites. Typed part names use K's serialization plan; explicit JSON tags keep them stable across policies. These APIs do not implement the upstream-inert ContextKey attribute |
+
+Join-removal investigation: C# source at
+`2e31b0dfba489159b3db323238f16d0f277056b4`,
+`Source/Clients/DotNET/Projections/{ChildrenBuilder,RemovedWithJoinBuilder}.cs` and
+`ModelBound/{RemovedWithJoinAttribute,RemovedWithExtensions}.cs`, emits the same
+child removal dictionary and key as Go. The C#
+`Integration/Client/Projections/Scenarios/when_removing/child_removed_with_join.cs`
+uses `GroupId` with `$eventSourceId` creation/removal keys and `UserId` as parent
+key. Its Go translation passes against the pinned image; changing only the child
+identifier to `Id` reproduces the failure without any re-add. The original
+content-key probe also passes when only its child identifier changes from `id`
+to `itemId`; that diagnostic change was reverted. The .NET suite itself was not
+run. Kernel `Source/Kernel/Storage.MongoDB/Sinks/Sink.cs:RemoveChildFromAll` omits
+`ToMongoDBPropertyName`, which ordinary `BuildChildRemoved` applies. Root and
+nested join-removal limitations are source-confirmed in
+`Source/Kernel/Core/Projections/Engine/ProjectionFactory.cs`, not additional live
+Go probes. The single Go encoder and golden fixtures remain unchanged.
 
 Additional acceptance evidence: `TestNodeRebindingUsesSerializationMetadataEverywhere`
 checks joins, child/removal keys, nested mappings and arithmetic against a second
