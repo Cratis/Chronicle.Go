@@ -16,6 +16,9 @@ import (
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/services"
+	di "github.com/cratis/fundamentals.go/dependencyinjection"
+	"github.com/cratis/fundamentals.go/dependencyinjection/container"
 )
 
 type FactoryCustomerV1 struct{ Name string }
@@ -31,7 +34,42 @@ type kernelDefinitionArtifact struct {
 
 func (a *kernelDefinitionArtifact) Close() error { (*a.closed)++; return nil }
 
+type kernelDefinitionProvider struct {
+	di.Provider
+	opened, closed, disposed int
+}
+
+func (p *kernelDefinitionProvider) NewScope(ctx context.Context) (di.Scope, error) {
+	scope, err := p.Provider.NewScope(ctx)
+	if scope != nil {
+		p.opened++
+		return kernelDefinitionScope{scope, &p.closed}, err
+	}
+	return nil, err
+}
+func (p *kernelDefinitionProvider) Close(ctx context.Context) error {
+	p.disposed++
+	return p.Provider.Close(ctx)
+}
+
+type kernelDefinitionScope struct {
+	di.Scope
+	closed *int
+}
+
+func (s kernelDefinitionScope) Close(ctx context.Context) error {
+	(*s.closed)++
+	return s.Scope.Close(ctx)
+}
+
 func TestKernelDefinitionFactoriesMaterializeConstrainAndEvolve(t *testing.T) {
+	for _, mode := range []string{"plain", "provider-scoped", "provider-singleton"} {
+		t.Run(mode, func(t *testing.T) { testKernelDefinitionFactories(t, mode) })
+	}
+}
+
+func testKernelDefinitionFactories(t *testing.T, mode string) {
+	t.Helper()
 	f := newKernelFixture(t)
 	original := f.client(integrationRegistry[FactoryCustomerV1](t, events.WithID("factory-customer")), chronicle.WithEventTypeGenerationValidation(true))
 	oldStore, err := original.EventStore(f.ctx, f.storeName)
@@ -56,7 +94,7 @@ func TestKernelDefinitionFactoriesMaterializeConstrainAndEvolve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	constructed, closed, defined := 0, 0, 0
+	constructed, closed, defined, providerConstructed := 0, 0, 0, 0
 	factory := func() *kernelDefinitionArtifact {
 		constructed++
 		return &kernelDefinitionArtifact{label: "configured", closed: &closed}
@@ -87,10 +125,47 @@ func TestKernelDefinitionFactoriesMaterializeConstrainAndEvolve(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	client := f.client(registry, chronicle.WithEventTypeGenerationValidation(true))
-	if constructed != 3 || closed != 3 || defined != 3 {
-		t.Fatalf("constructed=%d closed=%d defined=%d", constructed, closed, defined)
+	options := []chronicle.ClientOption{chronicle.WithEventTypeGenerationValidation(true)}
+	var provider *kernelDefinitionProvider
+	wantConstructed, wantClosed := 3, 3
+	if mode != "plain" {
+		lifetime := di.Scoped
+		if mode == "provider-singleton" {
+			lifetime = di.Singleton
+			wantConstructed, wantClosed = 1, 0
+		}
+		var bindings container.Registry
+		if err := di.Bind(&bindings, lifetime, func(context.Context, di.Resolver) (*kernelDefinitionArtifact, error) {
+			providerConstructed++
+			return factory(), nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		built, err := bindings.Build()
+		if err != nil {
+			t.Fatal(err)
+		}
+		provider = &kernelDefinitionProvider{Provider: built}
+		t.Cleanup(func() {
+			if provider.disposed == 0 {
+				if err := provider.Close(context.Background()); err != nil {
+					t.Error(err)
+				}
+			}
+		})
+		options = append(options, services.WithServices(provider))
 	}
+	client := f.client(registry, options...)
+	assertOwnership := func() {
+		t.Helper()
+		if constructed != wantConstructed || closed != wantClosed || defined != 3 {
+			t.Fatalf("constructed=%d closed=%d defined=%d", constructed, closed, defined)
+		}
+		if provider != nil && (provider.opened != 3 || provider.closed != 3 || provider.disposed != 0 || providerConstructed != wantConstructed) {
+			t.Fatalf("scopes=%d/%d provider closes=%d provider constructions=%d", provider.opened, provider.closed, provider.disposed, providerConstructed)
+		}
+	}
+	assertOwnership()
 	store, err := client.EventStore(f.ctx, f.storeName)
 	if err != nil {
 		t.Fatal(err)
@@ -150,7 +225,19 @@ func TestKernelDefinitionFactoriesMaterializeConstrainAndEvolve(t *testing.T) {
 	if err != nil || absent.Exists {
 		t.Fatal("factory model crossed namespaces", absent, err)
 	}
-	if constructed != 3 || closed != 3 || defined != 3 {
-		t.Fatal("store/namespace binding reran factories")
+	assertOwnership()
+	if err := client.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// Client shutdown neither closes the borrowed provider nor disposes a
+	// resolved Singleton (and never closes scoped results a second time).
+	assertOwnership()
+	if provider != nil {
+		if err := provider.Close(f.ctx); err != nil {
+			t.Fatal(err)
+		}
+		if closed != wantConstructed || provider.closed != 3 || provider.disposed != 1 {
+			t.Fatalf("provider ownership lost: artifacts=%d scopes=%d provider=%d", closed, provider.closed, provider.disposed)
+		}
 	}
 }
