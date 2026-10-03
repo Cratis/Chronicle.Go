@@ -37,8 +37,9 @@ type AppendNotification struct {
 	// absent or carries a different ID. Multiple executions may share this ID;
 	// use Origin to distinguish them.
 	CorrelationID metadata.CorrelationID
-	// Origin identifies the unit of work for a commit, or the origin installed
-	// in an immediate append's context. Zero means unattributed.
+	// Origin identifies the unit of work for a commit. Immediate appends use
+	// the handled resolver result (including zero), otherwise the context origin.
+	// Zero means unattributed.
 	Origin Origin
 	// Operation identifies the store, namespace, sequence and distinct exact types.
 	Operation OperationMetadata
