@@ -87,13 +87,16 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 		return nil, err
 	}
 	config := clientConfig{uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
-		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize,
+		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize, defaultSinkType: readmodels.MongoDB,
 		keepAliveTimeout: 5 * time.Second, reactorRetryWait: connection.Wait, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
 	for _, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("%w: nil client option", ErrInvalidConfiguration)
 		}
 		option(&config)
+	}
+	if err := validateDefaultSinkType(config.defaultSinkType); err != nil {
+		return nil, err
 	}
 	uri, tlsConfig, err := validateConfig(config)
 	if err != nil {
@@ -137,7 +140,7 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 	// composition callback can change application configuration for another store.
 	schemas := make(map[*registryDeclarations]registrySchemas)
 	for _, declarations := range selected {
-		prepared, err := prepareRegistrySchemas(declarations, config.naming)
+		prepared, err := prepareRegistrySchemasWithSink(declarations, config.naming, config.defaultSinkType)
 		if err != nil {
 			return nil, err
 		}
