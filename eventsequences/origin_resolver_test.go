@@ -277,8 +277,15 @@ func TestUnitCommitBypassesFailingExternalAppendOriginResolver(t *testing.T) {
 func TestUnitOriginCapabilityCannotAuthorizeOtherAppendsFromCallbackContext(t *testing.T) {
 	var commitCtx context.Context
 	var resolutions int
-	policy := eventsequences.ConcurrencyPolicy{Strategy: strategyFunc(func(ctx context.Context, _ *eventsequences.Sequence, _ eventsequences.ScopeFilter) (eventsequences.Scope, error) {
+	policy := eventsequences.ConcurrencyPolicy{Strategy: strategyFunc(func(ctx context.Context, sequence *eventsequences.Sequence, _ eventsequences.ScopeFilter) (eventsequences.Scope, error) {
 		commitCtx = ctx
+		// Even during owner completion, a new immediate append is not the
+		// exact snapshot authorized by the unit capability on this context.
+		_, err := sequence.Append(ctx, "unrelated", opened{})
+		var failure *eventsequences.AppendOriginResolutionError
+		if !errors.As(err, &failure) {
+			t.Fatalf("callback append borrowed owner authority: %v", err)
+		}
 		return eventsequences.Scope{Expectation: eventsequences.NoCheck()}, nil
 	})}
 	s, calls := originResolverFixture(t, func(context.Context) (eventsequences.Origin, bool, error) {
@@ -297,7 +304,7 @@ func TestUnitOriginCapabilityCannotAuthorizeOtherAppendsFromCallbackContext(t *t
 	if _, err = owner.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if commitCtx == nil || calls.Load() != 1 || resolutions != 0 {
+	if commitCtx == nil || calls.Load() != 1 || resolutions != 1 {
 		t.Fatal("unit commit did not bypass resolution")
 	}
 	// A custom strategy can retain its context, but it cannot turn that into
@@ -314,7 +321,7 @@ func TestUnitOriginCapabilityCannotAuthorizeOtherAppendsFromCallbackContext(t *t
 			t.Fatalf("reused context bypassed resolution: %v", failure)
 		}
 	}
-	if calls.Load() != 1 || resolutions != 2 {
+	if calls.Load() != 1 || resolutions != 3 {
 		t.Fatalf("RPCs=%d resolutions=%d", calls.Load(), resolutions)
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/eventstores"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/projections"
@@ -70,6 +71,7 @@ type EventStore struct {
 	readModelReactorSnapshot []*reactors.ReadModelPlan
 	compliance               *compliance.Manager
 	readModels               *readmodels.Service
+	decisionCatalog          *decision.Catalog
 	reactors                 storeObservers
 	reducers                 storeObservers
 	readModelReactors        storeObservers

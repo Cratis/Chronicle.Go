@@ -14,6 +14,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/compliance"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
@@ -31,6 +32,7 @@ type Service struct {
 	compliance       compliance.ComplianceClient
 	passive          PassiveReader
 	reductionChanges *ReductionChanges
+	decisions        decision.Provider
 }
 
 // New constructs a service without I/O. The caller owns the channel and any
@@ -40,6 +42,7 @@ func New(store metadata.StoreName, namespace metadata.Namespace, catalog *Catalo
 		return nil, invalid("store, namespace, catalog and transport required")
 	}
 	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), materialized: contracts.NewMaterializedReadModelsClient(conn), compliance: compliance.NewComplianceClient(conn)}
+	service.decisions, _ = conn.(decision.Provider)
 	for _, option := range options {
 		if option == nil {
 			return nil, invalid("nil service option")
@@ -104,6 +107,25 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 		}
 		return result, nil
 	}
+	result, err := s.getInstance(ctx, d, key, session)
+	if err != nil || !result.Exists {
+		return result, err
+	}
+	data, err := s.Release(ctx, d.Identifier(), result.Value)
+	if err != nil {
+		return Instance[json.RawMessage]{}, err
+	}
+	data, err = normalizeID(data, d)
+	if err != nil {
+		return Instance[json.RawMessage]{}, err
+	}
+	result.Value = data
+	return result, nil
+}
+
+// getInstance reads and checks raw protocol shape only. Its caller must release
+// protected values and validate them before returning any document to a caller.
+func (s *Service) getInstance(ctx context.Context, d Descriptor, key Key, session string) (Instance[json.RawMessage], error) {
 	response, err := s.client.GetInstanceByKey(ctx, &contracts.GetInstanceByKeyRequest{EventStore: string(s.store), Namespace: string(s.namespace), ReadModelIdentifier: string(d.Identifier()), EventSequenceId: string(d.EventSequence()), ReadModelKey: string(key), SessionId: session})
 	if err != nil {
 		return Instance[json.RawMessage]{}, wire.RPCError(err)
@@ -125,14 +147,6 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 	}
 	if !validDocument(data) {
 		return Instance[json.RawMessage]{}, faults.ErrProtocol
-	}
-	data, err = s.Release(ctx, d.Identifier(), data)
-	if err != nil {
-		return Instance[json.RawMessage]{}, err
-	}
-	data, err = normalizeID(data, d)
-	if err != nil {
-		return Instance[json.RawMessage]{}, err
 	}
 	result.Value, result.Exists = data, true
 	return result, nil

@@ -12,6 +12,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/appendorigin"
+	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
@@ -27,6 +28,7 @@ type PreparedBatch struct {
 	batch    preparedBatch
 	entries  []Entry // Only source/route, for first-entry default scopes.
 	explicit []LabeledScope
+	guards   []*decision.Guard
 }
 
 // PrepareBatch snapshots entries, context metadata and scopes without I/O.
@@ -95,6 +97,10 @@ func (b *PreparedBatch) Merge(next *PreparedBatch) (*PreparedBatch, error) {
 			return nil, fmt.Errorf("%w: conflicting concurrency scopes for label %q", faults.ErrInvalidConfiguration, incoming.Label)
 		}
 	}
+	guards := slices.Concat(b.guards, next.guards)
+	if err := validateDecisionScopes(explicit, guards); err != nil {
+		return nil, err
+	}
 	// Prepared requests are never mutated (dispatch deep-clones), so the merged
 	// header shares nested messages instead of deep-copying every staged event.
 	request := &sequences.AppendManyForEventSourcesRequest{
@@ -103,7 +109,7 @@ func (b *PreparedBatch) Merge(next *PreparedBatch) (*PreparedBatch, error) {
 		Tags: slices.Clone(first.Tags), Causation: slices.Clone(first.Causation), CausedBy: first.CausedBy,
 		ConcurrencyScopes: slices.Clone(first.ConcurrencyScopes),
 	}
-	return &PreparedBatch{sequence: b.sequence, entries: slices.Concat(b.entries, next.entries), explicit: explicit,
+	return &PreparedBatch{sequence: b.sequence, entries: slices.Concat(b.entries, next.entries), explicit: explicit, guards: guards,
 		batch: preparedBatch{request: request, refs: slices.Concat(b.batch.refs, next.batch.refs), named: slices.Concat(b.batch.named, next.batch.named)}}, nil
 }
 
@@ -168,6 +174,9 @@ func (s *Sequence) AppendPreparedBatch(ctx context.Context, snapshot *PreparedBa
 		if err != nil {
 			return BatchResult{Disposition: Rejected}, err
 		}
+	}
+	if len(snapshot.guards) > 0 {
+		return s.appendDecisionBatch(ctx, snapshot, origin)
 	}
 	scopes, err := s.automaticBatchScopes(ctx, snapshot.entries, snapshot.explicit)
 	if err != nil {

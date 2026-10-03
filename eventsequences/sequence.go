@@ -12,6 +12,7 @@ import (
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
@@ -28,6 +29,7 @@ type Sequence struct {
 	catalog              *events.Catalog
 	service              sequences.EventSequencesClient
 	concurrency          ConcurrencyPolicy
+	decisions            decision.Provider
 	appends              appendSubscriptions
 	appendOriginResolver AppendOriginResolver
 }
@@ -44,6 +46,7 @@ func New(store metadata.StoreName, namespace metadata.Namespace, id events.Seque
 		return nil, fmt.Errorf("%w: sequence coordinates, catalog and connection are required", faults.ErrInvalidConfiguration)
 	}
 	sequence := &Sequence{store: store, namespace: namespace, id: id, catalog: catalog, service: sequences.NewEventSequencesClient(conn)}
+	sequence.decisions, _ = conn.(decision.Provider)
 	if provider, ok := conn.(ConcurrencyPolicyProvider); ok {
 		sequence.concurrency = provider.ConcurrencyPolicy()
 	}

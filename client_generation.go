@@ -14,6 +14,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts"
 	"github.com/cratis/chronicle.go/contracts/clients"
 	"github.com/cratis/chronicle.go/internal/connection"
+	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/registration"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -23,6 +24,7 @@ import (
 
 type generation struct {
 	number        uint64
+	decisions     bool
 	ctx           context.Context
 	cancel        context.CancelFunc
 	raw           grpc.ClientConnInterface
@@ -94,6 +96,7 @@ func (c *Client) establish(ctx context.Context, g *generation) error {
 		if !response.IsCompatible || len(response.Incompatibilities) > 0 {
 			return &CompatibilityError{ServerVersion: response.ServerVersion, Details: append([]string(nil), response.Incompatibilities...)}
 		}
+		g.decisions = decision.Supported(response.ServerVersion, response.ServerProtocolVersion)
 	}
 	id, err := uuid.NewRandom()
 	if err != nil {

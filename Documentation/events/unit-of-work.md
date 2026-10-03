@@ -3,7 +3,7 @@ title: Stage an ordered unit of work
 description: Share immutable event staging with nested participants while retaining one completion owner.
 ---
 
-Use `transactions.Begin` when several participants must contribute to one atomic append. The unit fixes one store, namespace and sequence, and preserves global enrollment order: A1, B1, A2 stays A1, B1, A2. This API is experimental in the v0.x SDK. Protected read models and decision tokens are not implemented.
+Use `transactions.Begin` when several participants must contribute to one atomic append. The unit fixes one store, namespace and sequence, and preserves global enrollment order: A1, B1, A2 stays A1, B1, A2. This API is experimental in the v0.x SDK. Use [decision reads](../read-models/decision-reads.md) to enroll admitted projection reads into an owned commit.
 
 ## Participant and owner
 
@@ -50,7 +50,7 @@ Check the operation error and then `result.Err()`. Interpret the disposition eve
 
 `IsCompleted` is not evidence of persistence. Rollback only discards pending work: it cannot undo a committed or ambiguous batch. An early aggregate commit completes the shared owner, not only that aggregate. Later staging fails, and later command failure cannot undo it. Arc integrations must retain the owner outside ordinary handlers and must not silently open a successor unit.
 
-An empty unit is different from a scope-only unit. Staging explicit scopes without events commits through the eventless validation path; it requires an effective protected check. Older-kernel refusal remains `ErrUnsupported`, not a successful no-op. There is no protected-decision token enrollment API yet.
+An empty unit is different from a scope-only unit. Staging explicit scopes without events commits through the eventless validation path; it requires an effective protected check. Older-kernel refusal remains `ErrUnsupported`, not a successful no-op. Enrolling a decision token through `unit.Enroll` also counts as work with no staged events; its protected path rejects unchecked mixed scopes.
 
 ## Run the example
 
