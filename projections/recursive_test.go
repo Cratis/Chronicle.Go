@@ -152,6 +152,97 @@ func fluentRecursiveDefinition(t *testing.T, created events.Type[ModuleCreated],
 	return definition
 }
 
+type RootSelfReferencingFeature struct {
+	ID          string                       `json:"id" chronicle:"key"`
+	Name        string                       `chronicle:"set(SubFeatureAdded)"`
+	SubFeatures []RootSelfReferencingFeature `chronicle:"children(SubFeatureAdded,identified-by=id,parent-key=ParentID)"`
+}
+
+// ChildrenDefinitionExtensions at Chronicle 2e31b0d builds the first child with
+// includeSelfReferencingEvents: false, even when the root type is its own child.
+// The root-seeded visited set stops expansion, not normal member/event filtering.
+func TestRootSelfReferenceUsesFirstLevelFiltersAndStopsExpansion(t *testing.T) {
+	created := mustEvent[ModuleCreated](t)
+	sub := mustEvent[SubFeatureAdded](t)
+	updated := mustEvent[FeatureUpdated](t)
+	catalog, err := events.NewCatalog(created.Descriptor(), sub.Descriptor(), updated.Descriptor())
+	if err != nil {
+		t.Fatal(err)
+	}
+	declaration := projections.ModelBound(mustModel[RootSelfReferencingFeature](t), projections.FromEvent(created), projections.WithNodes(projections.Node[RootSelfReferencingFeature](
+		projections.FromEvent(updated, projections.UsingKey(projections.Path[FeatureUpdated, string]("FeatureID"))),
+	)))
+	definition, err := projections.Compile(declaration, catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	child := definition.KernelDefinition().Children["SubFeatures"]
+	if child == nil || len(child.Children) != 0 {
+		t.Fatalf("root self-reference expanded grandchildren: %v", child)
+	}
+	if !hasChildEvent(child, "FeatureUpdated") {
+		t.Fatalf("normal keyed update was filtered as recursive: %v", child.From)
+	}
+	for _, from := range child.From {
+		if from.Key.Id == "SubFeatureAdded" {
+			if _, mapped := from.Value.Properties["Name"]; mapped {
+				t.Fatalf("normal child kept its own child-creator set mapping: %v", from.Value)
+			}
+			return
+		}
+	}
+	t.Fatal("child creator missing")
+}
+
+type RecursiveFeatureWithSetFrom struct {
+	ID          string                        `json:"id" chronicle:"key"`
+	Name        string                        `chronicle:"set(SubFeatureAdded)"`
+	SubFeatures []RecursiveFeatureWithSetFrom `chronicle:"children(SubFeatureAdded,identified-by=id,parent-key=ParentID)"`
+}
+type RecursiveModuleWithSetFrom struct {
+	ID       string `json:"id" chronicle:"key"`
+	Name     string
+	Features []RecursiveFeatureWithSetFrom `chronicle:"children(FeatureAdded,key=FeatureID,identified-by=id,parent-key=ModuleID)"`
+}
+
+// Reproduces C# self_referencing_children_with_set_from at Chronicle 2e31b0d:
+// SetFrom<SubFeatureAdded> cannot create a root feature, but maps the repeated
+// SubFeatures node. This exercises the member filter separately from FromEvent.
+func TestRecursiveChildSetFromFiltersNonRecursiveLevelOnly(t *testing.T) {
+	created := mustEvent[ModuleCreated](t)
+	added := mustEvent[FeatureAdded](t)
+	sub := mustEvent[SubFeatureAdded](t)
+	catalog, err := events.NewCatalog(created.Descriptor(), added.Descriptor(), sub.Descriptor())
+	if err != nil {
+		t.Fatal(err)
+	}
+	declaration := projections.ModelBound(mustModel[RecursiveModuleWithSetFrom](t), projections.FromEvent(created), projections.WithNodes(projections.Node[RecursiveFeatureWithSetFrom](
+		projections.FromEvent(added),
+		projections.FromEvent(sub, projections.UsingParentKey(projections.Path[SubFeatureAdded, string]("ParentID"))),
+	)))
+	definition, err := projections.Compile(declaration, catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	child := definition.KernelDefinition().Children["Features"]
+	if child == nil || hasChildEvent(child, "SubFeatureAdded") {
+		t.Fatalf("set mapping added a non-recursive creator: %v", child)
+	}
+	repeated := child.Children["SubFeatures"]
+	if repeated == nil || len(repeated.Children) != 0 {
+		t.Fatalf("missing finite recursive node: %v", repeated)
+	}
+	for _, from := range repeated.From {
+		if from.Key.Id == "SubFeatureAdded" {
+			if from.Value.Properties["Name"] != "Name" {
+				t.Fatalf("recursive set mapping lost: %v", from.Value)
+			}
+			return
+		}
+	}
+	t.Fatal("recursive creator missing")
+}
+
 func hasChildEvent(child *contracts.ChildrenDefinition, id string) bool {
 	for _, from := range child.From {
 		if from.Key.Id == id {

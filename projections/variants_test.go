@@ -169,6 +169,51 @@ func TestVariantValidationAndGlobalTargets(t *testing.T) {
 	}
 }
 
+type SharedTitleAndExtraChanged struct {
+	Title string `json:"title"`
+	Extra string `json:"extra"`
+}
+type SharedTitleAndExtra struct {
+	Title string `json:"title" chronicle:"set(SharedTitleAndExtraChanged)"`
+	Extra string `json:"extra"`
+}
+
+// C# MergeGlobalHandlers copies From.Properties, never AutoMap matches from a
+// class-level FromEvent (ModelBoundProjectionBuilder at Chronicle 2e31b0d).
+func TestGlobalDoesNotMaterializeAutoMapMatches(t *testing.T) {
+	created := mustEvent[IssueCreated](t)
+	changed := mustEvent[SharedTitleAndExtraChanged](t)
+	catalog, err := events.NewCatalog(created.Descriptor(), changed.Descriptor())
+	if err != nil {
+		t.Fatal(err)
+	}
+	global, err := projections.Global[SharedTitleAndExtra](projections.GlobalFor[WorkItem](), projections.FromEvent(changed))
+	if err != nil {
+		t.Fatal(err)
+	}
+	variant := projections.ModelBound(mustModel[PullRequestItem](t), projections.VariantOf[WorkItem](), projections.EntersOn(created))
+	defs, err := projections.CompileGroup([]projections.Declaration{variant, global}, catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wire := defs[0].KernelDefinition()
+	if len(wire.Join) != 1 || wire.Join[0].Key.Id != "SharedTitleAndExtraChanged" || len(wire.Join[0].Value.Properties) != 1 || wire.Join[0].Value.Properties["title"] != "title" {
+		t.Fatalf("global copied more than explicit properties: %v", wire.Join)
+	}
+}
+
+func TestFluentGlobalFromWithoutPropertiesFailsAtBuild(t *testing.T) {
+	changed := mustEvent[TitleChanged](t)
+	builder := projections.NewBuilder("", mustModel[FluentShared](t), projections.GlobalFor[WorkItem](), projections.AutoMap())
+	projections.From(builder, changed, nil)
+	_, err := builder.Build()
+	var empty *projections.GlobalFromHasNoProperties
+	var declaration *projections.DeclarationError
+	if !errors.As(err, &empty) || !errors.As(err, &declaration) || empty.Global != reflect.TypeFor[FluentShared]() || empty.Event != changed.Ref() {
+		t.Fatalf("missing typed global From failure: %v", err)
+	}
+}
+
 func TestGlobalCopiesFromPropertiesOnly(t *testing.T) {
 	created := mustEvent[IssueCreated](t)
 	renamed := mustEvent[TitleChanged](t)

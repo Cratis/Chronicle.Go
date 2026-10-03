@@ -22,6 +22,7 @@ type compiler struct {
 	globals          []boundGlobal
 	usedNodes        map[reflect.Type]bool
 	active           map[reflect.Type]bool
+	childDepth       int
 	ancestorCreators map[events.TypeRef]int
 }
 type boundGlobal struct {
@@ -29,7 +30,7 @@ type boundGlobal struct {
 	fields []serialization.Field
 }
 
-func (c *compiler) compileNode(d *declaration, fields, parentFields []serialization.Field, inheritedNoAuto, nested bool, identifiedBy string, creators []subscription, recursive bool) (*nodeDefinition, error) {
+func (c *compiler) compileNode(d *declaration, fields, parentFields []serialization.Field, inheritedNoAuto, nested bool, identifiedBy string, creators []subscription, stopExpanding, recursive bool) (*nodeDefinition, error) {
 	if d.err != nil {
 		return nil, d.err
 	}
@@ -138,7 +139,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			if !d.modelBound {
 				return nil, invalid("model mapping tags and fluent mappings cannot be mixed")
 			}
-			if !recursive {
+			if !stopExpanding {
 				if err = c.boundChild(n, field, fields, directives); err != nil {
 					return nil, err
 				}
@@ -522,12 +523,18 @@ func (c *compiler) compileChild(n *nodeDefinition, child childDeclaration, field
 			d.removals = append(slices.Clone(registered.removals), d.removals...)
 		}
 	}
-	recursive := c.active[typ] && d.modelBound
-	if !recursive {
+	stopExpanding := c.active[typ] && d.modelBound
+	// C# seeds traversal with the root type, but the first child level always
+	// uses the normal filter (includeSelfReferencingEvents: false). A root
+	// collection of its own type stops here without using the recursive filter.
+	recursive := stopExpanding && c.childDepth > 0
+	if !c.active[typ] {
 		c.active[typ] = true
 		defer delete(c.active, typ)
 	}
-	compiled, err := c.compileNode(d, local, fields, n.ownNoAuto, child.nested, child.identifiedBy, creators, recursive)
+	c.childDepth++
+	defer func() { c.childDepth-- }()
+	compiled, err := c.compileNode(d, local, fields, n.ownNoAuto, child.nested, child.identifiedBy, creators, stopExpanding, recursive)
 	if err != nil {
 		return err
 	}

@@ -43,6 +43,7 @@ func EntersOn[E any](event events.Type[E], options ...FromOption) Option {
 // GlobalFor marks a shared-mapping type for variants of I. Only From property
 // mappings are merged, overwriting existing writes. Keys, joins, children, All,
 // removals and settings are not copied. Globals never register a read model.
+// A From without explicit property mappings fails with GlobalFromHasNoProperties.
 func GlobalFor[I any]() Option {
 	return func(d *declaration) { d.globalFor = reflect.TypeFor[I]() }
 }
@@ -78,6 +79,20 @@ func (e *GlobalHandlerPropertyNotOnVariant) Error() string {
 }
 
 func (e *GlobalHandlerPropertyNotOnVariant) Unwrap() error { return invalid("global target missing") }
+
+// GlobalFromHasNoProperties identifies a global From handler without explicit
+// property mappings. Global AutoMap cannot supply these mappings because globals
+// are not sent to the kernel. It is wrapped in a DeclarationError.
+type GlobalFromHasNoProperties struct {
+	Global reflect.Type
+	Event  events.TypeRef
+}
+
+func (e *GlobalFromHasNoProperties) Error() string {
+	return fmt.Sprintf("global handler %s From event %s,%d requires explicit property mappings", e.Global, e.Event.ID, e.Event.Generation)
+}
+
+func (e *GlobalFromHasNoProperties) Unwrap() error { return invalid("global From has no properties") }
 
 // CompileGroup compiles one complete declaration graph atomically. Globals apply
 // in declaration order (last writer wins); returned ordinary definitions are
@@ -132,23 +147,25 @@ func CompileGroup(declarations []Declaration, catalog *events.Catalog, currentSt
 			if err := lowerVariant(d); err != nil {
 				return nil, declarationFailure(d.id, Provenance{Directive: "VariantOf", Offset: -1}, err)
 			}
-			for _, sibling := range groups[d.variant] {
-				other := compiled[sibling].data
-				if other == d {
-					continue
-				}
-				for _, entering := range other.entering {
-					if slices.ContainsFunc(d.removals, func(r removalDefinition) bool { return !r.join && r.event == entering.event }) {
-						continue
-					}
-					d.removals = append(d.removals, removalDefinition{event: entering.event, key: expression{kind: sourceExpression}, parent: expression{kind: sourceExpression}})
-				}
-			}
 		}
-		sortNode(&d.nodeDefinition)
 		if err := inferSource(d, catalog, currentStore); err != nil {
 			return nil, err
 		}
+		// Infer from the variant's own handlers before adding generated sibling
+		// removals: those must not reroute local creation to a sibling's inbox.
+		for _, sibling := range groups[d.variant] {
+			other := compiled[sibling].data
+			if other == d {
+				continue
+			}
+			for _, entering := range other.entering {
+				if slices.ContainsFunc(d.removals, func(r removalDefinition) bool { return !r.join && r.event == entering.event }) {
+					continue
+				}
+				d.removals = append(d.removals, removalDefinition{event: entering.event, key: expression{kind: sourceExpression}, parent: expression{kind: sourceExpression}})
+			}
+		}
+		sortNode(&d.nodeDefinition)
 	}
 	slices.SortFunc(compiled, func(a, b Definition) int { return strings.Compare(a.Identifier(), b.Identifier()) })
 	return compiled, nil

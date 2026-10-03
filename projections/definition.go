@@ -135,6 +135,9 @@ func (d Definition) Diagnostics() []Diagnostic {
 // Hash returns a SHA-256 fingerprint of the finalized wire definition. Map keys
 // are encoded deterministically; timestamps and authoring provenance are absent.
 // Rebinding naming or a source store changes the hash when the wire shape changes.
+// Stability is limited to one build: protobuf deterministic encoding is not
+// guaranteed across binaries or dependency versions. Do not persist hashes across
+// upgrades. Neither the kernel nor C# uses this client-side convenience hash.
 func (d Definition) Hash() ([32]byte, error) {
 	if d.data == nil {
 		return [32]byte{}, invalid("definition required")

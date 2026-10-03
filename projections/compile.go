@@ -72,7 +72,7 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 		}
 	}
 	c := compiler{result: compiled, catalog: catalog, declaration: d, usedNodes: map[reflect.Type]bool{}, active: map[reflect.Type]bool{d.model.GoType(): true}, ancestorCreators: map[events.TypeRef]int{}}
-	node, err := c.compileNode(d, d.model.Fields(), nil, false, false, "", nil, false)
+	node, err := c.compileNode(d, d.model.Fields(), nil, false, false, "", nil, false, false)
 	if err != nil {
 		return locate(err)
 	}
@@ -112,22 +112,12 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 			return locate(err)
 		}
 	}
-	if d.globalFor != nil && !compiled.noAuto {
-		// Normally AutoMap stays kernel-owned. A GlobalFor is never sent to the
-		// kernel: materialize its matching From properties before the narrow merge.
-		for i := range compiled.from {
-			from := &compiled.from[i]
-			event, _ := catalog.LookupRef(from.event)
-			for _, field := range serialization.RootFields(d.model.Fields()) {
-				if hasWrite(from.writes, field.Path) || slices.Contains(compiled.exclusions, field.Path) {
-					continue
-				}
-				if source, ok := serialization.FieldAt(event.Fields(), field.Path); ok && scalarCompatible(field, source, d.model.Fields(), event.Fields()) {
-					w := write{path: field.Path, expression: expression{kind: pathExpression, text: field.Path}, provenance: Provenance{FrontEnd: "convention", Directive: "global-automap", Path: field.Path, Offset: -1, Event: event.Ref()}}
-					if err := addWrite(compiled, from, w, d.model.Fields(), event.Fields(), false); err != nil {
-						return locate(err)
-					}
-				}
+	if d.globalFor != nil {
+		// C# merges only explicit root From properties. AutoMap is kernel-owned,
+		// and globals are never sent to the kernel, so a bare From has no effect.
+		for _, from := range compiled.from {
+			if len(from.writes) == 0 {
+				return Definition{}, declarationFailure(d.id, Provenance{Directive: "FromEvent", Offset: -1, Event: from.event}, &GlobalFromHasNoProperties{Global: d.model.GoType(), Event: from.event})
 			}
 		}
 	}

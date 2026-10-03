@@ -11,6 +11,42 @@ import (
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
+func TestSiblingRemovalsDoNotChangeVariantSource(t *testing.T) {
+	created := mustEvent[IssueCreated](t)
+	entered := mustEvent[PullRequestCreated](t, events.WithSourceStore("github"))
+	renamed := mustEvent[TitleChanged](t)
+	catalog, err := events.NewCatalog(created.Descriptor(), entered.Descriptor(), renamed.Descriptor())
+	if err != nil {
+		t.Fatal(err)
+	}
+	backlog := projections.ModelBound(mustModel[BacklogItem](t), projections.VariantOf[WorkItem](), projections.EntersOn(created))
+	pullRequest := projections.ModelBound(mustModel[PullRequestItem](t), projections.VariantOf[WorkItem](), projections.EntersOn(entered))
+	for _, group := range [][]projections.Declaration{{backlog, pullRequest}, {pullRequest, backlog}} {
+		definitions, err := projections.CompileGroup(group, catalog, "local")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(definitions) != 2 {
+			t.Fatalf("definitions = %d, want 2", len(definitions))
+		}
+		for _, definition := range definitions {
+			want := events.EventLog
+			sibling := "PullRequestCreated"
+			if definition.Model().GoType() == pullRequest.Model().GoType() {
+				want = "inbox-github"
+				sibling = "IssueCreated"
+			}
+			if definition.EventSequence() != want || definition.Model().EventSequence() != want {
+				t.Fatalf("%s source = %s, want %s", definition.Identifier(), definition.EventSequence(), want)
+			}
+			wire := definition.KernelDefinition()
+			if len(wire.RemovedWith) != 1 || wire.RemovedWith[0].Key.Id != sibling {
+				t.Fatalf("sibling removal lost: %v", wire.RemovedWith)
+			}
+		}
+	}
+}
+
 func TestSourceInferenceExplicitSequenceAndCompatibility(t *testing.T) {
 	created := mustEvent[IssueCreated](t, events.WithSourceStore("origin"))
 	renamed := mustEvent[TitleChanged](t, events.WithSourceStore("other"))

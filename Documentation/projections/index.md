@@ -224,8 +224,9 @@ kernel; use a disposable kernel for repeat runs, not production credentials/data
 
 Definitions register after event types and read models, share the store-level
 registration barrier, and replay from frozen snapshots on reconnect. Adding to a
-registry after `NewClient` does not alter that client. Definitions expose a stable
-`Hash()` of their finalized wire shape. Runtime registry extension, initial-value
+registry after `NewClient` does not alter that client. Definitions expose a
+`Hash()` of their finalized wire shape, stable only within one build. Do not
+persist it across upgrades; neither the kernel nor C# uses a client hash. Runtime registry extension, initial-value
 authoring, derived-child codecs and inbox subscription provisioning remain
 unimplemented. Source-store inference selects only a sequence; see
 [variants, recursive children and queries](variants.md) and the

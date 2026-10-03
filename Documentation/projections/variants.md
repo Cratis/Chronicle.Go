@@ -126,8 +126,10 @@ explicit non-entering handlers reclassified as joins, not that broad fallback.
 Each variant registers independently, but its definition already includes sibling
 removals. Reconnect reuses those frozen definitions without reflective discovery.
 `Definition.Hash()` fingerprints the finalized wire shape, including nested
-nodes, exclusions and sibling removals. It is a Go SHA-256 fingerprint, not the
-kernel's definition-hash format.
+nodes, exclusions and sibling removals. This Go SHA-256 convenience fingerprint
+is stable only within one build: protobuf deterministic encoding can change across
+binaries or dependency versions. Do not persist it across upgrades. Neither the
+kernel nor C# uses a client hash.
 
 ## Recursive children
 

@@ -12,8 +12,9 @@ func inferSource(d *definition, catalog *events.Catalog, currentStore []string) 
 	if d.sequenceExplicit {
 		return nil
 	}
-	// Include every contributing handler after variant cross-wiring, not only
-	// root From. This intentionally repairs C#'s inconsistent front-end coverage.
+	// Include authored handlers, not only root From. Generated sibling removals
+	// are added after inference so they cannot change a variant's source.
+	// The broader authored-handler coverage is an intentional Go difference.
 	var visit func(*nodeDefinition) error
 	check := func(ref events.TypeRef) error {
 		event, ok := catalog.LookupRef(ref)

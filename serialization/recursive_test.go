@@ -6,6 +6,7 @@ package serialization_test
 import (
 	"encoding/json"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -56,6 +57,62 @@ func TestRecursiveSchemaCodecAndSiblingTraversal(t *testing.T) {
 	second, err := serialization.Compile(reflect.TypeFor[Forest]())
 	if err != nil || second.Schema() != plan.Schema() {
 		t.Fatal("unstable recursive schema")
+	}
+}
+
+type genericRecursiveTree[T any] struct {
+	Value    T                         `json:"value"`
+	Children []genericRecursiveTree[T] `json:"children"`
+}
+
+func TestGenericRecursiveSchemaReferencesUseSafeNames(t *testing.T) {
+	plan, err := serialization.Compile(reflect.TypeFor[genericRecursiveTree[recursiveTree]]())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema map[string]any
+	if err := json.Unmarshal([]byte(plan.Schema()), &schema); err != nil {
+		t.Fatal(err)
+	}
+	definitions := schema["definitions"].(map[string]any)
+	if len(definitions) != 2 {
+		t.Fatalf("generic and argument definitions missing: %s", plan.Schema())
+	}
+	safeName := regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+	for name := range definitions {
+		if !safeName.MatchString(name) {
+			t.Errorf("unsafe schema definition name: %q", name)
+		}
+	}
+	var references int
+	var checkReferences func(any)
+	checkReferences = func(value any) {
+		switch value := value.(type) {
+		case map[string]any:
+			if ref, ok := value["$ref"].(string); ok {
+				references++
+				name, local := strings.CutPrefix(ref, "#/definitions/")
+				if !local || !safeName.MatchString(name) || definitions[name] == nil {
+					t.Errorf("unresolvable reference: %q", ref)
+				}
+			}
+			for _, child := range value {
+				checkReferences(child)
+			}
+		case []any:
+			for _, child := range value {
+				checkReferences(child)
+			}
+		}
+	}
+	checkReferences(schema)
+	if references == 0 {
+		t.Fatal("recursive schema has no references")
+	}
+	value := genericRecursiveTree[recursiveTree]{Value: recursiveTree{Name: "root"}, Children: []genericRecursiveTree[recursiveTree]{{Value: recursiveTree{Name: "child"}}}}
+	data, err := plan.Marshal(value)
+	if err != nil || string(data) != `{"children":[{"value":{"name":"child"}}],"value":{"name":"root"}}` {
+		t.Fatalf("generic recursive payload: %s %v", data, err)
 	}
 }
 

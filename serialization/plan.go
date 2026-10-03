@@ -108,7 +108,10 @@ type compileState struct {
 func compile(typ reflect.Type, state *compileState, policy NamingPolicy, readModelRoot bool) (*node, error) {
 	if previous := state.active[typ]; previous != nil && !previous.readModelRoot {
 		if typ.Kind() == reflect.Struct {
-			name := fmt.Sprintf("%s_%x", typ.Name(), sha256.Sum256([]byte(typ.PkgPath()+"."+typ.String())))
+			// Instantiated generic names can contain package paths and brackets.
+			// Keep definition names safe for both JSON Pointers and URI fragments;
+			// the hash still distinguishes types with the same sanitized name.
+			name := fmt.Sprintf("%s_%x", schemaTypeName(typ.Name()), sha256.Sum256([]byte(typ.PkgPath()+"."+typ.String())))
 			state.definitions[name] = previous.schema
 			return &node{typ: typ, reference: previous, schema: map[string]any{"$ref": "#/definitions/" + name}}, nil
 		}
@@ -214,6 +217,15 @@ func compile(typ reflect.Type, state *compileState, policy NamingPolicy, readMod
 		return nil, unsupported(typ, "unsupported JSON shape")
 	}
 	return n, nil
+}
+
+func schemaTypeName(name string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '_' {
+			return r
+		}
+		return '_'
+	}, name)
 }
 
 func (n *node) compileFields(state *compileState, policy NamingPolicy, readModelRoot bool) error {
