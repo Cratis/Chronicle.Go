@@ -72,6 +72,10 @@ Unavailable progress means absent state even if the projection returns initial-s
 
 Every created session is dehydrated before the read returns or retries. Cleanup has a five-second budget detached from request cancellation, retaining request metadata and the original generation. Read, decode, release and cleanup failures return no token; read and cleanup errors can be joined. Generation loss cannot move a fold or its cleanup onto the next connection. Cleanup failure may leave server session resources to server lifecycle management; it never becomes successful enrollment.
 
+The generation-pinned lease covers RPC folding, raw-schema compliance release, awaited dehydration and both agreement checks. Application codecs, including protected-value validation, run only after that counted lease is released; a codec can synchronously close the client without waiting on its own read. Before issuing a token, the reader rechecks the original caller's context, generation and catalog epoch. Closing the client or invalidating that evidence during decoding returns no model or token.
+
+Decision-read error messages omit model data, source keys and server diagnostics, including joined fold/cleanup failures. Use `errors.Is` and `errors.As` for cancellation, unsupported operations, admission refusals and typed release failures. Unwrapped causes remain inspectable and can contain sensitive server text; do not log them indiscriminately.
+
 ## Protected completion
 
 An enrolled decision counts as work even with no staged events. Completion sends **one atomic batch** containing the frozen ordered event snapshots and checked scopes. Eventless completion uses the plain batch RPC, returns no event positions and appends no dummy event. There is no separate validation call followed by an unchecked append.

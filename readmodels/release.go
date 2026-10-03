@@ -56,6 +56,19 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 	if !validDocument(bytes.TrimSpace(document)) {
 		return nil, invalid("release requires a JSON object")
 	}
+	released, err := s.releaseDocument(ctx, d, document)
+	if err != nil {
+		return nil, err
+	}
+	if err = validateReleasedDocument(d, released); err != nil {
+		return nil, err
+	}
+	return released, nil
+}
+
+// releaseDocument performs only RPC and raw-schema work. It never invokes an
+// application codec. Callers must validateReleasedDocument before delivery.
+func (s *Service) releaseDocument(ctx context.Context, d Descriptor, document json.RawMessage) (json.RawMessage, error) {
 	if len(d.definition.protected) == 0 {
 		return append(json.RawMessage(nil), document...), nil
 	}
@@ -146,6 +159,23 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 			}
 		}
 	}
+	result, err := json.Marshal(fields)
+	if err != nil {
+		return nil, &ReleaseError{Cause: faults.ErrProtocol}
+	}
+	return result, nil
+}
+
+// validateReleasedDocument invokes application codecs, so callers must not hold
+// a counted transport lease or an internal lock while validating.
+func validateReleasedDocument(d Descriptor, document json.RawMessage) error {
+	if len(d.definition.protected) == 0 {
+		return nil
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(document, &fields); err != nil {
+		return &ReleaseError{Cause: faults.ErrProtocol}
+	}
 	// Validate only classified roots against the declared codec. Raw documents
 	// may contain sink bookkeeping and differently represented unprotected IDs.
 	protected := make(map[string]json.RawMessage, len(d.definition.protected))
@@ -156,16 +186,12 @@ func (s *Service) Release(ctx context.Context, model Identifier, document json.R
 	}
 	protectedJSON, err := json.Marshal(protected)
 	if err != nil {
-		return nil, &ReleaseError{Cause: faults.ErrProtocol}
+		return &ReleaseError{Cause: faults.ErrProtocol}
 	}
 	if err := d.definition.plan.Unmarshal(protectedJSON, reflect.New(d.GoType()).Interface()); err != nil {
-		return nil, &ReleaseError{Cause: err}
+		return &ReleaseError{Cause: err}
 	}
-	result, err := json.Marshal(fields)
-	if err != nil {
-		return nil, &ReleaseError{Cause: faults.ErrProtocol}
-	}
-	return result, nil
+	return nil
 }
 
 func releaseSubject(raw json.RawMessage) string {

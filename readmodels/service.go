@@ -107,6 +107,25 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 		}
 		return result, nil
 	}
+	result, err := s.getInstance(ctx, d, key, session)
+	if err != nil || !result.Exists {
+		return result, err
+	}
+	data, err := s.Release(ctx, d.Identifier(), result.Value)
+	if err != nil {
+		return Instance[json.RawMessage]{}, err
+	}
+	data, err = normalizeID(data, d)
+	if err != nil {
+		return Instance[json.RawMessage]{}, err
+	}
+	result.Value = data
+	return result, nil
+}
+
+// getInstance reads and checks raw protocol shape only. Its caller must release
+// protected values and validate them before returning any document to a caller.
+func (s *Service) getInstance(ctx context.Context, d Descriptor, key Key, session string) (Instance[json.RawMessage], error) {
 	response, err := s.client.GetInstanceByKey(ctx, &contracts.GetInstanceByKeyRequest{EventStore: string(s.store), Namespace: string(s.namespace), ReadModelIdentifier: string(d.Identifier()), EventSequenceId: string(d.EventSequence()), ReadModelKey: string(key), SessionId: session})
 	if err != nil {
 		return Instance[json.RawMessage]{}, wire.RPCError(err)
@@ -128,14 +147,6 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 	}
 	if !validDocument(data) {
 		return Instance[json.RawMessage]{}, faults.ErrProtocol
-	}
-	data, err = s.Release(ctx, d.Identifier(), data)
-	if err != nil {
-		return Instance[json.RawMessage]{}, err
-	}
-	data, err = normalizeID(data, d)
-	if err != nil {
-		return Instance[json.RawMessage]{}, err
 	}
 	result.Value, result.Exists = data, true
 	return result, nil

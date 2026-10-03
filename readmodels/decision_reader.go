@@ -5,6 +5,7 @@ package readmodels
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -54,7 +55,9 @@ func (r *DecisionReader[T]) Get(ctx context.Context, key Key) (read DecisionRead
 // an unfiltered pre-fold log boundary, and probes the source's dependency types
 // separately. LastHandled is progress, never a proof or replacement boundary.
 // Cleanup is awaited, with a five-second cancellation-detached metadata-preserving
-// budget; cleanup/cancellation/generation/epoch failure returns no token. The
+// budget; cleanup/cancellation/generation/epoch failure returns no token. Application
+// codecs run only after cleanup, agreement checks and release of counted RPC work;
+// cancellation, connection generation and catalog epoch are rechecked afterward. The
 // pinned protocol cannot atomically bind definitions or in-place history changes.
 // Errors have payload-free messages; underlying causes remain deliberately
 // inspectable through errors.Is/As and may contain sensitive transport diagnostics.
@@ -71,13 +74,14 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 		return DecisionRead[T]{}, err
 	}
 	service := r.reader.service
-	// One lease spans every attempt. A reconnect must fail this read, never
-	// silently splice its catalog, fold or cleanup onto another generation.
+	// One lease spans every RPC attempt, never application codecs. A reconnect
+	// must fail this read, never splice fold or cleanup onto another generation.
 	lease, err := service.decisions.AcquireDecision(ctx)
 	if err != nil {
 		return DecisionRead[T]{}, err
 	}
 	defer lease.Release()
+	callerContext := ctx
 	ctx = lease.Context
 	pinned := &Service{store: service.store, namespace: service.namespace, catalog: service.catalog,
 		client: contracts.NewReadModelsClient(lease.Conn), compliance: compliance.NewComplianceClient(lease.Conn)}
@@ -105,7 +109,7 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 		if err != nil {
 			return DecisionRead[T]{}, err
 		}
-		instance, err := foldDecision[T](ctx, pinned, admitted.descriptor, key)
+		raw, err := foldDecision(ctx, pinned, admitted.descriptor, key)
 		if err != nil {
 			return DecisionRead[T]{}, err
 		}
@@ -119,7 +123,7 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 			return DecisionRead[T]{}, err
 		}
 		reason := DecisionReadRefusalReason("")
-		last := instance.LastHandled
+		last := raw.LastHandled
 		if probe != events.Unavailable && (last == nil || *last < probe) {
 			reason = DecisionFoldIncomplete
 		}
@@ -131,6 +135,30 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 				continue
 			}
 			return DecisionRead[T]{}, &DecisionReadRefused{Model: admitted.descriptor.Identifier(), Reason: reason}
+		}
+		// All RPCs, release schema checks and awaited cleanup are complete. A
+		// codec may synchronously close the client, which joins counted work.
+		// Release cancels lease.Context, so the final check uses the caller's
+		// context and the separately retained generation/epoch identities.
+		lease.Release()
+		if raw.Exists {
+			if err = validateReleasedDocument(admitted.descriptor, raw.Value); err != nil {
+				return DecisionRead[T]{}, err
+			}
+			raw.Value, err = normalizeID(raw.Value, admitted.descriptor)
+			if err != nil {
+				return DecisionRead[T]{}, err
+			}
+		}
+		instance, err := decode[T](raw, admitted.descriptor)
+		if err != nil {
+			return DecisionRead[T]{}, err
+		}
+		if err = callerContext.Err(); err != nil {
+			return DecisionRead[T]{}, err
+		}
+		if lease.Check() != nil || admitted.epoch != admitted.catalog.Epoch.Load() {
+			return DecisionRead[T]{}, decision.ErrStale
 		}
 		token := decision.Issue(decision.Evidence{Target: service.decisions.DecisionTarget(events.EventLog), Model: string(admitted.descriptor.Identifier()), Key: string(key), Types: admitted.types, Boundary: boundary,
 			Catalog: admitted.catalog, Epoch: admitted.epoch, Generation: lease.Generation, Check: lease.Check})
@@ -162,10 +190,10 @@ func decisionTail(ctx context.Context, lease *decision.Lease, service *Service, 
 	return position, nil
 }
 
-func foldDecision[T any](ctx context.Context, service *Service, descriptor Descriptor, key Key) (instance Instance[T], err error) {
+func foldDecision(ctx context.Context, service *Service, descriptor Descriptor, key Key) (instance Instance[json.RawMessage], err error) {
 	session, err := uuid.NewRandom()
 	if err != nil {
-		return Instance[T]{}, err
+		return Instance[json.RawMessage]{}, err
 	}
 	defer func() {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -177,17 +205,23 @@ func foldDecision[T any](ctx context.Context, service *Service, descriptor Descr
 		}
 		if cleanupErr != nil {
 			err = errors.Join(decisionReadFailure(err), &decisionReadError{cause: wire.RPCError(cleanupErr), cleanup: true})
-			instance = Instance[T]{}
+			instance = Instance[json.RawMessage]{}
 		}
 	}()
-	raw, err := service.get(ctx, descriptor, key, session.String())
+	raw, err := service.getInstance(ctx, descriptor, key, session.String())
 	if err != nil {
-		return Instance[T]{}, err
+		return Instance[json.RawMessage]{}, err
+	}
+	if raw.Exists {
+		raw.Value, err = service.releaseDocument(ctx, descriptor, raw.Value)
+		if err != nil {
+			return Instance[json.RawMessage]{}, err
+		}
 	}
 	// An empty fold can contain projection initial state. It is still absent;
 	// null after a removal retains its meaningful LastHandled position.
 	if raw.LastHandled == nil {
 		raw.Exists = false
 	}
-	return decode[T](raw, descriptor)
+	return raw, nil
 }
