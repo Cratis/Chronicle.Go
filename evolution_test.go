@@ -341,9 +341,14 @@ func TestMigrationInvalidGraphsFailBeforeConnection(t *testing.T) {
 					t.Fatal(err)
 				}
 				if scenario == "duplicate" {
-					if err := chronicle.RegisterEventMigration(registry, current, old, migration); err != nil {
-						t.Fatal(err)
+					if err := chronicle.RegisterEventMigration(registry, current, old, migration); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+						t.Fatalf("duplicate migration admitted: %v", err)
 					}
+					catalog := catalogFor(t, registry, chronicle.WithEventTypeGenerationValidation(true))
+					if len(catalog.Migrations()) != 1 {
+						t.Fatal("rejected duplicate changed the registry")
+					}
+					return
 				}
 			}
 			client, err := chronicle.NewClient(chronicle.WithRegistry(registry), chronicle.WithEventTypeGenerationValidation(true))

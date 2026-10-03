@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
@@ -22,6 +23,7 @@ import (
 
 func TestCaptureRegistryClonesEveryDeclarationCollectionWithoutCallbacks(t *testing.T) {
 	registry := &Registry{
+		projectionFactories: []projectionFactoryDeclaration{{}}, constraintFactories: []constraintFactoryDeclaration{{}}, migrationFactories: []migrationFactoryDeclaration{{}},
 		descriptors: []events.Descriptor{{}}, migrations: []events.MigrationDeclaration{{}},
 		constraints: []constraints.Definition{{}}, constraintCompositions: []constraintComposition{{configure: func(*constraints.Builder) { t.Fatal("capture invoked composition") }}},
 		readModels: []readmodels.Descriptor{{}}, projections: []projections.Declaration{{}},
@@ -76,7 +78,7 @@ func TestCompileRegistryPreservesCapturedDeclarationsAndModelIdentity(t *testing
 // Both the earliest composition callback and the later seeder callback must see
 // all selected stores already captured. New declarations belong to the next client.
 func TestClientCapturesAllRegistriesBeforeApplicationPreparation(t *testing.T) {
-	for _, phase := range []string{"constraint composition", "seeder"} {
+	for _, phase := range []string{"constraint composition", "seeder", "event classifier", "model classifier", "service catalog", "scope open", "constructor", "definition", "cleanup"} {
 		t.Run(phase, func(t *testing.T) {
 			defaults := NewRegistry()
 			stores := []*Registry{catalogRegistry(t), catalogRegistry(t)}
@@ -94,7 +96,7 @@ func TestClientCapturesAllRegistriesBeforeApplicationPreparation(t *testing.T) {
 					if err := RegisterSeederFunc(registry, func(*seeding.Builder) error { lateSeeds++; return nil }); err != nil {
 						return err
 					}
-					event, err := RegisterEvent[catalogReplacement](registry)
+					event, err := RegisterEvent[catalogReplacement](registry, events.WithGeneration(2))
 					if err != nil {
 						return err
 					}
@@ -102,22 +104,108 @@ func TestClientCapturesAllRegistriesBeforeApplicationPreparation(t *testing.T) {
 					if err != nil {
 						return err
 					}
-					if err := registry.AddProjection(projections.ModelBound(model, projections.FromEvent(event))); err != nil {
+					if err := RegisterProjectionFactory(registry, "late-factory", model.Descriptor(), nil, func(context.Context, preparationDependency) (projections.Declaration, error) {
+						t.Fatal("late projection factory ran")
+						return projections.ModelBound(model, projections.WithIdentifier("late-factory"), projections.FromEvent(event)), nil
+					}); err != nil {
+						return err
+					}
+					if err := RegisterConstraintFactory(registry, []string{"late-constraint"}, nil, func(context.Context, preparationDependency) ([]constraints.Definition, error) {
+						t.Fatal("late constraint factory ran")
+						return nil, nil
+					}); err != nil {
+						return err
+					}
+					previous, err := RegisterEventGeneration[snapshotReplacementPrevious](registry, event, 1)
+					if err != nil {
+						return err
+					}
+					if err := RegisterEventMigrationFactory(registry, event.Descriptor(), previous.Descriptor(), nil, func(context.Context, preparationDependency) (events.MigrationDeclaration, error) {
+						t.Fatal("late migration factory ran")
+						return events.MigrationDeclaration{}, nil
+					}); err != nil {
 						return err
 					}
 				}
 				return nil
 			}
 			var mutationErr error
-			if phase == "constraint composition" {
+			mutated := false
+			mutateOnce := func() {
+				if !mutated {
+					mutated = true
+					mutationErr = mutate()
+				}
+			}
+			var options []ClientOption
+			switch phase {
+			case "event classifier", "model classifier":
+				armed := false
+				classifier := compliance.Using(func(compliance.Target) (compliance.Classification, error) {
+					if armed {
+						mutateOnce()
+					}
+					return compliance.Classification{}, mutationErr
+				})
+				if phase == "event classifier" {
+					if _, err := RegisterEvent[catalogEvent](defaults, events.WithProtection(classifier)); err != nil {
+						t.Fatal(err)
+					}
+				} else if _, err := RegisterReadModel[catalogModel](defaults, readmodels.WithProtection(classifier)); err != nil {
+					t.Fatal(err)
+				}
+				armed = true
+			case "constraint composition":
 				declareEvent[DeclaredEmail](t, defaults)
 				if err := defaults.ConfigureDeclaredConstraint("email", func(*constraints.Builder) { mutationErr = mutate() }); err != nil {
 					t.Fatal(err)
 				}
-			} else if err := RegisterSeederFunc(defaults, func(*seeding.Builder) error { mutationErr = mutate(); return mutationErr }); err != nil {
-				t.Fatal(err)
+			case "seeder":
+				if err := RegisterSeederFunc(defaults, func(*seeding.Builder) error { mutationErr = mutate(); return mutationErr }); err != nil {
+					t.Fatal(err)
+				}
+			default:
+				event := declareEvent[catalogEvent](t, defaults)
+				model, err := RegisterReadModel[catalogModel](defaults)
+				if err != nil {
+					t.Fatal(err)
+				}
+				services := preparationFactory{
+					contains: func(reflect.Type) bool {
+						if phase == "service catalog" {
+							mutateOnce()
+						}
+						return false
+					},
+					open: func(context.Context) (reactors.Scope, error) {
+						if phase == "scope open" {
+							mutateOnce()
+						}
+						return &preparationScope{close: func(context.Context) error {
+							if phase == "cleanup" {
+								mutateOnce()
+							}
+							return mutationErr
+						}}, nil
+					},
+				}
+				options = append(options, WithServices(services))
+				if err := RegisterProjectionFactory(defaults, "prepared", model.Descriptor(), func() *preparationArtifact {
+					if phase == "constructor" {
+						mutateOnce()
+					}
+					return &preparationArtifact{close: func(context.Context) error { return nil }}
+				}, func(context.Context, *preparationArtifact) (projections.Declaration, error) {
+					if phase == "definition" {
+						mutateOnce()
+					}
+					return projections.ModelBound(model, projections.WithIdentifier("prepared"), projections.FromEvent(event)), mutationErr
+				}); err != nil {
+					t.Fatal(err)
+				}
 			}
-			client, err := NewClient(WithSkipKeepAlive(), WithRegistry(defaults), WithRegistryForStore("a", stores[0]), WithRegistryForStore("z", stores[1]), WithRegistryForStore("empty", nil))
+			options = append(options, WithSkipKeepAlive(), WithRegistry(defaults), WithRegistryForStore("a", stores[0]), WithRegistryForStore("z", stores[1]), WithRegistryForStore("empty", nil))
+			client, err := NewClient(options...)
 			if err != nil {
 				t.Fatal(err)
 			}

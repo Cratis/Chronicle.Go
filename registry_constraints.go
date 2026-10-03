@@ -21,10 +21,8 @@ func (r *Registry) AddConstraint(definition constraints.Definition) error {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	for _, existing := range r.constraints {
-		if existing.Name() == definition.Name() {
-			return fmt.Errorf("%w: duplicate constraint name %q", ErrInvalidConfiguration, definition.Name())
-		}
+	if constraintNameTaken(r, definition.Name()) {
+		return fmt.Errorf("%w: duplicate constraint name %q", ErrInvalidConfiguration, definition.Name())
 	}
 	for _, descriptor := range append(definition.EventTypes(), definition.RemovalTypes()...) {
 		if !containsConstraintEvent(r.descriptors, descriptor) {

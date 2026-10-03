@@ -40,15 +40,16 @@ type MessageProvider func(Violation) string
 // Its zero value is invalid. Accessors return defensive copies; message callbacks
 // are retained by reference and must synchronize any captured mutable state.
 type Definition struct {
-	name         string
-	kind         Type
-	fields       []EventFields
-	types        []events.Descriptor
-	removers     []events.Descriptor
-	scope        Scope
-	sequences    []events.SequenceID
-	ignoreCasing bool
-	message      MessageProvider
+	name            string
+	kind            Type
+	fields          []EventFields
+	types           []events.Descriptor
+	removers        []events.Descriptor
+	scope           Scope
+	sequences       []events.SequenceID
+	ignoreCasing    bool
+	message         MessageProvider
+	messageProvider bool
 }
 
 // Name returns the stable constraint identity.
@@ -80,6 +81,10 @@ func (d Definition) EventSequences() []events.SequenceID { return slices.Clone(d
 
 // IgnoresCasing reports whether property comparisons ignore casing in the kernel.
 func (d Definition) IgnoresCasing() bool { return d.ignoreCasing }
+
+// HasMessageProvider distinguishes runtime callbacks from static WithMessage
+// templates. Temporary definition factories cannot retain runtime collaborators.
+func (d Definition) HasMessageProvider() bool { return d.messageProvider }
 
 // ResolveMessage applies the definition's provider and {DetailKey} substitution
 // only to a matching violation. Empty templates preserve the kernel message.

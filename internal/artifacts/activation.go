@@ -6,7 +6,6 @@ package artifacts
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"sync"
 )
@@ -90,8 +89,8 @@ type Lease struct {
 func Open(ctx context.Context, services ScopeFactory) (l *Lease, err error) {
 	l = &Lease{closeDone: make(chan struct{})}
 	defer func() {
-		if p := recover(); p != nil {
-			err = fmt.Errorf("activation panic: %v", p)
+		if recover() != nil {
+			err = &panicError{}
 		}
 	}()
 	l.Scope, err = services.NewScope(ctx)
@@ -107,15 +106,19 @@ func Open(ctx context.Context, services ScopeFactory) (l *Lease, err error) {
 // Construct obtains a borrowed service or owns the result of a constructor,
 // including non-nil partial values returned alongside errors.
 func (l *Lease) Construct(ctx context.Context, c Constructor) (any, error) {
+	return l.construct(ctx, c, l.Scope)
+}
+
+func (l *Lease) construct(ctx context.Context, c Constructor, scope Scope) (any, error) {
 	if c.borrowed {
-		return Resolve(ctx, l.Scope, c.typ)
+		return Resolve(ctx, scope, c.typ)
 	}
 	args := []reflect.Value{}
 	if c.context {
 		args = append(args, reflect.ValueOf(ctx))
 	}
 	for _, t := range c.args {
-		value, err := Resolve(ctx, l.Scope, t)
+		value, err := Resolve(ctx, scope, t)
 		if err != nil {
 			return nil, err
 		}

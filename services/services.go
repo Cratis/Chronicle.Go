@@ -19,6 +19,9 @@ import (
 // is preserved for NewClient parameter validation. The caller owns the provider;
 // close Chronicle before closing it. Client-lifetime collaborators should use
 // Singleton bindings, not an operation scope retained for the client's lifetime.
+// Provider errors are sanitized: panic payloads/causes and custom error wrappers
+// are discarded. Known service diagnostics and plain ordinary causes remain
+// inspectable; application As/Is hooks are never invoked or forwarded.
 func WithServices(factory dependencyinjection.ScopeFactory) chronicle.ClientOption {
 	if factory == nil || (reflect.ValueOf(factory).Kind() == reflect.Pointer && reflect.ValueOf(factory).IsNil()) {
 		return chronicle.WithServices(nil)
@@ -36,13 +39,18 @@ type scopeFactory struct {
 
 func (f scopeFactory) NewScope(ctx context.Context) (reactors.Scope, error) {
 	scope, err := f.factory.NewScope(ctx)
-	if err != nil {
-		return nil, err
-	}
+	// Sanitize after acquiring the scope, with its own recovery boundary, so a
+	// hostile error tree cannot lose a partially opened scope's cleanup ownership.
+	err = sanitizeError(err)
 	if scope == nil || (reflect.ValueOf(scope).Kind() == reflect.Pointer && reflect.ValueOf(scope).IsNil()) {
+		if err != nil {
+			return nil, err
+		}
 		return nil, dependencyinjection.ErrInvalidScope
 	}
-	return adaptedScope{scope}, nil
+	// A failed open may still own resources. Preserve that scope for the lease
+	// to release; never close provider-resolved artifacts separately.
+	return adaptedScope{scope}, err
 }
 
 type catalogFactory struct {
@@ -62,9 +70,10 @@ func (s adaptedScope) Resolve(ctx context.Context, typ reflect.Type) (any, error
 	if err != nil {
 		return nil, err
 	}
-	return s.scope.Resolve(ctx, key)
+	value, err := s.scope.Resolve(ctx, key)
+	return value, sanitizeError(err)
 }
-func (s adaptedScope) Close(ctx context.Context) error { return s.scope.Close(ctx) }
+func (s adaptedScope) Close(ctx context.Context) error { return sanitizeError(s.scope.Close(ctx)) }
 
 // Scope unwraps the borrowed Fundamentals scope during a middleware/factory call.
 // Arc adapters can verify ScopeOwner/ContextChecker before borrowing it. Never

@@ -5,10 +5,8 @@ package chronicle
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
-	"time"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/artifacts"
@@ -77,7 +75,7 @@ func prepareSeeders(ctx context.Context, catalog *events.Catalog, declarations [
 		if declaration.instance != nil {
 			continue
 		}
-		constructor, err := artifacts.CompileConstructor(declaration.typ, declaration.factory, services)
+		constructor, err := compileDefinitionFactory("seeder", definitionFactory{declaration.typ, declaration.factory}, services)
 		if err != nil {
 			return seeding.Definition{}, fmt.Errorf("prepare seeder %s: %w", declaration.typ, err)
 		}
@@ -89,7 +87,7 @@ func prepareSeeders(ctx context.Context, catalog *events.Catalog, declarations [
 				return err
 			}
 			if declaration.instance != nil {
-				if err := declaration.instance.Seed(builder); err != nil {
+				if err := artifacts.Protect("seeder", "define", func() error { return declaration.instance.Seed(builder) }); err != nil {
 					return err
 				}
 			} else if err := prepareScopedSeeder(ctx, builder, services, constructors[i]); err != nil {
@@ -100,22 +98,8 @@ func prepareSeeders(ctx context.Context, catalog *events.Catalog, declarations [
 	}))
 }
 
-func prepareScopedSeeder(ctx context.Context, builder *seeding.Builder, services artifacts.ScopeFactory, constructor artifacts.Constructor) (err error) {
-	lease, err := artifacts.Open(ctx, services)
-	defer func() {
-		if recover() != nil {
-			err = fmt.Errorf("%w: seeder activation or declaration panicked", ErrInvalidConfiguration)
-		}
-		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		err = errors.Join(err, lease.Close(cleanup))
-	}()
-	if err != nil {
-		return err
-	}
-	value, err := lease.Construct(ctx, constructor)
-	if err != nil {
-		return err
-	}
-	return value.(seeding.Seeder).Seed(builder)
+func prepareScopedSeeder(ctx context.Context, builder *seeding.Builder, services artifacts.ScopeFactory, constructor artifacts.Constructor) error {
+	return artifacts.Prepare(ctx, "seeder", services, constructor, definitionDependency, func(value any) error {
+		return value.(seeding.Seeder).Seed(builder)
+	})
 }

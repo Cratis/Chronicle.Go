@@ -68,6 +68,7 @@ func (b *Builder) WithName(name string) *Builder { b.definition.name = name; ret
 // message. The last WithMessage or WithMessageProvider call wins.
 func (b *Builder) WithMessage(message string) *Builder {
 	b.definition.message = func(Violation) string { return message }
+	b.definition.messageProvider = false
 	return b
 }
 
@@ -80,6 +81,7 @@ func (b *Builder) WithMessageProvider(provider MessageProvider) *Builder {
 		b.invalid("nil message provider")
 	}
 	b.definition.message = provider
+	b.definition.messageProvider = true
 	return b
 }
 

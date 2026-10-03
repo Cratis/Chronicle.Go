@@ -6,6 +6,8 @@
   href: connection-strings/index.md
 - name: Lifecycle and readiness
   href: connection-strings/lifecycle.md
+- name: Definition factories
+  href: definition-factories.md
 - name: Events
   items:
     - name: Event types
