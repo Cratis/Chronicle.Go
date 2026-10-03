@@ -234,11 +234,11 @@ func (s *ReadModelScenario[M]) Instances(ctx context.Context) (map[readmodels.Ke
 		if _, duplicate := result[key]; duplicate {
 			return nil, chronicle.ErrProtocol
 		}
-		var value M
-		if err = json.Unmarshal(document, &value); err != nil {
+		value, err := s.model.Unmarshal(document)
+		if err != nil {
 			return nil, err
 		}
-		result[key] = value
+		result[key] = *value.(*M)
 	}
 	return result, nil
 }
@@ -281,10 +281,11 @@ func (s *ReadModelScenario[M]) reduce(ctx context.Context) (map[readmodels.Key]M
 		batch := batches[key]
 		var initial *M
 		if s.initial != nil {
-			initial = new(M)
-			if err := json.Unmarshal(s.initial, initial); err != nil {
+			value, err := s.model.Unmarshal(s.initial)
+			if err != nil {
 				return nil, err
 			}
+			initial = value.(*M)
 		}
 		if len(batch) == 0 {
 			if initial != nil {
@@ -302,11 +303,11 @@ func (s *ReadModelScenario[M]) reduce(ctx context.Context) (map[readmodels.Key]M
 			if err != nil {
 				return nil, err
 			}
-			var value M
-			if err = json.Unmarshal(data, &value); err != nil {
+			value, err := s.model.Unmarshal(data)
+			if err != nil {
 				return nil, err
 			}
-			result[key] = value
+			result[key] = *value.(*M)
 		}
 	}
 	return result, nil
@@ -329,11 +330,11 @@ func (s *ReadModelScenario[M]) Instance(ctx context.Context) (readmodels.Instanc
 		if len(documents) == 0 {
 			return readmodels.Instance[M]{}, nil
 		}
-		var value M
-		if err = json.Unmarshal(documents[0], &value); err != nil {
+		value, err := s.model.Unmarshal(documents[0])
+		if err != nil {
 			return readmodels.Instance[M]{}, err
 		}
-		return readmodels.Instance[M]{Exists: true, Value: value}, nil
+		return readmodels.Instance[M]{Exists: true, Value: *value.(*M)}, nil
 	}
 	values, err := s.Instances(ctx)
 	if err != nil {

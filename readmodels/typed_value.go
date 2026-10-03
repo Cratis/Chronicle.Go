@@ -5,7 +5,6 @@ package readmodels
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -32,13 +31,12 @@ func (s *Service) GetValue(ctx context.Context, typ reflect.Type, key Key) (any,
 		}
 		return nil, fmt.Errorf("%w: absent read model requires a pointer parameter", faults.ErrNotRegistered)
 	}
-	value := reflect.New(descriptor.GoType())
-	if err := json.Unmarshal(raw.Value, value.Interface()); err != nil {
+	value, err := descriptor.Unmarshal(raw.Value)
+	if err != nil {
 		return nil, fmt.Errorf("%w: model document does not match declared type", faults.ErrProtocol)
 	}
-	normalizeCollections(value.Elem())
 	if typ.Kind() == reflect.Pointer {
-		return value.Interface(), nil
+		return value, nil
 	}
-	return value.Elem().Interface(), nil
+	return reflect.ValueOf(value).Elem().Interface(), nil
 }

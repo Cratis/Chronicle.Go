@@ -243,7 +243,7 @@ func (r *Reader[T]) Release(ctx context.Context, value T) (T, error) {
 	if err != nil {
 		return zero, &ReleaseError{Cause: err}
 	}
-	result, err := decode[T](Instance[json.RawMessage]{Value: released, Exists: true})
+	result, err := decode[T](Instance[json.RawMessage]{Value: released, Exists: true}, d)
 	if err != nil {
 		return zero, &ReleaseError{Cause: err}
 	}
