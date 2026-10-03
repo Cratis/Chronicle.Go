@@ -150,6 +150,8 @@ def layout(root):
     for entry in entries:
         directory = entry["dir"]
         module = go_manifest(root, directory)
+        if module.get("Ignore"):
+            raise ValueError(f"{directory}: ignore directives are forbidden; module gates must cover all packages")
         expected_path = MODULE + ("" if directory == "." else "/" + directory)
         if (module.get("Module") or {}).get("Path") != expected_path:
             raise ValueError(f"{directory}: expected module {expected_path}")

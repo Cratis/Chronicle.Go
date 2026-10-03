@@ -117,7 +117,9 @@ python3 -B .github/scripts/go_modules.py tidy --module .
 The matrix contains module records with JSON booleans, not shell commands. CI
 validates policy before starting module commands. Each listed module gets its
 own build, vet, unit test, race, tidy, formatting, lint and vulnerability job,
-with `GOWORK=off` and `GOTOOLCHAIN=local`. Go 1.26/1.27 Linux and Go 1.27
+with `GOWORK=off` and `GOTOOLCHAIN=local`. `ignore` directives in `go.mod` are
+forbidden in every listed module, including unpublished previews and recipes:
+they must not hide packages from the native gates. Go 1.26/1.27 Linux and Go 1.27
 macOS/Windows lanes and the root's required check names are unchanged.
 
 Run the [contribution guide's gates](../CONTRIBUTING.md) inside each listed module;

@@ -366,6 +366,54 @@ class ModulePolicy(unittest.TestCase):
         self.write("go.mod", f"module {MODULE}\ngo 1.26\ntool golang.org/x/tools/cmd/stringer\n")
         self.reject("tool directives belong in a nested module")
 
+    def test_root_ignore_selectors_are_rejected_from_native_parser_json(self):
+        for selectors in [["./internal"], ["./..."], ["internal"], ["./internal", "./examples"]]:
+            with self.subTest(selectors=selectors):
+                directive = ("ignore " + selectors[0] + "\n" if len(selectors) == 1 else
+                             "ignore (\n" + "\n".join(selectors) + "\n)\n")
+                self.write("go.mod", f"module {MODULE}\ngo 1.26\n{directive}")
+                self.assertEqual(policy.go_manifest(self.root, ".")["Ignore"],
+                                 [{"Path": selector} for selector in selectors])
+                self.reject(r"\.: ignore directives are forbidden")
+
+    def test_nested_ignore_directives_have_no_preview_publication_or_recipe_exception(self):
+        tool = self.nested()
+        self.nested("integrations/example", publish=True, version="v0.1.0")
+        self.nested("recipes", version="v0.0.0", extra=f"replace {MODULE} => ../\n")
+        for directory, publish, version in [("tools", False, PSEUDO), ("tools", True, "v0.1.0"),
+                                            ("integrations/example", True, "v0.1.0"),
+                                            ("recipes", False, "v0.0.0")]:
+            if directory == "tools":
+                tool["publish"] = publish
+                self.configure()
+                self.write("tools/go.mod", f"module {MODULE}/tools\ngo 1.26\nrequire {MODULE} {version}\n")
+            manifest = self.root / directory / "go.mod"
+            original = manifest.read_text()
+            for directive in ["ignore ./internal\n", "ignore (\n./internal\n./examples\n)\n"]:
+                with self.subTest(directory=directory, publish=publish, directive=directive):
+                    self.write(directory + "/go.mod", original + directive)
+                    self.assertTrue(policy.go_manifest(self.root, directory)["Ignore"])
+                    self.reject(directory + ": ignore directives are forbidden")
+            self.write(directory + "/go.mod", original)
+
+    def test_absent_or_empty_ignore_json_preserves_all_module_gates(self):
+        self.nested()
+        self.nested("integrations/example", publish=True, version="v0.1.0")
+        self.nested("recipes", version="v0.0.0", extra=f"replace {MODULE} => ../\n")
+        expected = self.matrix()
+        original = policy.go_manifest
+        for state in ["absent", None, []]:
+            def manifest(root, directory):
+                result = original(root, directory)
+                self.assertFalse(result.get("Ignore"))
+                if state == "absent":
+                    result.pop("Ignore", None)
+                else:
+                    result["Ignore"] = state
+                return result
+            with self.subTest(state=state), patch.object(policy, "go_manifest", side_effect=manifest):
+                self.assertEqual(self.matrix(), expected)
+
     def test_real_go_parser_rejects_invalid_and_unknown_mod_directives(self):
         for extra in ["require (\n", "invented directive\n", "go 1.27\n"]:
             with self.subTest(extra=extra):
