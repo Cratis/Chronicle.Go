@@ -1,0 +1,108 @@
+---
+title: Prepare a client with a shared provider
+description: Bind one borrowed client identity before preparing Chronicle definitions with Fundamentals.Go scopes.
+---
+
+Use captured preparation when one shared provider must contain the client identity
+and supply services needed to prepare that same client's definitions. This
+experimental v0.x API does not automatically bind stores or facades. For ordinary
+clients, keep using `NewClient` or `NewClientContext`; they capture and prepare in
+one call and return only a prepared client.
+
+## Compose the provider before preparing definitions
+
+1. Register events, models and definition factories in a Chronicle registry.
+2. Call `chronicle.CaptureClient(options...)`. Set all client configuration here,
+   including any append-origin resolver.
+3. Register `p.Client()` using `dependencyinjection.BindValue(&bindings, p.Client())`.
+   This is an explicit **borrowed** singleton, not an owned constructor result.
+4. Register application collaborators, then build the provider. Do not open a
+   preparation scope from inside a provider factory.
+5. Call `services.PrepareClient(ctx, p, provider)`. Await its result before creating
+   consumers that read catalogs, connecting, or obtaining store handles.
+6. Use the returned client normally. It is exactly the identity from `p.Client()`.
+
+The [executable example](../services/example_preparation_test.go) runs this complete
+sequence with a provider-backed seeder and an offline catalog read:
+
+```sh
+go test -run ExamplePrepareClient ./services
+```
+
+The example prints `true 0`: identity is unchanged and its selected catalog has no
+events. Neither capture nor preparation performs SDK transport I/O. Configuration
+option functions still execute during capture; arbitrary application callbacks
+can perform effects that Chronicle cannot prevent or roll back.
+
+An Arc SDK consumer that reads catalogs during construction must be created after
+preparation. This slice verifies a local catalog consumer, not actual Arc SDK
+adoption or a published cross-module pairing. Automatic client/store/facade binding
+helpers remain outside this API.
+
+## Preparation contract
+
+`CaptureClient(options ...ClientOption) (*ClientPreparation, error)` applies and
+validates options, captures every selected registry once, and initializes the
+client's lifecycle. It does not invoke schema, factory, service, or selector
+preparation callbacks. Registry collections are detached; immutable declaration
+plans retain their codecs, classifications and original model identities. Borrowed
+callbacks and their hidden closure state are not cloned.
+
+`p.Client() *Client` always returns the same identity. Do not copy a `Client` value,
+let a provider default-construct it, or transfer its cleanup ownership. During
+preparation a constructor can borrow this exact `*Client` through an explicit
+binding, but operational use returns `ErrNotPrepared`. Visible own-store/sequence
+dependencies and SDK facade artifact results are rejected before activation.
+Chronicle checks the identity of clients it resolves directly. The provider and
+application remain responsible for provider-internal graphs and borrowed ownership.
+
+`p.Prepare(ctx, scopes reactors.ScopeFactory) (*Client, error)` is the
+container-independent core API. `services.PrepareClient` adapts a Fundamentals.Go
+scope factory and preserves its optional service catalog. Both borrow the factory
+for preparation and runtime observers; neither closes the provider.
+
+- Nil scopes selects captured `WithServices`, or the container-free default.
+- Before admission, a nil context, typed-nil factory, or explicit factory combined
+  with captured `WithServices` is invalid and does not consume the attempt.
+- An already canceled context consumes the admitted attempt and retains failure.
+- Only one attempt is admitted. Concurrent and reentrant calls return
+  `ErrPreparationInProgress` immediately, including while cleanup runs.
+- Completed calls ignore their arguments and return the retained result without
+  callbacks or factory reevaluation. Retry requires a new capture.
+- All selected metadata and visible definition/seeder constructor plans are
+  preflighted before the first temporary scope. Each distinct captured registry
+  compiles once. Every snapshot is published together, only after cleanup succeeds.
+
+Before successful preparation, `Connect`, `Ready`, `EventStore`, `EventStores`,
+`Catalogs`, and `Artifacts` fail before options, selectors or transport effects.
+`Ready` does not retry a preparation-state error. A callback may handle a denial,
+and an external readiness probe does not invalidate preparation. Actual errors,
+cancellation, closure or cleanup failure prevent publication.
+
+State diagnostics contain only fixed operation/category text. Preparation errors
+use the existing payload-free `PreparationError`; panic payloads are discarded.
+See [definition factory errors and ownership](definition-factories.md).
+
+## Close the client, join preparation, then close the provider
+
+Preparation is synchronous caller-owned work, not client-owned background work.
+Its context combines caller cancellation with the client lifetime. Callbacks and
+closers execute outside SDK locks and may call `Client.Close()` without waiting
+for themselves.
+
+`Close`, `CloseContext`, and `Shutdown` cancel preparation but **do not join its
+callbacks or cleanup**. A deadline cannot forcibly terminate a non-cooperative
+callback. An outstanding preparation call remains your responsibility even after
+client closure completes.
+
+On normal shutdown or startup failure:
+
+1. Stop and join application work.
+2. Close Chronicle.
+3. Join any outstanding `Prepare` or `PrepareClient` call, including its cleanup.
+4. Close the provider.
+
+A client closed before preparation admits no callbacks and cannot publish catalogs.
+After a successful preparation, closure is independent: repeated `Prepare` still
+returns that same, now-closed identity. Operational calls return `ErrClosed`, while
+`Catalogs` and `Artifacts` remain available as historical frozen configuration.
