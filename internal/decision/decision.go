@@ -175,6 +175,13 @@ func WithDispatchValidation(ctx context.Context, check func() error) context.Con
 	return context.WithValue(ctx, dispatchValidationKey{}, check)
 }
 
+// CleanupContext detaches caller cancellation and read/epoch validation only.
+// Metadata and the lease's pinned transport remain intact; that transport still
+// enforces client closure and generation retirement before dispatching cleanup.
+func CleanupContext(ctx context.Context) context.Context {
+	return context.WithValue(context.WithoutCancel(ctx), dispatchValidationKey{}, struct{}{})
+}
+
 func ValidateDispatch(ctx context.Context) error {
 	if check, ok := ctx.Value(dispatchValidationKey{}).(func() error); ok {
 		return check()

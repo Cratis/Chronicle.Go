@@ -160,7 +160,7 @@ func TestDecisionLeaseCannotSpliceRPCsAcrossGenerationLoss(t *testing.T) {
 		t.Fatal("generation loss not visible")
 	}
 	// A cleanup context detaches request cancellation, never transport identity.
-	_, err = clients.NewConnectionServiceClient(lease.Conn).ConnectionKeepAlive(context.WithoutCancel(lease.Context), &clients.ConnectionKeepAlive{})
+	_, err = clients.NewConnectionServiceClient(lease.Conn).ConnectionKeepAlive(decision.CleanupContext(decision.WithDispatchValidation(lease.Context, func() error { return decision.ErrStale })), &clients.ConnectionKeepAlive{})
 	var before *faults.BeforeDispatch
 	if !errors.As(err, &before) {
 		t.Fatalf("old generation dispatched: %v", err)

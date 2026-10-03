@@ -192,7 +192,7 @@ func foldDecision(ctx context.Context, service *Service, descriptor Descriptor, 
 		return Instance[json.RawMessage]{}, err
 	}
 	defer func() {
-		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		cleanup, cancel := context.WithTimeout(decision.CleanupContext(ctx), 5*time.Second)
 		defer cancel()
 		response, cleanupErr := service.client.DehydrateSession(cleanup, &contracts.DehydrateSessionRequest{
 			EventStore: string(service.store), Namespace: string(service.namespace), EventSequenceId: string(events.EventLog), ReadModelIdentifier: string(descriptor.Identifier()), ReadModelKey: string(key), SessionId: session.String()})
