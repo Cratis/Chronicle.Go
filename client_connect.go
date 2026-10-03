@@ -25,6 +25,9 @@ type supervision struct {
 // Concurrent callers share startup. The initiating context bounds the first attempt,
 // never the client lifetime. Transient loss reconnects automatically. A terminal
 // auth/compatibility failure is retried only by a subsequent explicit Connect.
+// WithSkipKeepAlive uses a protected read-only startup probe instead of a logical
+// connection session; no application-heartbeat-driven reconnect or registration
+// replay after kernel restarts is guaranteed in that mode.
 func (c *Client) Connect(ctx context.Context) error { return c.connect(ctx, true) }
 
 func (c *Client) connect(ctx context.Context, explicit bool) error {

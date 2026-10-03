@@ -35,26 +35,29 @@ type TokenInvalidator interface {
 type ClientOption func(*clientConfig)
 
 type clientConfig struct {
-	uri                                    string
-	tls                                    *tls.Config
-	tokenSource                            TokenSource
-	noAuth, development, skipCompatibility bool
-	connectTimeout                         time.Duration
-	keepAliveTimeout                       time.Duration
-	registrationRetry                      RegistrationRetry
-	resolver                               SRVResolver
-	resolverSet                            bool
-	borrowed                               grpc.ClientConnInterface
-	tlsSet, tokenSet, borrowedSet, uriSet  bool
-	validateEventTypes                     bool
-	concurrency                            eventsequences.ConcurrencyPolicy
-	appendOriginResolver                   eventsequences.AppendOriginResolver
-	naming                                 serialization.NamingPolicy
-	registry                               *Registry
-	stores                                 map[StoreName]*Registry
-	reactorServices                        reactorScopeFactory
-	reactorServicesSet                     bool
-	reactorRetryWait                       func(context.Context, time.Duration) error
+	uri                                             string
+	tls                                             *tls.Config
+	tokenSource                                     TokenSource
+	noAuth, development, skipCompatibility          bool
+	connectTimeout                                  time.Duration
+	keepAliveTimeout                                time.Duration
+	keepAliveTimeoutSet, skipKeepAlive              bool
+	maxSendMessageSize, maxReceiveMessageSize       int
+	maxSendMessageSizeSet, maxReceiveMessageSizeSet bool
+	registrationRetry                               RegistrationRetry
+	resolver                                        SRVResolver
+	resolverSet                                     bool
+	borrowed                                        grpc.ClientConnInterface
+	tlsSet, tokenSet, borrowedSet, uriSet           bool
+	validateEventTypes                              bool
+	concurrency                                     eventsequences.ConcurrencyPolicy
+	appendOriginResolver                            eventsequences.AppendOriginResolver
+	naming                                          serialization.NamingPolicy
+	registry                                        *Registry
+	stores                                          map[StoreName]*Registry
+	reactorServices                                 reactorScopeFactory
+	reactorServicesSet                              bool
+	reactorRetryWait                                func(context.Context, time.Duration) error
 }
 
 // WithAppendOriginResolver selects a borrowed metadata-only callback for local

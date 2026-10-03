@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"maps"
+	"math"
 	"reflect"
 	"slices"
 	"strings"
@@ -83,6 +84,7 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 		return nil, err
 	}
 	config := clientConfig{uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
+		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize,
 		keepAliveTimeout: 5 * time.Second, reactorRetryWait: connection.Wait, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
 	for _, option := range options {
 		if option == nil {
@@ -123,6 +125,16 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 		c.reducers.stores[name] = frozen.reducers
 		c.storeSeeds[name] = frozen.seeds
 	}
+	if config.skipKeepAlive {
+		if len(c.reactors.defaults)+len(c.reducers.defaults)+len(c.readModelReactors.defaults) != 0 {
+			return nil, fmt.Errorf("%w: SkipKeepAlive cannot run reactors, reducers or read-model reactors; kernel subscriptions require a logical connection session", ErrInvalidConfiguration)
+		}
+		for _, name := range slices.Sorted(maps.Keys(config.stores)) {
+			if len(c.reactors.stores[name])+len(c.reducers.stores[name])+len(c.readModelReactors.stores[name]) != 0 {
+				return nil, fmt.Errorf("%w: SkipKeepAlive cannot run reactors, reducers or read-model reactors; kernel subscriptions require a logical connection session", ErrInvalidConfiguration)
+			}
+		}
+	}
 	c.config.registry, c.config.stores = nil, nil
 	c.config.skipCompatibility = config.skipCompatibility || uri.skipCompatibility
 	if c.config.resolver == nil {
@@ -157,6 +169,32 @@ func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) 
 	}
 	if config.borrowed != nil && (uri.srv || len(uri.addresses) > 1 || uri.loadBalancer != "") {
 		return uri, nil, fmt.Errorf("%w: borrowed channels own endpoint selection", ErrInvalidConfiguration)
+	}
+	if (config.maxSendMessageSizeSet && (config.maxSendMessageSize < 1 || config.maxSendMessageSize > math.MaxInt32)) ||
+		(config.maxReceiveMessageSizeSet && (config.maxReceiveMessageSize < 1 || config.maxReceiveMessageSize > math.MaxInt32)) {
+		return uri, nil, fmt.Errorf("%w: message sizes must be between 1 and 2147483647 bytes", ErrInvalidConfiguration)
+	}
+	if config.skipKeepAlive && config.keepAliveTimeoutSet {
+		return uri, nil, fmt.Errorf("%w: SkipKeepAlive conflicts with an explicit keepalive timeout", ErrInvalidConfiguration)
+	}
+	if config.skipKeepAlive {
+		// Reject before definition preparation invokes caller-owned seeders or
+		// scopes. Plans are checked again after freezing for concurrent admission.
+		registries := []*Registry{config.registry}
+		for _, name := range slices.Sorted(maps.Keys(config.stores)) {
+			registries = append(registries, config.stores[name])
+		}
+		for _, registry := range registries {
+			if registry == nil {
+				continue
+			}
+			registry.mu.Lock()
+			hasObservers := len(registry.reactors)+len(registry.reducers)+len(registry.readModelReactors) != 0
+			registry.mu.Unlock()
+			if hasObservers {
+				return uri, nil, fmt.Errorf("%w: SkipKeepAlive cannot run reactors, reducers or read-model reactors; kernel subscriptions require a logical connection session", ErrInvalidConfiguration)
+			}
+		}
 	}
 	policy := config.registrationRetry
 	if config.connectTimeout <= 0 || config.keepAliveTimeout <= 0 || policy.MaxAttempts < 1 || policy.MaxAttempts > 100 || policy.InitialDelay <= 0 || policy.MaximumDelay < policy.InitialDelay || policy.AttemptTimeout <= 0 {

@@ -439,8 +439,8 @@ This slice compares `DotNET/ChronicleClient.cs`, `ChronicleOptions.cs`, `EventSt
 | Client construction and stores | `ChronicleClient`, `GetEventStore`, `GetEventStores` | `NewClient`/`Dial`, `EventStore`, `EventStores`; explicit contexts and construction errors, frozen options rather than mutable `Options` |
 | Endpoint/authentication | `localhost:35000`, development client credentials | Same endpoint and credentials; validated TLS is the safety difference described above |
 | Connection budget | `ConnectTimeout = 5` seconds; initial-startup and post-failure wait behavior differ | `WithConnectTimeout`, five seconds for each complete discovery/auth/handshake attempt; first attempt returns its actual failure rather than reporting an unready connection as connected. Subsequent readiness waits use the caller's deadline |
-| Heartbeats and transport pings | Fixed five-second staleness, evaluated on a one-second watchdog tick; HTTP/2 60s/30s | Same default thresholds/pings; timer-driven staleness is configurable with `WithKeepAliveTimeout`, without the extra polling tick |
-| Reconnect | Watchdog retries with exponential 1–30s delays, lifecycle disconnect/connect notifications | Same automatic replacement and re-registration; Go adds half-to-full downward jitter to avoid synchronized fleets, joins old workers, and stops on terminal authentication/compatibility errors |
+| Heartbeats and transport pings | Fixed five-second staleness, evaluated on a one-second watchdog tick; HTTP/2 60s/30s; `SkipKeepAlive = false` | Same default thresholds/pings; timer-driven staleness is configurable with `WithKeepAliveTimeout`, without the extra polling tick. `WithSkipKeepAlive()` omits the entire application session, not HTTP/2 pings |
+| Reconnect | Watchdog retries with exponential 1–30s delays, lifecycle disconnect/connect notifications | Same automatic replacement and re-registration when the application session is enabled; Go adds half-to-full downward jitter, joins old workers, and stops on terminal authentication/compatibility errors. Skipped sessions have no heartbeat-driven generation replacement |
 | Calls during recovery | Service accessor attempts connection, subject to failure backoff | Existing handles fail before dispatch while disconnected, rather than making every RPC wait for reconnection. Use `Ready(ctx)` when waiting is appropriate; replay barriers block required operations |
 | Balancing | Factory defaults to least-connections despite a stale round-robin options comment; random-offset round-robin/random alternatives | Same algorithms and URI names; at most 64 endpoints, no custom balancer extension yet. A borrowed channel retains its owner's routing |
 | OAuth | 60s refresh margin, 5s failure throttle, 3600s fallback lifetime, forced refresh on rejection | Same cache/refresh constants; five-second HTTP request cap and a fresh endpoint-bound OAuth cache per generation. This intentionally avoids carrying a token across server restarts; no automatic unary replay |
@@ -449,7 +449,48 @@ This slice compares `DotNET/ChronicleClient.cs`, `ChronicleOptions.cs`, `EventSt
 | Readiness and outcomes | `Registration`, `WaitForRegistration`, `RegisterAll`, `Lifecycle.IsConnected` | `WaitForRegistration(ctx)` returns a generation/pass outcome; `Ready(ctx)` separates connection health from artifact readiness. Only implemented store/namespace/event-type/read-model/constraint stages are represented, in C# `RegisterAllArtifacts` order (event types and read models before constraints); runtime `RegisterAll`/registry extension is deferred |
 | Failed store creation | Evicts a failed lazy task from the name/namespace cache | Retains the immutable handle but never caches failure as successful readiness; later passes and reconnect can recover it. No failed task permanently poisons admission |
 | Disposal | `Dispose()` cancels owned connection lifetime and disposes the supplied connection | `Close()` cancels/joins only owned resources; `CloseContext` bounds joining and `Shutdown` adds deadline-bounded RPC draining. Borrowed channels are never disposed |
-| Remaining option/lifecycle surface | `SkipKeepAlive`, configurable message limits, `EvictEventStores`, lifecycle event hooks, process/software metadata and custom balancer | Not implemented in this slice. Keep-alive remains mandatory, message limits remain 100 MiB each (matching C# defaults), handles persist until client close, and no public connection-event callbacks are exposed. These are explicit gaps, not ignored options |
+| Remaining option/lifecycle surface | Default sink, `EvictEventStores`, lifecycle event hooks, process/software metadata and custom balancer | Not implemented in this slice. Handles persist until client close and no public connection-event callbacks are exposed. [#62](https://github.com/Cratis/Chronicle.Go/issues/62) remains open for sink defaults, eviction, lifecycle hooks and custom balancing |
+
+## Client transport options
+
+Authority: `DotNET/ChronicleOptions.cs` and
+`Connections/ChronicleConnection.cs:{ConnectInternal,CreateGrpcChannel}` at C#
+`2e31b0dfba489159b3db323238f16d0f277056b4`. The actual application protocol is
+server-streaming `Connect` plus unary `ConnectionKeepAlive` acknowledgments, not
+bidirectional streaming. All options below are client-wide, validated and frozen
+at `NewClient`; they cannot be changed on a store or namespace handle.
+
+| C# option/default | Go option and status | Executable evidence / intentional difference |
+| --- | --- | --- |
+| `MaxSendMessageSize = 104857600` bytes | **Implemented**, **Go-specific** bounded substitution: `WithMaxSendMessageSize(bytes int)`, last wins | `TestMessageSizeOptionsValidateFinalValues`, `TestMessageBoundsExactProtobufUnaryAndStreamingOwnedAndBorrowed`, `TestKernelClientTransportOptions`, `ExampleWithMaxSendMessageSize`; accepts 1..2147483647, rejects zero/negative/overflow. No nullable/unlimited mode |
+| `MaxReceiveMessageSize = 104857600` bytes | **Implemented**, **Go-specific** bounded substitution: `WithMaxReceiveMessageSize(bytes int)`, last wins | Same exact protobuf and kernel tests; `TestOmittedMessageBoundsPreserveBorrowedOwnerDefaults`, `ExampleWithMaxReceiveMessageSize`; accepts 1..2147483647. Owned replacement generations retain both frozen bounds; borrowed channels retain owner defaults unless explicitly overridden per RPC, for unary and streaming calls alike. Neither direction implicitly overrides the other |
+| `SkipKeepAlive = false` | **Implemented**, **Go-specific** protected readiness: `WithSkipKeepAlive()` | `TestSkipKeepAliveProbesRegistersAndSurvivesSilence`, `TestSkipKeepAliveProbeFailsClosedEvenWithoutCompatibility`, `TestSkipKeepAliveCompatibilityStillTerminatesStartup`, `TestSkipKeepAliveProbeCancellationAndCloseJoin`, `TestSkipKeepAliveTokenFailureDoesNotDispatchProbe`, `TestKernelClientTransportOptions`, `ExampleWithSkipKeepAlive`; skips Connect/first acknowledgment/receiver/watchdog entirely; HTTP/2 60s/30s settings remain unchanged |
+| Fixed application staleness threshold; optional skipped session | **Go-specific**: positive `WithKeepAliveTimeout`, default five seconds | `TestSkipKeepAliveRejectsExplicitTimeoutInEitherOrder`, `TestSkipKeepAliveRejectsConfiguredObserverRuntimesBeforeIO`; an explicit timeout conflicts with SkipKeepAlive in either order. Configured reactors, reducers (even passive) and read-model reactors in default or per-store registries also fail before network I/O: kernel subscriptions require a registered logical session |
+
+Message bounds cover serialized protobuf messages, not just event JSON. Small
+limits can therefore reject compatibility, registration or observer requests as
+well as appends and reads. Both `Invoke` and `NewStream` apply explicit settings
+on the shared generation transport; no borrowed channel is mutated or closed.
+An explicit value equal to the SDK default still overrides a borrowed owner's
+limit. Omitted settings preserve that owner's limits.
+
+Compatibility preflight remains fail-closed unless explicitly skipped. It is
+anonymous on the kernel and cannot prove authenticated readiness. With a skipped
+application session, startup always calls protected, read-only
+`GetConnectedClients`, even when compatibility is disabled. Authentication,
+authorization and unsupported-method failures are surfaced without fabricating
+connection registration or retrying the rejected operation. The
+**19.29.4-development** witness verifies anonymous rejection, authenticated
+registration/append/read without any new connected-client entry, and exact
+compatibility protobuf bounds (126854 send bytes, 20 receive bytes).
+
+A skipped session has no application heartbeat-driven logical reconnect or
+registration replay guarantee after a kernel restart. grpc-go transport
+reconnection is not a replacement for that lifecycle. Startup/replacement
+registration workers still belong to their generation; cancellation, `Close`,
+`CloseContext` and `Shutdown` join client-owned work as usual. Prefer skipped
+sessions for short-lived one-shot clients. TLS verification, credential ownership
+and the no-append-retry contract are unchanged; no idle-ping guarantee is added.
 
 ## Unit-of-work migration
 
