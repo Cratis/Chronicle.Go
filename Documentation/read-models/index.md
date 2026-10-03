@@ -95,10 +95,11 @@ model's configured event sequence, rather than C#'s hard-coded event log.
 
 The raw equivalent is `store.ReadModels().Watch(ctx, model.Identifier())`.
 Both APIs validate the returned namespace and normalize model IDs/collections as
-one-shot reads do. Protected documents pass through the same fail-closed `Release`
-path before delivery. Chronicle 19.29.4's string-PII handler treats already released
-plaintext as a no-op; missing subjects, failed releases and invalid documents are
-terminal, never ciphertext fallbacks.
+one-shot reads do. Classified models fail with `ErrUnsupported` before subscribing.
+The pinned kernel can corrupt legitimate plaintext on the projection watch route,
+including namespace-encrypted values after PII erasure
+([Chronicle#4566](https://github.com/Cratis/Chronicle/issues/4566)). Another client
+`Release` cannot repair that loss and can itself corrupt already-released values.
 
 ### Lifetime, interruption and overload
 
@@ -125,8 +126,12 @@ terminal, never ciphertext fallbacks.
 For a registered reducer, `Watch` attaches to successful folds delivered through
 this client's reducer observation runtime instead. Passive one-shot reads do not
 publish into this feed. Readiness is a local attachment, not a server
-`Subscribed` signal. Values are released before delivery; changes are `Modified`
-or `Removed`, with unknown event metadata. This does not observe other clients,
+`Subscribed` signal. Unclassified fold values are already plaintext and are
+validated without a remote release; changes are `Modified` or `Removed`, with
+unknown event metadata. Classified local watches fail with `ErrUnsupported`:
+notifications do not carry persisted lineage or a delivery-time erasure fence.
+Erasure does not revoke arbitrary historical copies in application memory.
+This does not observe other clients,
 prove a sink write, or provide durable recovery. Local notifications and decoded
 deliveries each have the configured bounded queue. Generation replacement ends
 existing watches; retired folds cannot publish into a new generation's watches.
@@ -137,8 +142,17 @@ existing watches; retired folds cannot publish into a new generation's watches.
 `ObserveInstances(ctx, window, options...)` returns a subscription of **complete
 replacement windows**, not changesets. The first `Recv()` yields the initial
 snapshot. This RPC has no `Subscribed` marker: opening waits for the first
-successfully decoded and released window instead. The kernel may coalesce
-intermediate snapshots under load. Release and decoding preserve receive order.
+successfully validated and decoded window instead. The kernel releases stored
+values using persisted lineage; the SDK does not decrypt the reply again. The
+kernel may coalesce intermediate snapshots under load. Validation and decoding
+preserve receive order.
+
+Protected windows admit only MongoDB root string PII and namespace-encrypted
+properties. Type and provider declarations must compile to that same scalar schema;
+nested, nullable, collection, other encryption-scope and other sink profiles fail
+with `ErrUnsupported` before RPC. Missing classified roots or invalid final values
+fail without returning a partial window. A string's shape alone is not proof of
+decryption: this boundary relies on the admitted server route's release contract.
 
 Pass nil for the C# defaults, skip 0 / take 50, or pass
 `&readmodels.Window{Skip: 5, Take: 10}`. Negative skip becomes zero. Take zero or
