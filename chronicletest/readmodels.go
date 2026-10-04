@@ -33,6 +33,12 @@ type ReadModelOptions[M any] struct {
 	Projection *projections.Declaration
 	// Initial is a serialized snapshot used at the start of each source's fold.
 	Initial *M
+	// StrictEventSubscription rejects registered events not subscribed by the
+	// selected projection. The default is false; reducers ignore this option.
+	// Strict projections require a known unprotected root source-key profile.
+	// Given returns ErrUnsubscribedEventSeeded before the offending append,
+	// unlike C# scenarios' lazy result-time error. Always check Given's error.
+	StrictEventSubscription bool
 }
 
 // ReadModelScenario folds reducers in-process or replays projections on the real
@@ -47,6 +53,7 @@ type ReadModelScenario[M any] struct {
 	model         readmodels.Descriptor
 	reducer       *reducers.Plan
 	projection    projections.Definition
+	subscription  *projectionSubscription
 	history       []reducers.Event
 	initial       json.RawMessage
 	seeds         *seededModels
@@ -136,6 +143,12 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 	if len(s.artifacts.Reactors) != 0 || len(s.artifacts.Reducers) != 0 {
 		return fail(fmt.Errorf("%w: projection scenario registry contains other Go observers; isolate the registry or use EventScenario for live lifecycle", chronicle.ErrUnsupported))
 	}
+	if option.StrictEventSubscription {
+		s.subscription, err = strictProjectionSubscription(s.projection, s.artifacts.Events)
+		if err != nil {
+			return fail(err)
+		}
+	}
 	if config.ConnectionString == "" {
 		return fail(ErrKernelUnavailable)
 	}
@@ -171,7 +184,10 @@ func (s *ReadModelScenario[M]) Fidelity() Fidelity {
 
 // Given snapshots events for local folding, or appends them through the production
 // client to the projection's selected sequence. Unsubscribed events are ignored by
-// folds and filtered by the kernel for projections. Failures retain earlier seeds.
+// folds and filtered by the kernel for projections by default. Strict projections
+// reject registered unsubscribed seeds before serialization or append. Failures
+// retain earlier successful seeds, including those earlier in the same call; no
+// rollback or retry safety is promised.
 func (s *ReadModelScenario[M]) Given(ctx context.Context, source events.SourceID, values ...any) error {
 	if s.closed {
 		return chronicle.ErrClosed
@@ -186,6 +202,9 @@ func (s *ReadModelScenario[M]) Given(ctx context.Context, source events.SourceID
 		descriptor, ok := s.artifacts.Events.Lookup(value)
 		if !ok {
 			return chronicle.ErrNotRegistered
+		}
+		if err := s.subscription.admit(descriptor.Ref().ID); err != nil {
+			return err
 		}
 		data, err := descriptor.Marshal(value)
 		if err != nil {

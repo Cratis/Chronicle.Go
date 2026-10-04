@@ -32,6 +32,116 @@ func kernelContext(t *testing.T) context.Context {
 	t.Cleanup(cancel)
 	return ctx
 }
+
+// This witnesses append admission and synchronous bounded replay, not observer
+// catch-up or asynchronous replay-job completion (Chronicle.Go#60).
+func TestKernelReadModelStrictEventSubscription(t *testing.T) {
+	registry := eventRegistry(t)
+	if _, err := chronicle.RegisterEvent[auditMarker](registry); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := chronicle.RegisterReadModel[ProjectedAccount](registry); err != nil {
+		t.Fatal(err)
+	}
+	for _, strict := range []bool{true, false} {
+		name := "default"
+		if strict {
+			name = "strict"
+		}
+		t.Run(name, func(t *testing.T) {
+			ctx := kernelContext(t)
+			config := kernelConfig(registry)
+			// The combined MongoDB database name includes store + "+es+" +
+			// namespace. Keep both isolated coordinates short (42 bytes total).
+			config.Store = chronicle.StoreName("ss-" + uuid.NewString()[:16])
+			config.Namespace = chronicle.Namespace("ns-" + uuid.NewString()[:16])
+			// New* skips only an omitted endpoint; configured failures are fatal.
+			if config.ConnectionString == "" {
+				t.Skip("set CHRONICLE_INTEGRATION_CONNECTION_STRING")
+			}
+			s, err := chronicletest.OpenReadModelScenario[ProjectedAccount](ctx, config, chronicletest.ReadModelOptions[ProjectedAccount]{StrictEventSubscription: strict})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := s.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			if err := s.Given(ctx, "source", AccountOpened{Name: "A"}); err != nil {
+				t.Fatal(err)
+			}
+			err = s.Given(ctx, "source", auditMarker{})
+			if strict {
+				if !errors.Is(err, chronicletest.ErrUnsubscribedEventSeeded) {
+					t.Fatalf("registered marker was not rejected: %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.Given(ctx, "source", AccountOpened{Name: "B"}); err != nil {
+				t.Fatal(err)
+			}
+			reader, err := chronicle.NewClient(chronicle.WithRegistry(registry), chronicle.WithConnectionString(config.ConnectionString), chronicle.WithDevelopmentDefaults())
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := reader.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			store, err := reader.EventStore(ctx, config.Store, chronicle.WithNamespace(config.Namespace))
+			if err != nil {
+				t.Fatal(err)
+			}
+			history, err := store.EventLog().ReadSource(ctx, "source", eventsequences.SourceFilter{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantCount := 3
+			if strict {
+				wantCount = 2
+			}
+			if len(history) != wantCount {
+				t.Fatalf("persisted seed count = %d, want %d", len(history), wantCount)
+			}
+			for i, event := range history {
+				if event.Context.Store != config.Store || event.Context.Namespace != config.Namespace || event.Context.SourceID != "source" || event.Context.SequenceNumber != events.SequenceNumber(i) {
+					t.Fatalf("history coordinates/order: %+v", event.Context)
+				}
+				if strict && event.Context.EventType.ID != "AccountOpened" {
+					t.Fatal("strict rejection persisted the marker")
+				}
+			}
+			first, err := events.Decode[AccountOpened](store.EventTypes(), history[0])
+			if err != nil || first.Name != "A" {
+				t.Fatalf("first accepted seed: %+v %v", first, err)
+			}
+			last, err := events.Decode[AccountOpened](store.EventTypes(), history[len(history)-1])
+			if err != nil || last.Name != "B" {
+				t.Fatalf("last accepted seed: %+v %v", last, err)
+			}
+			if !strict && history[1].Context.EventType.ID != "auditMarker" {
+				t.Fatal("default behavior did not persist unrelated marker")
+			}
+			values, err := s.Instances(ctx)
+			if err != nil || len(values) != 1 || values["source"].ID != "source" || values["source"].Name != "B" {
+				t.Fatalf("typed bounded replay: %+v %v", values, err)
+			}
+			isolated, err := reader.EventStore(ctx, config.Store, chronicle.WithNamespace("other"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			present, err := isolated.EventLog().HasEvents(ctx, "source")
+			if err != nil || present {
+				t.Fatalf("history crossed namespace: %v %v", present, err)
+			}
+			t.Logf("%s: history=%d ordered A/B, marker accepted=%t, replay[source]={id:source name:B}, namespace isolation passed", name, len(history), !strict)
+		})
+	}
+}
+
 func TestKernelReadModelScenarioDiscoversProjectionAndRejectsAmbiguousInstance(t *testing.T) {
 	registry := eventRegistry(t)
 	if _, err := chronicle.RegisterReadModel[ProjectedAccount](registry); err != nil {

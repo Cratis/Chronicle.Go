@@ -90,6 +90,22 @@ func TestReadModelScenarioFoldsRegisteredConventionsAndSelectsInstances(t *testi
 		t.Fatalf("deletion: %+v %v", selected, err)
 	}
 }
+func TestReadModelScenarioStrictSubscriptionDoesNotChangeReducerFiltering(t *testing.T) {
+	registry, _, numbers := reducerRegistry(t)
+	initial := Account{Name: "initial"}
+	s := chronicletest.NewReadModelScenario[Account](t, chronicletest.Config{Registry: registry}, chronicletest.ReadModelOptions[Account]{StrictEventSubscription: true, Initial: &initial})
+	if err := s.Given(t.Context(), "a", auditMarker{}, AccountOpened{Name: "Ada"}); err != nil {
+		t.Fatal(err)
+	}
+	selected, err := s.InstanceFor(t.Context(), "a")
+	if err != nil || !selected.Exists || selected.Value.Name != "Ada" || len(*numbers) != 1 || (*numbers)[0] != 1 {
+		t.Fatalf("strict flag changed reducer filtering: %+v %v %v", selected, err, *numbers)
+	}
+	if !errors.Is(s.Fidelity().Require(chronicletest.ProjectionExecution), chronicletest.ErrFidelityUnavailable) {
+		t.Fatal("strict flag changed reducer fidelity")
+	}
+}
+
 func TestReadModelScenarioPropagatesFoldFailureWithoutPartialResults(t *testing.T) {
 	registry, _, _ := reducerRegistry(t)
 	s := chronicletest.NewReadModelScenario[Account](t, chronicletest.Config{Registry: registry})
@@ -166,6 +182,18 @@ func TestReadModelScenarioRefusesProjectionDefaultsBeforeConnection(t *testing.T
 	scenario, err := chronicletest.OpenReadModelScenario[ProjectedAccount](t.Context(), chronicletest.Config{Registry: registry, Engine: chronicletest.Kernel, ConnectionString: "chronicle://127.0.0.1:1"}, chronicletest.ReadModelOptions[ProjectedAccount]{Projection: &declaration})
 	if scenario != nil || !errors.Is(err, chronicletest.ErrFidelityUnavailable) || !strings.Contains(err.Error(), "initial state") {
 		t.Fatalf("projection defaults did not fail before I/O: %v %v", scenario, err)
+	}
+}
+
+func TestReadModelScenarioStrictSubscriptionStillRefusesProjectionInitialState(t *testing.T) {
+	registry := eventRegistry(t)
+	if _, err := chronicle.RegisterReadModel[ProjectedAccount](registry); err != nil {
+		t.Fatal(err)
+	}
+	initial := ProjectedAccount{Name: "initial"}
+	s, err := chronicletest.OpenReadModelScenario[ProjectedAccount](t.Context(), chronicletest.Config{Registry: registry, Engine: chronicletest.Kernel, ConnectionString: "chronicle://127.0.0.1:1"}, chronicletest.ReadModelOptions[ProjectedAccount]{StrictEventSubscription: true, Initial: &initial})
+	if s != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+		t.Fatalf("strict flag admitted projection initial state: %v %v", s, err)
 	}
 }
 
