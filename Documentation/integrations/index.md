@@ -83,6 +83,11 @@ the producer must publish into `source.EventSequence(events.Outbox)`.
 | `WithHeader(key, value)` | Replaces the same exact key |
 | `WithBasicAuth`, `WithBearerToken`, `WithOAuth` | No authorization; last authorization option wins |
 
+The C# public Register builder supports Basic and Bearer. Go `WithOAuth` is a
+converter/contract-backed convenience, not C# Register-factory parity. The
+[actual-package authentication observations](authentication-evidence.md) compare
+None/Basic/Bearer requests without claiming kernel authentication behavior.
+
 Targets must be absolute HTTP(S) URLs without userinfo. Put credentials in the
 authorization options, not the URL. Returned definitions expose `Identifier`,
 `EventSequence`, `EventTypes`, `TargetURL`, `Headers`, `IsActive` and `IsReplayable`.

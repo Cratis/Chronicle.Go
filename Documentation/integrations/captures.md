@@ -82,7 +82,9 @@ Webhook-source authorization is **not implemented**: CDL has no authorization
 fields and the kernel exposes no typed capture-definition submission RPC. Go does
 not discard credentials or embed them in capture text. Configure outbound API
 credentials on the referenced external service instead. Model-bound capture tags
-and automatic activation are also not implemented.
+and automatic activation are also not implemented. [Actual-package authentication
+observations](authentication-evidence.md) document the C# inbound representation;
+they do not add a Go authorization API or prove authentication enforcement.
 
 ## Validate and save
 
