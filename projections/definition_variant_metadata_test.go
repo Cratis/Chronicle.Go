@@ -23,9 +23,20 @@ func compiledVariant(t *testing.T, d projections.Definition) bool {
 	return classification.IsVariant()
 }
 
+type enumMetadataEvent struct {
+	Name  string
+	State projectionEnum
+}
+type enumMetadataModel struct {
+	ID    string `chronicle:"key"`
+	Name  string
+	State projectionEnum
+}
+
 func TestCompiledVariantMetadataSurvivesIdenticalWireAndClientSnapshots(t *testing.T) {
-	event := mustEvent[IssueCreated](t)
-	model := mustModel[PullRequestItem](t)
+	codecs := projectionEnumCodecs(t, false)
+	event := mustEvent[enumMetadataEvent](t, events.WithCodecs(codecs))
+	model := mustModel[enumMetadataModel](t, readmodels.WithCodecs(codecs))
 	ordinary := projections.ModelBound(model, projections.FromEvent(event))
 	variant := projections.ModelBound(model, projections.VariantOf[WorkItem](), projections.EntersOn(event))
 	catalog, err := events.NewCatalog(event.Descriptor())
@@ -54,11 +65,11 @@ func TestCompiledVariantMetadataSurvivesIdenticalWireAndClientSnapshots(t *testi
 	for _, isVariant := range []bool{false, true} {
 		for _, naming := range []serialization.NamingPolicy{serialization.PreservePropertyNames, serialization.CamelCase, serialization.LegacyGoCamelCase} {
 			r := chronicle.NewRegistry()
-			e, err := chronicle.RegisterEvent[IssueCreated](r)
+			e, err := chronicle.RegisterEvent[enumMetadataEvent](r, events.WithCodecs(codecs))
 			if err != nil {
 				t.Fatal(err)
 			}
-			m, err := chronicle.RegisterReadModel[PullRequestItem](r, readmodels.WithIdentifier("metadata"))
+			m, err := chronicle.RegisterReadModel[enumMetadataModel](r, readmodels.WithIdentifier("metadata"), readmodels.WithCodecs(codecs))
 			if err != nil {
 				t.Fatal(err)
 			}

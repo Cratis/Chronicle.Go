@@ -160,6 +160,9 @@ func subscriptionRegistry(t *testing.T, kind string) *chronicle.Registry {
 	if _, err := chronicle.RegisterEvent[subscriptionHostileEvent](r); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := chronicle.RegisterEvent[subscriptionEnumSeed](r, events.WithCodecs(subscriptionEnumCodecs(t))); err != nil {
+		t.Fatal(err)
+	}
 	model, err := chronicle.RegisterReadModel[subscriptionModel](r)
 	if err != nil {
 		t.Fatal(err)

@@ -10,6 +10,7 @@ import (
 
 	chronicle "github.com/cratis/chronicle.go"
 	contracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
+	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/metadata"
@@ -63,8 +64,9 @@ func TestEnricherCanCloseClientWithoutHoldingPreparationLease(t *testing.T) {
 }
 
 type subjectEnriched struct {
-	Subject string `json:"subject" chronicle:"subject"`
-	Value   string `json:"value"`
+	Subject string         `json:"subject" chronicle:"subject"`
+	Value   string         `json:"value"`
+	State   enrichmentEnum `json:"state"`
 }
 
 func TestEnrichmentFreezesSubjectAndRefusesOpaqueDependencies(t *testing.T) {
@@ -75,14 +77,16 @@ func TestEnrichmentFreezesSubjectAndRefusesOpaqueDependencies(t *testing.T) {
 		wantFailure                  bool
 	}{
 		{name: "tagged", field: "subject", wantFailure: true},
-		{name: "opaque", resolver: true, field: "value", wantFailure: true},
-		{name: "opaque explicit bypass", resolver: true, explicit: true, field: "value"},
+		{name: "enum edit", field: "state"},
+		{name: "opaque", resolver: true, field: "state", wantFailure: true},
+		{name: "opaque explicit bypass", resolver: true, explicit: true, field: "state"},
 		{name: "opaque read only", resolver: true, readOnly: true, field: "value"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			registry := chronicle.NewRegistry()
 			resolverCalls := 0
-			var opts []events.TypeOption
+			codecs, _ := enrichmentEnumCodecs(t)
+			opts := []events.TypeOption{events.WithCodecs(codecs)}
 			if test.resolver {
 				opts = append(opts, events.WithSubjectResolver(func(value subjectEnriched) (events.Subject, bool) {
 					resolverCalls++
@@ -92,12 +96,30 @@ func TestEnrichmentFreezesSubjectAndRefusesOpaqueDependencies(t *testing.T) {
 			if _, err := chronicle.RegisterEvent[subjectEnriched](registry, opts...); err != nil {
 				t.Fatal(err)
 			}
-			client, _ := testClient(t, &fakeKernel{}, chronicle.WithRegistry(registry), chronicle.WithEventEnrichers(func(_ context.Context, _ events.TypeRef, c *events.EventContent) error {
+			kernel := &fakeKernel{append: func(_ context.Context, r *sequences.AppendRequest) (*sequences.CommandResult_AppendResponse, error) {
+				wantSubject := "person"
+				if test.explicit {
+					wantSubject = "explicit"
+				}
+				wantContent := `{"subject":"person","value":"original","state":1}`
+				if test.field == "state" && !test.readOnly {
+					wantContent = `{"subject":"person","value":"original","state":2}`
+				}
+				if r.Subject != wantSubject || r.Content != wantContent {
+					t.Error("subject or enum content changed", r.Subject, r.Content)
+				}
+				return success(r, 0), nil
+			}}
+			client, _ := testClient(t, kernel, chronicle.WithRegistry(registry), chronicle.WithEventEnrichers(func(_ context.Context, _ events.TypeRef, c *events.EventContent) error {
 				if test.readOnly {
 					_, _, err := c.Get(test.field)
 					return err
 				}
-				_ = c.Set(test.field, "changed")
+				if test.field == "state" {
+					_ = c.Set(test.field, enrichmentEnum(2))
+				} else {
+					_ = c.Set(test.field, "changed")
+				}
 				return nil
 			}))
 			ctx := testContext(t)
@@ -109,12 +131,22 @@ func TestEnrichmentFreezesSubjectAndRefusesOpaqueDependencies(t *testing.T) {
 			if test.explicit {
 				options = append(options, eventsequences.WithSubject("explicit"))
 			}
-			_, err = store.EventLog().Append(ctx, "A", subjectEnriched{Subject: "person", Value: "original"}, options...)
+			_, err = store.EventLog().Append(ctx, "A", subjectEnriched{Subject: "person", Value: "original", State: 1}, options...)
 			if (err != nil) != test.wantFailure {
 				t.Fatal(err)
 			}
 			if test.explicit && resolverCalls != 0 {
 				t.Fatal("explicit subject did not bypass resolver")
+			}
+			if test.resolver && !test.explicit && resolverCalls != 1 {
+				t.Fatal("subject was not selected exactly once", resolverCalls)
+			}
+			wantAppends := int32(1)
+			if test.wantFailure {
+				wantAppends = 0
+			}
+			if kernel.appendCalls.Load() != wantAppends {
+				t.Fatal("subject guard changed dispatch", kernel.appendCalls.Load())
 			}
 		})
 	}
