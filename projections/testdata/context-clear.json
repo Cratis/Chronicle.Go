@@ -1,0 +1,14 @@
+{
+  "EventSequenceId": "event-log",
+  "Identifier": "Example.AuditProjection",
+  "ReadModel": "Example.Audit",
+  "IsActive": true,
+  "IsRewindable": true,
+  "InitialModelState": "{}",
+  "From": [
+    {"Key": {"Id": "audit-stamped", "Generation": 1}, "Value": {"Key": "$eventSourceId", "Properties": {"labels": "$eventContext(Tags)", "attributes": "attributes", "corrId": "$eventContext(correlationId)"}}}
+  ],
+  "All": {},
+  "AutoMap": "Enabled",
+  "NoAutoMapProperties": ["attributes", "labels"]
+}

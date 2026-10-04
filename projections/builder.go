@@ -80,6 +80,8 @@ func EventSourceID[M, E, V any](builder *FromBuilder[M, E], target Field[M, V]) 
 }
 
 // Value snapshots a typed scalar literal. A nil scalar pointer emits $null.
+// Nil slice/map pointers fail with ErrUnsupported because pinned-kernel
+// materialized reads do not preserve explicit null collection properties.
 // Unsupported values and kernel-unrepresentable literals fail Build/Compile.
 func Value[M, E, V any](builder *FromBuilder[M, E], target Field[M, V], value V) {
 	expression := expression{kind: invalidExpression}

@@ -5,11 +5,15 @@ package projections
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/cratis/chronicle.go/declarations"
+	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/serialization"
 	"github.com/cratis/fundamentals.go/concepts"
 )
@@ -103,8 +107,13 @@ var kernelArithmeticPath = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9.]*$`)
 
 func validateLiteral(e expression, target serialization.Field) error {
 	if e.kind == nullExpression {
-		if !target.Nullable || target.Scalar == serialization.NotScalar {
+		if !nullableAssignment(target) {
 			return invalid("null requires a nullable scalar pointer")
+		}
+		if target.Scalar == serialization.NotScalar {
+			// The pinned MongoDB materialized read route omits BSON nulls.
+			// Do not admit a new clear profile that cannot preserve explicit null.
+			return fmt.Errorf("%w: nullable collection clear does not preserve explicit null in kernel materialized reads", faults.ErrUnsupported)
 		}
 		return nil
 	}
@@ -302,32 +311,76 @@ func validateExpression(e expression, target serialization.Field, modelFields, e
 	}
 	return nil
 }
-func validateContext(path string, target serialization.Field) error {
-	// Names are the serialized kernel EventContext contract, not Go's differently
-	// named Context fields. Complex collections/objects require the later node slice.
+
+// nullableAssignment uses the frozen field representation. Collection elements,
+// fixed arrays, interfaces and objects are not direct nullable assignments.
+func nullableAssignment(target serialization.Field) bool {
+	if !target.Nullable || target.Collection || target.Type.Kind() != reflect.Pointer {
+		return false
+	}
+	if target.Scalar != serialization.NotScalar {
+		return true
+	}
+	typ := indirectType(target.Type)
+	if typ.Kind() != reflect.Slice && (typ.Kind() != reflect.Map || typ.Key().Kind() != reflect.String) {
+		return false
+	}
+	_, compiled := target.Element()
+	return compiled
+}
+
+// resolveContext describes the kernel contract, not Go events.Context's names.
+// Keep existing scalar spellings and conversions; whole Tags is the first
+// admitted collection. Other known complex properties fail explicitly.
+func resolveContext(path string) (serialization.Field, error) {
+	field := serialization.Field{Type: reflect.TypeFor[string](), Scalar: serialization.String}
 	switch path {
 	case "occurred":
-		if target.Scalar == serialization.String && target.Format == "date-time" {
-			return nil
-		}
+		field.Type, field.Format = reflect.TypeFor[time.Time](), "date-time"
 	case "eventSourceId", "EventSourceId", "correlationId":
-		if target.Scalar == serialization.String && (target.Format == "" || target.Format == "uuid") {
-			return nil
-		}
+		field.Format = "uuid"
 	case "eventSourceType", "eventStreamType", "eventStreamId", "eventStore", "namespace", "subject", "hash", "eventType.id":
-		if target.Scalar == serialization.String && target.Format == "" {
-			return nil
-		}
-	case "sequenceNumber", "eventType.generation":
-		if target.Scalar == serialization.Integer {
-			return nil
-		}
-	case "observationState":
-		if target.Scalar == serialization.Integer {
-			return nil
-		}
+	case "sequenceNumber", "eventType.generation", "observationState":
+		field.Type, field.Scalar = reflect.TypeFor[int64](), serialization.Integer
+	case "Tags", "tags":
+		field.Type, field.Scalar = reflect.TypeFor[[]events.Tag](), serialization.NotScalar
+	case "CausedBy", "causedBy", "EventType", "eventType", "NamedTags", "namedTags", "Causation", "causation":
+		return serialization.Field{}, fmt.Errorf("%w: complex context property is not supported", faults.ErrUnsupported)
 	default:
-		return invalid("unknown or not yet supported scalar context property")
+		return serialization.Field{}, invalid("unknown or not yet supported scalar context property")
+	}
+	return field, nil
+}
+
+func validateContext(path string, target serialization.Field) error {
+	source, err := resolveContext(path)
+	if err != nil {
+		return err
+	}
+	if source.Scalar == serialization.NotScalar {
+		if indirectType(target.Type).Kind() == reflect.Slice {
+			element, ok := target.Element()
+			if ok && !element.Nullable && element.Scalar == serialization.String && element.Format == "" {
+				return nil
+			}
+		}
+		return invalid("context Tags requires a slice of non-nullable unformatted strings")
+	}
+	if target.Scalar == source.Scalar {
+		switch source.Format {
+		case "date-time":
+			if target.Format == "date-time" {
+				return nil
+			}
+		case "uuid":
+			if target.Format == "" || target.Format == "uuid" {
+				return nil
+			}
+		default:
+			if target.Scalar != serialization.String || target.Format == "" {
+				return nil
+			}
+		}
 	}
 	return invalid("context property does not match target scalar")
 }

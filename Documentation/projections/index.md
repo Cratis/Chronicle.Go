@@ -115,7 +115,7 @@ field's actual type in `Path`; `Build` validates compatibility, not arbitrary co
 | --- | --- |
 | `set(E)` | Assign the event property matching this field's serialized name |
 | `set(E,from=details.name)` | Assign an exact serialized event path |
-| `context(E,from=occurred)` | Assign a kernel EventContext scalar; also subscribes to E |
+| `context(E,from=occurred)` / `context(E,from=Tags)` | Assign an admitted kernel EventContext property; whole Tags supports string slices; also subscribes to E |
 | `value(E,value="active")` | Assign a typed JSON scalar literal |
 | `value(E,value=null)` / `clear(E)` | Clear a nullable scalar pointer with `$null` |
 | `add(E,from=amount)` / `subtract(E,from=amount)` | Numeric running total; omitted `from` uses this field's serialized name |
@@ -138,6 +138,40 @@ parentheses, quotes, newlines and characters above U+FFFF are rejected rather th
 misencoded. Property paths exactly equal to `true`, `True`, `false` or `False` are
 also rejected: the kernel resolves those as boolean literals, not event fields. `null`
 is not an empty string or zero value; use pointers for nullable scalars.
+Whole context `Tags` (or `tags`) maps to a slice of non-nullable, unformatted
+strings, including `[]events.Tag`, `[]string` and their pointer forms. It preserves
+order and maps empty tags to `[]`, independently of any conflicting payload field.
+For example, a registered model field can declare:
+
+```go
+Labels *[]events.Tag `json:"labels" chronicle:"no-auto;context(AuditStamped,from=Tags)"`
+```
+
+The equivalent fluent write inside an `AuditStamped` subscription is
+`projections.Context(from, projections.Path[Audit, *[]events.Tag]("labels"), "Tags")`.
+The model and event must already be registered. `no-auto` and `not-projected`
+exclude AutoMap only; explicit context and payload assignments still work.
+Every/All context mappings use the same validation. Context keys remain scalar-only.
+Other complex properties (`CausedBy`, `EventType`, `NamedTags`, `Causation`) fail
+with a located `ErrUnsupported`; unknown paths and incompatible types remain
+configuration errors. Paths are not arbitrary functions, indexes or expressions.
+
+Nullable collection clear remains unsupported on the pinned kernel: after a clear,
+materialized raw reads omit the properties instead of preserving explicit JSON
+null. `clear`/`Clear` and `value(...,value=null)`/`Value(...,nil)` on direct slice/map
+pointers therefore fail with a located `ErrUnsupported` before registration.
+Bare slices/maps are not nullable declarations; fixed arrays and object/element
+paths are not scalar clears. Existing scalar clears and structural child/nested
+removals are unchanged. See [remaining parity](../parity.md) for this boundary.
+
+Pointers preserve typed nil versus empty collections, but cannot distinguish
+missing JSON from explicit null: both decode to a nil pointer. Model serialization
+omits both nil outer pointers and pointers to nil slices/maps; pointers to empty
+collections encode `[]`/`{}`. A default projection request is still `{}` and
+registration creates no instance. That request is not evidence that stored
+properties remain absent: kernel initial-state construction seeds array-schema
+properties with empty arrays.
+
 Arithmetic embeds paths in a stricter kernel regex: ASCII letters/digits and dots,
 with an underscore permitted only as the first character. Even a legal JSON
 property such as `amount_delta` cannot be used inside `$add`/`$subtract`.
