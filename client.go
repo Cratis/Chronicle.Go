@@ -43,6 +43,7 @@ type Client struct {
 	constraints      []constraints.Definition
 	storeConstraints map[StoreName][]constraints.Definition
 	stores           map[storeKey]*EventStore
+	definitions      map[StoreName]*definitionCoordinator
 	current          *generation
 	supervisor       *supervision
 	changed          chan struct{}

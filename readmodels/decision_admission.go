@@ -130,6 +130,9 @@ func (r *DecisionReader[T]) assess() (admittedDecision, error) {
 		return refuse(DecisionUnavailable)
 	}
 	catalog := s.decisions.DecisionCatalog()
+	if catalog.ExpectedEpoch != catalog.Epoch.Load() {
+		return admittedDecision{}, decision.ErrStale
+	}
 	var matches []*contracts.ProjectionDefinition
 	for _, definition := range catalog.Projections {
 		if definition.GetReadModel() == string(d.Identifier()) {
@@ -147,7 +150,7 @@ func (r *DecisionReader[T]) assess() (admittedDecision, error) {
 	if !ok {
 		return refuse(DecisionKeyConversion)
 	}
-	return admittedDecision{descriptor: d, projection: matches[0], types: types, key: key, catalog: catalog, epoch: catalog.Epoch.Load()}, nil
+	return admittedDecision{descriptor: d, projection: matches[0], types: types, key: key, catalog: catalog, epoch: catalog.ExpectedEpoch}, nil
 }
 
 func assessProjection(p *contracts.ProjectionDefinition, catalog *events.Catalog) ([]events.TypeRef, DecisionReadRefusalReason) {

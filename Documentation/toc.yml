@@ -48,6 +48,8 @@
   items:
     - name: Overview
       href: projections/index.md
+    - name: Runtime registration
+      href: projections/runtime-registration.md
     - name: Initial values and labels
       href: projections/defaults.md
     - name: Orders with children and joins

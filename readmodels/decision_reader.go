@@ -95,6 +95,7 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 		}
 		return nil
 	}
+	ctx = decision.WithDispatchValidation(ctx, check)
 	for attempt := range 3 {
 		if err = check(); err != nil {
 			return DecisionRead[T]{}, err
@@ -154,6 +155,9 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 		}
 		token := decision.Issue(decision.Evidence{Target: service.decisions.DecisionTarget(events.EventLog), Model: string(admitted.descriptor.Identifier()), Key: string(key), Types: admitted.types, Boundary: boundary,
 			Catalog: admitted.catalog, Epoch: admitted.epoch, Generation: lease.Generation, Check: lease.Check})
+		if token.IsZero() {
+			return DecisionRead[T]{}, decision.ErrStale
+		}
 		return DecisionRead[T]{Instance: instance, Token: token}, nil
 	}
 	return DecisionRead[T]{}, faults.ErrProtocol
@@ -188,7 +192,7 @@ func foldDecision(ctx context.Context, service *Service, descriptor Descriptor, 
 		return Instance[json.RawMessage]{}, err
 	}
 	defer func() {
-		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		cleanup, cancel := context.WithTimeout(decision.CleanupContext(ctx), 5*time.Second)
 		defer cancel()
 		response, cleanupErr := service.client.DehydrateSession(cleanup, &contracts.DehydrateSessionRequest{
 			EventStore: string(service.store), Namespace: string(service.namespace), EventSequenceId: string(events.EventLog), ReadModelIdentifier: string(descriptor.Identifier()), ReadModelKey: string(key), SessionId: session.String()})

@@ -46,7 +46,7 @@ func (c *Client) Artifacts(store StoreName) (Artifacts, error) {
 	}
 	reactorPlans := snapshot.reactors
 	reducerPlans := snapshot.reducers
-	return Artifacts{snapshot.events, snapshot.models, snapshot.projections, slices.Clone(reactorPlans), slices.Clone(reducerPlans), slices.Clone(snapshot.constraints)}, nil
+	return Artifacts{snapshot.events, snapshot.models, slices.Clone(snapshot.projections), slices.Clone(reactorPlans), slices.Clone(reducerPlans), slices.Clone(snapshot.constraints)}, nil
 }
 
 // WithProjection returns a detached registry with a replacement producer for the

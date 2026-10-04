@@ -45,6 +45,14 @@ func (c *Client) selectedStoreSnapshot(store StoreName) (registrySnapshot, error
 // selectedStoreSnapshotLocked binds the already compiled registry; it never compiles
 // declarations again. Callers hold c.mu and have checked preparation readiness.
 func (c *Client) selectedStoreSnapshotLocked(store StoreName) (registrySnapshot, error) {
+	definitions, err := c.definitionsLocked(store)
+	if err != nil {
+		return registrySnapshot{}, err
+	}
+	return definitions.root.snapshot, nil
+}
+
+func (c *Client) initialStoreSnapshotLocked(store StoreName) (registrySnapshot, error) {
 	if strings.TrimSpace(string(store)) == "" {
 		return registrySnapshot{}, fmt.Errorf("%w: store must be nonblank", ErrInvalidConfiguration)
 	}

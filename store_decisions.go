@@ -12,6 +12,10 @@ import (
 )
 
 func (s *EventStore) initializeDecisions(snapshot registrySnapshot) {
+	if s.definitions != nil {
+		s.decisionCatalog = s.definitions.root.decisions
+		return
+	}
 	var definitions []*contracts.ProjectionDefinition
 	for _, projection := range snapshot.projections {
 		definitions = append(definitions, projection.KernelDefinition())
@@ -23,6 +27,9 @@ func (s *EventStore) initializeDecisions(snapshot registrySnapshot) {
 }
 
 func (t *clientTransport) DecisionCatalog() *decision.Catalog {
+	if t.decisionSnapshot != nil {
+		return t.decisionSnapshot
+	}
 	if t.store == nil {
 		return nil
 	}
@@ -37,17 +44,13 @@ func (t *clientTransport) DecisionTarget(sequence events.SequenceID) decision.Ta
 }
 
 func (t *clientTransport) AcquireDecision(ctx context.Context) (*decision.Lease, error) {
-	g, ctx, done, err := t.client.acquire(ctx)
+	g, ctx, done, err := t.acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if !g.decisions || t.store == nil {
 		done()
 		return nil, decision.Unsupported()
-	}
-	if _, err = t.store.register(ctx, g); err != nil {
-		done()
-		return nil, err
 	}
 	return &decision.Lease{Context: ctx, Conn: g.transport, Generation: g.number, Check: g.ctx.Err,
 		Release: done, Resolve: t.store.resolveConstraintMessages}, nil

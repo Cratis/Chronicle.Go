@@ -81,7 +81,35 @@ func (t *generationTransport) Invoke(ctx context.Context, method string, args, r
 	if err = decision.ValidateDispatch(ctx); err != nil {
 		return &faults.BeforeDispatch{Cause: err}
 	}
-	err = t.generation.raw.Invoke(ctx, method, args, reply, t.options(options)...)
+	if c := t.generation.client; c != nil {
+		c.mu.Lock()
+		if c.closed {
+			c.mu.Unlock()
+			return &faults.BeforeDispatch{Cause: ErrClosed}
+		}
+		if err := t.generation.ctx.Err(); err != nil {
+			c.mu.Unlock()
+			return &faults.BeforeDispatch{Cause: err}
+		}
+		if err := ctx.Err(); err != nil {
+			c.mu.Unlock()
+			return &faults.BeforeDispatch{Cause: err}
+		}
+		if err := decision.ValidateDispatch(ctx); err != nil {
+			c.mu.Unlock()
+			return &faults.BeforeDispatch{Cause: err}
+		}
+		t.generation.work.Add(1)
+		c.work.Add(1)
+		c.mu.Unlock()
+	}
+	err = func() error {
+		if c := t.generation.client; c != nil {
+			defer t.generation.work.Done()
+			defer c.work.Done()
+		}
+		return t.generation.raw.Invoke(ctx, method, args, reply, t.options(options)...)
+	}()
 	invalidateRejectedToken(t.generation.tokens, err)
 	if err != nil && ctx.Err() != nil {
 		return errors.Join(err, ctx.Err())

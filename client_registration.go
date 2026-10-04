@@ -42,7 +42,7 @@ func (e *RegistrationError) Unwrap() error { return e.Outcome.Failure }
 // a later call observes successful readiness once Open recovers.
 func (s *EventStore) WaitForRegistration(ctx context.Context) (RegistrationOutcome, error) {
 	for {
-		g, attemptCtx, done, err := s.client.acquireReady(ctx)
+		g, attemptCtx, done, err := s.client.acquireRegistrationReady(ctx)
 		if err != nil {
 			return RegistrationOutcome{}, err
 		}
@@ -70,7 +70,7 @@ func (c *Client) Ready(ctx context.Context) error {
 	}
 	stores := c.storeSnapshot()
 	for {
-		g, attemptCtx, done, err := c.acquireReady(ctx)
+		g, attemptCtx, done, err := c.acquireRegistrationReady(ctx)
 		if err != nil {
 			return err
 		}
@@ -114,6 +114,21 @@ func (c *Client) acquireReady(ctx context.Context) (*generation, context.Context
 	}
 }
 
+// Explicit registration is caller-owned preparation until final raw admission.
+// In particular an application token callback must not retain its own RPC join
+// lease while calling Close. Destructive dispatch acquires its short lease only
+// after authorization; cancellation still follows the selected generation.
+func (c *Client) acquireRegistrationReady(ctx context.Context) (*generation, context.Context, func(), error) {
+	g, _, release, err := c.acquireReady(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	release()
+	attemptCtx, cancel := context.WithCancel(ctx)
+	stop := context.AfterFunc(g.ctx, cancel)
+	return g, attemptCtx, func() { stop(); cancel() }, nil
+}
+
 func (c *Client) storeSnapshot() []*EventStore {
 	c.mu.Lock()
 	stores := make([]*EventStore, 0, len(c.stores))
@@ -145,8 +160,8 @@ func retryRegistration(err error) bool {
 	}
 }
 
-func registrationKey(name StoreName, namespace Namespace) string {
-	return fmt.Sprintf("namespace:%q:%q", name, namespace)
+func registrationKey(name StoreName, namespace Namespace, revision uint64) string {
+	return fmt.Sprintf("namespace:%q:%q:%d", name, namespace, revision)
 }
 
 func (s *EventStore) register(ctx context.Context, g *generation) (RegistrationOutcome, error) {
@@ -154,7 +169,21 @@ func (s *EventStore) register(ctx context.Context, g *generation) (RegistrationO
 }
 
 func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, waitReady bool) (RegistrationOutcome, error) {
-	outcome := g.registrations.For(registrationKey(s.name, s.namespace)).Run(ctx, g.number, s.client.config.registrationRetry, retryRegistration, func(ctx context.Context) ([]ArtifactRegistration, error) { return s.registerStages(ctx, g) })
+	for {
+		if err := ctx.Err(); err != nil {
+			return RegistrationOutcome{}, err
+		}
+		root := s.definitionRoot()
+		outcome, err := s.registerRoot(ctx, g, waitReady, root)
+		if !s.definitionCurrent(root) || errors.Is(err, errDefinitionSuperseded) {
+			continue
+		}
+		return outcome, err
+	}
+}
+
+func (s *EventStore) registerRoot(ctx context.Context, g *generation, waitReady bool, root *definitionRoot) (RegistrationOutcome, error) {
+	outcome := g.registrations.For(registrationKey(s.name, s.namespace, root.revision)).Run(ctx, g.number, s.client.config.registrationRetry, retryRegistration, func(ctx context.Context) ([]ArtifactRegistration, error) { return s.registerStages(ctx, g, root) })
 	if outcome.Failure != nil {
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
@@ -211,7 +240,7 @@ func (c *Client) replayRegistrations(g *generation) {
 			if g.ctx.Err() != nil {
 				return
 			}
-			outcome := g.registrations.For(registrationKey(store.name, store.namespace)).Snapshot()
+			outcome := g.registrations.For(registrationKey(store.name, store.namespace, store.definitionRoot().revision)).Snapshot()
 			if !outcome.HasRun || outcome.RetryPending || store.needsSeedRegistration(g) || store.needsExternalSubscriptionRegistration(g) {
 				// Ordinary replay starts observer workers without waiting. Seeded
 				// stores must await their registration before dispatching seed data.
