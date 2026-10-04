@@ -72,6 +72,8 @@
       href: integrations/index.md
     - name: Capture declarations
       href: integrations/captures.md
+    - name: Webhook authentication evidence
+      href: integrations/authentication-evidence.md
 - name: Testing with scenarios
   href: testing-with-scenarios.md
 - name: Parity and limitations

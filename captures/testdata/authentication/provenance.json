@@ -1,0 +1,193 @@
+{
+  "rawSHA256": "5912663e5b7ec32ccee825391815af894bb63abe73bbc61757ba7c8b4e9152ee",
+  "inventorySHA256": "5d2dd77927254d9cff012b9ef8038765c58dc358c2f02fcbb1dcaa30bacc085a",
+  "metadata": {
+    "profile": "authentication_chronicle-19.29.4_fundamentals-7.19.6_net-10.0.12",
+    "sourceAuthority": "2e31b0dfba489159b3db323238f16d0f277056b4",
+    "packageSource": "ae5e00a8abaa688138b2c2f689e2b4659cccb4fd",
+    "syntheticInputsOnly": true,
+    "limits": [
+      "no-encryption",
+      "no-authentication-enforcement",
+      "no-token-acquisition",
+      "no-HTTP-delivery",
+      "no-persistence",
+      "no-kernel",
+      "no-Go-inbound-auth-implementation"
+    ],
+    "runtime": {
+      "framework": ".NET 10.0.12",
+      "version": "10.0.12",
+      "architecture": "Arm64",
+      "culture": ""
+    },
+    "packages": [
+      {
+        "name": "cratis.chronicle",
+        "version": "19.29.4",
+        "sha256": "fc67b021a1ba51a55829cc225ddc3778842a934d452a313c3c0b286413bb9358"
+      },
+      {
+        "name": "cratis.chronicle.connections",
+        "version": "19.29.4",
+        "sha256": "5cdfe235f58170818b9973f5e43e6372896e27f4dbba4daa1e357de0d3e6f6e1"
+      },
+      {
+        "name": "cratis.fundamentals",
+        "version": "7.19.6",
+        "sha256": "5af9f9eb7593bc5add06b89f442d743e053f68fcde57686ad11d62f8b295769c"
+      }
+    ],
+    "proxy": {
+      "type": "ProtoBuf.Grpc.Internal.Proxies.ClientBase.IWebhooks_Proxy_0",
+      "assembly": "ProtoBuf.Grpc.Internal.Proxies-1",
+      "dynamicAssembly": true,
+      "fileHash": "not-applicable-dynamic-proxy-generated-by-public-factory"
+    },
+    "assemblies": [
+      {
+        "name": "Cratis.Chronicle",
+        "version": "19.29.4.0",
+        "informationalVersion": "19.29.4+ae5e00a8abaa688138b2c2f689e2b4659cccb4fd.ae5e00a8abaa688138b2c2f689e2b4659cccb4fd",
+        "sha256": "3f7dc7cc2534726e240fcdb84cf51eba83c6bad86227e7e71f336f066a172e37"
+      },
+      {
+        "name": "Cratis.Chronicle.Connections",
+        "version": "19.29.4.0",
+        "informationalVersion": "19.29.4+ae5e00a8abaa688138b2c2f689e2b4659cccb4fd.ae5e00a8abaa688138b2c2f689e2b4659cccb4fd",
+        "sha256": "90ed4aba5b63d51e631d3fd01da51f8a9d682e79d392954ac74e8572d5d58234"
+      },
+      {
+        "name": "Cratis.Chronicle.Contracts",
+        "version": "19.29.4.0",
+        "informationalVersion": "19.29.4+ae5e00a8abaa688138b2c2f689e2b4659cccb4fd.ae5e00a8abaa688138b2c2f689e2b4659cccb4fd",
+        "sha256": "09dc0d1d08ca6960d4b51c2e127f060c80b202edb794d93d7e7f53dbfe5fb638"
+      },
+      {
+        "name": "Cratis.Fundamentals",
+        "version": "1.0.0.0",
+        "informationalVersion": "1.0.0+14037b1ff8346b7944ad48065b8f66feca80dab5",
+        "sha256": "fd8e5188c5d80d96eee6b5790a5602fedd0e90cbc034345b198908ee832814f5"
+      },
+      {
+        "name": "System.Text.Json",
+        "version": "10.0.0.0",
+        "informationalVersion": "10.0.12+95017c711e6afc1085133d440e42b4bd78155701",
+        "sha256": "5e8419f146b0fd12343fdd2d203fa3362b637b62b69a5a6d0acb6e065797382b"
+      },
+      {
+        "name": "Grpc.Core.Api",
+        "version": "2.0.0.0",
+        "informationalVersion": "2.84.0+4c6997a214601422dd66c5c74c1969db749479e9",
+        "sha256": "16b1ff898b9a2c1ffac0e22035c8280728967e7041bfe8a382bcb1f99a9a530b"
+      },
+      {
+        "name": "protobuf-net",
+        "version": "3.0.0.0",
+        "informationalVersion": "3.2.56+dfdfce61a7",
+        "sha256": "78d95efd88bce208a2aa412f193ed534e4b6337f8c15ff9171b8696946200edf"
+      },
+      {
+        "name": "protobuf-net.Grpc",
+        "version": "1.0.0.0",
+        "informationalVersion": "1.3.14+dce09b9244",
+        "sha256": "17cae4cff410f4d15905066e4de130fa76c946999911d70457df1c92581aec15"
+      }
+    ],
+    "harness": [
+      {
+        "name": "Program.cs",
+        "sha256": "f6fee8b719fc54dd195692ec5d44ce95d541e852eeeef7b52909967d82b7aeab"
+      },
+      {
+        "name": "Isolation.cs",
+        "sha256": "7b7507712bf5e9618c8226a16540977036c5d4e647573666a79be9372b6a6aab"
+      },
+      {
+        "name": "AuthenticationCapture.csproj",
+        "sha256": "529c87357d787dbcbb168289997b2bda9b66ee9c2e77d58432d40e206120adb8"
+      },
+      {
+        "name": "global.json",
+        "sha256": "4e7d5022b2a5a8d02bb951bb264a4c8613eabc332572a0af5f9743d23f23d84e"
+      },
+      {
+        "name": "packages.lock.json",
+        "sha256": "09d8d1d987c9c131d6f8ec21d40f66faef02cb1dde182247b117eb0bff6db920"
+      }
+    ],
+    "allowedCalls": {
+      "artifacts.get_AdditionalEventInformationProviders": 2,
+      "catalog.All": 4,
+      "catalog.GetEventTypeFor": 2,
+      "ChronicleClient.publicBorrowedConstructor": 2,
+      "connection.Dispose": 2,
+      "connection.Services": 6,
+      "derived.HasDerivatives": 10,
+      "EventSerializer.publicConstructor": 2,
+      "factory.CreateClient": 1,
+      "marshaller.Deserialize": 6,
+      "marshaller.Serialize": 6,
+      "provider.IServiceProviderIsService": 2,
+      "provider.IsService.ITypes": 2,
+      "provider.ITypes": 2,
+      "rpc.AddWebhooks": 6,
+      "rpc.Dispose": 6,
+      "services.Webhooks": 6,
+      "store.Connection": 1,
+      "store.Name": 6,
+      "types.FindMultiple": 8
+    },
+    "forbiddenCalls": {},
+    "configurations": [
+      {
+        "namingPolicy": "DefaultNamingPolicy",
+        "propertyNamingPolicy": null,
+        "PropertyNameCaseInsensitive": false,
+        "defaultIgnoreCondition": "WhenWritingNull",
+        "WriteIndented": false,
+        "converters": [
+          "Cratis.Json.ComplexKeyDictionaryJsonConverterFactory",
+          "Cratis.Json.EnumConverterFactory",
+          "Cratis.Chronicle.Events.EventSourceIdJsonConverterFactory",
+          "Cratis.Json.EnumerableConceptAsJsonConverterFactory",
+          "Cratis.Json.ConceptAsJsonConverterFactory",
+          "Cratis.Json.DateOnlyJsonConverter",
+          "Cratis.Json.TimeOnlyJsonConverter",
+          "Cratis.Json.TypeJsonConverter",
+          "Cratis.Json.UriJsonConverter",
+          "Cratis.Json.PointJsonConverter",
+          "Cratis.Json.LineStringJsonConverter",
+          "Cratis.Json.PolygonJsonConverter",
+          "Cratis.Json.EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory"
+        ],
+        "typeInfoResolver": "System.Text.Json.Serialization.Metadata.JsonTypeInfoResolverWithAddedModifiers",
+        "encoder": "System.Text.Encodings.Web.JavaScriptEncoder.Default"
+      },
+      {
+        "namingPolicy": "CamelCaseNamingPolicy",
+        "propertyNamingPolicy": "Cratis.Serialization.AcronymFriendlyJsonCamelCaseNamingPolicy",
+        "PropertyNameCaseInsensitive": false,
+        "defaultIgnoreCondition": "WhenWritingNull",
+        "WriteIndented": false,
+        "converters": [
+          "Cratis.Json.ComplexKeyDictionaryJsonConverterFactory",
+          "Cratis.Json.EnumConverterFactory",
+          "Cratis.Chronicle.Events.EventSourceIdJsonConverterFactory",
+          "Cratis.Json.EnumerableConceptAsJsonConverterFactory",
+          "Cratis.Json.ConceptAsJsonConverterFactory",
+          "Cratis.Json.DateOnlyJsonConverter",
+          "Cratis.Json.TimeOnlyJsonConverter",
+          "Cratis.Json.TypeJsonConverter",
+          "Cratis.Json.UriJsonConverter",
+          "Cratis.Json.PointJsonConverter",
+          "Cratis.Json.LineStringJsonConverter",
+          "Cratis.Json.PolygonJsonConverter",
+          "Cratis.Json.EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory"
+        ],
+        "typeInfoResolver": "System.Text.Json.Serialization.Metadata.JsonTypeInfoResolverWithAddedModifiers",
+        "encoder": "System.Text.Encodings.Web.JavaScriptEncoder.Default"
+      }
+    ]
+  }
+}
