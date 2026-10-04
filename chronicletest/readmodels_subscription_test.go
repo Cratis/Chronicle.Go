@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
+	"github.com/cratis/chronicle.go/compliance"
 	projectioncontracts "github.com/cratis/chronicle.go/contracts/projections"
 	modelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/contracts/sequences"
@@ -597,6 +598,68 @@ func assertStrictUnsupportedBeforeIO[M any](t *testing.T, registry *chronicle.Re
 	}
 	if err := connection.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestStrictProjectionChecksProtectionAcrossSubscribedGenerations(t *testing.T) {
+	for _, kind := range []string{"unprotected current only", "protected current", "protected historical"} {
+		t.Run(kind, func(t *testing.T) {
+			r := chronicle.NewRegistry()
+			protection := events.WithProtection(compliance.Property("Name", compliance.Classification{PII: true}))
+			options := []events.TypeOption{events.WithID("subscribed-generations"), events.WithGeneration(2)}
+			if kind == "protected current" {
+				options = append(options, protection)
+			}
+			current, err := chronicle.RegisterEvent[subscriptionAdded](r, options...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if kind == "protected historical" {
+				previous, err := chronicle.RegisterEventGeneration[subscriptionMarker](r, current, 1, protection)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if previous.Ref().ID != current.Ref().ID || previous.Ref().Generation != 1 || current.Ref().Generation != 2 {
+					t.Fatal("fixture generations do not share the subscribed event ID")
+				}
+			}
+			model, err := chronicle.RegisterReadModel[subscriptionModel](r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			builder := projections.NewBuilder("subscribed-generations", model)
+			projections.From(builder, current, nil)
+			declaration, err := builder.Build()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := r.AddProjection(declaration); err != nil {
+				t.Fatal(err)
+			}
+			if kind != "unprotected current only" {
+				assertStrictUnsupportedBeforeIO[subscriptionModel](t, r)
+				return
+			}
+			// The same current-generation projection is admitted without protection;
+			// a generation number alone must not explain either negative case.
+			client, err := chronicle.NewClient(chronicle.WithRegistry(r))
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := client.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			artifacts, err := client.Artifacts("unprotected")
+			if err != nil {
+				t.Fatal(err)
+			}
+			selected, err := strictProjectionSubscription(artifacts.Projections[0], artifacts.Events)
+			if err != nil || selected == nil || selected.admit(current.Ref().ID) != nil {
+				t.Fatal("unprotected subscribed generation refused", err)
+			}
+		})
 	}
 }
 
