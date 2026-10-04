@@ -175,7 +175,7 @@ func (b *Builder[M]) Configure(options ...Option) {
 // on names a model field, not an event field. The callback uses the same typed
 // mapping operations as From. Overlap with local writes produces diagnostics.
 func Join[M, E, V any](b *Builder[M], event events.Type[E], on Field[M, V], define func(*FromBuilder[M, E]), options ...FromOption) {
-	from := &FromBuilder[M, E]{subscription: newSubscription(event.Descriptor(), options)}
+	from := &FromBuilder[M, E]{subscription: newSubscription(event.Descriptor(), options), model: b.data.model}
 	if define != nil {
 		define(from)
 	}

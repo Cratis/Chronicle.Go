@@ -134,6 +134,9 @@ func validateLiteral(e expression, target serialization.Field) error {
 	default:
 		return invalid("invalid scalar literal")
 	}
+	if target.IsEnum() {
+		return validateEnumLiteral(data, target)
+	}
 	// The plan has already rejected custom codecs. Decode only to validate scalar
 	// ranges/formats; never call a concept accessor on a fabricated value.
 	typ := target.Type
@@ -161,6 +164,9 @@ func validateLiteral(e expression, target serialization.Field) error {
 // scalarCompatible checks wire conversion, not exact Go width or nullability.
 // Typed field/key validation separately preserves declared domain identity.
 func scalarCompatible(target, source serialization.Field, targetFields, sourceFields []serialization.Field) bool {
+	if target.IsEnum() || source.IsEnum() {
+		return target.SameRepresentation(source)
+	}
 	targetScalar, targetOK := scalarRepresentation(target)
 	sourceScalar, sourceOK := scalarRepresentation(source)
 	if !targetOK || !sourceOK {
@@ -303,6 +309,9 @@ func validateExpression(e expression, target serialization.Field, modelFields, e
 	return nil
 }
 func validateContext(path string, target serialization.Field) error {
+	if target.IsEnum() {
+		return invalid("context cannot supply a declared enum")
+	}
 	// Names are the serialized kernel EventContext contract, not Go's differently
 	// named Context fields. Complex collections/objects require the later node slice.
 	switch path {
@@ -382,7 +391,7 @@ func validateKey(e expression, expected reflect.Type, fields []serialization.Fie
 		}
 	case pathExpression:
 		field, ok := serialization.FieldAt(fields, e.text)
-		if ok && !field.Collection && field.Scalar != serialization.NotScalar && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
+		if ok && !field.IsEnum() && !field.Collection && field.Scalar != serialization.NotScalar && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
 			return nil
 		}
 	}

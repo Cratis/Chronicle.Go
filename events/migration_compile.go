@@ -29,6 +29,9 @@ func (c *Catalog) WithMigrations(declarations []MigrationDeclaration, validateCh
 		if !hasPrevious || !hasUpgrade || previous.typ != declaration.previous.typ || upgrade.typ != declaration.upgrade.typ {
 			return nil, fmt.Errorf("%w: migration endpoints must be registered in this store", faults.ErrInvalidConfiguration)
 		}
+		if err := rejectEnumMigration(upgrade, previous); err != nil {
+			return nil, err
+		}
 		if from.ID != to.ID || from.Generation == 0 || to.Generation <= from.Generation || to.Generation-from.Generation != 1 {
 			return nil, fmt.Errorf("%w: migration requires the same ID and adjacent increasing generations", faults.ErrInvalidConfiguration)
 		}

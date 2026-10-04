@@ -48,6 +48,9 @@ func (p *Plan) RebindJSON(data []byte, next *Plan) ([]byte, error) {
 	if p == nil || next == nil || p.typ != next.typ {
 		return nil, unsupported(nil, "matching snapshot plans required")
 	}
+	if err := rebindEnumProfiles(p.root, next.root); err != nil {
+		return nil, err
+	}
 	if err := jsonstructure.Validate(data); err != nil {
 		return nil, &UnmarshalError{cause: err}
 	}

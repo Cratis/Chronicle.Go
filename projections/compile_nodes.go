@@ -155,7 +155,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			case "children", "nested", "index", "subject", "pii", "compliance-details", "encrypted":
 				continue
 			case "key":
-				if n.keyField != "" || field.Scalar == serialization.NotScalar || field.Nullable {
+				if n.keyField != "" || field.IsEnum() || field.Scalar == serialization.NotScalar || field.Nullable {
 					return fail(invalid("one non-nullable scalar key field is required"))
 				}
 				n.keyField = field.Path
@@ -324,6 +324,9 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			}
 		}
 	}
+	if err := validateEnumAutoMap(n, fields, c.catalog); err != nil {
+		return nil, err
+	}
 	return n, nil
 }
 
@@ -358,7 +361,7 @@ func (c *compiler) addJoin(n *nodeDefinition, j joinDeclaration, fields []serial
 		return invalid("join does not support a parent key")
 	}
 	on, ok := serialization.FieldAt(fields, j.on)
-	if !ok || validateTarget(on, j.onType) != nil || on.Scalar == serialization.NotScalar {
+	if !ok || on.IsEnum() || validateTarget(on, j.onType) != nil || on.Scalar == serialization.NotScalar {
 		return invalid("join on requires a scalar model field")
 	}
 	var target *joinDefinition
@@ -413,6 +416,9 @@ func (c *compiler) addGlobal(n *nodeDefinition, g globalDeclaration, fields []se
 	target, ok := serialization.FieldAt(fields, w.path)
 	if !ok || validateTarget(target, w.targetType) != nil {
 		return declarationFailure(c.result.id, w.provenance, invalid("unknown global target field"))
+	}
+	if target.IsEnum() && g.all {
+		return declarationFailure(c.result.id, w.provenance, invalid("all-event enum mappings cannot validate unknown event profiles"))
 	}
 	if w.expression.kind == pathExpression {
 		if !eventPropertyPath(w.expression.text) {

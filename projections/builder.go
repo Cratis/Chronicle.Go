@@ -10,6 +10,7 @@ import (
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // Field describes a serialized path and its declared value type. Validation never
@@ -42,12 +43,15 @@ func NewBuilder[M any](id string, model readmodels.Model[M], options ...Option) 
 
 // FromBuilder configures mappings for one event. Retaining it after From returns
 // is harmless: From snapshots its mappings before returning.
-type FromBuilder[M, E any] struct{ subscription subscription }
+type FromBuilder[M, E any] struct {
+	subscription subscription
+	model        readmodels.Descriptor
+}
 
 // From subscribes and invokes define exactly once. Nil define means AutoMap only.
 // Generic operations are package functions because Go has no generic methods.
 func From[M, E any](builder *Builder[M], event events.Type[E], define func(*FromBuilder[M, E]), options ...FromOption) {
-	from := &FromBuilder[M, E]{subscription: newSubscription(event.Descriptor(), options)}
+	from := &FromBuilder[M, E]{subscription: newSubscription(event.Descriptor(), options), model: builder.data.model}
 	if define != nil {
 		define(from)
 	}
@@ -83,7 +87,13 @@ func EventSourceID[M, E, V any](builder *FromBuilder[M, E], target Field[M, V]) 
 // Unsupported values and kernel-unrepresentable literals fail Build/Compile.
 func Value[M, E, V any](builder *FromBuilder[M, E], target Field[M, V], value V) {
 	expression := expression{kind: invalidExpression}
-	data, err := json.Marshal(value)
+	var data []byte
+	var err error
+	if field, ok := serialization.FieldAt(builder.model.Fields(), target.path); ok && field.IsEnum() {
+		data, err = field.Marshal(value)
+	} else {
+		data, err = json.Marshal(value)
+	}
 	if err == nil {
 		// Reuse the versioned JSON scalar parser, not a separate quoting grammar.
 		parsed, parseErr := declarations.Parse(declarations.V1, "value(E,value="+string(data)+")")

@@ -30,6 +30,9 @@ func compileConcept(n *node, representation concepts.Representation, state *comp
 		if err != nil {
 			return nil, err
 		}
+		if hasEnum(underlying) {
+			return nil, unsupported(n.typ, "enum concepts are not supported")
+		}
 		n.schema = underlying.schema
 		return n, nil
 	}

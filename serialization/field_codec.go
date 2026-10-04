@@ -46,6 +46,9 @@ func sameRepresentation(a, b *node, seen map[[2]*node]bool) bool {
 	if b.reference != nil {
 		b = b.reference
 	}
+	if !sameEnum(a.enum, b.enum) {
+		return false
+	}
 	if a.typ != b.typ || a.family != b.family || a.scalar != b.scalar || len(a.fields) != len(b.fields) || len(a.derivatives) != len(b.derivatives) {
 		return false
 	}

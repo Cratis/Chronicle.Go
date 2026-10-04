@@ -14,36 +14,61 @@ import (
 
 const derivedTypeID = "_derivedTypeId"
 
-// Codec is an immutable registration declaration. Construct it with Derived.
-// Its zero value is invalid. No application callbacks or discovery are involved.
+type codecKind uint8
+
+const (
+	derivedCodec codecKind = iota + 1
+	enumCodec
+)
+
+// Codec is a comparable immutable registration declaration. Construct it with
+// Derived, Enum or Flags. Its zero value is invalid. No callbacks or discovery run.
 type Codec struct {
 	family, concrete reflect.Type
 	id               string
+	kind             codecKind
+	enum             *enumDefinition
 }
 
 // Derived admits exactly Concrete as an implementation of Family with a stable
 // wire discriminator. Family must be an interface; Concrete a named struct or a
 // pointer to one. NewCodecs validates declarations, including assignability.
 func Derived[Family, Concrete any](stableID string) Codec {
-	return Codec{reflect.TypeFor[Family](), reflect.TypeFor[Concrete](), stableID}
+	return Codec{family: reflect.TypeFor[Family](), concrete: reflect.TypeFor[Concrete](), id: stableID, kind: derivedCodec}
 }
 
-// Codecs is an immutable, concurrency-safe set of explicit family registrations.
-// Its zero value (and a nil *Codecs) admits no families. Registrations are never
+// Codecs is an immutable, concurrency-safe set of explicit codec registrations.
+// Its zero value (and a nil *Codecs) admits no families or enum profiles. Registrations are never
 // global and cannot be modified after construction.
 type Codecs struct {
 	ordered  []Codec
 	families map[reflect.Type][]Codec
+	enums    map[reflect.Type]*enumDefinition
 }
 
 // NewCodecs copies and validates registrations in declaration order. Duplicate
 // pairs, conflicting IDs and pointer/value duplicates are errors. One concrete
 // type may belong to multiple families only with the same globally unique ID.
+// Enum types may be registered once; their member tables are copied and validated.
 func NewCodecs(registrations ...Codec) (*Codecs, error) {
-	c := &Codecs{ordered: append([]Codec(nil), registrations...), families: map[reflect.Type][]Codec{}}
+	c := &Codecs{ordered: append([]Codec(nil), registrations...), families: map[reflect.Type][]Codec{}, enums: map[reflect.Type]*enumDefinition{}}
 	ids := map[string]reflect.Type{}
 	types := map[reflect.Type]Codec{}
-	for _, r := range c.ordered {
+	for i, r := range c.ordered {
+		if r.kind == enumCodec {
+			definition, err := compileEnum(r)
+			if err != nil {
+				return nil, err
+			}
+			if c.enums[r.concrete] != nil {
+				return nil, codecError(r, "", "duplicate enum type")
+			}
+			c.enums[r.concrete], c.ordered[i].enum = definition, definition
+			continue
+		}
+		if r.kind != derivedCodec {
+			return nil, codecError(r, "", "invalid codec declaration")
+		}
 		if r.family == nil || r.family.Kind() != reflect.Interface || r.concrete == nil {
 			return nil, codecError(r, "", "interface family and concrete struct required")
 		}
@@ -88,6 +113,9 @@ type CodecError struct {
 
 // Error returns configuration-only diagnostics; discriminator values are redacted.
 func (e *CodecError) Error() string {
+	if e.Family == nil {
+		return fmt.Sprintf("chronicle: %s %v codec type %v field %s: %s", e.Role, e.Artifact, e.Concrete, e.Field, e.Message)
+	}
 	return fmt.Sprintf("chronicle: %s %v derived codec family %v concrete %v field %s (%s): %s", e.Role, e.Artifact, e.Family, e.Concrete, e.Field, derivedTypeID, e.Message)
 }
 
@@ -149,6 +177,9 @@ func (n *node) compileFamily(state *compileState, policy NamingPolicy) error {
 		}
 		if object.reference != nil {
 			object = object.reference
+		}
+		if hasEnum(object) {
+			return codecError(registration, "", "enum properties in derivatives are not supported")
 		}
 		if object.scalar || object.concept != nil {
 			return codecError(registration, "", "derivative requires an ordinary object codec")

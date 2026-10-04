@@ -113,6 +113,9 @@ func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, 
 		}
 		return nil, unsupported(n.typ, "unregistered dynamic derivative")
 	}
+	if n.enum != nil {
+		return n.encodeEnum(value)
+	}
 	if n.concept != nil {
 		return n.encodeConcept(value, dictionary)
 	}

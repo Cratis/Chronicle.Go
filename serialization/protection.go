@@ -161,6 +161,9 @@ func (c *protectionCompiler) walk(n *node, inherited, member compliance.Classifi
 		return nil, err
 	}
 	if metadata != (compliance.Classification{}) {
+		if hasEnum(n) {
+			return nil, protectionError("protected enum placements are not supported")
+		}
 		c.classified = true
 	}
 	if (metadata.PII || metadata.Encrypted) && containsSourceIdentity(n, map[*node]bool{}) {

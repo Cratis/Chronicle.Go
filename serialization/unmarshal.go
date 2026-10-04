@@ -70,7 +70,14 @@ func (n *node) decodeContext(data []byte, value reflect.Value, depth int, open b
 	if n.reference != nil {
 		return n.reference.decodeContext(data, value, depth, open)
 	}
+	if n.enum != nil {
+		return n.decodeEnum(data, value)
+	}
 	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		if n.item != nil && n.item.enum != nil {
+			value.SetZero()
+			return n.decodeMissingEnum(value)
+		}
 		return decodeLeafJSON(data, value)
 	}
 	if n.family {
@@ -122,6 +129,15 @@ func (n *node) decodeContext(data []byte, value reflect.Value, depth int, open b
 						raw, ok = properties[key], true
 						break
 					}
+				}
+			}
+			if !ok && (field.value.enum != nil || field.value.typ.Kind() == reflect.Slice && field.value.item.enum != nil) {
+				target, err := fieldValue(value, field.index, true)
+				if err != nil {
+					return err
+				}
+				if err := field.value.decodeMissingEnum(target); err != nil {
+					return err
 				}
 			}
 			if ok {

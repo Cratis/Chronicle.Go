@@ -215,7 +215,7 @@ func validateEvent(catalog *events.Catalog, event events.Descriptor) error {
 		return invalid("event handle is empty")
 	}
 	registered, ok := catalog.LookupRef(event.Ref())
-	if !ok || registered.GoType() != event.GoType() || registered.Schema() != event.Schema() || registered.SourceStore() != event.SourceStore() {
+	if !ok || registered.GoType() != event.GoType() || registered.Schema() != event.Schema() || registered.SourceStore() != event.SourceStore() || !sameEventEnumProfiles(registered, event) {
 		return invalid("event handle does not belong to the frozen store catalog")
 	}
 	return nil
