@@ -133,5 +133,16 @@ environment variables, and credentials are never captured. Application-provided
 facts must also remain free of secrets and personal data.
 
 These defaults deliberately differ from C#: existing Go clients still default to
-NotSet, a fresh missing correlation, and **no** implicit process root. Identity
-rename is a separate, unimplemented workflow in this slice.
+NotSet, a fresh missing correlation, and **no** implicit process root.
+
+## Identity-name operations
+
+[Identity rename](../identities.md) resolves these audit providers once before its
+pre-list, command, and post-list, outside locks and work leases. An explicit optional
+correlation value wins; explicit zero generates fresh without consulting its provider.
+The same frozen context and caller deadline reach all three RPCs. Rename has no actor
+or causation fields, so selecting those values does not persist them on the command;
+correlation uses the existing header. Enrichers, subject/origin resolvers, concurrency
+strategies, and append notifications do not run. Rename requires existing current-root
+readiness rather than starting or joining registration. Separate readiness operations
+and independent background activity are outside its invocation-local privacy contract.
