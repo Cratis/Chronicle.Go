@@ -14,14 +14,11 @@ import (
 // variant handlers have been lowered. Generated joins must obey the same enum
 // correlation boundary as explicit joins, even with AutoMap disabled.
 func validateEnumGraph(d *definition, catalog *events.Catalog) error {
-	return validateEnumNode(d, &d.nodeDefinition, d.model.Fields(), catalog, false)
+	noAuto := d.noAuto && !d.inheritAuto
+	return validateEnumNode(d, &d.nodeDefinition, d.model.Fields(), catalog, noAuto, noAuto)
 }
 
-func validateEnumNode(d *definition, n *nodeDefinition, fields []serialization.Field, catalog *events.Catalog, inheritedNoAuto bool) error {
-	noAuto := n.noAuto
-	if n.inheritAuto {
-		noAuto = inheritedNoAuto
-	}
+func validateEnumNode(d *definition, n *nodeDefinition, fields []serialization.Field, catalog *events.Catalog, noAuto, projectionNoAuto bool) error {
 	for _, join := range n.joins {
 		if target, ok := serialization.FieldAt(fields, join.on); ok && target.IsEnum() {
 			return enumMappingFailure(d, target, join.event, "join", "enum correlation keys are not supported")
@@ -38,12 +35,24 @@ func validateEnumNode(d *definition, n *nodeDefinition, fields []serialization.F
 		}
 	}
 	for _, path := range sortedKeys(n.children) {
-		if err := validateEnumNode(d, n.children[path], scopedFields(fields, path), catalog, noAuto); err != nil {
+		child := n.children[path]
+		// The pinned factory creates a separate Projection for each collection,
+		// retaining encoded Inherit. Its property merger disables AutoMap only
+		// for Disabled, so parent NoAutoMap must not skip this child's checks.
+		childNoAuto := child.noAuto && !child.inheritAuto
+		if err := validateEnumNode(d, child, scopedFields(fields, path), catalog, childNoAuto, childNoAuto); err != nil {
 			return err
 		}
 	}
 	for _, path := range sortedKeys(n.nested) {
-		if err := validateEnumNode(d, n.nested[path], scopedFields(fields, path), catalog, noAuto); err != nil {
+		nested := n.nested[path]
+		nestedNoAuto := nested.noAuto
+		if nested.inheritAuto {
+			// Recursive nested subscriptions use the containing Projection's
+			// AutoMap, not the immediately enclosing nested definition's mode.
+			nestedNoAuto = projectionNoAuto
+		}
+		if err := validateEnumNode(d, nested, scopedFields(fields, path), catalog, nestedNoAuto, projectionNoAuto); err != nil {
 			return err
 		}
 	}
