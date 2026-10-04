@@ -264,6 +264,43 @@ func TestIdentityRenameHostileFailuresOpaqueAndLeasesReleased(t *testing.T) {
 	}
 }
 
+func TestIdentityRenameAfterActualCloseReturnsClosedWithoutRPC(t *testing.T) {
+	client, ctx := supervisionClient(t, &supervisedKernel{})
+	var rpc atomic.Int32
+	client.config.borrowed = identityRaw{ClientConnInterface: client.config.borrowed, before: func(context.Context, string, any) { rpc.Add(1) }}
+	store, err := client.EventStore(ctx, "store")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.mu.Lock()
+	g := client.current
+	client.mu.Unlock()
+	if g == nil {
+		t.Fatal("missing connected generation")
+	}
+	manager := store.Identities()
+	if err := client.Close(); err != nil {
+		t.Fatal(err)
+	}
+	client.mu.Lock()
+	closed, current := client.closed, client.current
+	client.mu.Unlock()
+	if !closed || current != nil {
+		t.Fatal("actual shutdown did not clear the generation")
+	}
+	rpc.Store(0)
+	result, err := manager.Rename(ctx, "subject", "new")
+	var failure *IdentityRenameError
+	if result.Disposition != IdentityRenameNotDispatched || result.Acknowledged || !errors.Is(err, ErrClosed) ||
+		!errors.As(err, &failure) || failure.Phase() != "prepare" || failure.Reason() != "closed" || rpc.Load() != 0 {
+		t.Fatalf("result=%+v error=%v rpc=%d", result, err, rpc.Load())
+	}
+	categories := failure.Unwrap()
+	if len(categories) != 1 || categories[0] != ErrClosed {
+		t.Fatal("closed failure exposed anything but the fixed SDK category")
+	}
+}
+
 func TestIdentityRenameDecoderBypassCannotAcknowledge(t *testing.T) {
 	k := identityHappyKernel()
 	conn := identityConnection(t, k)

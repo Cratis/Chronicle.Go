@@ -133,6 +133,10 @@ func (m *IdentityManager) Rename(ctx context.Context, subject string, name ident
 	ctx = audit.Context(ctx)
 	c := m.store.client
 	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return result, identityRenameError("prepare", identityFailure{reason: "closed", category: ErrClosed}, result.Disposition)
+	}
 	g, root := c.current, m.store.definitions.root
 	c.mu.Unlock()
 	if g == nil || root == nil {
