@@ -16,28 +16,21 @@ func validateEnumHandler(d *definition, from fromDefinition, join bool, n *nodeD
 	if !ok {
 		return invalid("enum auto-map event is not registered")
 	}
-	sources := serialization.RootFields(event.Fields())
-	targets := serialization.RootFields(fields)
+	eventFields := event.Fields()
+	sources := enumRootFields(eventFields)
+	targets := enumRootFields(fields)
 	// Every can acquire additional handlers through globals or EntersOn. Check
 	// known source profiles again against the final subscription population.
 	for _, w := range n.all {
-		target, _ := serialization.FieldAt(fields, w.path)
-		if source, exists := serialization.FieldAt(event.Fields(), w.expression.text); w.expression.kind == pathExpression && exists && (source.IsEnum() || target.IsEnum()) {
-			if !eventPropertyPath(w.expression.text) {
-				return enumMappingFailure(d, target, from.event, "every", "global enum source is not a safe event property expression")
-			}
-			if !target.SameRepresentation(source) {
-				return enumMappingFailure(d, target, from.event, "every", "global enum profiles must match exactly")
-			}
+		if err := validateEnumWrite(d, w, fields, eventFields, from.event, "every"); err != nil {
+			return err
 		}
 	}
 	// Rebinding can turn an originally safe explicit path (TRUE) into a
 	// literal (true). Check enum-involved paths even when AutoMap is disabled.
 	for _, w := range from.writes {
-		target, _ := serialization.FieldAt(fields, w.path)
-		source, exists := serialization.FieldAt(event.Fields(), w.expression.text)
-		if w.expression.kind == pathExpression && exists && (source.IsEnum() || target.IsEnum()) && !eventPropertyPath(w.expression.text) {
-			return enumMappingFailure(d, target, from.event, "set", "enum mapping source is not a safe event property expression")
+		if err := validateEnumWrite(d, w, fields, eventFields, from.event, "set"); err != nil {
+			return err
 		}
 	}
 	if noAuto || !join && aggregateOnly(from.writes) {
@@ -66,8 +59,8 @@ func validateEnumHandler(d *definition, from fromDefinition, join bool, n *nodeD
 		if len(matches) != 1 || len(matchingASCIIFields(sources, source.Name)) != 1 {
 			return enumMappingFailure(d, firstEnumField(matches, []serialization.Field{source}), from.event, "AutoMap", "ambiguous case-insensitive enum auto-map properties")
 		}
-		if !eventPropertyPath(source.Name) {
-			return enumMappingFailure(d, target, from.event, "AutoMap", "enum auto-map source is not a safe event property expression")
+		if issue := enumMappingPathIssue(target, source, expression{kind: pathExpression, text: source.Name}, fields, eventFields); issue != "" {
+			return enumMappingFailure(d, target, from.event, "AutoMap", issue)
 		}
 		if !target.SameRepresentation(source) {
 			return enumMappingFailure(d, target, from.event, "AutoMap", "auto-map enum profiles must match exactly")

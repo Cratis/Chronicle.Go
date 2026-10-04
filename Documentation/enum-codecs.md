@@ -108,7 +108,20 @@ The rendered source name must also be a safe event-property expression:
 `true`, `True`, `false` and `False` resolve as kernel constants, not event values.
 Enum-involved automatic mappings using these names fail locally, including after
 naming rebinding. Excluded properties and explicit target writes can suppress
-AutoMap; explicit enum copies still require safe source expressions.
+AutoMap; explicit enum copies still require safe source expressions. Sparse
+`EveryMap` checks expression safety even when the subscribed event lacks the
+source property. Naming rebinding can use an unsubscribed catalog event, so the
+check runs again on the final expression. Safe missing property paths remain
+allowed and do not add subscriptions.
+
+Direct root JSON names such as `json:"State.Value"` are admitted by serialization,
+but cannot be used in enum-involved projection mappings: the kernel treats the
+dot as a path separator, not part of the property name. These mappings fail
+locally, whether the enum is on the source or target, including explicit
+literal/null targets. Rename the JSON property to a simple name for projection
+use. The guard uses structural field ownership; genuine nested ordinary paths
+and ordinary non-enum mapping behavior are unchanged. This does not admit nested
+enum placements or provide escaping for arbitrary JSON names.
 
 For enum validation, encoded collection `Inherit` enables automatic mapping in
 the pinned kernel even beneath a `NoAutoMap` root. Nested `Inherit` uses the

@@ -19,6 +19,15 @@ func validateEnumGraph(d *definition, catalog *events.Catalog) error {
 }
 
 func validateEnumNode(d *definition, n *nodeDefinition, fields []serialization.Field, catalog *events.Catalog, noAuto, projectionNoAuto bool) error {
+	// The kernel resolves Every eagerly, including nodes without handlers.
+	// Handler-specific checks below additionally compare known source profiles.
+	if len(n.from) == 0 && len(n.joins) == 0 {
+		for _, w := range n.all {
+			if err := validateEnumWrite(d, w, fields, nil, events.TypeRef{}, "every"); err != nil {
+				return err
+			}
+		}
+	}
 	for _, join := range n.joins {
 		if target, ok := serialization.FieldAt(fields, join.on); ok && target.IsEnum() {
 			return enumMappingFailure(d, target, join.event, "join", "enum correlation keys are not supported")
