@@ -7,12 +7,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync/atomic"
 	"testing"
 
+	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/contracts/compliance"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestReleaseRejectsWrongProtectedScalarKind(t *testing.T) {
@@ -96,63 +99,80 @@ func TestBooleanReleaseSubjectMatchesCSharpToString(t *testing.T) {
 	}
 }
 
-func TestConfidentialityWatchesAndWindowsReleaseWithoutSubject(t *testing.T) {
-	for _, window := range []bool{false, true} {
-		t.Run(map[bool]string{false: "changes", true: "windows"}[window], func(t *testing.T) {
-			model, err := readmodels.Define[IndependentSecrets](readmodels.WithObserver(readmodels.Projection, "secrets"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			kernel := &watchKernel{release: func(_ context.Context, r *compliance.ReleaseRequest) (*compliance.ReleaseResponse, error) {
-				if r.Subject != "" {
-					t.Error("independent value acquired an owner")
-				}
-				return &compliance.ReleaseResponse{HasError: true}, nil
-			}}
-			kernel.watch = func(_ *contracts.WatchRequest, s grpc.ServerStreamingServer[contracts.ReadModelChangeset]) error {
-				if err := s.Send(&contracts.ReadModelChangeset{Subscribed: true}); err != nil {
-					return err
-				}
-				if err := s.Send(sendChange("tenant-a", contracts.ReadModelChangeType_Added, `{"shared":"ciphertext","global":"ciphertext"}`)); err != nil {
-					return err
-				}
-				<-s.Context().Done()
-				return s.Context().Err()
-			}
-			kernel.observe = func(_ *contracts.ObserveInstancesRequest, s grpc.ServerStreamingServer[contracts.ObserveInstancesResponse]) error {
-				if err := s.Send(&contracts.ObserveInstancesResponse{Instances: []string{`{"shared":"ciphertext","global":"ciphertext"}`}}); err != nil {
-					return err
-				}
-				<-s.Context().Done()
-				return s.Context().Err()
-			}
-			service, ctx := watchFixture(t, kernel, model.Descriptor())
-			reader := readmodels.For(service, model)
-			if window {
-				sub, err := reader.Materialized().ObserveInstances(ctx, nil)
-				if sub != nil {
-					if closeErr := sub.Close(); closeErr != nil {
-						t.Error(closeErr)
-					}
-				}
-				if sub != nil || !errors.Is(err, readmodels.ErrRelease) {
-					t.Fatal("unsafe encrypted window")
-				}
-			} else {
-				sub, err := reader.Watch(ctx)
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer func() {
-					if err := sub.Close(); err != nil {
-						t.Error(err)
-					}
-				}()
-				value, err := sub.Recv()
-				if value.HasValue || !errors.Is(err, readmodels.ErrRelease) {
-					t.Fatal("unsafe encrypted change")
-				}
-			}
-		})
+func TestConfidentialityWatchesAndWindowsRefuseBeforeRPCWithoutSubject(t *testing.T) {
+	model, err := readmodels.Define[IndependentSecrets](readmodels.WithObserver(readmodels.Projection, "secrets"))
+	if err != nil {
+		t.Fatal(err)
 	}
+	catalog, err := readmodels.NewCatalog(model.Descriptor())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var allRPCs, watches, observations, releases atomic.Int32
+	unexpectedRPC := errors.New("unexpected RPC for unsupported protection profile")
+	conn, err := grpc.NewClient("passthrough:///unsupported-profile",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(func(_ context.Context, method string, _, _ any, _ *grpc.ClientConn, _ grpc.UnaryInvoker, _ ...grpc.CallOption) error {
+			allRPCs.Add(1)
+			if method == compliance.Compliance_Release_FullMethodName {
+				releases.Add(1)
+			}
+			return unexpectedRPC
+		}),
+		grpc.WithStreamInterceptor(func(_ context.Context, _ *grpc.StreamDesc, _ *grpc.ClientConn, method string, _ grpc.Streamer, _ ...grpc.CallOption) (grpc.ClientStream, error) {
+			allRPCs.Add(1)
+			switch method {
+			case contracts.ReadModels_Watch_FullMethodName:
+				watches.Add(1)
+			case contracts.MaterializedReadModels_ObserveInstances_FullMethodName:
+				observations.Add(1)
+			}
+			return nil, unexpectedRPC
+		}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := conn.Close(); err != nil {
+			t.Error(err)
+		}
+		if allRPCs.Load() != 0 || watches.Load() != 0 || observations.Load() != 0 || releases.Load() != 0 {
+			t.Errorf("RPCs: all=%d Watch=%d ObserveInstances=%d Release=%d; want zero", allRPCs.Load(), watches.Load(), observations.Load(), releases.Load())
+		}
+	})
+	service, err := readmodels.New("store", "tenant-a", catalog, conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader := readmodels.For(service, model)
+	ctx := t.Context()
+	// IndependentSecrets mixes namespace and global confidentiality. All
+	// classified watches and this unsupported mixed/global window profile must
+	// refuse before transport. No ciphertext or fabricated clear reply is needed.
+	t.Run("raw watch", func(t *testing.T) {
+		if sub, err := service.Watch(ctx, model.Identifier()); sub != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatal("classified watch was not refused before RPC", err)
+		}
+	})
+	t.Run("typed watch", func(t *testing.T) {
+		if sub, err := reader.Watch(ctx); sub != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatal("classified watch was not refused before RPC", err)
+		}
+	})
+	t.Run("raw window", func(t *testing.T) {
+		if values, err := service.Materialized().GetInstances(ctx, model.Identifier(), nil); values != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatal("mixed/global window was not refused before RPC", err)
+		}
+		if sub, err := service.Materialized().ObserveInstances(ctx, model.Identifier(), nil); sub != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatal("mixed/global window was not refused before RPC", err)
+		}
+	})
+	t.Run("typed window", func(t *testing.T) {
+		if values, err := reader.Materialized().GetInstances(ctx, nil); values != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatal("mixed/global window was not refused before RPC", err)
+		}
+		if sub, err := reader.Materialized().ObserveInstances(ctx, nil); sub != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatal("mixed/global window was not refused before RPC", err)
+		}
+	})
 }
