@@ -6,6 +6,7 @@ package chronicle
 import (
 	"context"
 	"errors"
+	"net"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -17,7 +18,11 @@ import (
 	"github.com/cratis/chronicle.go/reactors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials/insecure"
+	grpcmetadata "google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -214,30 +219,213 @@ func TestIdentityRenameInvalidInputAndProviderFailureCounts(t *testing.T) {
 }
 
 func TestIdentityRenameConcurrentInvocationsKeepIndependentCorrelation(t *testing.T) {
-	// Each invocation has its own server/namespace; shared audit providers remain
-	// concurrent-safe and no operation state is stored in the manager/client.
-	var providers atomic.Int32
-	var workers sync.WaitGroup
-	for range 2 {
-		k := identityHappyKernel()
-		s, _ := identityStore(t, identityConnection(t, k))
-		s.client.config.outgoing.Correlation = func(context.Context) (metadata.CorrelationID, bool, error) {
-			providers.Add(1)
-			id, err := metadata.NewCorrelationID()
-			return id, true, err
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	firstID, secondID := metadata.CorrelationID{1}, metadata.CorrelationID{2}
+	k := identityHappyKernel()
+	k.pre = identityQuery(identityRow("first", "first-new"), identityRow("second", "second-new"))
+	k.post = k.pre
+	type wireCall struct{ method, correlation, subject string }
+	var callsMu sync.Mutex
+	var calls []wireCall
+	commandEntered, releaseCommand := make(chan struct{}), make(chan struct{})
+	var commands atomic.Int32
+	listener := bufconn.Listen(1024 * 1024)
+	server := grpc.NewServer(grpc.ForceServerCodec(identityServerCodec{k}), grpc.UnaryInterceptor(func(call context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		md, _ := grpcmetadata.FromIncomingContext(call)
+		ids := md.Get("x-correlation-id")
+		if len(ids) != 1 || (ids[0] != firstID.String() && ids[0] != secondID.String()) {
+			t.Error("wire correlation missing or unexpected")
+			return nil, status.Error(codes.InvalidArgument, "invalid test correlation")
 		}
+		captured := wireCall{method: info.FullMethod, correlation: ids[0]}
+		if request, ok := req.(*contracts.RenameIdentityRequest); ok {
+			captured.subject = request.Subject
+			if request.Subject == "first" && (ids[0] != firstID.String() || request.Name != "first-new") ||
+				request.Subject == "second" && (ids[0] != secondID.String() || request.Name != "second-new") {
+				t.Error("command correlation or name crossed invocations")
+			}
+		}
+		callsMu.Lock()
+		calls = append(calls, captured)
+		callsMu.Unlock()
+		if info.FullMethod == contracts.Identities_RenameIdentity_FullMethodName && commands.Add(1) == 1 {
+			close(commandEntered)
+			select {
+			case <-releaseCommand:
+			case <-call.Done():
+				return nil, call.Err()
+			}
+		}
+		return handler(call, req)
+	}))
+	contracts.RegisterIdentitiesServer(server, k)
+	served := make(chan struct{})
+	go func() { defer close(served); _ = server.Serve(listener) }()
+	t.Cleanup(func() { server.Stop(); _ = listener.Close(); <-served })
+	conn, err := grpc.NewClient("passthrough:///shared-identity", grpc.WithContextDialer(func(call context.Context, _ string) (net.Conn, error) { return listener.DialContext(call) }), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := conn.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	s, g := identityStore(t, conn)
+	manager, root, generationContext := s.Identities(), s.definitions.root, g.ctx
+	var identityCalls, causationCalls, correlationCalls, tokens atomic.Int32
+	s.client.config.outgoing.Identity = func(context.Context) (identities.Identity, bool, error) {
+		identityCalls.Add(1)
+		return identities.Identity{Subject: "audit-actor", Name: "audit-name"}, true, nil
+	}
+	s.client.config.outgoing.Causation = func(context.Context) ([]metadata.Causation, bool, error) {
+		causationCalls.Add(1)
+		return []metadata.Causation{{Type: "shared-test", Properties: map[string]string{"key": "frozen"}}}, true, nil
+	}
+	s.client.config.outgoing.Correlation = func(context.Context) (metadata.CorrelationID, bool, error) {
+		correlationCalls.Add(1)
+		return metadata.CorrelationID{}, false, nil
+	}
+	g.tokens = decisionTokenSource(func(context.Context) (Token, error) {
+		tokens.Add(1)
+		return Token{AccessToken: "synthetic-token"}, nil
+	})
+	firstRead, secondRead := make(chan struct{}), make(chan struct{})
+	releaseFirst, releaseSecond := make(chan struct{}), make(chan struct{})
+	var firstReads, secondReads atomic.Int32
+	g.raw = identityRaw{ClientConnInterface: conn, before: func(call context.Context, _ string, _ any) {
+		chain := metadata.CausationChain(call)
+		if metadata.Identity(call).Name != "audit-name" || len(chain) != 1 || chain[0].Properties["key"] != "frozen" {
+			t.Error("audit providers were not frozen for the invocation")
+		}
+	}, after: func(call context.Context, method string) {
+		if method != contracts.Identities_GetIdentities_FullMethodName {
+			return
+		}
+		var entered, release chan struct{}
+		switch metadata.Correlation(call) {
+		case firstID:
+			if firstReads.Add(1) == 1 {
+				entered, release = firstRead, releaseFirst
+			}
+		case secondID:
+			if secondReads.Add(1) == 1 {
+				entered, release = secondRead, releaseSecond
+			}
+		default:
+			t.Error("outgoing correlation crossed invocations")
+		}
+		if entered != nil {
+			close(entered)
+			select {
+			case <-release:
+			case <-call.Done():
+			}
+		}
+	}}
+	var firstOnce, secondOnce, commandOnce sync.Once
+	unblockFirst := func() { firstOnce.Do(func() { close(releaseFirst) }) }
+	unblockSecond := func() { secondOnce.Do(func() { close(releaseSecond) }) }
+	unblockCommand := func() { commandOnce.Do(func() { close(releaseCommand) }) }
+	var workers sync.WaitGroup
+	t.Cleanup(func() { cancel(); unblockFirst(); unblockSecond(); unblockCommand(); workers.Wait() })
+	type outcome struct {
+		result IdentityRenameResult
+		err    error
+	}
+	firstDone, secondDone := make(chan outcome, 1), make(chan outcome, 1)
+	start := func(subject string, name identities.Name, id metadata.CorrelationID, done chan<- outcome) {
 		workers.Add(1)
 		go func() {
 			defer workers.Done()
-			result, err := s.Identities().Rename(t.Context(), "subject", "new")
-			if err != nil || result.Disposition != IdentityRenameObserved {
-				t.Errorf("result=%+v error=%v", result, err)
-			}
+			result, err := manager.Rename(ctx, subject, name, id)
+			done <- outcome{result, err}
 		}()
 	}
-	workers.Wait()
-	if providers.Load() != 2 {
-		t.Fatal("provider invocation count")
+	start("first", "first-new", firstID, firstDone)
+	awaitSignal(t, ctx, firstRead)
+	start("second", "second-new", secondID, secondDone)
+	awaitSignal(t, ctx, secondRead)
+	unblockFirst()
+	awaitSignal(t, ctx, commandEntered)
+	s.client.mu.Lock()
+	flight, changed := s.definitions.flight, s.definitions.changed
+	s.client.mu.Unlock()
+	if !flight {
+		t.Fatal("missing competing command flight")
+	}
+	unblockSecond()
+	var refused outcome
+	select {
+	case refused = <-secondDone:
+	case <-ctx.Done():
+		t.Fatal("competing rename waited for the command flight", ctx.Err())
+	}
+	var failure *IdentityRenameError
+	if refused.result.Disposition != IdentityRenameNotDispatched || refused.result.Acknowledged || refused.result.RequestCorrelationID != secondID ||
+		!errors.As(refused.err, &failure) || failure.Phase() != "pre_read" || failure.Reason() != "registration_not_ready" || len(failure.Unwrap()) != 0 {
+		t.Fatalf("competing result=%+v error=%v", refused.result, refused.err)
+	}
+	callsMu.Lock()
+	admitted := len(calls)
+	callsMu.Unlock()
+	if admitted != 3 || tokens.Load() != 3 || identityCalls.Load() != 2 || causationCalls.Load() != 2 || correlationCalls.Load() != 0 {
+		t.Fatal("refusal started extra RPCs or repeated audit providers")
+	}
+	unblockCommand()
+	var first outcome
+	select {
+	case first = <-firstDone:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	if first.err != nil || !first.result.Acknowledged || first.result.Disposition != IdentityRenameObserved || first.result.RequestCorrelationID != firstID {
+		t.Fatalf("original result=%+v error=%v", first.result, first.err)
+	}
+	awaitSignal(t, ctx, changed)
+	later, err := manager.Rename(ctx, "second", "second-new", secondID)
+	if err != nil || !later.Acknowledged || later.Disposition != IdentityRenameObserved || later.RequestCorrelationID != secondID {
+		t.Fatalf("later result=%+v error=%v", later, err)
+	}
+	g.work.Wait()
+	s.client.work.Wait()
+	s.client.mu.Lock()
+	stable := s.client.current == g && s.definitions.root == root && g.ctx == generationContext && !s.definitions.flight && !s.definitions.destructiveUnknown
+	s.client.mu.Unlock()
+	if !stable || len(s.reactors.runs)+len(s.reducers.runs)+len(s.readModelReactors.runs) != 0 {
+		t.Fatal("rename changed generation/root or started observers")
+	}
+	k.mu.Lock()
+	reads, mutations := k.reads, k.commands
+	k.mu.Unlock()
+	if reads != 5 || mutations != 2 || tokens.Load() != 7 || identityCalls.Load() != 3 || causationCalls.Load() != 3 || correlationCalls.Load() != 0 {
+		t.Fatal("shared-manager RPC/provider counts")
+	}
+	want := []wireCall{
+		{contracts.Identities_GetIdentities_FullMethodName, firstID.String(), ""},
+		{contracts.Identities_GetIdentities_FullMethodName, secondID.String(), ""},
+		{contracts.Identities_RenameIdentity_FullMethodName, firstID.String(), "first"},
+		{contracts.Identities_GetIdentities_FullMethodName, firstID.String(), ""},
+		{contracts.Identities_GetIdentities_FullMethodName, secondID.String(), ""},
+		{contracts.Identities_RenameIdentity_FullMethodName, secondID.String(), "second"},
+		{contracts.Identities_GetIdentities_FullMethodName, secondID.String(), ""},
+	}
+	callsMu.Lock()
+	defer callsMu.Unlock()
+	if len(calls) != len(want) {
+		t.Fatalf("wire calls=%v, want %v", calls, want)
+	}
+	for index := range want {
+		if calls[index] != want[index] {
+			t.Fatalf("wire call %d=%v, want %v", index, calls[index], want[index])
+		}
+	}
+	if err := s.client.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if conn.GetState() == connectivity.Shutdown {
+		t.Fatal("borrowed connection was closed")
 	}
 }
 
