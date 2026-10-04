@@ -6,6 +6,7 @@ package serialization_test
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -127,6 +128,148 @@ func TestEnumCaptureValidationRejectsIncompleteEvidence(t *testing.T) {
 					t.Fatal("incomplete capture accepted")
 				}
 			})
+		}
+	}
+}
+
+func TestEnumCaptureValidationRejectsForbiddenSecondaryFields(t *testing.T) {
+	data, err := os.ReadFile("testdata/enum/profile.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parseEnumCaptureFixture(data); err != nil {
+		t.Fatalf("original capture: %v", err)
+	}
+	targets := []struct {
+		name, operation, parent string
+		fields                  []string
+	}{
+		{"Serialize", "EventSerializer.Serialize", "", []string{"reserialize", "toJson"}},
+		{"schema-Generate", "Generate", "", []string{"reserialize", "toJson"}},
+		{"schema-GenerateForReadModel", "GenerateForReadModel", "", []string{"reserialize", "toJson"}},
+		{"Deserialize", "EventSerializer.Deserialize", "", []string{"toJson"}},
+		{"Expando", "ExpandoObjectConverter.ToExpandoObject/ToJsonObject", "", []string{"reserialize"}},
+		{"nestedSecondary-reserialize", "EventSerializer.Deserialize", "reserialize", []string{"reserialize", "toJson"}},
+		{"nestedSecondary-toJson", "ExpandoObjectConverter.ToExpandoObject/ToJsonObject", "toJson", []string{"reserialize", "toJson"}},
+	}
+	for policy := range 2 {
+		for _, target := range targets {
+			for _, field := range target.fields {
+				for _, null := range []bool{false, true} {
+					name := []string{"default", "camelCase"}[policy] + "/" + target.name + "/" + field
+					if null {
+						name += "-explicit-null"
+					}
+					t.Run(name, func(t *testing.T) {
+						var document enumCaptureValidationDocument
+						if err := json.Unmarshal(data, &document); err != nil {
+							t.Fatal(err)
+						}
+						p := &document.Profiles[policy]
+						var result map[string]json.RawMessage
+						var schema *enumCaptureValidationSchema
+						var c *enumCaptureValidationCase
+						switch target.operation {
+						case "Generate", "GenerateForReadModel":
+							for i := range p.Schemas {
+								if p.Schemas[i].Operation == target.operation {
+									schema = &p.Schemas[i]
+									break
+								}
+							}
+							if schema == nil {
+								t.Fatal("original capture has no required schema")
+							}
+							if err := json.Unmarshal(schema.Result, &result); err != nil {
+								t.Fatal(err)
+							}
+						default:
+							c = acceptedEnumValidationCase(t, p, target.operation)
+							result = c.Result
+							if target.parent != "" {
+								result = nil
+								if err := json.Unmarshal(c.Result[target.parent], &result); err != nil {
+									t.Fatal(err)
+								}
+							}
+						}
+						if string(result["status"]) != `"accepted"` {
+							t.Fatal("shape mutation requires an accepted original result")
+						}
+						result[field] = json.RawMessage(`{"status":"accepted","output":null}`)
+						if null {
+							result[field] = json.RawMessage(`null`)
+						}
+						if schema != nil || target.parent != "" {
+							encoded, err := json.Marshal(result)
+							if err != nil {
+								t.Fatal(err)
+							}
+							if schema != nil {
+								schema.Result = encoded
+							} else {
+								c.Result[target.parent] = encoded
+							}
+						}
+						mutated, err := json.Marshal(document)
+						if err != nil {
+							t.Fatal(err)
+						}
+						if _, err := parseEnumCaptureFixture(mutated); err == nil || !strings.Contains(err.Error(), "unexpected "+field+" ") {
+							t.Fatalf("forbidden %s must fail its shape check, got %v", field, err)
+						}
+					})
+				}
+			}
+		}
+	}
+}
+
+func TestEnumCaptureValidationRejectsNullSecondaryFieldsOnErrors(t *testing.T) {
+	data, err := os.ReadFile("testdata/enum/profile.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for policy := range 2 {
+		for _, operation := range []string{"EventSerializer.Serialize", "EventSerializer.Deserialize", "ExpandoObjectConverter.ToExpandoObject/ToJsonObject", "Generate", "GenerateForReadModel", "reserialize", "toJson"} {
+			for _, field := range []string{"reserialize", "toJson"} {
+				t.Run([]string{"default", "camelCase"}[policy]+"/"+operation+"/"+field, func(t *testing.T) {
+					var document enumCaptureValidationDocument
+					if err := json.Unmarshal(data, &document); err != nil {
+						t.Fatal(err)
+					}
+					failure, err := json.Marshal(map[string]json.RawMessage{
+						"status": json.RawMessage(`"error"`), "category": json.RawMessage(`"System.OverflowException"`), field: json.RawMessage(`null`),
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+					p := &document.Profiles[policy]
+					switch operation {
+					case "Generate":
+						p.Schemas[0].Result = failure
+					case "GenerateForReadModel":
+						p.Schemas[1].Result = failure
+					case "reserialize":
+						acceptedEnumValidationCase(t, p, "EventSerializer.Deserialize").Result[operation] = failure
+					case "toJson":
+						acceptedEnumValidationCase(t, p, "ExpandoObjectConverter.ToExpandoObject/ToJsonObject").Result[operation] = failure
+					default:
+						c := acceptedEnumValidationCase(t, p, operation)
+						c.Result = nil
+						if err := json.Unmarshal(failure, &c.Result); err != nil {
+							t.Fatal(err)
+						}
+					}
+					mutated, err := json.Marshal(document)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if _, err := parseEnumCaptureFixture(mutated); err == nil || !strings.Contains(err.Error(), "invalid error ") {
+						t.Fatalf("null secondary on error must fail its shape check, got %v", err)
+					}
+				})
+			}
 		}
 	}
 }

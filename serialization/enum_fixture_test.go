@@ -16,12 +16,34 @@ import (
 
 // These tests validate captured .NET evidence, not a Go enum codec or parity claim.
 type enumCaptureResult struct {
-	Status        string             `json:"status"`
-	Output        json.RawMessage    `json:"output"`
-	Category      string             `json:"category"`
-	InnerCategory *string            `json:"innerCategory"`
-	Reserialize   *enumCaptureResult `json:"reserialize"`
-	ToJSON        *enumCaptureResult `json:"toJson"`
+	Status             string             `json:"status"`
+	Output             json.RawMessage    `json:"output"`
+	Category           string             `json:"category"`
+	InnerCategory      *string            `json:"innerCategory"`
+	Reserialize        *enumCaptureResult `json:"reserialize"`
+	ToJSON             *enumCaptureResult `json:"toJson"`
+	reserializePresent bool
+	toJSONPresent      bool
+}
+
+// Pointer decoding alone conflates an absent field with explicit JSON null.
+func (result *enumCaptureResult) UnmarshalJSON(data []byte) error {
+	type plainResult enumCaptureResult
+	var decoded plainResult
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	var fields struct {
+		Reserialize json.RawMessage `json:"reserialize"`
+		ToJSON      json.RawMessage `json:"toJson"`
+	}
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	*result = enumCaptureResult(decoded)
+	result.reserializePresent = len(fields.Reserialize) != 0
+	result.toJSONPresent = len(fields.ToJSON) != 0
+	return nil
 }
 
 type enumCaptureCase struct {
@@ -224,7 +246,7 @@ func parseEnumCaptureFixture(data []byte) (enumCaptureFixture, error) {
 				return fixture, fmt.Errorf("duplicate schema %s", id)
 			}
 			seenSchemas[id] = true
-			if err := checkEnumCaptureResult(id, schema.Result); err != nil {
+			if err := checkEnumCaptureResult(id, schema.Result, ""); err != nil {
 				return fixture, err
 			}
 		}
@@ -242,8 +264,12 @@ func parseEnumCaptureFixture(data []byte) (enumCaptureFixture, error) {
 				return fixture, fmt.Errorf("invalid or duplicate case %s", id)
 			}
 			seenCases[id] = true
+			secondary := ""
 			switch c.Operation {
 			case "EventSerializer.Deserialize", "EventSerializer.Serialize":
+				if c.Operation == "EventSerializer.Deserialize" {
+					secondary = "reserialize"
+				}
 				if c.SchemaAPI != "" {
 					return fixture, fmt.Errorf("unexpected schemaAPI %s", id)
 				}
@@ -251,6 +277,7 @@ func parseEnumCaptureFixture(data []byte) (enumCaptureFixture, error) {
 					return fixture, fmt.Errorf("missing reserialize %s", id)
 				}
 			case "ExpandoObjectConverter.ToExpandoObject/ToJsonObject":
+				secondary = "toJson"
 				if !seenSchemas[c.DeclaredType+"/"+c.SchemaAPI] {
 					return fixture, fmt.Errorf("unlinked schemaAPI %s", id)
 				}
@@ -260,7 +287,7 @@ func parseEnumCaptureFixture(data []byte) (enumCaptureFixture, error) {
 			default:
 				return fixture, fmt.Errorf("unexpected operation %s", id)
 			}
-			if err := checkEnumCaptureResult(id, c.Result); err != nil {
+			if err := checkEnumCaptureResult(id, c.Result, secondary); err != nil {
 				return fixture, err
 			}
 		}
@@ -268,26 +295,32 @@ func parseEnumCaptureFixture(data []byte) (enumCaptureFixture, error) {
 	return fixture, nil
 }
 
-func checkEnumCaptureResult(id string, result enumCaptureResult) error {
+func checkEnumCaptureResult(id string, result enumCaptureResult, secondary string) error {
 	switch result.Status {
 	case "accepted":
 		if !json.Valid(result.Output) || result.Category != "" || result.InnerCategory != nil {
 			return fmt.Errorf("invalid success %s", id)
 		}
 	case "error":
-		if !strings.HasPrefix(result.Category, "System.") || len(result.Output) != 0 || result.Reserialize != nil || result.ToJSON != nil {
+		if !strings.HasPrefix(result.Category, "System.") || len(result.Output) != 0 || result.reserializePresent || result.toJSONPresent {
 			return fmt.Errorf("invalid error %s", id)
 		}
 	default:
 		return fmt.Errorf("missing status %s", id)
 	}
+	if result.reserializePresent && secondary != "reserialize" {
+		return fmt.Errorf("unexpected reserialize %s", id)
+	}
+	if result.toJSONPresent && secondary != "toJson" {
+		return fmt.Errorf("unexpected toJson %s", id)
+	}
 	if result.Reserialize != nil {
-		if err := checkEnumCaptureResult(id+"/reserialize", *result.Reserialize); err != nil {
+		if err := checkEnumCaptureResult(id+"/reserialize", *result.Reserialize, ""); err != nil {
 			return err
 		}
 	}
 	if result.ToJSON != nil {
-		if err := checkEnumCaptureResult(id+"/toJson", *result.ToJSON); err != nil {
+		if err := checkEnumCaptureResult(id+"/toJson", *result.ToJSON, ""); err != nil {
 			return err
 		}
 	}
