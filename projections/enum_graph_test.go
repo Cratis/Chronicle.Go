@@ -54,6 +54,39 @@ func TestFinalEnumGraphRefusesSparseLiteralWithAnyHandlerShape(t *testing.T) {
 	}
 }
 
+func TestFinalEnumGraphRefusesWildcardEveryRegardlessOfExpression(t *testing.T) {
+	codecs, err := serialization.NewCodecs(serialization.Enum(serialization.EnumMember[graphEnum]{Name: "Zero", Value: 0}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	model, err := readmodels.Define[graphEnumModel](readmodels.WithCodecs(codecs))
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := events.NewCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range []expressionKind{pathExpression, literalExpression, nullExpression} {
+		d := &definition{id: "wildcard-final", model: model.Descriptor(), initialState: "{}", subscribesAll: true,
+			nodeDefinition: nodeDefinition{noAuto: true, all: []write{{path: "Value", expression: expression{kind: kind, text: "Value"}}}}}
+		// Rebind clones node mappings and must retain actual root wildcard metadata.
+		_, reboundErr := (Definition{data: d}).Rebind(model.Descriptor(), catalog, catalog)
+		for _, err := range []error{validateEnumGraph(d, catalog), reboundErr} {
+			var located *DeclarationError
+			if !errors.Is(err, faults.ErrInvalidConfiguration) || !errors.As(err, &located) || located.Path != "Value" || located.GoField != "Value" || located.Directive != "every" {
+				t.Fatalf("wildcard final graph kind %d: %v", kind, err)
+			}
+		}
+		if kind == pathExpression {
+			d.subscribesAll = false
+			if err := validateEnumGraph(d, catalog); err != nil {
+				t.Fatalf("handlerless Every without wildcard: %v", err)
+			}
+		}
+	}
+}
+
 func TestFinalEnumGraphRefusesGeneratedJoinEvenWithoutAutoMap(t *testing.T) {
 	codecs, err := serialization.NewCodecs(serialization.Enum(serialization.EnumMember[graphEnum]{Name: "Zero", Value: 0}))
 	if err != nil {

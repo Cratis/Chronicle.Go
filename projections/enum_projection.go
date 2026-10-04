@@ -14,8 +14,18 @@ import (
 // variant handlers have been lowered. Generated joins must obey the same enum
 // correlation boundary as explicit joins, even with AutoMap disabled.
 func validateEnumGraph(d *definition, catalog *events.Catalog) error {
+	fields := d.model.Fields()
+	// All and Every share the root wire dictionary. Any All declaration makes
+	// every root mapping apply to unknown and future event profiles as well.
+	if d.subscribesAll {
+		for _, w := range d.all {
+			if target, ok := enumMappingField(fields, w.path); ok && target.IsEnum() {
+				return enumMappingFailure(d, target, events.TypeRef{}, "every", "all-event enum mappings cannot validate unknown event profiles")
+			}
+		}
+	}
 	noAuto := d.noAuto && !d.inheritAuto
-	return validateEnumNode(d, &d.nodeDefinition, d.model.Fields(), catalog, noAuto, noAuto)
+	return validateEnumNode(d, &d.nodeDefinition, fields, catalog, noAuto, noAuto)
 }
 
 func validateEnumNode(d *definition, n *nodeDefinition, fields []serialization.Field, catalog *events.Catalog, noAuto, projectionNoAuto bool) error {

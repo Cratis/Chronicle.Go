@@ -112,7 +112,11 @@ AutoMap; explicit enum copies still require safe source expressions. Sparse
 `EveryMap` checks expression safety even when the subscribed event lacks the
 source property. Naming rebinding can use an unsubscribed catalog event, so the
 check runs again on the final expression. Safe missing property paths remain
-allowed and do not add subscriptions.
+allowed and do not add subscriptions. Root enum `Every` mappings are supported
+only without an all-event subscription: adding an ordinary `All` mapping also
+makes the shared dictionary apply to unknown and future event types, so this
+combination is refused regardless of declaration order or `NoAutoMap`. Ordinary
+non-enum `All` mappings remain supported.
 
 Direct root JSON names such as `json:"State.Value"` are admitted by serialization,
 but cannot be used in enum-involved projection mappings: the kernel treats the
