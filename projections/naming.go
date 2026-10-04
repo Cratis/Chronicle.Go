@@ -44,6 +44,9 @@ func (d Definition) Rebind(model readmodels.Descriptor, before, after *events.Ca
 	if r.err != nil {
 		return Definition{}, r.err
 	}
+	if err := validateEnumGraph(&copy, after); err != nil {
+		return Definition{}, err
+	}
 	return Definition{data: &copy}, nil
 }
 
