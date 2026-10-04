@@ -108,7 +108,7 @@ var kernelArithmeticPath = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9.]*$`)
 func validateLiteral(e expression, target serialization.Field) error {
 	if e.kind == nullExpression {
 		if !nullableAssignment(target) {
-			return invalid("null requires a nullable scalar pointer")
+			return invalid("null requires a supported nullable pointer")
 		}
 		return nil
 	}

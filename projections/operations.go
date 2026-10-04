@@ -31,9 +31,12 @@ func Count[M, E, V any](b *FromBuilder[M, E], target Field[M, V]) {
 	b.add(target.path, reflect.TypeFor[V](), nil, expression{kind: countExpression}, "count")
 }
 
-// Clear assigns null to a nullable scalar pointer. Direct nullable slice/map
-// clears fail with ErrUnsupported: the pinned kernel omits nulls on materialized
-// reads. This is not an empty collection or child/nested removal.
+// Clear assigns null to a nullable scalar pointer or a direct compiled
+// slice/string-keyed map pointer. Collection pointers preserve typed nil versus
+// empty in the C# nullable collection profile without initializers; raw materialized
+// reads may omit the cleared property. Bare slices/maps, fixed arrays, interfaces,
+// structural objects and collection-element paths are excluded. This is not an
+// empty collection or child/nested removal.
 func Clear[M, E, V any](b *FromBuilder[M, E], target Field[M, V]) {
 	b.add(target.path, reflect.TypeFor[V](), nil, expression{kind: nullExpression}, "clear")
 }
