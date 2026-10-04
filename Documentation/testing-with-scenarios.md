@@ -146,6 +146,56 @@ original registry is unchanged. Models with explicitly conflicting producer/sink
 metadata still fail normal production validation. `Initial: &model` supports
 reducer initial state; projection initial state is explicitly unsupported.
 
+### Reject unrelated projection seeds
+
+Opt in when seeding an unrelated registered event should reveal a test mistake:
+
+```go
+scenario := chronicletest.NewReadModelScenario[ProjectedAccount](t,
+    kernelConfig, chronicletest.ReadModelOptions[ProjectedAccount]{
+        StrictEventSubscription: true,
+    })
+if err := scenario.Given(ctx, "account-1", AccountOpened{Name: "Ada"}); err != nil {
+    t.Fatal(err)
+}
+```
+
+This excerpt assumes your registry contains the `ProjectedAccount` projection and
+`AccountOpened`, and `kernelConfig` selects your isolated kernel store. The
+[compiling strict-subscription example](../chronicletest/example_test.go) shows
+registration and checks `errors.Is(err, chronicletest.ErrUnsubscribedEventSeeded)`.
+
+The default is `false`: unrelated registered seeds are still appended and ignored
+by projection processing. With strict mode, `Given` rejects an unsubscribed event
+immediately after registered-type lookup, before its codecs, outgoing providers,
+append or history mutation. The error identifies only the selected projection and
+event type IDs. Unknown event types still return `chronicle.ErrNotRegistered`.
+Reducers ignore the option and retain their existing unsubscribed-event filtering.
+
+**Check every `Given` error.** C# raises its strict-subscription error during lazy
+result processing; Go deliberately raises from its existing error-returning
+`Given`, before remote append. Result reads never reintroduce a rejected seed.
+Earlier successful seeds remain, even when a later item in the same call fails.
+There is no batch rollback or promise that retrying a failed call is safe.
+
+This first strict profile admits only known, unclassified root source-key
+projections: final root `From`/`RemovedWith` membership by event type ID, regardless
+of generation, or pure `All` membership for all registered types. Ordinary `Every`
+mappings do not subscribe additional event types. Inline replacement uses its
+selected compiled definition, not the original producer. Unsupported
+relationships, children/nested definitions, custom keys, derivative-group wire
+forms, variants (even those with ordinary-looking wire fields), protected models
+or subscribed events, and mixed explicit-plus-`All` subscriptions fail before
+connecting. Projection initial state and nonempty defaults remain refused;
+`SeedReadModel` is not a projected-state overlay.
+
+Strict seed checking does not prove observer attachment, partition/correlation
+routing, retries, durability or distributed completion. The pinned-kernel sibling
+checks persisted history and the synchronous bounded replay result, not asynchronous
+replay-job completion; [#60](https://github.com/Cratis/Chronicle.Go/issues/60)
+remains an unknown completion outcome. Projection seeding still serializes before
+production `Append` serializes again; this option does not change that pipeline.
+
 `SeedReadModel(key, value)` on read-model and reactor scenarios supplies a separate
 snapshot for `ReadModels()` dependency reads. It does not seed projected state or
 write a sink. Reducer constructors can receive explicit collaborators through

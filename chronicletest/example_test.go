@@ -5,6 +5,7 @@ package chronicletest_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	chronicle "github.com/cratis/chronicle.go"
@@ -101,6 +102,45 @@ func ExampleReadModelScenario() {
 	}
 	fmt.Println(instance.Exists, instance.Value.Name)
 	// Output: true Grace
+}
+
+// This example requires a running development kernel; it is compile-checked.
+func ExampleReadModelOptions_strictEventSubscription() {
+	ctx := context.Background()
+	registry := chronicle.NewRegistry()
+	if _, err := chronicle.RegisterEvent[AccountOpened](registry); err != nil {
+		panic(err)
+	}
+	if _, err := chronicle.RegisterEvent[WelcomeRequested](registry); err != nil {
+		panic(err)
+	}
+	if _, err := chronicle.RegisterReadModel[ProjectedAccount](registry); err != nil {
+		panic(err)
+	}
+	scenario, err := chronicletest.OpenReadModelScenario[ProjectedAccount](ctx, chronicletest.Config{
+		Registry: registry, Engine: chronicletest.Kernel,
+		ConnectionString: "chronicle://localhost:35000", Development: true,
+	}, chronicletest.ReadModelOptions[ProjectedAccount]{StrictEventSubscription: true})
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := scenario.Close(); err != nil {
+			panic(err)
+		}
+	}()
+	if err := scenario.Given(ctx, "account-1", AccountOpened{Name: "Ada"}); err != nil {
+		panic(err)
+	}
+	// Given, not result access, reports the mistake before this event is appended.
+	if err := scenario.Given(ctx, "account-1", WelcomeRequested{Message: "unrelated"}); !errors.Is(err, chronicletest.ErrUnsubscribedEventSeeded) {
+		panic("expected an unsubscribed event error")
+	}
+	instance, err := scenario.InstanceFor(ctx, "account-1")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(instance.Value.Name) // Ada; the rejected event is never replayed.
 }
 
 func ExampleReactorScenario() {
