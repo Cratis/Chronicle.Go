@@ -6,7 +6,6 @@ package projections
 import (
 	"encoding/json"
 	"reflect"
-	"time"
 
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/serialization"
@@ -172,12 +171,6 @@ func numeric(field serialization.Field) bool {
 }
 
 func contextField(path string) (serialization.Field, bool) {
-	field := serialization.Field{Type: reflect.TypeFor[string](), Scalar: serialization.String}
-	switch path {
-	case "occurred":
-		field.Type, field.Format = reflect.TypeFor[time.Time](), "date-time"
-	case "sequenceNumber", "eventType.generation", "observationState":
-		field.Type, field.Scalar = reflect.TypeFor[int64](), serialization.Integer
-	}
-	return field, validateContext(path, field) == nil
+	field, err := resolveContext(path)
+	return field, err == nil && field.Scalar != serialization.NotScalar
 }

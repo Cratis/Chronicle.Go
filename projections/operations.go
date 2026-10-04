@@ -31,8 +31,12 @@ func Count[M, E, V any](b *FromBuilder[M, E], target Field[M, V]) {
 	b.add(target.path, reflect.TypeFor[V](), nil, expression{kind: countExpression}, "count")
 }
 
-// Clear assigns null to a nullable scalar pointer. Collection clears are rejected
-// because collection serialization normalizes nil; use RemovedWith for children.
+// Clear assigns null to a nullable scalar pointer or a direct compiled
+// slice/string-keyed map pointer. Collection pointers preserve typed nil versus
+// empty in the C# nullable collection profile without initializers; raw materialized
+// reads may omit the cleared property. Bare slices/maps, fixed arrays, interfaces,
+// structural objects and collection-element paths are excluded. This is not an
+// empty collection or child/nested removal.
 func Clear[M, E, V any](b *FromBuilder[M, E], target Field[M, V]) {
 	b.add(target.path, reflect.TypeFor[V](), nil, expression{kind: nullExpression}, "clear")
 }
@@ -73,7 +77,8 @@ func EveryMap[M, V any](b *EveryBuilder[M], target Field[M, V], source string) {
 	b.writes = append(b.writes, write{path: target.path, targetType: reflect.TypeFor[V](), expression: expression{kind: pathExpression, text: source}, provenance: Provenance{FrontEnd: "fluent", Path: target.path, Directive: "every", Offset: -1}})
 }
 
-// EveryContext maps a scalar kernel EventContext property for Every or All.
+// EveryContext maps an admitted kernel EventContext property for Every or All.
+// Whole Tags supports string slices; correlation keys remain scalar-only.
 func EveryContext[M, V any](b *EveryBuilder[M], target Field[M, V], path string) {
 	b.writes = append(b.writes, write{path: target.path, targetType: reflect.TypeFor[V](), expression: expression{kind: contextExpression, text: path}, provenance: Provenance{FrontEnd: "fluent", Path: target.path, Directive: "every", Offset: -1}})
 }

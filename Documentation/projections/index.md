@@ -115,9 +115,9 @@ field's actual type in `Path`; `Build` validates compatibility, not arbitrary co
 | --- | --- |
 | `set(E)` | Assign the event property matching this field's serialized name |
 | `set(E,from=details.name)` | Assign an exact serialized event path |
-| `context(E,from=occurred)` | Assign a kernel EventContext scalar; also subscribes to E |
+| `context(E,from=occurred)` / `context(E,from=Tags)` | Assign an admitted kernel EventContext property; whole Tags supports string slices; also subscribes to E |
 | `value(E,value="active")` | Assign a typed JSON scalar literal |
-| `value(E,value=null)` / `clear(E)` | Clear a nullable scalar pointer with `$null` |
+| `value(E,value=null)` / `clear(E)` | Clear a nullable scalar or direct compiled slice/string-keyed map pointer with `$null` |
 | `add(E,from=amount)` / `subtract(E,from=amount)` | Numeric running total; omitted `from` uses this field's serialized name |
 | `increment(E)` / `decrement(E)` / `count(E)` | Kernel `$increment`, `$decrement`, `$count`; optional `key=value("total")` |
 | `every(from=name)` / `every(context=occurred)` | Map existing subscriptions without discovering events |
@@ -138,6 +138,51 @@ parentheses, quotes, newlines and characters above U+FFFF are rejected rather th
 misencoded. Property paths exactly equal to `true`, `True`, `false` or `False` are
 also rejected: the kernel resolves those as boolean literals, not event fields. `null`
 is not an empty string or zero value; use pointers for nullable scalars.
+Whole context `Tags` (or `tags`) maps to a slice of non-nullable, unformatted
+strings, including `[]events.Tag`, `[]string` and their pointer forms. It preserves
+order and maps empty tags to `[]`, independently of any conflicting payload field.
+For example, a registered model field can declare:
+
+```go
+Labels *[]events.Tag `json:"labels" chronicle:"no-auto;context(AuditStamped,from=Tags)"`
+```
+
+The equivalent fluent write inside an `AuditStamped` subscription is
+`projections.Context(from, projections.Path[Audit, *[]events.Tag]("labels"), "Tags")`.
+The model and event must already be registered. `no-auto` and `not-projected`
+exclude AutoMap only; explicit context and payload assignments still work.
+Every/All context mappings use the same validation. Context keys remain scalar-only.
+Other complex properties (`CausedBy`, `EventType`, `NamedTags`, `Causation`) fail
+with a located `ErrUnsupported`; unknown paths and incompatible types remain
+configuration errors. Paths are not arbitrary functions, indexes or expressions.
+
+Startup projections admit `clear`/`Clear` and
+`value(...,value=null)`/`Value(...,nil)` on direct compiled pointers to slices and
+string-keyed maps, as well as nullable scalar pointers. All emit `$null`.
+The ordinary Go pointer-container profile preserves **typed nil versus empty**:
+after a processed clear, the document survives and its collection pointers are nil,
+not restored to schema defaults, stale values, `[]` or `{}`. Materialized raw reads
+may omit the properties or carry explicit JSON null; the pinned kernel omits them.
+No missing-to-null overlay is added. Present raw null is a stronger, separate
+capability, not required for this typed profile.
+
+This follows C# nullable collection behavior for the ordinary no-initializer
+profile, not universal equivalence for constructors/default property initializers
+or configured serializers. Bare slices/maps are not nullable declarations; fixed
+arrays, interfaces, structural objects and collection-element paths are not direct
+clears. Existing structural child/nested removals are unchanged. Runtime
+`RegisterProjection` still refuses collection models before publication/RPC; use
+the startup registry. Other complex context sources remain
+[partial](../parity.md).
+
+Pointers preserve typed nil versus empty collections, but cannot distinguish
+missing JSON from explicit null: both decode to a nil pointer. Model serialization
+omits both nil outer pointers and pointers to nil slices/maps; pointers to empty
+collections encode `[]`/`{}`. A default projection request is still `{}` and
+registration creates no instance. That request is not evidence that stored
+properties remain absent: kernel initial-state construction seeds array-schema
+properties with empty arrays.
+
 Arithmetic embeds paths in a stricter kernel regex: ASCII letters/digits and dots,
 with an underscore permitted only as the first character. Even a legal JSON
 property such as `amount_delta` cannot be used inside `$add`/`$subtract`.

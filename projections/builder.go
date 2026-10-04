@@ -79,7 +79,11 @@ func EventSourceID[M, E, V any](builder *FromBuilder[M, E], target Field[M, V]) 
 	builder.add(target.path, reflect.TypeFor[V](), nil, expression{kind: sourceExpression}, "source")
 }
 
-// Value snapshots a typed scalar literal. A nil scalar pointer emits $null.
+// Value snapshots a typed scalar literal. Nil nullable scalar pointers and direct
+// compiled slice/string-keyed map pointers emit $null. Collection pointers preserve
+// typed nil versus empty in the C# nullable collection profile without initializers;
+// raw materialized reads may omit the cleared property. Bare slices/maps, fixed
+// arrays, interfaces, structural objects and collection-element paths are excluded.
 // Unsupported values and kernel-unrepresentable literals fail Build/Compile.
 func Value[M, E, V any](builder *FromBuilder[M, E], target Field[M, V], value V) {
 	expression := expression{kind: invalidExpression}
