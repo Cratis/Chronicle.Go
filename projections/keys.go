@@ -166,6 +166,9 @@ func parsedKey(v declarations.Value) expression {
 }
 
 func numeric(field serialization.Field) bool {
+	if field.IsEnum() {
+		return false
+	}
 	scalar, ok := scalarRepresentation(field)
 	return ok && (scalar == serialization.Integer || scalar == serialization.Number)
 }

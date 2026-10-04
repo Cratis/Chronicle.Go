@@ -40,6 +40,7 @@ type node struct {
 	schema        map[string]any
 	scalar        bool
 	concept       *concepts.Representation
+	enum          *enumDefinition
 	reference     *node
 	readModelRoot bool
 	family        bool
@@ -127,10 +128,16 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	if err != nil {
 		return nil, err
 	}
+	if err := validateEnumPlacement(root); err != nil {
+		return nil, err
+	}
 	var families []*node
 	seen := map[reflect.Type]bool{}
 	if config.Codecs != nil {
 		for _, registration := range config.Codecs.ordered {
+			if registration.kind != derivedCodec {
+				continue
+			}
 			if seen[registration.family] {
 				continue
 			}
@@ -245,6 +252,10 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 		}
 		return n, nil
 	}
+	if definition := state.codecs.enumeration(typ); definition != nil {
+		n.enum, n.schema = definition, definition.schema()
+		return n, nil
+	}
 	if representation, ok, err := concepts.Underlying(typ); err != nil {
 		return nil, fmt.Errorf("%w: %w", faults.ErrInvalidConfiguration, err)
 	} else if ok {
@@ -346,7 +357,7 @@ func (n *node) compileFields(state *compileState, policy NamingPolicy, readModel
 			}
 		}
 		properties[name] = value.schema
-		if !candidate.optional && !entry.omitEmpty && !entry.omitZero && f.Type.Kind() != reflect.Pointer && f.Type.Kind() != reflect.Map && f.Type.Kind() != reflect.Slice && f.Type.Kind() != reflect.Interface {
+		if hasEnum(value) || !candidate.optional && !entry.omitEmpty && !entry.omitZero && f.Type.Kind() != reflect.Pointer && f.Type.Kind() != reflect.Map && f.Type.Kind() != reflect.Slice && f.Type.Kind() != reflect.Interface {
 			required = append(required, name)
 		}
 		n.fields = append(n.fields, entry)

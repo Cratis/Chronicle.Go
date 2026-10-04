@@ -10,6 +10,7 @@ import (
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // Field describes a serialized path and its declared value type. Validation never
@@ -27,7 +28,10 @@ func Path[T, V any](path string) Field[T, V] {
 
 // Builder authors one fluent projection. It is not safe for concurrent mutation.
 // Build returns an immutable snapshot; later builder changes cannot affect it.
-type Builder[M any] struct{ data *declaration }
+type Builder[M any] struct {
+	data   *declaration
+	fields []serialization.Field
+}
 
 // NewBuilder creates a fluent builder. Empty id uses the model's observer identity
 // when set, otherwise the full model type name.
@@ -37,17 +41,20 @@ func NewBuilder[M any](id string, model readmodels.Model[M], options ...Option) 
 	if id != "" {
 		d.id = id
 	}
-	return &Builder[M]{data: d}
+	return &Builder[M]{data: d, fields: model.Descriptor().Fields()}
 }
 
 // FromBuilder configures mappings for one event. Retaining it after From returns
 // is harmless: From snapshots its mappings before returning.
-type FromBuilder[M, E any] struct{ subscription subscription }
+type FromBuilder[M, E any] struct {
+	subscription subscription
+	fields       []serialization.Field
+}
 
 // From subscribes and invokes define exactly once. Nil define means AutoMap only.
 // Generic operations are package functions because Go has no generic methods.
 func From[M, E any](builder *Builder[M], event events.Type[E], define func(*FromBuilder[M, E]), options ...FromOption) {
-	from := &FromBuilder[M, E]{subscription: newSubscription(event.Descriptor(), options)}
+	from := &FromBuilder[M, E]{subscription: newSubscription(event.Descriptor(), options), fields: builder.fields}
 	if define != nil {
 		define(from)
 	}
@@ -87,7 +94,20 @@ func EventSourceID[M, E, V any](builder *FromBuilder[M, E], target Field[M, V]) 
 // Unsupported values and kernel-unrepresentable literals fail Build/Compile.
 func Value[M, E, V any](builder *FromBuilder[M, E], target Field[M, V], value V) {
 	expression := expression{kind: invalidExpression}
-	data, err := json.Marshal(value)
+	var data []byte
+	var err error
+	field, ok := serialization.FieldAt(builder.fields, target.path)
+	if !ok || validateTarget(field, reflect.TypeFor[V]()) != nil {
+		// Keep the ordinary located Build/Compile diagnostic, but never execute
+		// application serialization hooks for an invalid target descriptor.
+		builder.add(target.path, reflect.TypeFor[V](), nil, expression, "value")
+		return
+	}
+	if field.IsEnum() {
+		data, err = field.Marshal(value)
+	} else {
+		data, err = json.Marshal(value)
+	}
 	if err == nil {
 		// Reuse the versioned JSON scalar parser, not a separate quoting grammar.
 		parsed, parseErr := declarations.Parse(declarations.V1, "value(E,value="+string(data)+")")

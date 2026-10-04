@@ -90,6 +90,7 @@ func appendCustomer(ctx context.Context) (err error) {
 - [Connecting and lifecycle](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/connection-strings/index.md)
 - [Webhook authentication evidence and limits](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/integrations/authentication-evidence.md)
 - [Event types](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/event-types.md)
+- [Declared Int32 enum codecs](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/enum-codecs.md)
 - [Appending and concurrency](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/appending-events.md)
 - [Atomic batches](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/batches.md)
 - [Reading events and history](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/reading-events.md)

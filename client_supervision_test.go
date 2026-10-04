@@ -137,12 +137,12 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 		seedcontracts.RegisterEventSeedingServer(server, k.seeding)
 	}
 	served := make(chan struct{})
-	go func() {
-		defer close(served)
-		if err := server.Serve(listener); err != nil {
-			t.Error(err)
-		}
-	}()
+	t.Cleanup(func() {
+		server.Stop()
+		_ = listener.Close()
+		<-served
+	})
+	go serveSupervisionFixture(server, listener, served, t.Error)
 	conn, err := grpc.NewClient("passthrough:///supervision", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }), grpc.WithStreamInterceptor(k.streamInterceptor))
 	if err != nil {
 		t.Fatal(err)
@@ -151,9 +151,6 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 		if err := conn.Close(); err != nil {
 			t.Error(err)
 		}
-		server.Stop()
-		_ = listener.Close()
-		<-served
 	})
 	registry := NewRegistry()
 	if _, err = RegisterEvent[lifecycleEvent](registry); err != nil {
@@ -172,6 +169,14 @@ func supervisionClient(t *testing.T, k *supervisedKernel, options ...ClientOptio
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	t.Cleanup(cancel)
 	return client, ctx
+}
+
+func serveSupervisionFixture(server *grpc.Server, listener net.Listener, served chan struct{}, report func(...any)) {
+	defer close(served)
+	// Cleanup can stop the server before this goroutine starts serving.
+	if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
+		report(err)
+	}
 }
 
 func awaitSignal(t *testing.T, ctx context.Context, signal <-chan struct{}) {

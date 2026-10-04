@@ -22,6 +22,8 @@ type Property[T any] string
 // properties pass through in the kernel and are filtered by the target schema.
 // MapValues, when supplied, runs before direction-specific operations, so the
 // last directional operation on a property wins. No callback runs on payloads.
+// Declared serialization.Enum/Flags endpoints are not supported; authoring and
+// catalog compilation reject them before generic JSON can bypass their codecs.
 type Migration[Upgrade, Previous any] struct {
 	Upcast    func(*MigrationBuilder[Upgrade, Previous])
 	Downcast  func(*MigrationBuilder[Previous, Upgrade])
@@ -29,8 +31,9 @@ type Migration[Upgrade, Previous any] struct {
 }
 
 // ValueMapping declares a previous/source value followed by its upgraded/target
-// value. Values use their JSON representation (including numeric Go enums and
-// Fundamentals concepts). Inputs are serialized and copied during registration.
+// value. Values use their JSON representation (including ordinary named integers
+// and Fundamentals concepts). Inputs are serialized and copied during registration.
+// Closed enum codec endpoints are explicitly unsupported.
 type ValueMapping struct{ From, To any }
 
 type valueMapping struct {
@@ -137,6 +140,9 @@ func (d MigrationDeclaration) Previous() Descriptor { return d.previous }
 func DefineMigration[U, P any](upgrade Type[U], previous Type[P], migration Migration[U, P]) (MigrationDeclaration, error) {
 	if migration.Upcast == nil || migration.Downcast == nil {
 		return MigrationDeclaration{}, fmt.Errorf("%w: both migration directions are required", faults.ErrInvalidConfiguration)
+	}
+	if err := rejectEnumMigration(upgrade.Descriptor(), previous.Descriptor()); err != nil {
+		return MigrationDeclaration{}, err
 	}
 	maps := &ValueMapBuilder[U, P]{}
 	if migration.MapValues != nil {
