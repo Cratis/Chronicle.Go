@@ -20,6 +20,7 @@ import (
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 )
 
 type ContextAuditStamped struct {
@@ -30,19 +31,15 @@ type ContextAuditStamped struct {
 type ContextAuditCleared struct {
 	Marker string `json:"marker"`
 }
+type ContextAuditInitialized struct {
+	Marker string `json:"marker"`
+}
 type ContextAudit struct {
 	ID         uuid.UUID          `json:"id" chronicle:"key"`
 	Labels     *[]events.Tag      `json:"labels" chronicle:"no-auto;context(ContextAuditStamped,from=Tags);clear(ContextAuditCleared)"`
 	Attributes *map[string]string `json:"attributes" chronicle:"not-projected;set(ContextAuditStamped,from=attributes);clear(ContextAuditCleared)"`
 	CorrID     uuid.UUID          `json:"corrId" chronicle:"context(ContextAuditStamped,from=correlationId)"`
-	Marker     string             `json:"marker"`
-}
-type ContextStampOnly struct {
-	ID         uuid.UUID          `json:"id" chronicle:"key"`
-	Labels     *[]events.Tag      `json:"labels" chronicle:"no-auto;context(ContextAuditStamped,from=Tags)"`
-	Attributes *map[string]string `json:"attributes" chronicle:"not-projected;set(ContextAuditStamped,from=attributes)"`
-	CorrID     uuid.UUID          `json:"corrId" chronicle:"context(ContextAuditStamped,from=correlationId)"`
-	Marker     string             `json:"marker"`
+	Marker     string             `json:"marker" chronicle:"set(ContextAuditInitialized)"`
 }
 type ContextFluentAudit struct {
 	ID         uuid.UUID          `json:"id" chronicle:"key"`
@@ -54,34 +51,22 @@ type ContextFluentAudit struct {
 
 func TestKernelProjectionContextCollectionClear(t *testing.T) {
 	f := newKernelFixture(t)
-	// The combined stamp/clear profile must be refused atomically at startup.
-	// A pinned-kernel probe processed both clears but returned absent properties,
-	// not explicit JSON null; no new collection-clear parity is claimed here.
-	refused := chronicle.NewRegistry()
-	if _, err := chronicle.RegisterEvent[ContextAuditStamped](refused); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := chronicle.RegisterEvent[ContextAuditCleared](refused); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := chronicle.RegisterReadModel[ContextAudit](refused); err != nil {
-		t.Fatal(err)
-	}
-	client, err := chronicle.NewClient(chronicle.WithRegistry(refused))
-	var located *projections.DeclarationError
-	if client != nil {
-		_ = client.Close()
-		t.Fatal("unsupported startup profile returned a client")
-	}
-	if !errors.Is(err, chronicle.ErrUnsupported) || !errors.As(err, &located) || located.Path != "labels" || located.Directive != "clear" {
-		t.Fatalf("unlocated refusal: %v", err)
-	}
+	// This ordinary Go pointer-container profile follows C# typed nullability,
+	// not the stronger promise of present raw JSON null. No read overlay is used.
 	registry := chronicle.NewRegistry()
 	stamped, err := chronicle.RegisterEvent[ContextAuditStamped](registry)
 	if err != nil {
 		t.Fatal(err)
 	}
-	bound, err := chronicle.RegisterReadModel[ContextStampOnly](registry)
+	cleared, err := chronicle.RegisterEvent[ContextAuditCleared](registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialized, err := chronicle.RegisterEvent[ContextAuditInitialized](registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound, err := chronicle.RegisterReadModel[ContextAudit](registry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,6 +80,13 @@ func TestKernelProjectionContextCollectionClear(t *testing.T) {
 		projections.Map(from, projections.Path[ContextFluentAudit, *map[string]string]("attributes"), projections.Path[ContextAuditStamped, *map[string]string]("attributes"))
 		projections.Context(from, projections.Path[ContextFluentAudit, uuid.UUID]("corrId"), "correlationId")
 	})
+	projections.From(builder, cleared, func(from *projections.FromBuilder[ContextFluentAudit, ContextAuditCleared]) {
+		projections.Clear(from, projections.Path[ContextFluentAudit, *[]events.Tag]("labels"))
+		projections.Clear(from, projections.Path[ContextFluentAudit, *map[string]string]("attributes"))
+	})
+	projections.From(builder, initialized, func(from *projections.FromBuilder[ContextFluentAudit, ContextAuditInitialized]) {
+		projections.Map(from, projections.Path[ContextFluentAudit, string]("marker"), projections.Path[ContextAuditInitialized, string]("marker"))
+	})
 	declaration, err := builder.Build()
 	if err != nil {
 		t.Fatal(err)
@@ -102,18 +94,25 @@ func TestKernelProjectionContextCollectionClear(t *testing.T) {
 	if err := registry.AddProjection(declaration); err != nil {
 		t.Fatal(err)
 	}
-	catalog, err := events.NewCatalog(stamped.Descriptor())
+	catalog, err := events.NewCatalog(stamped.Descriptor(), cleared.Descriptor(), initialized.Descriptor())
 	if err != nil {
 		t.Fatal(err)
 	}
+	var previous proto.Message
 	for _, decl := range []projections.Declaration{projections.ModelBound(bound), declaration} {
 		definition, err := projections.Compile(decl, catalog)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if definition.KernelDefinition().InitialModelState != "{}" {
+		wire := definition.KernelDefinition()
+		if wire.InitialModelState != "{}" {
 			t.Fatal("default request changed")
 		}
+		wire.Identifier, wire.ReadModel = "same-projection", "same-model"
+		if previous != nil && !proto.Equal(previous, wire) {
+			t.Fatalf("startup front ends differ: %v / %v", previous, wire)
+		}
+		previous = wire
 	}
 	store, err := f.client(registry).EventStore(f.ctx, f.storeName)
 	if err != nil {
@@ -127,24 +126,58 @@ func TestKernelProjectionContextCollectionClear(t *testing.T) {
 			t.Fatalf("registration created an instance: %+v %v", instance, err)
 		}
 	}
+	// Registration absence and the actual initial array seed are separate from
+	// clear-state evidence: the kernel seeds labels=[] only when creating a row.
+	appendSuccessfully(t, f.ctx, store, events.SourceID(source.String()), ContextAuditInitialized{Marker: "initial-array"})
+	initialLeft := awaitProjection(t, f.ctx, readmodels.For(store.ReadModels(), bound), readmodels.Key(source.String()), func(v ContextAudit) bool { return v.Marker == "initial-array" })
+	initialRight := awaitProjection(t, f.ctx, readmodels.For(store.ReadModels(), fluent), readmodels.Key(source.String()), func(v ContextFluentAudit) bool { return v.Marker == "initial-array" })
+	if !initialLeft.Exists || !initialRight.Exists || initialLeft.Value.ID != source || initialRight.Value.ID != source || initialLeft.Value.Labels == nil || initialRight.Value.Labels == nil || len(*initialLeft.Value.Labels) != 0 || len(*initialRight.Value.Labels) != 0 {
+		t.Fatal("initial array seed was not observed")
+	}
+	for _, id := range ids {
+		raw, err := store.ReadModels().Get(f.ctx, id, readmodels.Key(source.String()))
+		if err != nil || !raw.Exists {
+			t.Fatalf("initial raw instance: %v %v", raw.Exists, err)
+		}
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(raw.Value, &fields); err != nil {
+			t.Fatal(err)
+		}
+		if string(fields["labels"]) != "[]" || string(fields["marker"]) != `"initial-array"` {
+			t.Fatalf("initial seed/marker: %s", raw.Value)
+		}
+		t.Logf("initial-array %s raw=%s", id, raw.Value)
+	}
 	for _, step := range []struct {
 		marker     string
 		tags       []events.Tag
 		attributes map[string]string
+		clear      bool
 	}{
-		{"nonempty", []events.Tag{"second", "first"}, map[string]string{"source": "payload"}},
-		{"empty", []events.Tag{}, map[string]string{}},
-		{"rewrite", []events.Tag{"new", "ordered"}, map[string]string{"source": "rewrite"}},
+		{"nonempty", []events.Tag{"second", "first"}, map[string]string{"source": "payload"}, false},
+		{"empty", []events.Tag{}, map[string]string{}, false},
+		{"clear", nil, nil, true},
+		{"clear-again", nil, nil, true},
+		{"rewrite", []events.Tag{"new", "ordered"}, map[string]string{"source": "rewrite"}, false},
 	} {
 		t.Run(step.marker, func(t *testing.T) {
-			appendSuccessfully(t, f.ctx, store, events.SourceID(source.String()), ContextAuditStamped{Labels: []events.Tag{"wrong-payload"}, Attributes: &step.attributes, Marker: step.marker}, eventsequences.WithTags(step.tags...), eventsequences.WithCorrelation(metadata.CorrelationID(correlation)))
+			if step.clear {
+				appendSuccessfully(t, f.ctx, store, events.SourceID(source.String()), ContextAuditCleared{Marker: step.marker})
+			} else {
+				appendSuccessfully(t, f.ctx, store, events.SourceID(source.String()), ContextAuditStamped{Labels: []events.Tag{"wrong-payload"}, Attributes: &step.attributes, Marker: step.marker}, eventsequences.WithTags(step.tags...), eventsequences.WithCorrelation(metadata.CorrelationID(correlation)))
+			}
 			// Each marker proves this event was processed, including the empty case.
-			left := awaitProjection(t, f.ctx, readmodels.For(store.ReadModels(), bound), readmodels.Key(source.String()), func(v ContextStampOnly) bool { return v.Marker == step.marker })
+			left := awaitProjection(t, f.ctx, readmodels.For(store.ReadModels(), bound), readmodels.Key(source.String()), func(v ContextAudit) bool { return v.Marker == step.marker })
 			right := awaitProjection(t, f.ctx, readmodels.For(store.ReadModels(), fluent), readmodels.Key(source.String()), func(v ContextFluentAudit) bool { return v.Marker == step.marker })
 			if !left.Exists || !right.Exists || left.Value.ID != source || right.Value.ID != source || left.Value.CorrID != correlation || right.Value.CorrID != correlation {
 				t.Fatal("identity/correlation/document lost")
 			}
-			if left.Value.Labels == nil || left.Value.Attributes == nil || !reflect.DeepEqual(*left.Value.Labels, step.tags) || !reflect.DeepEqual(*left.Value.Attributes, step.attributes) || !reflect.DeepEqual(left.Value.Labels, right.Value.Labels) || !reflect.DeepEqual(left.Value.Attributes, right.Value.Attributes) {
+			if step.clear {
+				// No schema/default restoration after either processed clear marker.
+				if left.Value.Labels != nil || left.Value.Attributes != nil || right.Value.Labels != nil || right.Value.Attributes != nil {
+					t.Fatalf("clear restored a default/stale value: %+v / %+v", left.Value, right.Value)
+				}
+			} else if left.Value.Labels == nil || left.Value.Attributes == nil || !reflect.DeepEqual(*left.Value.Labels, step.tags) || !reflect.DeepEqual(*left.Value.Attributes, step.attributes) || !reflect.DeepEqual(left.Value.Labels, right.Value.Labels) || !reflect.DeepEqual(left.Value.Attributes, right.Value.Attributes) {
 				t.Fatalf("context/payload values = %+v / %+v", left.Value, right.Value)
 			}
 			for _, id := range ids {
@@ -156,10 +189,27 @@ func TestKernelProjectionContextCollectionClear(t *testing.T) {
 				if err := json.Unmarshal(raw.Value, &fields); err != nil {
 					t.Fatal(err)
 				}
-				for _, path := range []string{"id", "corrId", "marker", "labels", "attributes"} {
+				var retained struct {
+					ID     uuid.UUID `json:"id"`
+					CorrID uuid.UUID `json:"corrId"`
+					Marker string    `json:"marker"`
+				}
+				if err := json.Unmarshal(raw.Value, &retained); err != nil || retained.ID != source || retained.CorrID != correlation || retained.Marker != step.marker {
+					t.Fatalf("raw identity/correlation/processed marker lost: %s %v", raw.Value, err)
+				}
+				t.Logf("%s %s raw=%s", step.marker, id, raw.Value)
+				for _, path := range []string{"id", "corrId", "marker"} {
 					if _, present := fields[path]; !present {
 						t.Fatalf("missing %s in %s", path, raw.Value)
 					}
+				}
+				if step.clear {
+					for _, path := range []string{"labels", "attributes"} {
+						if value, present := fields[path]; present && string(value) != "null" {
+							t.Fatalf("clear requires omitted or null %s, got %s", path, raw.Value)
+						}
+					}
+					continue
 				}
 				labels, err := json.Marshal(step.tags)
 				if err != nil {

@@ -54,11 +54,12 @@ type FluentAudit struct {
 func auditDeclarations(t *testing.T) (projections.Definition, projections.Definition) {
 	t.Helper()
 	stamped := mustEvent[AuditStamped](t, events.WithID("audit-stamped"))
-	catalog, err := events.NewCatalog(stamped.Descriptor())
+	cleared := mustEvent[AuditCleared](t, events.WithID("audit-cleared"))
+	catalog, err := events.NewCatalog(stamped.Descriptor(), cleared.Descriptor())
 	if err != nil {
 		t.Fatal(err)
 	}
-	bound, err := projections.Compile(projections.ModelBound(mustModel[ContextAuditOnly](t, readmodels.WithIdentifier("Example.Audit")), projections.WithIdentifier("Example.AuditProjection")), catalog)
+	bound, err := projections.Compile(projections.ModelBound(mustModel[AuditID](t, readmodels.WithIdentifier("Example.Audit")), projections.WithIdentifier("Example.AuditProjection")), catalog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,6 +68,10 @@ func auditDeclarations(t *testing.T) (projections.Definition, projections.Defini
 		projections.Context(f, projections.Path[FluentAudit, *[]events.Tag]("labels"), "Tags")
 		projections.Map(f, projections.Path[FluentAudit, *map[string]string]("attributes"), projections.Path[AuditStamped, *map[string]string]("attributes"))
 		projections.Context(f, projections.Path[FluentAudit, uuid.UUID]("corrId"), "correlationId")
+	})
+	projections.From(b, cleared, func(f *projections.FromBuilder[FluentAudit, AuditCleared]) {
+		projections.Clear(f, projections.Path[FluentAudit, *[]events.Tag]("labels"))
+		projections.Clear(f, projections.Path[FluentAudit, *map[string]string]("attributes"))
 	})
 	decl, err := b.Build()
 	if err != nil {
@@ -102,7 +107,7 @@ func TestContextCollectionFrontEndsGolden(t *testing.T) {
 	if _, err := chronicle.RegisterEvent[AuditCleared](registry); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chronicle.RegisterReadModel[ContextAuditOnly](registry); err != nil {
+	if _, err := chronicle.RegisterReadModel[AuditID](registry); err != nil {
 		t.Fatal(err)
 	}
 	client, err := chronicle.NewClient(chronicle.WithRegistry(registry))
@@ -119,22 +124,30 @@ type ClearValue struct {
 	Attributes *map[string]string `json:"attributes" chronicle:"value(AuditCleared,value=null)"`
 }
 
-func assertCollectionClearRefusal(t *testing.T, err error, path, directive string) {
+func assertCollectionNullMappings(t *testing.T, definition projections.Definition, paths ...string) {
 	t.Helper()
-	var located *projections.DeclarationError
-	if !errors.Is(err, chronicle.ErrUnsupported) || !errors.As(err, &located) || located.Path != path || located.Directive != directive {
-		t.Fatalf("expected located unsupported collection clear: %v", err)
+	wire := definition.KernelDefinition()
+	if len(wire.From) != 1 {
+		t.Fatalf("null subscription count = %d", len(wire.From))
+	}
+	for _, path := range paths {
+		if got := wire.From[0].Value.Properties[path]; got != "$null" {
+			t.Fatalf("null mapping %s = %q, want $null", path, got)
+		}
 	}
 }
 
-func TestCollectionNullFormsRefuseBeforeRegistration(t *testing.T) {
+func TestCollectionNullFormsShareTypedNullableContract(t *testing.T) {
 	event := mustEvent[AuditCleared](t)
 	catalog, err := events.NewCatalog(event.Descriptor())
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = projections.Compile(projections.ModelBound(mustModel[ClearValue](t)), catalog)
-	assertCollectionClearRefusal(t, err, "labels", "value")
+	definition, err := projections.Compile(projections.ModelBound(mustModel[ClearValue](t)), catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCollectionNullMappings(t, definition, "labels", "attributes")
 	for _, path := range []string{"labels", "attributes"} {
 		for _, value := range []bool{false, true} {
 			b := projections.NewBuilder("null", mustModel[FluentAudit](t))
@@ -153,12 +166,15 @@ func TestCollectionNullFormsRefuseBeforeRegistration(t *testing.T) {
 					}
 				}
 			})
-			_, err := b.Build()
-			directive := "clear"
-			if value {
-				directive = "value"
+			declaration, err := b.Build()
+			if err != nil {
+				t.Fatal(err)
 			}
-			assertCollectionClearRefusal(t, err, path, directive)
+			definition, err := projections.Compile(declaration, catalog)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertCollectionNullMappings(t, definition, path)
 		}
 	}
 	registry := chronicle.NewRegistry()
@@ -172,11 +188,12 @@ func TestCollectionNullFormsRefuseBeforeRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 	client, err := chronicle.NewClient(chronicle.WithRegistry(registry))
-	if client != nil {
-		_ = client.Close()
-		t.Fatal("unsupported declaration published a client")
+	if err != nil {
+		t.Fatal(err)
 	}
-	assertCollectionClearRefusal(t, err, "labels", "clear")
+	if err := client.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 type GlobalTags struct {
@@ -244,13 +261,13 @@ func checkContextNullTarget[V any](t *testing.T, contextOK, nullOK bool) {
 	}
 }
 func TestContextCollectionTargetAndNullBoundaries(t *testing.T) {
-	t.Run("strings", func(t *testing.T) { checkContextNullTarget[*[]string](t, true, false) })
-	t.Run("numbers", func(t *testing.T) { checkContextNullTarget[*[]int](t, false, false) })
-	t.Run("uuids", func(t *testing.T) { checkContextNullTarget[*[]uuid.UUID](t, false, false) })
-	t.Run("optional elements", func(t *testing.T) { checkContextNullTarget[*[]*string](t, false, false) })
-	t.Run("dates", func(t *testing.T) { checkContextNullTarget[*[]time.Time](t, false, false) })
+	t.Run("strings", func(t *testing.T) { checkContextNullTarget[*[]string](t, true, true) })
+	t.Run("numbers", func(t *testing.T) { checkContextNullTarget[*[]int](t, false, true) })
+	t.Run("uuids", func(t *testing.T) { checkContextNullTarget[*[]uuid.UUID](t, false, true) })
+	t.Run("optional elements", func(t *testing.T) { checkContextNullTarget[*[]*string](t, false, true) })
+	t.Run("dates", func(t *testing.T) { checkContextNullTarget[*[]time.Time](t, false, true) })
 	t.Run("array", func(t *testing.T) { checkContextNullTarget[*[2]string](t, false, false) })
-	t.Run("map", func(t *testing.T) { checkContextNullTarget[*map[string]string](t, false, false) })
+	t.Run("map", func(t *testing.T) { checkContextNullTarget[*map[string]string](t, false, true) })
 	t.Run("slice", func(t *testing.T) { checkContextNullTarget[[]string](t, true, false) })
 	t.Run("bare map", func(t *testing.T) { checkContextNullTarget[map[string]string](t, false, false) })
 	t.Run("scalar", func(t *testing.T) { checkContextNullTarget[*uuid.UUID](t, false, true) })

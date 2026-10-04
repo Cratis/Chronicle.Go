@@ -117,7 +117,7 @@ field's actual type in `Path`; `Build` validates compatibility, not arbitrary co
 | `set(E,from=details.name)` | Assign an exact serialized event path |
 | `context(E,from=occurred)` / `context(E,from=Tags)` | Assign an admitted kernel EventContext property; whole Tags supports string slices; also subscribes to E |
 | `value(E,value="active")` | Assign a typed JSON scalar literal |
-| `value(E,value=null)` / `clear(E)` | Clear a nullable scalar pointer with `$null` |
+| `value(E,value=null)` / `clear(E)` | Clear a nullable scalar or direct compiled slice/string-keyed map pointer with `$null` |
 | `add(E,from=amount)` / `subtract(E,from=amount)` | Numeric running total; omitted `from` uses this field's serialized name |
 | `increment(E)` / `decrement(E)` / `count(E)` | Kernel `$increment`, `$decrement`, `$count`; optional `key=value("total")` |
 | `every(from=name)` / `every(context=occurred)` | Map existing subscriptions without discovering events |
@@ -156,13 +156,24 @@ Other complex properties (`CausedBy`, `EventType`, `NamedTags`, `Causation`) fai
 with a located `ErrUnsupported`; unknown paths and incompatible types remain
 configuration errors. Paths are not arbitrary functions, indexes or expressions.
 
-Nullable collection clear remains unsupported on the pinned kernel: after a clear,
-materialized raw reads omit the properties instead of preserving explicit JSON
-null. `clear`/`Clear` and `value(...,value=null)`/`Value(...,nil)` on direct slice/map
-pointers therefore fail with a located `ErrUnsupported` before registration.
-Bare slices/maps are not nullable declarations; fixed arrays and object/element
-paths are not scalar clears. Existing scalar clears and structural child/nested
-removals are unchanged. See [remaining parity](../parity.md) for this boundary.
+Startup projections admit `clear`/`Clear` and
+`value(...,value=null)`/`Value(...,nil)` on direct compiled pointers to slices and
+string-keyed maps, as well as nullable scalar pointers. All emit `$null`.
+The ordinary Go pointer-container profile preserves **typed nil versus empty**:
+after a processed clear, the document survives and its collection pointers are nil,
+not restored to schema defaults, stale values, `[]` or `{}`. Materialized raw reads
+may omit the properties or carry explicit JSON null; the pinned kernel omits them.
+No missing-to-null overlay is added. Present raw null is a stronger, separate
+capability, not required for this typed profile.
+
+This follows C# nullable collection behavior for the ordinary no-initializer
+profile, not universal equivalence for constructors/default property initializers
+or configured serializers. Bare slices/maps are not nullable declarations; fixed
+arrays, interfaces, structural objects and collection-element paths are not direct
+clears. Existing structural child/nested removals are unchanged. Runtime
+`RegisterProjection` still refuses collection models before publication/RPC; use
+the startup registry. Other complex context sources remain
+[partial](../parity.md).
 
 Pointers preserve typed nil versus empty collections, but cannot distinguish
 missing JSON from explicit null: both decode to a nil pointer. Model serialization

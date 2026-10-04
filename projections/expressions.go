@@ -110,11 +110,6 @@ func validateLiteral(e expression, target serialization.Field) error {
 		if !nullableAssignment(target) {
 			return invalid("null requires a nullable scalar pointer")
 		}
-		if target.Scalar == serialization.NotScalar {
-			// The pinned MongoDB materialized read route omits BSON nulls.
-			// Do not admit a new clear profile that cannot preserve explicit null.
-			return fmt.Errorf("%w: nullable collection clear does not preserve explicit null in kernel materialized reads", faults.ErrUnsupported)
-		}
 		return nil
 	}
 	if !representableLiteral(e.text) {
