@@ -1,0 +1,48 @@
+{
+  "fixture": "profile.json",
+  "generator": "capture/Program.cs",
+  "project": "capture/EnumCapture.csproj",
+  "declarations": "capture/Declarations.cs",
+  "isolation": "capture/Isolation.cs",
+  "sdk": "10.0.401",
+  "sdkRollForward": "disable",
+  "runtime": "10.0.12",
+  "runtimeRollForward": "Disable",
+  "packages": {
+    "Cratis.Chronicle": "19.29.4",
+    "Cratis.Fundamentals": "7.19.6"
+  },
+  "dependencyResolution": "capture/packages.lock.json; restore --locked-mode. Local capture restored offline from already-installed NuGet packages; no SDK or runtime download.",
+  "chroniclePackageSource": "ae5e00a8abaa688138b2c2f689e2b4659cccb4fd",
+  "chronicleAuthoritySource": "2e31b0dfba489159b3db323238f16d0f277056b4",
+  "fundamentalsPackageSource": "14037b1ff8346b7944ad48065b8f66feca80dab5",
+  "owningSources": [
+    "Cratis/Chronicle:Source/Clients/DotNET/ChronicleClient.cs (InitializeJsonSerializationOptions)",
+    "Cratis/Chronicle:Source/Clients/DotNET/Events/EventSerializer.cs",
+    "Cratis/Chronicle:Source/Clients/DotNET/Schemas/JsonSchemaGenerator.cs",
+    "Cratis/Chronicle:Source/Infrastructure/Json/ExpandoObjectConverter.cs",
+    "Cratis/Fundamentals:Source/DotNET/Fundamentals/Json/EnumConverter.cs"
+  ],
+  "historicalDeclarations": {
+    "repository": "Cratis/Fundamentals.Go",
+    "commit": "b4100a0d791fa370336a87d5fdca5b00d9d47c10",
+    "path": "ContractTests/EnumJson/Program.cs",
+    "sourceProfile": "d2accc4a79b6bcf2708213c97093ab5ba6c06381",
+    "scope": "Six enum declarations and PlainConcept copied unchanged. These are new Chronicle DTO observations, not the original 236 bare/concept/direct case IDs. Int32Sample, AllBits and DTO declarations are separately labelled controls. Historical golden unchanged. No complete package-equivalence claim."
+  },
+  "newerSourceProfile": {
+    "commit": "e8ac1ecca23fa95063f6d4e65b052819b4b565a5",
+    "scope": "Not executed here. Its two changed Bits numeric reads and separate 42-case supplement remain distinct from this package capture."
+  },
+  "countsPerNamingPolicy": {
+    "schemaObservations": 54,
+    "deserializeObservations": 586,
+    "independentSerializeObservations": 130,
+    "expandoDirectionPairs": 208
+  },
+  "caseIdentity": ["namingPolicy", "declaredType", "operation", "schemaAPI (when present)", "id"],
+  "representation": "input/output JSON text is retained as a string. Typed snapshots keep enum values as exact decimal strings. Expando snapshots name actual primitive CLR types. Errors retain only exception type categories, never messages or stacks. Each reserialization and Expando-to-JSON outcome is recorded independently of its preceding read.",
+  "configurationBoundary": "Actual packaged private client options initializer is invoked on an uninitialized client with only Options and naming policy assigned. No client constructor or connection runs. Actual EventSerializer constructor receives empty artifacts and explicit empty derived types; unused activator is null. A forbidden registry proxy throws and increments an out-of-catch capture-invalidating counter on every call. Reflection has no copied-options or alternative-constructor fallback.",
+  "admission": "Evidence only. No Go enum API or behavior is implemented or approved by these fixtures. Unknown numeric strings/writes, defaults, non-Int32 declarations and schema-direction loss are not safe admission merely because an operation returned accepted.",
+  "limits": "No live Chronicle kernel, Mongo/BSON converter, Go-to-.NET round trip, protected enum, AOT or alternative-runtime claim. Independent OpenAI evidence review is required before integration or Go implementation."
+}
