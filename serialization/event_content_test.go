@@ -69,6 +69,7 @@ func TestEventContentLatchesInvalidMutation(t *testing.T) {
 		mutate func(*serialization.EventContent)
 	}{
 		{"unknown", func(c *serialization.EventContent) { _ = c.Set("extra", "value") }},
+		{"unknown Get", func(c *serialization.EventContent) { _, _, _ = c.Get("extra") }},
 		{"Go spelling", func(c *serialization.EventContent) { _ = c.Set("Name", "value") }},
 		{"wrong type", func(c *serialization.EventContent) { _ = c.Set("count", int(2)) }},
 		{"raw JSON", func(c *serialization.EventContent) { _ = c.Set("name", json.RawMessage(`"value"`)) }},

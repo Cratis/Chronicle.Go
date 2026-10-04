@@ -7,7 +7,9 @@ package integration_test
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -21,6 +23,9 @@ import (
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/transactions"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	grpcmetadata "google.golang.org/grpc/metadata"
 )
 
 type EnrichmentInput struct {
@@ -30,6 +35,20 @@ type EnrichmentInput struct {
 type EnrichmentOutput struct {
 	Value  string `json:"value"`
 	Marker string `json:"marker"`
+}
+
+type enrichmentAuditStrategy struct {
+	t        *testing.T
+	selected metadata.CorrelationID
+	calls    atomic.Int32
+}
+
+func (s *enrichmentAuditStrategy) GetScope(ctx context.Context, _ *eventsequences.Sequence, filter eventsequences.ScopeFilter) (eventsequences.Scope, error) {
+	s.calls.Add(1)
+	if metadata.Correlation(ctx) != s.selected || metadata.Identity(ctx).Subject != "enrichment-actor" {
+		s.t.Error("kernel strategy context lost selected audit")
+	}
+	return eventsequences.Scope{Filter: filter}, nil
 }
 
 func TestKernelEnrichmentAuditAppendUnitReturnedEffectAndRevision(t *testing.T) {
@@ -49,8 +68,46 @@ func TestKernelEnrichmentAuditAppendUnitReturnedEffectAndRevision(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	parent, err := metadata.NewCorrelationID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture.ctx = metadata.WithCorrelation(fixture.ctx, parent)
+	strategy := &enrichmentAuditStrategy{t: t, selected: correlation}
+	var tailHeaders, writeHeaders atomic.Int32
+	uri, err := chronicle.ParseConnectionString(fixture.endpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, err := grpc.NewClient(uri.Addresses()[0].String(), grpc.WithDisableRetry(), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})), grpc.WithUnaryInterceptor(func(ctx context.Context, method string, request, response any, cc *grpc.ClientConn, invoke grpc.UnaryInvoker, options ...grpc.CallOption) error {
+		isTail := strings.HasSuffix(method, "/TailSequenceNumber")
+		isWrite := strings.Contains(method, "/Append") || strings.HasSuffix(method, "/Revise")
+		if isTail || isWrite {
+			md, _ := grpcmetadata.FromOutgoingContext(ctx)
+			if ids := md.Get("x-correlation-id"); len(ids) != 1 || ids[0] != correlation.String() {
+				t.Error("kernel request header lost selected correlation")
+			}
+			if isTail {
+				tailHeaders.Add(1)
+			} else {
+				writeHeaders.Add(1)
+			}
+		}
+		return invoke(ctx, method, request, response, cc, options...)
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := conn.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 	var enrichments atomic.Int32
-	first := func(_ context.Context, _ events.TypeRef, content *events.EventContent) error {
+	first := func(ctx context.Context, _ events.TypeRef, content *events.EventContent) error {
+		if metadata.Correlation(ctx) != correlation {
+			t.Error("kernel enricher lost selected correlation")
+		}
 		enrichments.Add(1)
 		return content.Set("marker", "first")
 	}
@@ -65,6 +122,8 @@ func TestKernelEnrichmentAuditAppendUnitReturnedEffectAndRevision(t *testing.T) 
 		return content.Set("marker", "first-second")
 	}
 	client := fixture.client(registry,
+		chronicle.WithGRPCConnection(conn),
+		chronicle.WithDefaultConcurrencyStrategy(strategy),
 		chronicle.WithEventEnrichers(first, second),
 		chronicle.WithIdentityProvider(func(context.Context) (identities.Identity, bool, error) {
 			return identities.Identity{Subject: "enrichment-actor"}, true, nil
@@ -151,6 +210,9 @@ func TestKernelEnrichmentAuditAppendUnitReturnedEffectAndRevision(t *testing.T) 
 	}
 	if matched != 1 {
 		t.Fatalf("revision audit system-event matches = %d", matched)
+	}
+	if strategy.calls.Load() < 4 || tailHeaders.Load() < 4 || writeHeaders.Load() != 5 {
+		t.Fatal("missing selected-audit request observations", strategy.calls.Load(), tailHeaders.Load(), writeHeaders.Load())
 	}
 	t.Log("observed stored protobuf audit and content for immediate, unit, returned effect, and revision; revision keeps the kernel-generated correlation")
 }

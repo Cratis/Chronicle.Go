@@ -97,6 +97,7 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	if err != nil {
 		return AppendResult{Disposition: Rejected}, err
 	}
+	ctx = batch.audit.Context(ctx)
 	prepared := batch.request.Events[0]
 	request := singleRequest(batch.request, prepared)
 	request.ConcurrencyScope, err = s.resolveScope(ctx, source, config)

@@ -49,7 +49,11 @@ func (handle *EventContent) Get(name string) (json.RawMessage, bool, error) {
 	c := handle.editor
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if !c.active || c.field(name) == nil {
+	if !c.active {
+		return nil, false, errContent
+	}
+	if c.field(name) == nil {
+		c.latch(errContent)
 		return nil, false, errContent
 	}
 	for _, property := range c.properties {
@@ -84,7 +88,7 @@ func (handle *EventContent) Set(name string, value any) error {
 		return errContent
 	}
 	if err != nil {
-		c.failure = err
+		c.latch(err)
 		return err
 	}
 	for i, property := range c.properties {
@@ -118,7 +122,7 @@ func (handle *EventContent) Remove(name string) error {
 		return err
 	}
 	if !canOmit(*f) {
-		c.failure = errContent
+		c.latch(errContent)
 		return errContent
 	}
 	for i, property := range c.properties {
@@ -144,11 +148,25 @@ func (c *contentEditor) mutableField(name string) (*field, error) {
 	}
 	f := c.field(name)
 	if f == nil || c.readOnly || c.immutable[name] || name == derivedTypeID {
-		c.failure = errContent
+		c.latch(errContent)
 		return nil, errContent
 	}
 	return f, nil
 }
+
+// latch retains only SDK-owned evidence and never lets a later ordinary
+// failure erase an earlier panic. Called only while the active editor is locked.
+func (c *contentEditor) latch(err error) {
+	panicked := false
+	if failure, ok := err.(*contentFailure); ok {
+		panicked = failure.panicked
+	}
+	if previous, ok := c.failure.(*contentFailure); ok {
+		panicked = panicked || previous.panicked
+	}
+	c.failure = &contentFailure{panicked: panicked}
+}
+
 func canOmit(f field) bool {
 	if f.omitEmpty || f.omitZero || f.optionalAncestor {
 		return true

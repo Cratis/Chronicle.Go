@@ -5,6 +5,8 @@ package eventsequences
 
 import (
 	"context"
+
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/reactoreffects"
 	"google.golang.org/protobuf/proto"
 )
@@ -15,6 +17,9 @@ import (
 func (s *Sequence) PrepareReturnedEvents(ctx context.Context, effect reactoreffects.Preparation[Entry, LabeledScope]) (func(context.Context) error, error) {
 	if len(effect.Entries) == 0 && !effect.Batch {
 		return func(context.Context) error { return nil }, nil
+	}
+	if len(effect.Entries) == 0 && !hasPotentialReturnedCheck(effect.Scopes) {
+		return nil, faults.ErrInvalidConfiguration
 	}
 	config := batchConfig{scopes: effect.Scopes}
 	if effect.Bare && !effect.Single {
@@ -47,6 +52,7 @@ func (s *Sequence) PrepareReturnedEvents(ctx context.Context, effect reactoreffe
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		ctx = batch.audit.Context(ctx)
 		var err error
 		pending := batch
 		pending.request = proto.CloneOf(batch.request)
@@ -82,6 +88,17 @@ func (s *Sequence) PrepareReturnedEvents(ctx context.Context, effect reactoreffe
 		}
 		return result.Err()
 	}, nil
+}
+
+// Resolve may still acquire protection from a matching tail. Only empty
+// effects with no potentially checked scope are statically impossible.
+func hasPotentialReturnedCheck(scopes []LabeledScope) bool {
+	for _, scope := range scopes {
+		if scope.Scope.Expectation.kind == 0 || scope.Scope.Expectation.kind == 1 || scope.Scope.Expectation.kind == 2 {
+			return true
+		}
+	}
+	return false
 }
 
 // Assert the private contract without growing the public EventAppender interface.

@@ -93,7 +93,9 @@ merge, and reconnect never rerun providers or serialization.
 
 SDK reactor appenders prepare every built-in returned action before executing
 any custom effect or append. Existing single, legacy-many, and heterogeneous
-routes remain distinct. Borrowed custom appenders retain their existing API;
+routes remain distinct. An empty returned batch with no potentially protected
+scope fails preparation before custom effects; empty unit enrollment and
+protected eventless checks remain supported. Borrowed custom appenders retain their existing API;
 they cannot provide this private SDK preparation guarantee. Several effects or
 RPCs are not a rollback-capable transaction.
 
@@ -108,7 +110,11 @@ dependencies. Keep providers metadata-only: the SDK cannot undo application I/O.
 `events.PreparationError` (also `metadata.ProviderError`) reports a fixed phase,
 zero-based provider/event indices (`-1` when not applicable), and a panic flag.
 Application errors and panic objects are discarded without formatting, error
-traversal, wrapping, or diagnostic retention. Actual caller cancellation is
+traversal, wrapping, or diagnostic retention. This boundary applies to base
+outgoing codecs even with no enrichers or audit providers configured; unsupported
+base encoding retains the SDK's `ErrUnsupported` category. Standalone
+`Descriptor.Marshal` keeps its ordinary codec error-inspection contract.
+Actual caller cancellation is
 returned separately; returning `context.Canceled` while the context is live is a
 provider failure. The immediate origin resolver still receives the original
 caller context; unit completion keeps its existing resolver bypass.

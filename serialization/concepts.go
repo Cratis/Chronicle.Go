@@ -48,7 +48,13 @@ func (n *node) encodeConcept(value reflect.Value, dictionary bool, state *encode
 			if !ok {
 				return nil, errContent
 			}
-			return codec.MarshalJSON()
+			data, err := codec.MarshalJSON()
+			if err != nil {
+				return nil, err
+			}
+			// A codec may reuse its buffer on the next field. Own successful
+			// bytes before validation or any subsequent application callback.
+			return append([]byte(nil), data...), nil
 		}
 		return json.Marshal(value.Interface())
 	})

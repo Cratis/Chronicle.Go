@@ -13,9 +13,6 @@ import (
 // MarshalContent is the module-private outgoing encoding bridge. Ordinary
 // Marshal, schema construction and incoming decoding never invoke enrichers.
 func (p *Plan) MarshalContent(request contentencoding.Request[EventContent]) ([]byte, error) {
-	if len(request.Providers) == 0 {
-		return p.Marshal(request.Value)
-	}
 	properties, err := p.contentProperties(request.Value)
 	if err != nil {
 		if request.Failed != nil {

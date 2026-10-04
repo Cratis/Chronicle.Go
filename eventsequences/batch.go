@@ -67,6 +67,7 @@ func (s *Sequence) AppendMany(ctx context.Context, source events.SourceID, value
 	if err != nil {
 		return BatchResult{Disposition: Rejected}, err
 	}
+	ctx = batch.audit.Context(ctx)
 	if config.scope == nil {
 		scope, err = s.automaticScope(ctx, source, config.route)
 		if err != nil {
@@ -107,6 +108,7 @@ func (s *Sequence) AppendBatch(ctx context.Context, entries []Entry, options ...
 	if err != nil {
 		return BatchResult{Disposition: Rejected}, err
 	}
+	ctx = batch.audit.Context(ctx)
 	scopes, err := s.automaticBatchScopes(ctx, entries, config.scopes)
 	if err != nil {
 		return BatchResult{}, err

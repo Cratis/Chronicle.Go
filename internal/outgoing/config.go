@@ -6,10 +6,12 @@ package outgoing
 
 import (
 	"context"
+	"errors"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/identities"
 	"github.com/cratis/chronicle.go/internal/contentencoding"
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/preparation"
 	"github.com/cratis/chronicle.go/metadata"
 )
@@ -122,8 +124,12 @@ func (a Audit) Context(ctx context.Context) context.Context {
 // Encode completes base encoding before the first provider and never decodes it.
 func (c Config) Encode(ctx context.Context, descriptor events.Descriptor, value any, explicitSubject bool, index int) ([]byte, error) {
 	var providerFailure error
+	baseContentFailure := false
 	request := contentencoding.Request[events.EventContent]{Value: value, ReadOnly: !explicitSubject}
 	request.Failed = func(provider int, contentFailed, panicked bool) error {
+		// The failed base encoding is an unsupported serialization result.
+		// Derive this SDK category here, never by inspecting application causes.
+		baseContentFailure = baseContentFailure || (provider == -1 && contentFailed)
 		if previous, ok := providerFailure.(*preparation.Error); ok {
 			panicked = panicked || previous.Panicked
 		}
@@ -140,9 +146,6 @@ func (c Config) Encode(ctx context.Context, descriptor events.Descriptor, value 
 	}
 	var data []byte
 	var err error
-	if len(c.Enrichers) == 0 {
-		return descriptor.EncodeOutgoing(request)
-	}
 	// Only SDK-owned boundary errors escape; codec and ignored setter failures
 	// cannot smuggle application errors through formatting or errors.Is/As.
 	err = preparation.Call(ctx, "content", -1, index, func() error {
@@ -153,6 +156,9 @@ func (c Config) Encode(ctx context.Context, descriptor events.Descriptor, value 
 		return nil, canceled
 	}
 	if providerFailure != nil {
+		if baseContentFailure {
+			return nil, errors.Join(providerFailure, faults.ErrUnsupported)
+		}
 		return nil, providerFailure
 	}
 	if err != nil {

@@ -110,7 +110,7 @@ func (b *PreparedBatch) Merge(next *PreparedBatch) (*PreparedBatch, error) {
 		ConcurrencyScopes: slices.Clone(first.ConcurrencyScopes),
 	}
 	return &PreparedBatch{sequence: b.sequence, entries: slices.Concat(b.entries, next.entries), explicit: explicit, guards: guards,
-		batch: preparedBatch{request: request, refs: slices.Concat(b.batch.refs, next.batch.refs), named: slices.Concat(b.batch.named, next.batch.named)}}, nil
+		batch: preparedBatch{request: request, refs: slices.Concat(b.batch.refs, next.batch.refs), named: slices.Concat(b.batch.named, next.batch.named), audit: b.batch.audit}}, nil
 }
 
 func equalScopes(first, second Scope) bool {
@@ -175,6 +175,7 @@ func (s *Sequence) AppendPreparedBatch(ctx context.Context, snapshot *PreparedBa
 			return BatchResult{Disposition: Rejected}, err
 		}
 	}
+	ctx = snapshot.batch.audit.Context(ctx)
 	if len(snapshot.guards) > 0 {
 		return s.appendDecisionBatch(ctx, snapshot, origin)
 	}
