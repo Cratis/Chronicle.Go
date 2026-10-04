@@ -13,6 +13,8 @@ import (
 	contracts "github.com/cratis/chronicle.go/contracts/identities"
 	"github.com/cratis/chronicle.go/identities"
 	"github.com/cratis/chronicle.go/internal/registration"
+	"github.com/cratis/chronicle.go/internal/wire"
+	"github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -202,6 +204,20 @@ func TestIdentityRenamePostReadKeepsAcknowledgment(t *testing.T) {
 				t.Fatalf("result=%+v error=%v", r, err)
 			}
 		})
+	}
+}
+
+func TestIdentityRenameRefusalPreservesExplicitZeroResponseCorrelation(t *testing.T) {
+	k := identityHappyKernel()
+	k.command = &contracts.CommandResult{CorrelationId: wire.Guid(metadata.CorrelationID{})}
+	s, _ := identityStore(t, identityConnection(t, k))
+	r, err := s.Identities().Rename(t.Context(), "subject", "new")
+	if !errors.Is(err, ErrIdentityRenameRefused) || r.Acknowledged || r.ResponseCorrelationID == nil || *r.ResponseCorrelationID != (metadata.CorrelationID{}) {
+		t.Fatalf("result=%+v error=%v", r, err)
+	}
+	k.command.CorrelationId.Lo = 1
+	if *r.ResponseCorrelationID != (metadata.CorrelationID{}) {
+		t.Fatal("response correlation aliased reply")
 	}
 }
 

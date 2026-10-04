@@ -159,6 +159,12 @@ func (m *IdentityManager) Rename(ctx context.Context, subject string, name ident
 		if !codec.decoded {
 			return identityFailure{reason: "protocol", category: ErrProtocol}
 		}
+		// A valid decoded command preserves correlation presence even when its
+		// envelope refuses execution or reports uncertainty.
+		if response.CorrelationId != nil {
+			selected := wire.Correlation(response.CorrelationId)
+			result.ResponseCorrelationID = &selected
+		}
 		failure := identityEnvelope(response.IsAuthorized, len(response.ValidationResults), response.ExceptionMessages, response.ExceptionStackTrace)
 		if failure.reason == "" && response.AuthorizationFailureReason != "" {
 			return identityFailure{reason: "protocol", category: ErrProtocol}
@@ -166,10 +172,6 @@ func (m *IdentityManager) Rename(ctx context.Context, subject string, name ident
 		failure.refused = failure.reason == "authorization" || failure.reason == "validation"
 		if failure.reason == "" {
 			result.Acknowledged = true
-			if response.CorrelationId != nil {
-				selected := wire.Correlation(response.CorrelationId)
-				result.ResponseCorrelationID = &selected
-			}
 		}
 		return failure
 	})
