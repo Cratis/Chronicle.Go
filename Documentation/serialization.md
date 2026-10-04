@@ -10,7 +10,8 @@ The default now preserves Go field spelling, matching the C# client's
 For explicitly registered interface implementations, see
 [unprotected derived codecs](derived-codecs.md). Their immediate property names
 have a C# camelCase exception, while nested ordinary objects retain the policy
-below.
+below. For a closed, declared-value Int32 enum or flags table, see
+[declared enum codecs](enum-codecs.md); this is opt-in, not string-enum discovery.
 
 ## Property naming reference
 
