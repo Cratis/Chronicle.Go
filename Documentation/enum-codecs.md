@@ -96,7 +96,16 @@ type and nullable/array shape on both sides. Integer-to-enum, enum-to-integer an
 cross-enum `MapAs` conversions are refused. Constants are validated through the
 actual field codec; numeric model-bound literals cannot bypass membership.
 Arithmetic, context-to-enum assignment, all-event enum mappings and enum
-correlation keys are unsupported.
+correlation keys are unsupported, including fluent `VariantKey` and generated
+variant joins. Validation runs against the final graph, after shared handlers and
+`EntersOn` create-or-update handlers are added.
+
+AutoMap uses the kernel's case-insensitive property matching: event `status` can
+populate model `Status` only with the same enum profile. Enum-active AutoMap
+handlers require ASCII property names; ambiguous case-insensitive names and
+Unicode names fail locally because CLR Unicode comparison is not qualified.
+Use `NoAutoMap` and explicit mappings when automatic matching is unsuitable.
+Literal targets are resolved and type-checked before any serialization hook runs.
 `Clear` can assign null to an ordinary nullable enum scalar.
 
 Historical descriptors retain their own tables. A naming rebind cannot change

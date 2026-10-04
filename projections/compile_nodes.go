@@ -324,9 +324,6 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			}
 		}
 	}
-	if err := validateEnumAutoMap(n, fields, c.catalog); err != nil {
-		return nil, err
-	}
 	return n, nil
 }
 

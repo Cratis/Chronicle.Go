@@ -169,6 +169,9 @@ func CompileGroup(declarations []Declaration, catalog *events.Catalog, currentSt
 				d.removals = append(d.removals, removalDefinition{event: entering.event, key: expression{kind: sourceExpression}, parent: expression{kind: sourceExpression}})
 			}
 		}
+		if err := validateEnumGraph(d, catalog); err != nil {
+			return nil, err
+		}
 		sortNode(&d.nodeDefinition)
 	}
 	slices.SortFunc(compiled, func(a, b Definition) int { return strings.Compare(a.Identifier(), b.Identifier()) })

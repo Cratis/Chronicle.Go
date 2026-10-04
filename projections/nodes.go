@@ -133,7 +133,7 @@ func IdentifiedBy[C, V any](field Field[C, V]) ChildOption {
 // parent keys and identity mappings require explicit fluent declarations.
 // The callback runs once and is snapshotted, including all recursive builders.
 func Children[M, C, V any](b *Builder[M], field Field[M, V], define func(*Builder[C]), options ...ChildOption) {
-	child := &Builder[C]{data: newDeclaration(readmodels.Descriptor{}, nil)}
+	child := &Builder[C]{data: newDeclaration(readmodels.Descriptor{}, nil), fields: scopedFields(b.fields, field.path)}
 	if define != nil {
 		define(child)
 	}
@@ -152,7 +152,7 @@ func Children[M, C, V any](b *Builder[M], field Field[M, V], define func(*Builde
 // Nested declares a nullable single-object node. ClearWith registers whole-object
 // removal; the object's own From subscriptions do not create root From entries.
 func Nested[M, N any](b *Builder[M], field Field[M, *N], define func(*Builder[N]), options ...NodeOption) {
-	child := &Builder[N]{data: newDeclaration(readmodels.Descriptor{}, options)}
+	child := &Builder[N]{data: newDeclaration(readmodels.Descriptor{}, options), fields: scopedFields(b.fields, field.path)}
 	if define != nil {
 		define(child)
 	}
@@ -175,7 +175,7 @@ func (b *Builder[M]) Configure(options ...Option) {
 // on names a model field, not an event field. The callback uses the same typed
 // mapping operations as From. Overlap with local writes produces diagnostics.
 func Join[M, E, V any](b *Builder[M], event events.Type[E], on Field[M, V], define func(*FromBuilder[M, E]), options ...FromOption) {
-	from := &FromBuilder[M, E]{subscription: newSubscription(event.Descriptor(), options), model: b.data.model}
+	from := &FromBuilder[M, E]{subscription: newSubscription(event.Descriptor(), options), fields: b.fields}
 	if define != nil {
 		define(from)
 	}
