@@ -6,6 +6,7 @@ package serialization_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,7 +28,7 @@ type enumCaptureCase struct {
 	DeclaredType string            `json:"declaredType"`
 	ID           string            `json:"id"`
 	Operation    string            `json:"operation"`
-	SchemaAPI    string            `json:"schemaAPI"`
+	SchemaAPI    string            `json:"schemaAPI,omitempty"`
 	Input        json.RawMessage   `json:"input"`
 	Result       enumCaptureResult `json:"result"`
 }
@@ -38,33 +39,37 @@ type enumCaptureSchema struct {
 	Result       enumCaptureResult `json:"result"`
 }
 
+type enumCaptureProfile struct {
+	NamingPolicy  string                        `json:"namingPolicy"`
+	EventOptions  struct{ Converters []string } `json:"eventOptions"`
+	SchemaOptions struct{ Converters []string } `json:"schemaOptions"`
+	Schemas       []enumCaptureSchema           `json:"schemas"`
+	Cases         []enumCaptureCase             `json:"cases"`
+}
+
+type enumCaptureFixture struct {
+	Profile     string                                        `json:"profile"`
+	GoAdmission string                                        `json:"goAdmission"`
+	Runtime     struct{ Version string }                      `json:"runtime"`
+	Isolation   *struct{ RegistryCalls *int }                 `json:"isolation"`
+	Assemblies  []struct{ Name, InformationalVersion string } `json:"assemblies"`
+	Enums       []struct {
+		Name    string
+		Members []struct{ Name, Numeric string }
+	} `json:"enums"`
+	Profiles []enumCaptureProfile `json:"profiles"`
+}
+
 func TestEnumPackageFixture(t *testing.T) {
-	var fixture struct {
-		Profile     string                                        `json:"profile"`
-		GoAdmission string                                        `json:"goAdmission"`
-		Runtime     struct{ Version string }                      `json:"runtime"`
-		Isolation   struct{ RegistryCalls int }                   `json:"isolation"`
-		Assemblies  []struct{ Name, InformationalVersion string } `json:"assemblies"`
-		Enums       []struct {
-			Name    string
-			Members []struct{ Name, Numeric string }
-		} `json:"enums"`
-		Profiles []struct {
-			NamingPolicy  string                        `json:"namingPolicy"`
-			EventOptions  struct{ Converters []string } `json:"eventOptions"`
-			SchemaOptions struct{ Converters []string } `json:"schemaOptions"`
-			Schemas       []enumCaptureSchema           `json:"schemas"`
-			Cases         []enumCaptureCase             `json:"cases"`
-		} `json:"profiles"`
-	}
 	data, err := os.ReadFile("testdata/enum/profile.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal(data, &fixture); err != nil {
+	fixture, err := parseEnumCaptureFixture(data)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if fixture.Profile != "chronicle-19.29.4_fundamentals-7.19.6_net-10.0.12" || fixture.Runtime.Version != "10.0.12" || fixture.Isolation.RegistryCalls != 0 || !strings.HasPrefix(fixture.GoAdmission, "not-implemented;") {
+	if fixture.Profile != "chronicle-19.29.4_fundamentals-7.19.6_net-10.0.12" || fixture.Runtime.Version != "10.0.12" || !strings.HasPrefix(fixture.GoAdmission, "not-implemented;") {
 		t.Fatal("capture profile/isolation/admission changed")
 	}
 	if len(fixture.Assemblies) != 4 || len(fixture.Enums) != 8 || len(fixture.Profiles) != 2 {
@@ -113,7 +118,6 @@ func TestEnumPackageFixture(t *testing.T) {
 				if c.DeclaredType == "" || c.ID == "" || !json.Valid(c.Input) {
 					t.Fatalf("invalid case %s", id)
 				}
-				checkEnumCaptureResult(t, id, c.Result)
 			}
 			find := func(typ, operation, api, id string) enumCaptureResult {
 				t.Helper()
@@ -152,14 +156,7 @@ func TestEnumPackageFixture(t *testing.T) {
 				array := find("ArrayValue<Int32Sample>", op, api, "token:[3,5,7,8,-1]")
 				assertEnumCaptureString(t, array.ToJSON.Output, `{"`+arrayKey+`":[null,null,null,null,"Negative"]}`)
 			}
-			seen := make(map[string]bool)
 			for _, schema := range profile.Schemas {
-				id := schema.DeclaredType + "/" + schema.Operation
-				if seen[id] {
-					t.Fatalf("duplicate schema %s", id)
-				}
-				seen[id] = true
-				checkEnumCaptureResult(t, id, schema.Result)
 				if schema.DeclaredType == "Scalar<Int32Sample>" {
 					var root struct {
 						Properties map[string]struct {
@@ -183,7 +180,7 @@ func TestEnumPackageFixture(t *testing.T) {
 					}
 					if schema.Operation == "Generate" {
 						assertEnumCaptureJSON(t, root.Properties[key], `{"default":null}`)
-					} else if !bytes.Contains(root.Properties[key], []byte(`"x-enumNames"`)) {
+					} else if schema.Operation == "GenerateForReadModel" && !bytes.Contains(root.Properties[key], []byte(`"x-enumNames"`)) {
 						t.Fatal("read-model default control was not restored")
 					}
 				}
@@ -192,26 +189,109 @@ func TestEnumPackageFixture(t *testing.T) {
 	}
 }
 
-func checkEnumCaptureResult(t *testing.T, id string, result enumCaptureResult) {
-	t.Helper()
+// parseEnumCaptureFixture validates evidence completeness, not whether captured
+// package operations succeeded. Secondary failures are independent observations.
+func parseEnumCaptureFixture(data []byte) (enumCaptureFixture, error) {
+	var fixture enumCaptureFixture
+	if err := json.Unmarshal(data, &fixture); err != nil {
+		return fixture, fmt.Errorf("decode enum capture: %w", err)
+	}
+	if fixture.Isolation == nil || fixture.Isolation.RegistryCalls == nil || *fixture.Isolation.RegistryCalls != 0 {
+		return fixture, fmt.Errorf("capture requires explicit isolation registryCalls zero")
+	}
+	if len(fixture.Profiles) != 2 {
+		return fixture, fmt.Errorf("incomplete naming profiles")
+	}
+	// Exact declarations from capture/Declarations.cs and Program.cs; never infer
+	// the required schema set from the fixture being checked.
+	declaredTypes := map[string]bool{"Int32Defaults": true, "NamingControl": true, "ConceptDefaultControl": true}
+	for _, enum := range []string{"Plain", "NoZero", "Bits", "ByteEnum", "UIntEnum", "LongEnum", "Int32Sample", "AllBits"} {
+		for _, wrapper := range []string{"Scalar", "NullableScalar", "ArrayValue"} {
+			declaredTypes[wrapper+"<"+enum+">"] = true
+		}
+	}
+	for _, profile := range fixture.Profiles {
+		if len(profile.Cases) != 924 || len(profile.Schemas) != 54 {
+			return fixture, fmt.Errorf("incomplete naming profile %s", profile.NamingPolicy)
+		}
+		seenSchemas := make(map[string]bool)
+		for _, schema := range profile.Schemas {
+			id := schema.DeclaredType + "/" + schema.Operation
+			if !declaredTypes[schema.DeclaredType] || (schema.Operation != "Generate" && schema.Operation != "GenerateForReadModel") {
+				return fixture, fmt.Errorf("unexpected schema %s", id)
+			}
+			if seenSchemas[id] {
+				return fixture, fmt.Errorf("duplicate schema %s", id)
+			}
+			seenSchemas[id] = true
+			if err := checkEnumCaptureResult(id, schema.Result); err != nil {
+				return fixture, err
+			}
+		}
+		for declaredType := range declaredTypes {
+			for _, api := range []string{"Generate", "GenerateForReadModel"} {
+				if !seenSchemas[declaredType+"/"+api] {
+					return fixture, fmt.Errorf("missing schema %s/%s", declaredType, api)
+				}
+			}
+		}
+		seenCases := make(map[string]bool)
+		for _, c := range profile.Cases {
+			id := c.DeclaredType + "/" + c.Operation + "/" + c.SchemaAPI + "/" + c.ID
+			if !declaredTypes[c.DeclaredType] || c.ID == "" || !json.Valid(c.Input) || seenCases[id] {
+				return fixture, fmt.Errorf("invalid or duplicate case %s", id)
+			}
+			seenCases[id] = true
+			switch c.Operation {
+			case "EventSerializer.Deserialize", "EventSerializer.Serialize":
+				if c.SchemaAPI != "" {
+					return fixture, fmt.Errorf("unexpected schemaAPI %s", id)
+				}
+				if c.Operation == "EventSerializer.Deserialize" && c.Result.Status == "accepted" && c.Result.Reserialize == nil {
+					return fixture, fmt.Errorf("missing reserialize %s", id)
+				}
+			case "ExpandoObjectConverter.ToExpandoObject/ToJsonObject":
+				if !seenSchemas[c.DeclaredType+"/"+c.SchemaAPI] {
+					return fixture, fmt.Errorf("unlinked schemaAPI %s", id)
+				}
+				if c.Result.Status == "accepted" && c.Result.ToJSON == nil {
+					return fixture, fmt.Errorf("missing toJson %s", id)
+				}
+			default:
+				return fixture, fmt.Errorf("unexpected operation %s", id)
+			}
+			if err := checkEnumCaptureResult(id, c.Result); err != nil {
+				return fixture, err
+			}
+		}
+	}
+	return fixture, nil
+}
+
+func checkEnumCaptureResult(id string, result enumCaptureResult) error {
 	switch result.Status {
 	case "accepted":
 		if !json.Valid(result.Output) || result.Category != "" || result.InnerCategory != nil {
-			t.Fatalf("invalid success %s", id)
+			return fmt.Errorf("invalid success %s", id)
 		}
 	case "error":
 		if !strings.HasPrefix(result.Category, "System.") || len(result.Output) != 0 || result.Reserialize != nil || result.ToJSON != nil {
-			t.Fatalf("invalid error %s", id)
+			return fmt.Errorf("invalid error %s", id)
 		}
 	default:
-		t.Fatalf("missing status %s", id)
+		return fmt.Errorf("missing status %s", id)
 	}
 	if result.Reserialize != nil {
-		checkEnumCaptureResult(t, id+"/reserialize", *result.Reserialize)
+		if err := checkEnumCaptureResult(id+"/reserialize", *result.Reserialize); err != nil {
+			return err
+		}
 	}
 	if result.ToJSON != nil {
-		checkEnumCaptureResult(t, id+"/toJson", *result.ToJSON)
+		if err := checkEnumCaptureResult(id+"/toJson", *result.ToJSON); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func assertEnumCaptureJSON(t *testing.T, actual json.RawMessage, expected string) {
