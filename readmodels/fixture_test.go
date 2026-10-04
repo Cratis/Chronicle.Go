@@ -6,6 +6,7 @@ package readmodels_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -79,12 +80,7 @@ func serviceFixture(t *testing.T, k *modelKernel, descriptors ...readmodels.Desc
 	compliance.RegisterComplianceServer(server, k)
 	readmodelexplorer.RegisterReadModelExplorerServer(server, k)
 	served := make(chan struct{})
-	go func() {
-		defer close(served)
-		if err := server.Serve(listener); err != nil {
-			t.Error(err)
-		}
-	}()
+	go serveServiceFixture(server, listener, served, t.Error)
 	conn, err := grpc.NewClient("passthrough:///readmodels", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
 	if err != nil {
 		t.Fatal(err)
@@ -108,6 +104,14 @@ func serviceFixture(t *testing.T, k *modelKernel, descriptors ...readmodels.Desc
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	t.Cleanup(cancel)
 	return service, ctx
+}
+
+func serveServiceFixture(server *grpc.Server, listener net.Listener, served chan struct{}, report func(...any)) {
+	defer close(served)
+	// Cleanup may stop the server before this goroutine starts serving.
+	if err := server.Serve(listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+		report(err)
+	}
 }
 
 type Person struct {
