@@ -131,6 +131,7 @@ type effectAction struct {
 	events   eventEffect
 	builtin  bool
 	handlers []SideEffectHandler
+	prepared func(context.Context) error
 }
 
 func (l *Lease) handleEffect(ctx context.Context, value any, invocation Invocation, runtime Runtime, onceOnly bool) error {
@@ -146,11 +147,22 @@ func (l *Lease) handleEffect(ctx context.Context, value any, invocation Invocati
 	if recorder, ok := runtime.(reactoreffects.Recorder); ok {
 		return recorder.RecordEffect(ctx, value)
 	}
-	// Use the store's serialization plans rather than PrepareBatch: Runtime
-	// supports borrowed appenders that need not expose a Sequence handle.
-	// Finish preparing every built-in action before executing any custom effect.
-	for _, action := range actions {
+	// SDK appenders retain immutable prepared actions. Borrowed custom appenders
+	// keep their existing contract, which cannot guarantee private preparation.
+	var preparer reactoreffects.Preparer[eventsequences.Entry, eventsequences.LabeledScope]
+	if provider, ok := runtime.(EventLogRuntime); ok {
+		preparer, _ = provider.EventLog().(reactoreffects.Preparer[eventsequences.Entry, eventsequences.LabeledScope])
+	}
+	for i := range actions {
+		action := &actions[i]
 		if !action.builtin {
+			continue
+		}
+		if preparer != nil {
+			action.prepared, err = preparer.PrepareReturnedEvents(ctx, reactoreffects.Preparation[eventsequences.Entry, eventsequences.LabeledScope]{Entries: action.events.entries, Scopes: action.events.scopes, Bare: action.events.bare, Single: action.events.single, Batch: action.events.batch})
+			if err != nil {
+				return err
+			}
 			continue
 		}
 		for _, entry := range action.events.entries {
@@ -171,7 +183,9 @@ func (l *Lease) handleEffect(ctx context.Context, value any, invocation Invocati
 			return err
 		}
 		var failure error
-		if action.builtin {
+		if action.prepared != nil {
+			failure = action.prepared(ctx)
+		} else if action.builtin {
 			failure = appendEffect(ctx, runtime, action.events)
 		}
 		for _, handler := range action.handlers {

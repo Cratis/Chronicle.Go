@@ -37,10 +37,25 @@ func compileConcept(n *node, representation concepts.Representation, state *comp
 	return n, nil
 }
 
-func (n *node) encodeConcept(value reflect.Value, dictionary bool) (any, error) {
+func (n *node) encodeConcept(value reflect.Value, dictionary bool, state *encodeState) (any, error) {
 	// Call the declared codec exactly once, not ConceptValue on a fabricated value.
-	data, err := invoke(func() ([]byte, error) { return json.Marshal(value.Interface()) })
+	data, err := invoke(func() ([]byte, error) {
+		if state.privateCallbacks {
+			// Go's JSON encoder may inspect a marshaler error (including errors.Is).
+			// Intercept application failure before giving only successful JSON bytes
+			// back to the normal scalar validation/JSON compaction path.
+			codec, ok := value.Interface().(json.Marshaler)
+			if !ok {
+				return nil, errContent
+			}
+			return codec.MarshalJSON()
+		}
+		return json.Marshal(value.Interface())
+	})
 	if err != nil {
+		if failure, ok := err.(*CallbackError); ok {
+			state.panicked = failure.panicked
+		}
 		return nil, fmt.Errorf("%w: concept codec: %w", faults.ErrUnsupported, err)
 	}
 	if err := concepts.CheckJSON(*n.concept, data); err != nil {

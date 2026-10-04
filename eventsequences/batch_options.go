@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/outgoing"
 	"github.com/cratis/chronicle.go/metadata"
 )
 
@@ -45,10 +46,13 @@ type LabeledScope struct {
 // options fail. Slice/map/pointer inputs are snapshotted at option construction.
 type BatchOption func(*batchConfig)
 type batchConfig struct {
-	correlation metadata.CorrelationID
-	tags        []events.Tag
-	named       []events.NamedTag
-	scopes      []LabeledScope
+	correlation          metadata.CorrelationID
+	correlationSet       bool
+	inheritedCorrelation metadata.CorrelationID
+	bound                *outgoing.Audit
+	tags                 []events.Tag
+	named                []events.NamedTag
+	scopes               []LabeledScope
 }
 
 // WithScopes sets explicit checks. A label matching an appended source replaces
@@ -64,7 +68,7 @@ func WithScopes(scopes ...LabeledScope) BatchOption {
 
 // WithBatchCorrelation overrides context correlation; zero requests a new UUID.
 func WithBatchCorrelation(id metadata.CorrelationID) BatchOption {
-	return func(c *batchConfig) { c.correlation = id }
+	return func(c *batchConfig) { c.correlation, c.correlationSet = id, true }
 }
 
 // WithBatchTags sets ordinary tags merged into every entry.
