@@ -71,15 +71,19 @@ Use the already installed, cached packages and SDK 10.0.401. Do not install or
 resolve newer dependencies to reproduce this profile. Create a task-owned empty
 feed and output directory; substitute their paths below. Run build and execution
 as separate bounded phases. `PACKAGE_CACHE` is the existing NuGet package cache;
-`WORK` is a task-owned ignored workspace, not the fixture directory.
+`WORK` is a task-owned ignored workspace, not the fixture directory. Set both
+variables to absolute paths. From the repository root, enter the capture directory
+so SDK selection discovers its `global.json`; keep that directory for both phases.
 
 ```sh
-dotnet build captures/testdata/authentication/capture/AuthenticationCapture.csproj \
+cd captures/testdata/authentication/capture
+
+dotnet build AuthenticationCapture.csproj \
   -c Release -p:RestoreLockedMode=true --source "$WORK/empty-feed" \
   -p:BaseIntermediateOutputPath="$WORK/obj/" -o "$WORK/bin"
 
 dotnet "$WORK/bin/AuthenticationCapture.dll" "$WORK/profile.json" \
-  captures/testdata/authentication/capture "$PACKAGE_CACHE"
+  . "$PACKAGE_CACHE"
 ```
 
 The output file must not exist. The capture returns nonzero for unexpected calls
