@@ -104,6 +104,21 @@ AutoMap uses the kernel's case-insensitive property matching: event `status` can
 populate model `Status` only with the same enum profile. Enum-active AutoMap
 handlers require ASCII property names; ambiguous case-insensitive names and
 Unicode names fail locally because CLR Unicode comparison is not qualified.
+The rendered source name must also be a safe event-property expression:
+`true`, `True`, `false` and `False` resolve as kernel constants, not event values.
+Enum-involved automatic mappings using these names fail locally, including after
+naming rebinding. Excluded properties and explicit target writes can suppress
+AutoMap; explicit enum copies still require safe source expressions.
+
+For enum validation, encoded collection `Inherit` enables automatic mapping in
+the pinned kernel even beneath a `NoAutoMap` root. Nested `Inherit` uses the
+containing root or collection projection's mode, not the immediately enclosing
+nested object's override. Set `NoAutoMap` explicitly on a collection child when
+you need it disabled. These checks apply even when only the event contains an
+enum; they do not admit nested enum model placements or qualify every C# node
+inheritance behavior. Existing encoded modes and ordinary non-enum mappings are
+unchanged.
+
 Use `NoAutoMap` and explicit mappings when automatic matching is unsuitable.
 Literal targets are resolved and type-checked before any serialization hook runs.
 `Clear` can assign null to an ordinary nullable enum scalar.
