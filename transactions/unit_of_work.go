@@ -9,12 +9,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/outgoing"
 	"github.com/cratis/chronicle.go/metadata"
 )
 
@@ -51,6 +51,7 @@ type UnitOfWork struct {
 	mu                sync.Mutex
 	sequence          *eventsequences.Sequence
 	correlation       metadata.CorrelationID
+	audit             outgoing.Audit
 	origin            eventsequences.Origin
 	pending           *eventsequences.PreparedBatch
 	hasWork           bool
@@ -75,19 +76,11 @@ func Begin(ctx context.Context, sequence *eventsequences.Sequence) (*UnitOfWork,
 	if err := ctx.Err(); err != nil {
 		return nil, nil, err
 	}
-	id := metadata.Correlation(ctx)
-	if id == (metadata.CorrelationID{}) {
-		var err error
-		id, err = metadata.NewCorrelationID()
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	pending, err := sequence.PrepareBatch(metadata.WithCorrelation(ctx, id), nil)
+	pending, audit, err := sequence.BindAuditMetadata(outgoing.Binding{}, ctx)
 	if err != nil {
 		return nil, nil, err
 	}
-	unit := &UnitOfWork{sequence: sequence, correlation: id, origin: eventsequences.NewOrigin(), pending: pending, state: Open}
+	unit := &UnitOfWork{sequence: sequence, correlation: audit.Correlation, audit: audit, origin: eventsequences.NewOrigin(), pending: pending, state: Open}
 	return unit, &Owner{unit: unit}, nil
 }
 
@@ -108,11 +101,8 @@ func (u *UnitOfWork) Stage(ctx context.Context, entries []eventsequences.Entry, 
 	if err != nil {
 		return err
 	}
-	if id := metadata.Correlation(ctx); id != (metadata.CorrelationID{}) && id != u.correlation {
-		return fmt.Errorf("%w: unit of work correlation must remain fixed", faults.ErrInvalidConfiguration)
-	}
-	// Serialization may call user methods. Never invoke them under the state lock.
-	batch, err := u.sequence.PrepareBatch(metadata.WithCorrelation(ctx, u.correlation), entries, eventsequences.WithScopes(scopes...))
+	// Providers and codecs are caller-owned work, never invoked under the state lock.
+	batch, err := u.sequence.PrepareBoundBatch(outgoing.Binding{}, ctx, u.audit, entries, scopes)
 	if err != nil {
 		return err
 	}

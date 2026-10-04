@@ -18,6 +18,8 @@
       href: events/evolution.md
     - name: Appending events
       href: events/appending-events.md
+    - name: Enrichment and auditing
+      href: events/enrichment.md
     - name: Atomic batches
       href: events/batches.md
     - name: Unique constraints

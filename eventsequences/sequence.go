@@ -14,6 +14,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/outgoing"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
@@ -32,6 +33,7 @@ type Sequence struct {
 	decisions            decision.Provider
 	appends              appendSubscriptions
 	appendOriginResolver AppendOriginResolver
+	outgoing             outgoing.Config
 }
 
 // New creates a low-level sequence over a caller-owned connection and registered
@@ -47,6 +49,9 @@ func New(store metadata.StoreName, namespace metadata.Namespace, id events.Seque
 	}
 	sequence := &Sequence{store: store, namespace: namespace, id: id, catalog: catalog, service: sequences.NewEventSequencesClient(conn)}
 	sequence.decisions, _ = conn.(decision.Provider)
+	if provider, ok := conn.(outgoing.Provider); ok {
+		sequence.outgoing = provider.OutgoingConfiguration()
+	}
 	if provider, ok := conn.(ConcurrencyPolicyProvider); ok {
 		sequence.concurrency = provider.ConcurrencyPolicy()
 	}
@@ -70,37 +75,39 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	if err := ctx.Err(); err != nil {
 		return AppendResult{}, err
 	}
-	origin, err := s.resolveAppendOrigin(ctx)
-	if err != nil {
-		return AppendResult{Disposition: Rejected}, err
-	}
 	if strings.TrimSpace(string(source)) == "" || s.id == "" {
 		return AppendResult{}, fmt.Errorf("%w: source and sequence are required", faults.ErrInvalidConfiguration)
 	}
-	descriptor, found := s.catalog.Lookup(event)
-	if !found {
-		return AppendResult{}, faults.ErrNotRegistered
-	}
-	content, err := descriptor.Marshal(event)
-	if err != nil {
-		return AppendResult{}, err
-	}
-	config := appendConfig{correlation: metadata.Correlation(ctx)}
+	config := appendConfig{}
 	for _, option := range options {
 		if option == nil {
 			return AppendResult{}, fmt.Errorf("%w: nil append option", faults.ErrInvalidConfiguration)
 		}
 		option(&config)
 	}
-	if config.subject == nil {
-		if subject, ok := descriptor.ResolveSubject(event); ok {
-			config.subject = &subject
-		}
+	var scopes []LabeledScope
+	if config.scope != nil {
+		scopes = []LabeledScope{{Label: string(source), Scope: *config.scope}}
 	}
-	request, err := s.request(ctx, source, descriptor, string(content), config)
+	batch, err := s.snapshotBatch(ctx, []Entry{{Source: source, Event: event, Route: config.route, Subject: config.subject, Occurred: config.occurred, Tags: config.tags, NamedTags: config.named}}, batchConfig{correlation: config.correlation, correlationSet: config.correlationSet, scopes: scopes})
 	if err != nil {
 		return AppendResult{}, err
 	}
+	origin, err := s.resolveAppendOrigin(ctx)
+	if err != nil {
+		return AppendResult{Disposition: Rejected}, err
+	}
+	ctx = batch.audit.Context(ctx)
+	prepared := batch.request.Events[0]
+	request := singleRequest(batch.request, prepared)
+	request.ConcurrencyScope, err = s.resolveScope(ctx, source, config)
+	if err != nil {
+		return AppendResult{}, err
+	}
+	return s.dispatchSingle(ctx, request, batch.refs[0], config.route, config.named, origin)
+}
+
+func (s *Sequence) dispatchSingle(ctx context.Context, request *sequences.AppendRequest, ref events.TypeRef, route Route, named []events.NamedTag, origin Origin) (result AppendResult, err error) {
 	if err = ctx.Err(); err != nil {
 		return AppendResult{}, err
 	}
@@ -108,14 +115,14 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	dispatched := true
 	defer func() {
 		if dispatched {
-			err = joinNotificationError(err, s.notifySingle(origin, source, descriptor.Ref(), config.route, wire.Correlation(request.CorrelationId), result, err))
+			err = joinNotificationError(err, s.notifySingle(origin, events.SourceID(request.EventSourceId), ref, route, wire.Correlation(request.CorrelationId), result, err))
 		}
 	}()
 	var envelope *sequences.CommandResult_AppendResponse
-	if len(config.named) == 0 {
+	if len(named) == 0 {
 		envelope, err = s.service.Append(ctx, request)
 	} else {
-		envelope, err = s.service.AppendWithNamedTags(ctx, namedRequest(request, config.named))
+		envelope, err = s.service.AppendWithNamedTags(ctx, namedRequest(request, named))
 	}
 	if err != nil {
 		var local *faults.BeforeDispatch
@@ -135,7 +142,7 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	if err = wire.RequireMessage(envelope, "Response"); err != nil {
 		return AppendResult{}, &OutcomeUnknownError{Cause: err}
 	}
-	result, err = s.result(envelope.Response, descriptor.Ref())
+	result, err = s.result(envelope.Response, ref)
 	if err != nil {
 		return AppendResult{}, &OutcomeUnknownError{Cause: err}
 	}

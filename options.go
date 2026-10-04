@@ -12,6 +12,8 @@ import (
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/clientoptions"
 	"github.com/cratis/chronicle.go/internal/connection"
+	"github.com/cratis/chronicle.go/internal/outgoing"
+	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/serialization"
 	"google.golang.org/grpc"
@@ -56,6 +58,8 @@ type clientConfig struct {
 	validateEventTypes                              bool
 	concurrency                                     eventsequences.ConcurrencyPolicy
 	appendOriginResolver                            eventsequences.AppendOriginResolver
+	outgoing                                        outgoing.Config
+	rootCausation                                   *metadata.RootCausation
 	naming                                          serialization.NamingPolicy
 	defaultSinkType                                 readmodels.SinkType
 	registry                                        *Registry

@@ -135,8 +135,12 @@ func (d Descriptor) compileDeclarations() (Descriptor, error) {
 			}
 		}
 	}
-	if subject != nil && d.subject == nil {
-		d.subject = taggedSubject(d.typ, *subject)
+	if subject != nil {
+		d.subjectFields = map[string]bool{subject.Name: true}
+		if d.subject == nil || d.taggedSubject {
+			d.subject = taggedSubject(d.typ, *subject)
+			d.taggedSubject = true
+		}
 	}
 	return d.withCompensationSchema()
 }

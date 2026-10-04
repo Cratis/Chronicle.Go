@@ -22,6 +22,8 @@ type Descriptor struct {
 	plan          *serialization.Plan
 	tags          []Tag
 	subject       func(any) (Subject, bool)
+	taggedSubject bool
+	subjectFields map[string]bool
 	sourceStore   string
 	unique        []Unique
 	removes       []string

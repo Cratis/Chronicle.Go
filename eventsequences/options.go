@@ -72,13 +72,14 @@ type Scope struct {
 // fail. Slice and pointer inputs are copied when the option is constructed.
 type AppendOption func(*appendConfig)
 type appendConfig struct {
-	route       Route
-	scope       *Scope
-	occurred    *time.Time
-	subject     *events.Subject
-	correlation metadata.CorrelationID
-	tags        []events.Tag
-	named       []events.NamedTag
+	route          Route
+	scope          *Scope
+	occurred       *time.Time
+	subject        *events.Subject
+	correlation    metadata.CorrelationID
+	correlationSet bool
+	tags           []events.Tag
+	named          []events.NamedTag
 }
 
 // WithRoute overrides routing; it never changes the source argument.
@@ -103,7 +104,7 @@ func WithSubject(subject events.Subject) AppendOption {
 
 // WithCorrelation overrides the context correlation. A zero ID requests a new UUID.
 func WithCorrelation(id metadata.CorrelationID) AppendOption {
-	return func(c *appendConfig) { c.correlation = id }
+	return func(c *appendConfig) { c.correlation, c.correlationSet = id, true }
 }
 
 // WithTags sets dynamic tags merged distinctly after static tags.

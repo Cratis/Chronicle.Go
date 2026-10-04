@@ -8,7 +8,10 @@ import "github.com/cratis/chronicle.go/internal/faults"
 // CallbackError reports an application codec or IsZero failure without formatting
 // its cause. errors.Is/As expose ordinary causes for deliberate inspection; causes
 // may contain personal data and must not be logged indiscriminately.
-type CallbackError struct{ cause error }
+type CallbackError struct {
+	cause    error
+	panicked bool
+}
 
 // Error returns a payload-free diagnostic.
 func (*CallbackError) Error() string { return "chronicle: serialization callback failed" }
@@ -31,7 +34,7 @@ func invoke[T any](callback func() (T, error)) (result T, err error) {
 		if recover() != nil {
 			var zero T
 			result = zero
-			err = &CallbackError{cause: &CallbackPanicError{}}
+			err = &CallbackError{cause: &CallbackPanicError{}, panicked: true}
 		}
 	}()
 	result, err = callback()

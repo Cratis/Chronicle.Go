@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/preparation"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/serialization"
@@ -121,7 +123,20 @@ func (s *Sequence) Revise(ctx context.Context, position events.SequenceNumber, r
 			}
 		}
 	}
-	content, err := descriptor.Marshal(replacement)
+	audit, err := s.outgoing.Resolve(ctx, metadata.CorrelationID{}, false, metadata.CorrelationID{})
+	if err != nil {
+		return err
+	}
+	ctx = audit.Context(ctx)
+	if err := preparation.Call(ctx, "subject", -1, 0, func() error {
+		if subject, ok := descriptor.ResolveSubject(replacement); ok {
+			return compliance.ValidateSubject(string(subject))
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	content, err := s.outgoing.Encode(ctx, descriptor, replacement, false, 0)
 	if err != nil {
 		return err
 	}

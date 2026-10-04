@@ -6,11 +6,16 @@ package eventsequences
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"slices"
 	"strings"
 
+	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/outgoing"
+	"github.com/cratis/chronicle.go/internal/preparation"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 )
@@ -23,10 +28,6 @@ import (
 func (s *Sequence) AppendMany(ctx context.Context, source events.SourceID, values []any, options ...AppendOption) (BatchResult, error) {
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
-	}
-	origin, err := s.resolveAppendOrigin(ctx)
-	if err != nil {
-		return BatchResult{Disposition: Rejected}, err
 	}
 	if strings.TrimSpace(string(source)) == "" {
 		return BatchResult{}, faults.ErrInvalidConfiguration
@@ -58,10 +59,15 @@ func (s *Sequence) AppendMany(ctx context.Context, source events.SourceID, value
 	}
 	tags = append(tags, config.tags...)
 	// Validate and serialize every event before invoking a user strategy or I/O.
-	batch, err := s.snapshotBatch(ctx, entries, batchConfig{correlation: config.correlation, tags: tags, named: config.named})
+	batch, err := s.snapshotBatch(ctx, entries, batchConfig{correlation: config.correlation, correlationSet: config.correlationSet, tags: tags, named: config.named, scopes: []LabeledScope{{Label: string(source), Scope: scope}}})
 	if err != nil {
 		return BatchResult{}, err
 	}
+	origin, err := s.resolveAppendOrigin(ctx)
+	if err != nil {
+		return BatchResult{Disposition: Rejected}, err
+	}
+	ctx = batch.audit.Context(ctx)
 	if config.scope == nil {
 		scope, err = s.automaticScope(ctx, source, config.route)
 		if err != nil {
@@ -87,10 +93,6 @@ func (s *Sequence) AppendBatch(ctx context.Context, entries []Entry, options ...
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
 	}
-	origin, err := s.resolveAppendOrigin(ctx)
-	if err != nil {
-		return BatchResult{Disposition: Rejected}, err
-	}
 	config := batchConfig{correlation: metadata.Correlation(ctx)}
 	for _, option := range options {
 		if option == nil {
@@ -98,7 +100,20 @@ func (s *Sequence) AppendBatch(ctx context.Context, entries []Entry, options ...
 		}
 		option(&config)
 	}
-	batch, err := s.prepareBatch(ctx, entries, config)
+	batch, err := s.snapshotBatch(ctx, entries, config)
+	if err != nil {
+		return BatchResult{}, err
+	}
+	origin, err := s.resolveAppendOrigin(ctx)
+	if err != nil {
+		return BatchResult{Disposition: Rejected}, err
+	}
+	ctx = batch.audit.Context(ctx)
+	scopes, err := s.automaticBatchScopes(ctx, entries, config.scopes)
+	if err != nil {
+		return BatchResult{}, err
+	}
+	batch, err = s.resolveBatch(ctx, batch, scopes)
 	if err != nil {
 		return BatchResult{}, err
 	}
@@ -109,72 +124,119 @@ type preparedBatch struct {
 	request *sequences.AppendManyForEventSourcesRequest
 	named   [][]*sequences.NamedTag
 	refs    []events.TypeRef
-}
-
-func (s *Sequence) prepareBatch(ctx context.Context, entries []Entry, config batchConfig) (preparedBatch, error) {
-	batch, err := s.snapshotBatch(ctx, entries, config)
-	if err != nil {
-		return preparedBatch{}, err
-	}
-	scopes, err := s.automaticBatchScopes(ctx, entries, config.scopes)
-	if err != nil {
-		return preparedBatch{}, err
-	}
-	return s.resolveBatch(ctx, batch, scopes)
+	audit   outgoing.Audit
 }
 
 func (s *Sequence) snapshotBatch(ctx context.Context, entries []Entry, config batchConfig) (preparedBatch, error) {
-	if err := validateAppendMetadata(nil, nil, config.named); err != nil {
+	entries, descriptors, err := s.preflightEntries(entries, config)
+	if err != nil {
 		return preparedBatch{}, err
 	}
-	if config.correlation == (metadata.CorrelationID{}) {
-		var err error
-		config.correlation, err = metadata.NewCorrelationID()
-		if err != nil {
-			return preparedBatch{}, err
-		}
+	audit, err := s.outgoing.Resolve(ctx, config.correlation, config.correlationSet, config.inheritedCorrelation)
+	if err != nil {
+		return preparedBatch{}, err
 	}
-	request := &sequences.AppendManyForEventSourcesRequest{EventStore: string(s.store), Namespace: string(s.namespace), EventSequenceId: string(s.id), CorrelationId: wire.Guid(config.correlation), Causation: causationContract(metadata.CausationChain(ctx)), CausedBy: identityContract(metadata.Identity(ctx))}
-	batch := preparedBatch{request: request}
-	for _, entry := range entries {
-		if strings.TrimSpace(string(entry.Source)) == "" {
+	if config.bound != nil && (audit.Correlation != config.bound.Correlation || !reflect.DeepEqual(audit.Identity, config.bound.Identity)) {
+		return preparedBatch{}, fmt.Errorf("%w: unit of work correlation and actor must remain fixed", faults.ErrInvalidConfiguration)
+	}
+	selected := audit.Context(ctx)
+	for _, cause := range audit.Causes {
+		if cause.Occurred.Year() < 1 || cause.Occurred.Year() > 9999 {
 			return preparedBatch{}, faults.ErrInvalidConfiguration
 		}
-		descriptor, found := s.catalog.Lookup(entry.Event)
-		if !found {
-			return preparedBatch{}, faults.ErrNotRegistered
-		}
-		content, err := descriptor.Marshal(entry.Event)
+	}
+	subjects := make([]events.Subject, len(entries))
+	for i, entry := range entries {
+		subject, err := frozenSubject(ctx, descriptors[i], entry.Event, entry.Source, entry.Subject, i)
 		if err != nil {
 			return preparedBatch{}, err
 		}
-		options := appendConfig{route: entry.Route, scope: &Scope{Expectation: NoCheck()}, correlation: config.correlation, subject: entry.Subject, occurred: entry.Occurred,
-			tags: append(append([]events.Tag(nil), entry.Tags...), config.tags...), named: append(append([]events.NamedTag(nil), entry.NamedTags...), config.named...)}
-		if options.subject == nil {
-			if subject, ok := descriptor.ResolveSubject(entry.Event); ok {
-				options.subject = &subject
-			}
+		subjects[i] = subject
+	}
+	request := &sequences.AppendManyForEventSourcesRequest{EventStore: string(s.store), Namespace: string(s.namespace), EventSequenceId: string(s.id), CorrelationId: wire.Guid(audit.Correlation), Causation: causationContract(audit.Causes), CausedBy: identityContract(audit.Identity)}
+	batch := preparedBatch{request: request, audit: audit}
+	for i, entry := range entries {
+		descriptor := descriptors[i]
+		explicitSubject := entry.Subject != nil
+		subject := subjects[i]
+		entryCtx := metadata.WithCausationChain(selected, append(slices.Clone(audit.Causes), entry.Causation...))
+		content, err := s.outgoing.Encode(entryCtx, descriptor, entry.Event, explicitSubject, i)
+		if err != nil {
+			return preparedBatch{}, err
 		}
-		one, err := s.request(ctx, entry.Source, descriptor, string(content), options)
+		options := appendConfig{route: entry.Route, scope: &Scope{Expectation: NoCheck()}, correlation: audit.Correlation, subject: &subject, occurred: entry.Occurred,
+			tags: append(slices.Clone(entry.Tags), config.tags...), named: append(slices.Clone(entry.NamedTags), config.named...)}
+		one, err := s.request(entryCtx, entry.Source, descriptor, string(content), options)
 		if err != nil {
 			return preparedBatch{}, err
 		}
 		event := &sequences.EventForEventSourceId{EventSourceId: one.EventSourceId, EventSourceType: one.EventSourceType, EventStreamType: one.EventStreamType, EventStreamId: one.EventStreamId, EventType: one.EventType, Content: one.Content, Tags: one.Tags, Subject: one.Subject, Occurred: one.Occurred}
 		if len(entry.Causation) > 0 {
-			chain := metadata.CausationChain(ctx)
-			for _, cause := range entry.Causation {
-				if cause.Occurred.Year() < 1 || cause.Occurred.Year() > 9999 {
-					return preparedBatch{}, faults.ErrInvalidConfiguration
-				}
-				chain = append(chain, cause)
-			}
-			event.Causation = causationContract(chain)
+			event.Causation = one.Causation
 		}
 		request.Events = append(request.Events, event)
 		batch.named = append(batch.named, namedRequest(one, options.named).NamedTags)
 		batch.refs = append(batch.refs, descriptor.Ref())
 	}
+	if err := ctx.Err(); err != nil {
+		return preparedBatch{}, err
+	}
 	return batch, nil
+}
+
+func frozenSubject(ctx context.Context, descriptor events.Descriptor, value any, source events.SourceID, explicit *events.Subject, index int) (events.Subject, error) {
+	subject := events.Subject(source)
+	if explicit != nil {
+		subject = *explicit
+	} else {
+		err := preparation.Call(ctx, "subject", -1, index, func() error {
+			if resolved, ok := descriptor.ResolveSubject(value); ok {
+				subject = resolved
+			}
+			return nil
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+	if err := compliance.ValidateSubject(string(subject)); err != nil {
+		return "", err
+	}
+	return subject, nil
+}
+
+func (s *Sequence) preflightEntries(entries []Entry, config batchConfig) ([]Entry, []events.Descriptor, error) {
+	if err := validateAppendMetadata(nil, nil, config.named); err != nil {
+		return nil, nil, err
+	}
+	if _, err := batchScopes(entries, config.scopes); err != nil {
+		return nil, nil, err
+	}
+	entries = slices.Clone(entries)
+	descriptors := make([]events.Descriptor, len(entries))
+	for i := range entries {
+		entry := &entries[i]
+		if strings.TrimSpace(string(entry.Source)) == "" {
+			return nil, nil, faults.ErrInvalidConfiguration
+		}
+		descriptor, found := s.catalog.Lookup(entry.Event)
+		if !found {
+			return nil, nil, faults.ErrNotRegistered
+		}
+		descriptors[i] = descriptor
+		entry.Subject, entry.Occurred = copyPointer(entry.Subject), copyPointer(entry.Occurred)
+		entry.Tags, entry.NamedTags = slices.Clone(entry.Tags), slices.Clone(entry.NamedTags)
+		if err := validateAppendMetadata(entry.Subject, entry.Occurred, entry.NamedTags); err != nil {
+			return nil, nil, err
+		}
+		entry.Causation = metadata.CausationChain(metadata.WithCausationChain(context.Background(), entry.Causation))
+		for _, cause := range entry.Causation {
+			if cause.Occurred.Year() < 1 || cause.Occurred.Year() > 9999 {
+				return nil, nil, faults.ErrInvalidConfiguration
+			}
+		}
+	}
+	return entries, descriptors, nil
 }
 
 func (s *Sequence) resolveBatch(ctx context.Context, batch preparedBatch, scopes []LabeledScope) (preparedBatch, error) {

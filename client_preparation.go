@@ -62,6 +62,9 @@ func CaptureClient(options ...ClientOption) (*ClientPreparation, error) {
 		}
 		option(&config)
 	}
+	if err := captureOutgoing(&config); err != nil {
+		return nil, err
+	}
 	if err := validateDefaultSinkType(config.defaultSinkType); err != nil {
 		return nil, err
 	}

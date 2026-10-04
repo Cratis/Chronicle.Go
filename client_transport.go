@@ -12,6 +12,7 @@ import (
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/outgoing"
 	"google.golang.org/grpc"
 )
 
@@ -53,6 +54,8 @@ type clientTransport struct {
 	store            *EventStore
 	decisionSnapshot *decision.Catalog
 }
+
+func (t *clientTransport) OutgoingConfiguration() outgoing.Config { return t.client.config.outgoing }
 
 func (t *clientTransport) AppendOriginResolver() eventsequences.AppendOriginResolver {
 	return t.client.config.appendOriginResolver

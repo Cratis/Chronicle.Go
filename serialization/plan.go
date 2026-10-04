@@ -51,6 +51,7 @@ type field struct {
 	goName, tag         string
 	value               *node
 	omitEmpty, omitZero bool
+	optionalAncestor    bool
 	isZero              func(reflect.Value) bool
 }
 
@@ -333,7 +334,7 @@ func (n *node) compileFields(state *compileState, policy NamingPolicy, readModel
 		if err != nil {
 			return err
 		}
-		entry := field{index: candidate.index, name: name, goName: candidate.goName, tag: f.Tag.Get("chronicle"), value: value}
+		entry := field{index: candidate.index, name: name, goName: candidate.goName, tag: f.Tag.Get("chronicle"), value: value, optionalAncestor: candidate.optional}
 		for _, option := range strings.Split(f.Tag.Get("json"), ",")[1:] {
 			switch option {
 			case "omitempty":

@@ -67,7 +67,11 @@ type valueVisit struct {
 	pointer uintptr
 	length  int
 }
-type encodeState struct{ active map[valueVisit]bool }
+type encodeState struct {
+	active           map[valueVisit]bool
+	panicked         bool
+	privateCallbacks bool
+}
 
 func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, depth int) (any, error) {
 	if depth > 256 {
@@ -114,7 +118,7 @@ func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, 
 		return nil, unsupported(n.typ, "unregistered dynamic derivative")
 	}
 	if n.concept != nil {
-		return n.encodeConcept(value, dictionary)
+		return n.encodeConcept(value, dictionary, state)
 	}
 	if err := n.checkInteger(value, dictionary); err != nil {
 		return nil, err
@@ -147,6 +151,9 @@ func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, 
 			if field.omitZero {
 				zero, err := invoke(func() (bool, error) { return field.isZero(v), nil })
 				if err != nil {
+					if failure, ok := err.(*CallbackError); ok {
+						state.panicked = failure.panicked
+					}
 					return nil, err
 				}
 				if zero {
