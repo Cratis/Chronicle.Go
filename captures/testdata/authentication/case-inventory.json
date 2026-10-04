@@ -1,0 +1,29 @@
+{
+  "count": 55,
+  "groups": [
+    {
+      "surface": "inbound",
+      "namingPolicies": ["DefaultNamingPolicy", "CamelCaseNamingPolicy"],
+      "operation": "EventSerializer.Serialize",
+      "cases": ["default-null", "explicit-none", "basic", "bearer", "oauth", "basic-then-bearer", "bearer-then-basic", "basic-then-oauth"]
+    },
+    {
+      "surface": "inbound",
+      "namingPolicies": ["DefaultNamingPolicy", "CamelCaseNamingPolicy"],
+      "operation": "JsonSerializer.SourceAuthorization",
+      "cases": ["none", "basic", "bearer", "oauth"]
+    },
+    {
+      "surface": "inbound",
+      "namingPolicies": ["DefaultNamingPolicy", "CamelCaseNamingPolicy"],
+      "operation": "EventSerializer.Deserialize",
+      "cases": ["missing-discriminator", "unknown-discriminator", "case-changed-value", "case-changed-key", "basic-missing-username", "basic-missing-password", "bearer-missing-token", "oauth-missing-authority", "oauth-missing-client-id", "oauth-missing-client-secret", "null-authorization", "explicit-none"]
+    },
+    {
+      "surface": "outgoing",
+      "namingPolicies": ["not-applicable"],
+      "operation": "Webhooks.Register",
+      "cases": ["none-default", "basic-default", "bearer-selected", "basic-then-bearer", "none-false", "bearer-selected-false", "oauth-unavailable"]
+    }
+  ]
+}
