@@ -11,7 +11,7 @@ Keep your client and store handles across transient outages. The client replaces
 
 `EventStore(ctx, name, ...)` ensures the store and namespace and registers event types before returning a cached handle. Cache keys include both store and namespace. Definitions are shared only within the same logical store and generation; namespace barriers remain separate. A failed creation can be retried without permanently poisoning its cache entry.
 
-`Ready(ctx)` waits for connection health and required registration of all handles known when called. A concurrently created store has its own barrier. `store.WaitForRegistration(ctx)` returns a `RegistrationOutcome` and an error, joining a pass or starting a new one after failure. Registration success refers to that generation, not a promise that the connection cannot subsequently fail.
+`Ready(ctx)` waits for connection health and required registration of the cached handles captured when called. A concurrently created store has its own barrier. `store.WaitForRegistration(ctx)` returns a `RegistrationOutcome` and an error, joining a pass or starting a new one after failure. Registration success refers to that generation, not a promise that the connection cannot subsequently fail.
 
 An outcome contains:
 
@@ -21,6 +21,49 @@ An outcome contains:
 - `Failure` and `RetryPending`; `RegistrationError` unwraps the underlying cause.
 
 Event-type registration acknowledges a batch, not separate server verdicts for individual definitions. This surface currently covers event types only. It makes no readiness claim for unimplemented reactors, reducers or other artifacts. Registry additions after `NewClient` are still excluded from its frozen snapshot.
+
+## Evict cached event stores
+
+Call `client.EvictEventStores()` to clear all store/namespace lookup entries and
+remove them from subsequent automatic registration passes. It returns an `error`
+for an unprepared or closed client, using the existing `ClientStateError` and
+`ErrNotPrepared`/`ErrClosed` identities. An empty prepared cache succeeds, including
+before connection. There is no context argument: eviction performs no I/O,
+callbacks, cancellation or joining.
+
+The next `EventStore` lookup returns a different `*EventStore` for the same
+coordinates. Existing handles still borrow the client and share its retained
+coordinate resources with the new facade. Sequences, append subscriptions,
+observer runs, unregister decisions and local reducer feeds are not duplicated
+or closed. An already-resolved provider scope keeps its facade; a new scope uses
+the new cache entry. Use client shutdown, not eviction, to stop owned work.
+
+Eviction is **membership removal, not revocation**:
+
+- Registration started by an acquisition, `Ready` or reconnect snapshot before
+  eviction may finish afterward. An older completion cannot replace a newer
+  cached facade.
+- Later `Ready` and automatic reconnect/retry snapshots omit detached handles.
+  `Ready` can therefore succeed with an empty cache without registering a
+  retained handle's namespace.
+- Explicit operations on an old handle can register the current generation;
+  this does not put that handle back into the cache. Existing watches keep their
+  independent lifetimes. A watch's own explicit registration can make a namespace
+  ready without restoring cache membership.
+- An already-ready identity manager stays ready on eviction alone. After a
+  generation change, if its namespace has not been registered, rename returns
+  `registration_not_ready` without starting registration. Explicitly call the
+  retained store's `WaitForRegistration(ctx)` before retrying.
+
+Cumulative projection definitions, uncertainty fences and decision evidence are
+unchanged by eviction. Later projection publication still updates new
+`ReadModels()` selections through detached handles and invalidates old guards;
+previously issued readers keep their immutable snapshots.
+
+Eviction does not delete server data or promise memory reclamation. The client
+retains one resource owner per distinct store/namespace until shutdown, not one
+per eviction. It does not promise uninterrupted delivery across generation loss:
+interrupted watches still require explicit rewatching and reconciliation.
 
 ## Registration retries
 
