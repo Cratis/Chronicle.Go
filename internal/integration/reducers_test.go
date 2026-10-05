@@ -112,6 +112,13 @@ func TestKernelReducerMaterializationDeletionAndFailedPartition(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The reactor/reducer stream is open, but the kernel subscribes it asynchronously.
+	// Appending first would start a catch-up that drops later live events
+	// (https://github.com/Cratis/Chronicle/issues/4558).
+	if _, err = store.WaitForRegistration(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+	awaitObserversObserving(t, f, store.Namespace(), append([]string{"go-balance"}, eventLogStatisticsObservers...)...)
 	reader := readmodels.For(store.ReadModels(), model)
 	appendSuccessfully(t, f.ctx, store, "balance", ReducedAmountChanged{-10})
 	appendSuccessfully(t, f.ctx, store, "balance", ReducedAmountChanged{8})

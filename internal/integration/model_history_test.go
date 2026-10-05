@@ -157,6 +157,14 @@ func TestKernelModelHistoryReducerCollectionRoutingAndDeletion(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			if !passive {
+				// The reducer stream is open, but the kernel subscribes it asynchronously;
+				// appending first starts a catch-up (https://github.com/Cratis/Chronicle/issues/4558).
+				if _, err = store.WaitForRegistration(f.ctx); err != nil {
+					t.Fatal(err)
+				}
+				awaitObserversObserving(t, f, store.Namespace(), append([]string{"go-balance"}, eventLogStatisticsObservers...)...)
+			}
 			reader := readmodels.For(store.ReadModels(), model)
 			appendSuccessfully(t, f.ctx, store, "a", ReducedAmountChanged{-10})
 			appendSuccessfully(t, f.ctx, store, "b", ReducedAmountChanged{0})
@@ -241,6 +249,12 @@ func TestKernelModelHistoryReleaseOwnershipAndErasure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The reducer stream is open, but the kernel subscribes it asynchronously;
+	// appending first starts a catch-up (https://github.com/Cratis/Chronicle/issues/4558).
+	if _, err = store.WaitForRegistration(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+	awaitObserversObserving(t, f, store.Namespace(), append([]string{"history-secret-active"}, eventLogStatisticsObservers...)...)
 	reader := readmodels.For(store.ReadModels(), model)
 	appendSuccessfully(t, f.ctx, store, "subject", HistorySecretChanged{Name: "private fixture"})
 	awaitHistoryCollection(t, f.ctx, reader, func(c readmodels.Collection[HistorySecret]) bool {

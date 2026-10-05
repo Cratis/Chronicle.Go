@@ -214,6 +214,13 @@ func TestKernelOperationsFailedPartitionDiagnostics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The reactor/reducer stream is open, but the kernel subscribes it asynchronously.
+	// Appending first would start a catch-up that drops later live events
+	// (https://github.com/Cratis/Chronicle/issues/4558).
+	if _, err = store.WaitForRegistration(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+	awaitObserversObserving(t, f, store.Namespace(), append([]string{"operations-failure"}, eventLogStatisticsObservers...)...)
 	appended, err := store.EventLog().AppendWithMetadata(f.ctx, "failed-partition", OperationsEvent{-1})
 	if err != nil || appended.Result().Err() != nil {
 		t.Fatal(err, appended.Result().Err())
