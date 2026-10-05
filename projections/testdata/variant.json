@@ -1,0 +1,14 @@
+{
+  "EventSequenceId": "event-log",
+  "Identifier": "Example.BacklogProjection",
+  "ReadModel": "Example.Backlog",
+  "IsActive": true,
+  "IsRewindable": true,
+  "InitialModelState": "{}",
+  "From": [{"Key": {"Id": "IssueCreated", "Generation": 1}, "Value": {"Key": "$eventSourceId"}}],
+  "Join": [{"Key": {"Id": "TitleChanged", "Generation": 1}, "Value": {"On": "id", "Key": "$eventSourceId", "Properties": {"title": "title"}}}],
+  "RemovedWith": [{"Key": {"Id": "PullRequestCreated", "Generation": 1}, "Value": {"Key": "$eventSourceId", "ParentKey": "$eventSourceId"}}],
+  "All": {"Properties": {"updated": "$eventContext(occurred)", "source": "$eventContext(eventSourceId)"}, "IncludeChildren": true},
+  "AutoMap": "Enabled",
+  "SubscribesToAllEvents": true
+}

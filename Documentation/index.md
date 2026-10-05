@@ -1,17 +1,33 @@
-# Chronicle for Go
+---
+title: Chronicle for Go
+description: Register typed events and append them securely to Cratis Chronicle from Go.
+---
 
-Chronicle for Go is the Go client for [Cratis Chronicle](https://github.com/Cratis/Chronicle), currently in early development.
+Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Without the client, you manage OAuth, structural compatibility, schemas and RPC envelopes yourself; with it, you register event structs and append facts through context-aware store handles.
 
-The repository contains a root Go module, package documentation, and development tooling. Client APIs are not implemented yet; usage examples and verified kernel/protocol compatibility will follow as implementation progresses.
+## Start here
 
-## Getting started
+[Append your first event](clients/go/getting-started.md) using a local development kernel. Requires Go 1.26 or newer. The API remains experimental in the v0.x release series.
 
-Go 1.26 or later is required. After the first tagged release:
+## Use the foundation
 
-```sh
-go get github.com/cratis/chronicle.go@latest
-```
+- [Connecting and lifecycle](connection-strings/index.md): endpoints, TLS, OAuth and ownership.
+- [Event types](events/event-types.md): stable identities, generations and supported JSON shapes.
+- [Serialization](serialization.md): property naming, migration and shared Fundamentals values.
+- [Appending events](events/appending-events.md): full results, metadata and concurrency protection.
+- [Event enrichment and auditing](events/enrichment.md): declared-field editing and per-call audit snapshots.
+- [Identity display names](identities.md): one update with acknowledgment and bounded name observation.
+- [Atomic batches](events/batches.md): ordered mixed-source events and independent checks.
+- [Reading events](events/reading-events.md): complete history and expectations derived from loaded state.
+- [Reactors](reactors.md): plain closures, convention handlers and optional scoped services.
+- [Reducers](reducers.md): nullable state folds, convention discovery and passive reads.
+- [Read models](read-models/index.md): typed reads, best-effort watches and materialized windows.
+- [Definition factories](definition-factories.md): prepare projections, constraints and migrations from configuration.
+- [Shared-provider client preparation](facade-composition.md): bind one borrowed client identity before preparing its definitions.
+- [Decision reads](read-models/decision-reads.md): admitted optimistic projection guards and owner-controlled commits.
+- [Read-model reactors](read-model-reactors.md): Added/Modified/Removed callbacks with scoped effects.
+- [Patterns](patterns.md): contextual and usual-action questions with honest empty answers.
+- [Parity and limitations](parity.md): executable evidence and deliberate C# differences.
+- [Release policy](releases.md): module versioning and experimental compatibility.
 
-The planned release series is v0.x; experimental APIs may change between minor releases. See the [README](../README.md), [contribution guide](../CONTRIBUTING.md), and [release policy](releases.md).
-
-The [Go reference](https://pkg.go.dev/github.com/cratis/chronicle.go) will become available after publication. Inclusion on the central Cratis documentation site requires separate site integration.
+Contracts target Chronicle 19.29.4; kernel-backed tests run against 19.29.4-development. Basic projections, event reactors, reducers and supervised recovery are available; advanced observer features remain incomplete. Inclusion in the central Cratis documentation site remains a separate site integration.

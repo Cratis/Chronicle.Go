@@ -1,4 +1,86 @@
 - name: Overview
   href: index.md
+- name: Get started
+  href: clients/go/getting-started.md
+- name: Connecting
+  href: connection-strings/index.md
+- name: Lifecycle and readiness
+  href: connection-strings/lifecycle.md
+- name: Definition factories
+  href: definition-factories.md
+- name: Shared-provider client preparation
+  href: facade-composition.md
+- name: Events
+  items:
+    - name: Event types
+      href: events/event-types.md
+    - name: Event evolution
+      href: events/evolution.md
+    - name: Appending events
+      href: events/appending-events.md
+    - name: Enrichment and auditing
+      href: events/enrichment.md
+    - name: Atomic batches
+      href: events/batches.md
+    - name: Unique constraints
+      href: events/constraints.md
+    - name: Reading events
+      href: events/reading-events.md
+    - name: Revise, redact, and close history
+      href: events/history-revision.md
+    - name: Seeding events
+      href: events/seeding.md
+    - name: Unit of work
+      href: events/unit-of-work.md
+- name: Serialization
+  href: serialization.md
+- name: Derived codecs
+  href: derived-codecs.md
+- name: Declared Int32 enum codecs
+  href: enum-codecs.md
+- name: Compliance and confidentiality
+  href: compliance.md
+- name: Read models
+  href: read-models/index.md
+- name: Collections and history
+  href: read-models/collections-and-history.md
+- name: Decision reads
+  href: read-models/decision-reads.md
+- name: Read-model reactors
+  href: read-model-reactors.md
+- name: Projections
+  items:
+    - name: Overview
+      href: projections/index.md
+    - name: Runtime registration
+      href: projections/runtime-registration.md
+    - name: Initial values and labels
+      href: projections/defaults.md
+    - name: Orders with children and joins
+      href: projections/orders.md
+    - name: Variants and shared handlers
+      href: projections/variants.md
+- name: Reactors
+  href: reactors.md
+- name: Reducers
+  href: reducers.md
+- name: Patterns queries
+  href: patterns.md
+- name: Observer and job administration
+  href: operations.md
+- name: External integrations
+  items:
+    - name: Subscriptions, webhooks and services
+      href: integrations/index.md
+    - name: Capture declarations
+      href: integrations/captures.md
+    - name: Webhook authentication evidence
+      href: integrations/authentication-evidence.md
+- name: Testing with scenarios
+  href: testing-with-scenarios.md
+- name: Parity and limitations
+  href: parity.md
 - name: Releases
   href: releases.md
+- name: Module policy
+  href: module-policy.md

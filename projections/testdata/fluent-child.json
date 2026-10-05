@@ -1,0 +1,19 @@
+{
+  "Identifier": "fluent-child",
+  "ReadModel": "Order",
+  "EventSequenceId": "event-log",
+  "IsActive": true,
+  "IsRewindable": true,
+  "InitialModelState": "{}",
+  "AutoMap": "Enabled",
+  "All": {},
+  "Children": {
+    "items": {
+      "IdentifiedBy": "id",
+      "AutoMap": "Inherit",
+      "All": {},
+      "NoAutoMapProperties": ["internal"],
+      "From": [{"Key": {"Id": "item-added", "Generation": 1}, "Value": {"Key": "itemId", "ParentKey": "", "Properties": {}}}]
+    }
+  }
+}

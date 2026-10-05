@@ -2,34 +2,99 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/cratis/chronicle.go.svg)](https://pkg.go.dev/github.com/cratis/chronicle.go)
 [![Build](https://github.com/Cratis/Chronicle.Go/actions/workflows/build.yml/badge.svg)](https://github.com/Cratis/Chronicle.Go/actions/workflows/build.yml)
-[![Release](https://github.com/Cratis/Chronicle.Go/actions/workflows/publish.yml/badge.svg)](https://github.com/Cratis/Chronicle.Go/actions/workflows/publish.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Cratis/Chronicle.Go/blob/main/LICENSE)
 
-The Go client for [Cratis Chronicle](https://github.com/Cratis/Chronicle), the event-sourcing platform in the Cratis ecosystem.
+The idiomatic Go client for [Cratis Chronicle](https://github.com/Cratis/Chronicle). Register typed events, connect securely, select a store and namespace, and append with explicit concurrency protection and complete outcomes.
 
-## Status
+## Status and installation
 
-**Early development.** This repository currently contains the module and repository scaffold, not implemented client APIs. Releases will remain **v0.x** while the API is experimental. There is no tagged Go release yet; the installation command and Go reference will become usable after the first release.
+**Experimental foundation, v0.x.** Connection/TLS/OAuth, compatibility, event registration, single/atomic batch appends and event history reads are implemented. Observers, projections and automatic lifecycle recovery are not yet implemented. See [parity and limitations](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md).
 
-Usage examples will follow as APIs are implemented. No kernel or protocol compatibility is claimed yet.
-
-## Installation
-
-Requires Go **1.26 or later**. Once a version has been published:
+Requires Go **1.26 or later**. After the first tagged release:
 
 ```sh
 go get github.com/cratis/chronicle.go@latest
 ```
 
-Use the lowercase module path exactly as shown. CI checks Go 1.26 and 1.27 independently of local Go workspaces.
+Contracts are pinned to Chronicle **19.29.4**; real-kernel tests use **19.29.4-development**. Generated contracts are public packages in this same module, with no .NET or sibling checkout needed.
 
-## Documentation
+## Quick start
 
-Start with [Documentation](Documentation/index.md). API reference will be available on [pkg.go.dev](https://pkg.go.dev/github.com/cratis/chronicle.go) after publication.
+Start the development kernel and wait for `https://localhost:35000/health` to report `Healthy`:
 
-## Development
+```sh
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.4-development
+```
 
-From the repository root:
+This complete program is also available as `go run ./examples/getting-started` in a checkout:
+
+```go
+package main
+
+import (
+    "context"
+    "errors"
+    "fmt"
+    "log"
+    "time"
+
+    chronicle "github.com/cratis/chronicle.go"
+    "github.com/cratis/chronicle.go/events"
+)
+
+type CustomerRegistered struct {
+    Name string `json:"name"`
+}
+
+func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+    if err := appendCustomer(ctx); err != nil {
+        log.Fatal(err)
+    }
+}
+
+func appendCustomer(ctx context.Context) (err error) {
+    registry := chronicle.NewRegistry()
+    if _, err = chronicle.RegisterEvent[CustomerRegistered](registry,
+        events.WithID("customer-registered")); err != nil {
+        return err
+    }
+    client, err := chronicle.NewClient(chronicle.WithDevelopmentDefaults(),
+        chronicle.WithRegistry(registry))
+    if err != nil {
+        return err
+    }
+    defer func() { err = errors.Join(err, client.Close()) }()
+    store, err := client.EventStore(ctx, "customers")
+    if err != nil {
+        return err
+    }
+    result, err := store.EventLog().Append(ctx, "customer-42", CustomerRegistered{Name: "Ada"})
+    if err != nil {
+        return err
+    }
+    if err = result.Err(); err != nil {
+        return err
+    }
+    fmt.Printf("Appended event at position %d\n", *result.Position)
+    return nil
+}
+```
+
+`WithDevelopmentDefaults` explicitly permits the kernel's self-signed certificate. Production TLS validates by default: configure real roots and credentials. An append transport error may hide a committed event; **never blindly retry**. Default optimistic concurrency leaves empty history unchecked; use `NoMatchingEvent` when first append must be protected.
+
+## Documentation and development
+
+- [Getting started](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/clients/go/getting-started.md)
+- [Connecting and lifecycle](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/connection-strings/index.md)
+- [Webhook authentication evidence and limits](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/integrations/authentication-evidence.md)
+- [Event types](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/event-types.md)
+- [Declared Int32 enum codecs](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/enum-codecs.md)
+- [Appending and concurrency](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/appending-events.md)
+- [Atomic batches](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/batches.md)
+- [Reading events and history](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/events/reading-events.md)
+- [Contributing and required checks](https://github.com/Cratis/Chronicle.Go/blob/main/CONTRIBUTING.md)
 
 ```sh
 export GOWORK=off
@@ -37,16 +102,10 @@ go build ./...
 go vet ./...
 go test -race -count=1 -timeout=3m ./...
 golangci-lint run
+go generate ./...
+python3 scripts/generate-contracts.py --check
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full checks and release conventions.
+## Community, security and license
 
-## Community and security
-
-- [Cratis](https://www.cratis.io/) and the [Cratis repositories](https://github.com/Cratis)
-- [Contribution guide](CONTRIBUTING.md)
-- [Private vulnerability reporting](SECURITY.md)
-
-## License
-
-[MIT](LICENSE).
+[Cratis](https://www.cratis.io/) · [Cratis repositories](https://github.com/Cratis) · [Private vulnerability reporting](https://github.com/Cratis/Chronicle.Go/blob/main/SECURITY.md) · [MIT license](https://github.com/Cratis/Chronicle.Go/blob/main/LICENSE)

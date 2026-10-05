@@ -1,0 +1,16 @@
+{
+  "EventStore": "store",
+  "Owner": "Client",
+  "Source": "Code",
+  "ReadModels": [
+    {
+      "Type": {"Identifier": "Example.Person", "Generation": 1},
+      "ContainerName": "People",
+      "DisplayName": "Person",
+      "Sink": {"ConfigurationId": {}, "TypeId": "MongoDB"},
+      "Schema": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"title\":\"Person\",\"type\":\"object\"}",
+      "Indexes": [{"PropertyPath": "name"}],
+      "ObserverType": "Projection"
+    }
+  ]
+}

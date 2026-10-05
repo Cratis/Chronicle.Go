@@ -1,0 +1,37 @@
+{
+  "EventStore": "shop",
+  "GlobalByEventType": [
+    {"EventTypeId":"product-added","Entries":[
+      {"EventSourceId":"p1","EventTypeId":"product-added","Content":"{\"Name\":\"Book\\u00E9\\u003C\\u003E\\u0026\\u0027\\u002B\",\"Age\":37}","Tags":["catalog","static"]},
+      {"EventSourceId":"p2","EventTypeId":"product-added","Content":"{\"Name\":\"Global\",\"Age\":9}","Tags":["catalog","static"]}
+    ]},
+    {"EventTypeId":"price-changed","Entries":[
+      {"EventSourceId":"p1","EventTypeId":"price-changed","Content":"{\"Price\":12}","Tags":[]}
+    ]}
+  ],
+  "GlobalByEventSource": [
+    {"EventSourceId":"p1","Entries":[
+      {"EventSourceId":"p1","EventTypeId":"product-added","Content":"{\"Name\":\"Book\\u00E9\\u003C\\u003E\\u0026\\u0027\\u002B\",\"Age\":37}","Tags":["catalog","static"]},
+      {"EventSourceId":"p1","EventTypeId":"price-changed","Content":"{\"Price\":12}","Tags":[]}
+    ]},
+    {"EventSourceId":"p2","Entries":[
+      {"EventSourceId":"p2","EventTypeId":"product-added","Content":"{\"Name\":\"Global\",\"Age\":9}","Tags":["catalog","static"]}
+    ]}
+  ],
+  "NamespacedEntries": [
+    {"Namespace":"red","ByEventType":[
+      {"EventTypeId":"product-added","Entries":[{"EventSourceId":"p2","EventTypeId":"product-added","Content":"{\"Name\":\"Red\",\"Age\":12}","Tags":["catalog","static"]}]},
+      {"EventTypeId":"price-changed","Entries":[{"EventSourceId":"p2","EventTypeId":"price-changed","Content":"{\"Price\":8}","Tags":[]}]}
+    ],"ByEventSource":[
+      {"EventSourceId":"p2","Entries":[
+        {"EventSourceId":"p2","EventTypeId":"product-added","Content":"{\"Name\":\"Red\",\"Age\":12}","Tags":["catalog","static"]},
+        {"EventSourceId":"p2","EventTypeId":"price-changed","Content":"{\"Price\":8}","Tags":[]}
+      ]}
+    ]},
+    {"Namespace":"default","ByEventType":[
+      {"EventTypeId":"price-changed","Entries":[{"EventSourceId":"p1","EventTypeId":"price-changed","Content":"{\"Price\":9}","Tags":[]}]}
+    ],"ByEventSource":[
+      {"EventSourceId":"p1","Entries":[{"EventSourceId":"p1","EventTypeId":"price-changed","Content":"{\"Price\":9}","Tags":[]}]}
+    ]}
+  ]
+}

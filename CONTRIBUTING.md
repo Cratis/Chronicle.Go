@@ -1,6 +1,6 @@
 # Contributing to Chronicle for Go
 
-Thank you for helping build the Go client for Cratis Chronicle. This repository is in early development: it contains a module scaffold, not client APIs. Discuss larger changes before implementation, and document only capabilities that exist and have been verified.
+Thank you for helping build the Go client for Cratis Chronicle. This repository is in early development: the foundation implements connection, event registration and single append. Discuss larger changes before implementation, and document only capabilities that exist and have been verified.
 
 The [Cratis contribution guide](https://github.com/Cratis/.github/blob/main/contributing.md) and [code of conduct](https://github.com/Cratis/.github/blob/main/CODE_OF_CONDUCT.md) apply.
 
@@ -13,13 +13,19 @@ The [Cratis contribution guide](https://github.com/Cratis/.github/blob/main/cont
 
 ## Layout and setup
 
-The repository has one root module, `github.com/cratis/chronicle.go`, with package `chronicle`. Product documentation lives in `Documentation/`. Add packages and examples only as implementation needs them; use lowercase package directories, co-located `_test.go` files, and compiling `Example` tests for public usage.
+The runtime has one root module, `github.com/cratis/chronicle.go`, with package `chronicle`. The explicit [module allow-list](.github/go-modules.json) currently contains only that root; real nested tools, integrations or unpublished recipes can be added under the [module policy](Documentation/module-policy.md). Product documentation lives in `Documentation/`. Add packages and examples only as implementation needs them; use lowercase package directories, co-located `_test.go` files, and compiling `Example` tests for public usage.
 
 Install Go 1.26 or later, golangci-lint v2.14.0, actionlint v1.7.12, ShellCheck, and markdownlint-cli2. CI tests Go 1.26 and 1.27, including the latest patches; golangci-lint must be built with a Go version at least as new as the code it analyzes.
 
 ## Verify your change
 
-Run from the repository root, with each supported Go toolchain where applicable:
+Validate the native module policy from the repository root, then run the Go checks inside each listed module with each supported toolchain where applicable. Root tests do not traverse nested modules:
+
+```sh
+python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
+python3 -B .github/scripts/go_modules.py matrix
+python3 -B .github/scripts/go_modules.py dependencies
+```
 
 ```sh
 export GOWORK=off
@@ -31,8 +37,7 @@ go vet ./...
 go test -count=1 -timeout=2m ./...
 go test -race -count=1 -timeout=3m ./...
 golangci-lint run
-go mod tidy
-git diff --exit-code -- go.mod go.sum
+go mod tidy -diff
 actionlint -color
 npx markdownlint-cli2 '*.md' 'Documentation/**/*.md' 'examples/**/*.md' '.github/ISSUE_TEMPLATE/*.md' '.github/pull_request_template.md' '!AGENTS.md' '!CLAUDE.md'
 ```
@@ -44,9 +49,50 @@ go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
 govulncheck ./...
 ```
 
-Format Go source with `gofmt`; no files should appear in `gofmt -l doc.go` for the initial scaffold. Check all Go files as the codebase grows. After `go mod tidy`, also check `git status --short -- go.mod go.sum` for untracked manifests. Commit `go.sum` when dependencies require it. Do not commit nested modules, local `replace` directives, or personal `go.work` files: released modules must build without sibling checkouts.
+Format handwritten Go source with `gofmt`; from the root, use `python3 -B .github/scripts/go_modules.py gofmt --module .` (or the listed nested directory) to check only that module's Git-visible Go files. Never hand-edit generated protobuf bindings. After authorized dependency changes, run `go mod tidy` and inspect `git status --short -- go.mod go.sum` inside the affected module. Commit its own `go.sum` when needed. Unlisted modules and repository workspaces are forbidden. All replacements are forbidden except the documented exact local-root replacement in expressly unpublished recipes; unpublished tool previews have no replacement exception. No nested publisher exists yet.
 
-Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Workflow lint invokes ShellCheck when it is available. The scaffold has no behavioral or integration tests yet; a passing empty package is not evidence of product compatibility. Add tests with behavior, and explicitly bounded integration checks before claiming kernel compatibility. CodeQL runs separately in GitHub Actions.
+Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Workflow lint invokes ShellCheck when it is available. Normal tests include parser/schema cases, real TLS/OAuth, bufconn RPCs, lifecycle and append behavior. The build gate also checks pinned contract generation and runs kernel integration tests. CodeQL runs separately in GitHub Actions.
+
+## Contracts and kernel integration
+
+Contracts live in this module under public `contracts/` packages. `contracts-source.json` pins Chronicle 19.29.4 at an immutable commit, input hashes and generator versions. Install Buf 1.73.0; Python 3 and Go are the other prerequisites. Generation installs its pinned Go plugins into isolated staging, fetches canonical upstream inputs and promotes only generator-owned files:
+
+```sh
+go generate ./...
+python3 scripts/generate-contracts.py --check
+```
+
+The check also detects stale or unexpected generated files; it does not require .NET, protoc, a sibling checkout or a running kernel. Builds consume checked-in output and do not generate on demand. Review source pins, managed package mappings and generated diffs together when upgrading contracts. Never generate duplicate BCL/protocol packages in downstream clients.
+
+Run the real-kernel tests against the development image matching the contract release:
+
+```sh
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.4-development
+# In another terminal, after https://localhost:35000/health reports Healthy:
+CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
+  go test -tags=integration -count=1 -timeout=4m ./internal/integration
+```
+
+The tests create isolated random stores, validate registration and schema preservation, exercise numeric/nullable/dictionary round trips and concurrency bounds, and read persisted events through public contracts. Stop your test container afterwards. A missing endpoint fails rather than silently skipping integration tests.
+
+### Pinned capture parser checks
+
+The optional capture AST test uses the real Screenplay 4.16.0 parser to check
+Go-rendered translation syntax, identifiers, condition kinds and literal round
+trips. It requires the .NET 10 SDK in addition to the normal Go/kernel setup:
+
+```sh
+dotnet build internal/integration/testdata/captureparser/CaptureParser.csproj \
+  -c Release -p:BaseIntermediateOutputPath="$PWD/.ai-work/captureparser/obj/" \
+  -o "$PWD/.ai-work/captureparser/bin/"
+CHRONICLE_CAPTURE_PARSER_DLL="$PWD/.ai-work/captureparser/bin/CaptureParser.dll" \
+CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
+  go test -tags=integration -count=1 -timeout=4m ./internal/integration
+```
+
+Without `CHRONICLE_CAPTURE_PARSER_DLL`, only this optional AST test skips; kernel
+capture validation still runs and checks compilation before capability errors.
+The Go unit regressions remain independent of .NET and a sibling checkout.
 
 ## Conventions
 

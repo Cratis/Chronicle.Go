@@ -1,0 +1,35 @@
+{
+  "chroniclePackage": "Cratis.Chronicle/19.29.4",
+  "chroniclePackageCommit": "ae5e00a8abaa688138b2c2f689e2b4659cccb4fd",
+  "chronicleAuthorityCommit": "2e31b0dfba489159b3db323238f16d0f277056b4",
+  "fundamentalsPackage": "Cratis.Fundamentals/7.19.6",
+  "fundamentalsCommit": "14037b1ff8346b7944ad48065b8f66feca80dab5",
+  "sdk": "10.0.401",
+  "targetFramework": "net10.0",
+  "source": "Probe.cs.txt",
+  "project": "Probe.csproj.txt",
+  "capture": "Executed the packaged DerivedTypeJsonConverterFactory and JsonSchemaGenerator; payload and schema files are File.WriteAllText outputs, not hand-derived JSON.",
+  "authorityComparison": "EventSerializer.cs and JsonSchemaGenerator.cs are unchanged between the Chronicle package and authority commits.",
+  "options": {
+    "PropertyNameCaseInsensitive": true,
+    "DefaultIgnoreCondition": "WhenWritingNull",
+    "WriteIndented": false,
+    "Encoder": "System.Text.Encodings.Web.JavaScriptEncoder.Default",
+    "NamingPolicies": ["Cratis.Serialization.DefaultNamingPolicy", "Cratis.Serialization.CamelCaseNamingPolicy"],
+    "Converters": ["Cratis.Serialization.DerivedTypeJsonConverterFactory"],
+    "DerivedTypes": "Explicit IDerivedTypes implementation in Probe.cs.txt",
+    "SchemaGenerator": "Cratis.Chronicle.Schemas.JsonSchemaGenerator with an empty compliance resolver"
+  },
+  "scope": "Relevant EventSerializer/ChronicleClient options reproduced; no EventSerializer instance or unrelated converter families are claimed. Whole schemas include C# required/title/reference conventions; Go fixtures compare actual payload bytes and the open family schema boundary.",
+  "failingFixture": {
+    "files": "*.unsafe-direct.payload.json, *.unsafe-direct.schema.json, unsafe-direct.output.txt",
+    "result": "Under both policies: decoded root=Human, child=NULL, children=Human",
+    "issue": "https://github.com/Cratis/Fundamentals/issues/1149",
+    "tagDifference": "Derived immediate Label ignores JsonPropertyName(explicit_label), emitting label. Ordinary concrete child honors explicit_label. Go deliberately honors explicit json tags in both contexts.",
+    "nullDifference": "Derived object-valued dictionary entries retain null child values despite WhenWritingNull. Go keeps ordinary nil-property omission and rejects null family collection elements."
+  },
+  "reproduction": "Copy the .txt source/project into a task-scoped directory as Program.cs and Probe.csproj, build Release, then run the resulting Probe.dll from the repository root. With no arguments it captures fixtures; with a capture-directory argument it additionally verifies both Go and C# kernel read-back payloads written by TestKernelDerivedCodecsCollectionsOrdinaryChildrenAndReplay, without rewriting fixtures.",
+  "kernelCapture": "*.go.kernel.json and *.csharp.kernel.json are actual authenticated kernel read-back payloads. The Go integration test decoded both producers with the compiled plan and verified child updates/replay. The executed .NET probe then decoded and reserialized all four read-back files to the original supported payload under each naming policy.",
+  "kernelImage": "cratis/chronicle:19.29.4-development",
+  "kernelDigest": "cratis/chronicle@sha256:23d9fc83e1764e3fcfad2326e4404d8fd081008c3ebc8c46be059fed09e4c261"
+}
