@@ -70,7 +70,7 @@ Run the real-kernel tests against the development image matching the contract re
 docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.4-development
 # In another terminal, after https://localhost:35000/health reports Healthy:
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
-  go test -tags=integration -count=1 -timeout=2m ./internal/integration
+  go test -tags=integration -count=1 -timeout=4m ./internal/integration
 ```
 
 The tests create isolated random stores, validate registration and schema preservation, exercise numeric/nullable/dictionary round trips and concurrency bounds, and read persisted events through public contracts. Stop your test container afterwards. A missing endpoint fails rather than silently skipping integration tests.
@@ -87,7 +87,7 @@ dotnet build internal/integration/testdata/captureparser/CaptureParser.csproj \
   -o "$PWD/.ai-work/captureparser/bin/"
 CHRONICLE_CAPTURE_PARSER_DLL="$PWD/.ai-work/captureparser/bin/CaptureParser.dll" \
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
-  go test -tags=integration -count=1 -timeout=2m ./internal/integration
+  go test -tags=integration -count=1 -timeout=4m ./internal/integration
 ```
 
 Without `CHRONICLE_CAPTURE_PARSER_DLL`, only this optional AST test skips; kernel

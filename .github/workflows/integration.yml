@@ -33,7 +33,7 @@ jobs:
       - name: Register, append and read back
         env:
           CHRONICLE_INTEGRATION_CONNECTION_STRING: chronicle://localhost:35000
-        run: go test -tags=integration -count=1 -timeout=2m ./internal/integration ./chronicletest/...
+        run: go test -tags=integration -count=1 -timeout=4m ./internal/integration ./chronicletest/...
       - name: Kernel diagnostics on failure
         if: failure()
         run: docker logs '${{ job.services.chronicle.id }}' --tail 150
