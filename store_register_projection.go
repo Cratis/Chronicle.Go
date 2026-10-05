@@ -37,7 +37,7 @@ type ProjectionRegistration struct {
 // It can accompany Published=true and a successful Outcome after a cumulative
 // attempt became uncertain and a retry acknowledged the same root.
 func (s *EventStore) RegisterProjection(ctx context.Context, declaration projections.Declaration) (result ProjectionRegistration, err error) {
-	if s == nil || s.client == nil || nilValue(ctx) {
+	if s == nil || s.storeOwner == nil || s.client == nil || nilValue(ctx) {
 		return result, ErrInvalidConfiguration
 	}
 	if err = ctx.Err(); err != nil {
@@ -83,13 +83,13 @@ func (s *EventStore) RegisterProjection(ctx context.Context, declaration project
 		root.previous, root.delta = base.revision, delta
 		// Prepare namespace readers outside the publication lock. If acquisition
 		// adds a namespace, repeat this callback-free composition, not preparation.
-		readers := make(map[*EventStore]*readmodels.Service)
+		readers := make(map[*storeOwner]*readmodels.Service)
 		for {
-			for _, store := range s.client.storeSnapshot() {
+			for _, store := range s.client.storeOwnerSnapshot() {
 				if store.name != s.name || readers[store] != nil {
 					continue
 				}
-				readers[store], err = store.readersFor(root)
+				readers[store], err = (&EventStore{storeOwner: store}).readersFor(root)
 				if err != nil {
 					return result, err
 				}
@@ -112,7 +112,7 @@ func (s *EventStore) RegisterProjection(ctx context.Context, declaration project
 				break
 			}
 			complete := true
-			for _, store := range s.client.stores {
+			for _, store := range s.client.storeOwners {
 				if store.name == s.name && readers[store] == nil {
 					complete = false
 					break

@@ -62,7 +62,7 @@ func TestRuntimeDestructiveDispositionIsRecordedBeforeFlightRelease(t *testing.T
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			client, _ := memoryLifecycleClient(t, nil)
-			store := testDefinitionStore(t, &EventStore{client: client, name: "store", namespace: DefaultNamespace})
+			store := testDefinitionStore(t, &EventStore{storeOwner: &storeOwner{client: client, name: "store", namespace: DefaultNamespace}})
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			g := &generation{ctx: t.Context()}

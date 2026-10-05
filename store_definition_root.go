@@ -44,6 +44,19 @@ func (d *definitionCoordinator) notifyLocked() {
 	d.changed = make(chan struct{})
 }
 
+// storeOwnerSnapshot includes detached coordinates for local publication. It
+// must never drive Ready or automatic generation replay. Joining active resources
+// remains owned by generation work/observer groups, not by cache enumeration.
+func (c *Client) storeOwnerSnapshot() []*storeOwner {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	owners := make([]*storeOwner, 0, len(c.storeOwners))
+	for _, owner := range c.storeOwners {
+		owners = append(owners, owner)
+	}
+	return owners
+}
+
 func (c *Client) definitionsLocked(name StoreName) (*definitionCoordinator, error) {
 	if d := c.definitions[name]; d != nil {
 		return d, nil

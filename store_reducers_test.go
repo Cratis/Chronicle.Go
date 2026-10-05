@@ -84,7 +84,7 @@ func TestPassiveReducerReadPreservesCallerIdentityForConstructionAndFold(t *test
 		}
 	})
 	// No kernel connection or materialization is needed for a passive fold.
-	store := &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}
+	store := &EventStore{storeOwner: &storeOwner{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}}
 	store.log, err = eventsequences.New(store.name, store.namespace, events.EventLog, store.catalog, passiveHistoryTransport{identity: identity})
 	if err != nil {
 		t.Fatal(err)

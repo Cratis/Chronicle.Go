@@ -113,7 +113,7 @@ func TestReducerCollectionsGloballyBoundHistoricalFoldsAndKeepActualPositions(t 
 			transport := &collectionHistoryTransport{namespace: namespace, history: []*sequences.AppendedEventResponse{
 				collectionEvent("a", 90, 3, false), collectionEvent("b", 11, 0, false), collectionEvent("a", 4, 1, false), collectionEvent("a", 100, 0, true), collectionEvent("c", 150, 0, false),
 			}}
-			store := &EventStore{client: client, name: "store", namespace: namespace, catalog: client.catalog}
+			store := &EventStore{storeOwner: &storeOwner{client: client, name: "store", namespace: namespace, catalog: client.catalog}}
 			store.log, err = eventsequences.New(store.name, store.namespace, events.EventLog, store.catalog, transport)
 			if err != nil {
 				t.Fatal(err)

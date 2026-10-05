@@ -118,7 +118,7 @@ func identityStore(t *testing.T, raw grpc.ClientConnInterface, options ...Client
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := testDefinitionStore(t, &EventStore{client: client, name: "store", namespace: "namespace", catalog: client.catalog})
+	store := testDefinitionStore(t, &EventStore{storeOwner: &storeOwner{client: client, name: "store", namespace: "namespace", catalog: client.catalog}})
 	ctx, cancel := context.WithCancel(client.life)
 	g := &generation{client: client, number: 1, ctx: ctx, cancel: cancel, raw: raw}
 	g.transport = &generationTransport{generation: g}
