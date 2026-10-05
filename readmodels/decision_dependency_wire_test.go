@@ -54,14 +54,19 @@ func TestDecisionDependencyAgreementAcrossProtobufTransport(t *testing.T) {
 			contracts.RegisterReadModelsServer(server, fixture)
 			projections.RegisterProjectionsServer(server, fixture)
 			served := make(chan error, 1)
-			go func() { served <- server.Serve(listener) }()
+			go func() {
+				defer close(served)
+				served <- server.Serve(listener)
+			}()
 			t.Cleanup(func() {
 				server.Stop()
 				if err := listener.Close(); err != nil {
 					t.Error(err)
 				}
-				if err := <-served; err != nil {
-					t.Error(err)
+				for err := range served {
+					if err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+						t.Error(err)
+					}
 				}
 			})
 			conn, err := grpc.NewClient("passthrough:///decision-dependencies",

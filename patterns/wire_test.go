@@ -127,9 +127,10 @@ func TestDefaultCodecThroughActualGRPC(t *testing.T) {
 			server := grpc.NewServer(grpc.ForceServerCodec(rawCodec{response: tc.bytes}))
 			contracts.RegisterPatternsServer(server, rawServer{})
 			done := make(chan struct{})
+			t.Cleanup(func() { server.Stop(); _ = listener.Close(); <-done })
 			go func() {
 				defer close(done)
-				if err := server.Serve(listener); err != nil {
+				if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
 					t.Error(err)
 				}
 			}()
@@ -141,9 +142,6 @@ func TestDefaultCodecThroughActualGRPC(t *testing.T) {
 				if err := conn.Close(); err != nil {
 					t.Error(err)
 				}
-				server.Stop()
-				_ = listener.Close()
-				<-done
 			})
 			s, err := New("store", "ns", conn)
 			if err != nil {

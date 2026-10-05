@@ -34,12 +34,8 @@ func operationsConnection(t *testing.T, call operationRPC, options ...grpc.Serve
 	obscontracts.RegisterFailedPartitionsServer(server, &obscontracts.UnimplementedFailedPartitionsServer{})
 	sequences.RegisterEventSequencesServer(server, &sequences.UnimplementedEventSequencesServer{})
 	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		if err := server.Serve(listener); err != nil {
-			t.Error(err)
-		}
-	}()
+	t.Cleanup(func() { server.Stop(); _ = listener.Close(); <-done })
+	go serveKernelFixture(server, listener, done, t.Error)
 	conn, err := grpc.NewClient("passthrough:///operations", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
 	if err != nil {
 		t.Fatal(err)
@@ -48,9 +44,6 @@ func operationsConnection(t *testing.T, call operationRPC, options ...grpc.Serve
 		if err := conn.Close(); err != nil {
 			t.Error(err)
 		}
-		server.Stop()
-		_ = listener.Close()
-		<-done
 	})
 	return conn
 }

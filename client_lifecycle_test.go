@@ -84,12 +84,7 @@ func TestConnectionLossAndRejectedOAuthRecover(t *testing.T) {
 			clients.RegisterConnectionServiceServer(server, kernel)
 			sequences.RegisterEventSequencesServer(server, kernel)
 			served := make(chan struct{})
-			go func() {
-				defer close(served)
-				if err := server.Serve(listener); err != nil {
-					t.Error(err)
-				}
-			}()
+			go serveSupervisionFixture(server, listener, served, t.Error)
 			defer func() { server.Stop(); _ = listener.Close(); <-served }()
 			conn, err := grpc.NewClient("passthrough:///lifecycle", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
 			if err != nil {

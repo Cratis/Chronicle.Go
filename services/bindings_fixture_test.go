@@ -71,9 +71,10 @@ func facadeConnection(t *testing.T, kernel *facadeKernel) *grpc.ClientConn {
 	eventstores.RegisterEventStoresServer(server, kernel)
 	namespaces.RegisterNamespacesServer(server, kernel)
 	done := make(chan struct{})
+	t.Cleanup(func() { server.Stop(); _ = listener.Close(); <-done })
 	go func() {
 		defer close(done)
-		if err := server.Serve(listener); err != nil {
+		if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
 			t.Errorf("serve: %v", err)
 		}
 	}()
@@ -85,9 +86,6 @@ func facadeConnection(t *testing.T, kernel *facadeKernel) *grpc.ClientConn {
 		if err := conn.Close(); err != nil {
 			t.Error(err)
 		}
-		server.Stop()
-		_ = listener.Close()
-		<-done
 	})
 	return conn
 }

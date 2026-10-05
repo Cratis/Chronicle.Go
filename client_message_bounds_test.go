@@ -78,12 +78,7 @@ func boundsServer(t *testing.T) (string, *tls.Config, *grpc.ClientConn) {
 		}}},
 	}, kernel)
 	served := make(chan struct{})
-	go func() {
-		defer close(served)
-		if err := server.Serve(listener); err != nil {
-			t.Error(err)
-		}
-	}()
+	go serveSupervisionFixture(server, listener, served, t.Error)
 	conn, err := grpc.NewClient(listener.Addr().String(), grpc.WithTransportCredentials(credentials.NewTLS(policy)), grpc.WithDisableRetry(),
 		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(32), grpc.MaxCallRecvMsgSize(32)))
 	if err != nil {

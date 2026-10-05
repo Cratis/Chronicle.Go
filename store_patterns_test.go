@@ -52,12 +52,8 @@ func patternClient(t *testing.T, k *patternKernel) (*chronicle.Client, *grpc.Cli
 	constraints.RegisterConstraintsServer(server, k.kernel)
 	contracts.RegisterPatternsServer(server, k)
 	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		if err := server.Serve(listener); err != nil {
-			t.Error(err)
-		}
-	}()
+	t.Cleanup(func() { server.Stop(); _ = listener.Close(); <-done })
+	go serveKernelFixture(server, listener, done, t.Error)
 	conn, err := grpc.NewClient("passthrough:///bufnet", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
 	if err != nil {
 		t.Fatal(err)
@@ -66,9 +62,6 @@ func patternClient(t *testing.T, k *patternKernel) (*chronicle.Client, *grpc.Cli
 		if err := conn.Close(); err != nil {
 			t.Error(err)
 		}
-		server.Stop()
-		_ = listener.Close()
-		<-done
 	})
 	registry := chronicle.NewRegistry()
 	if _, err := chronicle.RegisterEvent[CustomerRegistered](registry, events.WithID("patterns-registration")); err != nil {

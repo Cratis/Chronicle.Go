@@ -66,7 +66,7 @@ func assertAuthorizationRegistrationWire(t *testing.T, option webhooks.Option, a
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		if err := server.Serve(listener); err != nil {
+		if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
 			t.Error(err)
 		}
 	}()

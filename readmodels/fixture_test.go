@@ -80,6 +80,7 @@ func serviceFixture(t *testing.T, k *modelKernel, descriptors ...readmodels.Desc
 	compliance.RegisterComplianceServer(server, k)
 	readmodelexplorer.RegisterReadModelExplorerServer(server, k)
 	served := make(chan struct{})
+	t.Cleanup(func() { server.Stop(); _ = listener.Close(); <-served })
 	go serveServiceFixture(server, listener, served, t.Error)
 	conn, err := grpc.NewClient("passthrough:///readmodels", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
 	if err != nil {
@@ -89,9 +90,6 @@ func serviceFixture(t *testing.T, k *modelKernel, descriptors ...readmodels.Desc
 		if err := conn.Close(); err != nil {
 			t.Error(err)
 		}
-		server.Stop()
-		_ = listener.Close()
-		<-served
 	})
 	catalog, err := readmodels.NewCatalog(descriptors...)
 	if err != nil {
