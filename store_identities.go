@@ -109,10 +109,12 @@ func identityRenameError(phase string, failure identityFailure, disposition Iden
 // permission and fits configured message bounds. Observation is not atomic and
 // does not prove this command caused the name or historical cache convergence.
 //
-// The definition flight is per Client and store and is held only during a
-// Rename's command RPC; renames are not serialized across their reads. A Rename
-// on the same Client and store (any namespace) that reaches a readiness check
-// while another Rename's command is in flight fails with reason
+// A Rename holds the per-Client, per-store definition flight only during its
+// own command RPC; destructive definition registrations (read-model and
+// projection registration) use the same flight. Renames are not serialized
+// across their reads. A Rename on the same Client and store (any namespace)
+// that reaches a readiness check while anything else holds that flight (another
+// Rename's command or a destructive definition registration) fails with reason
 // registration_not_ready: before its own command it returns
 // IdentityRenameNotDispatched; past its command (post_read) it returns
 // IdentityRenameUnknown with Acknowledged true. Renames through other clients or

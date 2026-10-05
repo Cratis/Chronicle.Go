@@ -61,10 +61,12 @@ the existing payload-free preparation contract.
 
 ## Concurrent renames
 
-The definition flight is per `Client` and store and is held only during a
-rename's command RPC; renames are not serialized across their reads. A `Rename` on
-the same `Client` and store (any namespace) that reaches a readiness check while
-another rename's command is in flight fails with reason `registration_not_ready`.
+A rename holds the per-`Client`, per-store definition flight only during its own
+command RPC; destructive definition registrations (read-model and projection
+registration) use the same flight. Renames are not serialized across their reads.
+A `Rename` on the same `Client` and store (any namespace) that reaches a readiness
+check while anything else holds that flight (another rename's command or a
+destructive definition registration) fails with reason `registration_not_ready`.
 Before its own command it returns `IdentityRenameNotDispatched`; if it is already
 past its command (`post_read`), it returns `IdentityRenameUnknown` with
 `Acknowledged` true. Renames through other clients or processes are unaffected.
