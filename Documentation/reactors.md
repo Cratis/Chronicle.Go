@@ -278,8 +278,8 @@ retry independently; unregistering during an open releases readiness waiters.
 ### Wait for observers before the first append
 
 `EventStore` and `WaitForRegistration` mean registration was sent, not that the
-kernel has subscribed your observers. On the pinned 19.29.4 kernel, a reactor or
-reducer that subscribes after events were appended to a key makes the kernel start
+kernel has subscribed your observers. On the pinned 19.29.4 kernel, an observer
+that subscribes after events were appended to a key makes the kernel start
 a catch-up for that partition. Events appended to the same key during that catch-up
 can be dropped for other observers, including projections. This is an upstream
 defect ([Chronicle#4558](https://github.com/Cratis/Chronicle/issues/4558)); the
@@ -312,10 +312,16 @@ func awaitObserversActive(ctx context.Context, store *chronicle.EventStore, ids 
 }
 ```
 
-Pass your reactor and reducer IDs. If projections must see the first events, also
-wait for the kernel's event-log observers `$system.statistics.event-types` and
-`$system.statistics.event-types.global`, as the integration tests do. This does
-not protect observers added later or after a reconnect.
+Pass the IDs of every observer on the event log involved: each reactor, each
+reducer and each projection. A projection's observer ID is its model or projection
+identifier (for example `model.Identifier()`). Always include the kernel's
+event-log observers `$system.statistics.event-types` and
+`$system.statistics.event-types.global`, as the integration tests do.
+
+This only helps when the observers have nothing to catch up, for example before
+any events exist for the keys involved. `observation.Active` means the observer is
+active, not necessarily caught up. The wait does not protect observers added later
+or after a reconnect.
 
 Events execute in received order, with no application queue. A failed event stops
 the batch; the result names only the last successful sequence number, or

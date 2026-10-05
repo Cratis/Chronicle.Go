@@ -61,10 +61,14 @@ the existing payload-free preparation contract.
 
 ## Concurrent renames
 
-A rename holds the store's definition flight for its command. A second concurrent
-`Rename` on the same store, in any namespace, is not dispatched: it returns
-`IdentityRenameNotDispatched` with reason `registration_not_ready`. Retry after the
-first rename completes.
+The definition flight is per `Client` and store and is held only during a
+rename's command RPC; renames are not serialized across their reads. A `Rename` on
+the same `Client` and store (any namespace) that reaches a readiness check while
+another rename's command is in flight fails with reason `registration_not_ready`.
+Before its own command it returns `IdentityRenameNotDispatched`; if it is already
+past its command (`post_read`), it returns `IdentityRenameUnknown` with
+`Acknowledged` true. Renames through other clients or processes are unaffected.
+Decide whether to retry from the returned disposition, not from concurrency alone.
 
 ## Scope, cost, and privacy
 
