@@ -275,6 +275,48 @@ registration was **sent**, not that a handler has caught up. A caller's deadline
 bounds this readiness wait, not the subscription lifetime. Failed stream opens
 retry independently; unregistering during an open releases readiness waiters.
 
+### Wait for observers before the first append
+
+`EventStore` and `WaitForRegistration` mean registration was sent, not that the
+kernel has subscribed your observers. On the pinned 19.29.4 kernel, a reactor or
+reducer that subscribes after events were appended to a key makes the kernel start
+a catch-up for that partition. Events appended to the same key during that catch-up
+can be dropped for other observers, including projections. This is an upstream
+defect ([Chronicle#4558](https://github.com/Cratis/Chronicle/issues/4558)); the
+client cannot repair it.
+
+As a startup mitigation, wait until your observers are subscribed and `Active`
+before the first append whose live delivery matters, using a bounded context:
+
+```go
+func awaitObserversActive(ctx context.Context, store *chronicle.EventStore, ids ...observation.ID) error {
+    ticker := time.NewTicker(50 * time.Millisecond)
+    defer ticker.Stop()
+    for _, id := range ids {
+        for {
+            info, err := store.Observers().Get(ctx, id, events.EventLog)
+            if err != nil {
+                return err
+            }
+            if info != nil && info.IsSubscribed() && info.RunningState() == observation.Active {
+                break
+            }
+            select {
+            case <-ctx.Done():
+                return fmt.Errorf("observer %s is not subscribed and active: %w", id, ctx.Err())
+            case <-ticker.C:
+            }
+        }
+    }
+    return nil
+}
+```
+
+Pass your reactor and reducer IDs. If projections must see the first events, also
+wait for the kernel's event-log observers `$system.statistics.event-types` and
+`$system.statistics.event-types.global`, as the integration tests do. This does
+not protect observers added later or after a reconnect.
+
 Events execute in received order, with no application queue. A failed event stops
 the batch; the result names only the last successful sequence number, or
 `events.Unavailable` when none succeeded. The kernel owns partition recovery and

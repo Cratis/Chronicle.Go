@@ -109,6 +109,11 @@ func identityRenameError(phase string, failure identityFailure, disposition Iden
 // permission and fits configured message bounds. Observation is not atomic and
 // does not prove this command caused the name or historical cache convergence.
 //
+// A rename holds the store's definition flight for its command. A second
+// concurrent Rename on the same store, in any namespace, is not dispatched and
+// returns IdentityRenameNotDispatched with reason registration_not_ready; callers
+// may retry after the first completes.
+//
 // SDK processing of this invocation discards borrowed error/panic payloads without
 // invoking unknown error hooks. Independent background operations and borrowed
 // implementations' own logging/explicit reentrant operations are not covered.

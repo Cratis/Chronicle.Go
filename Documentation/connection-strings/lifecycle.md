@@ -11,7 +11,7 @@ Keep your client and store handles across transient outages. The client replaces
 
 `EventStore(ctx, name, ...)` ensures the store and namespace and registers event types before returning a cached handle. Cache keys include both store and namespace. Definitions are shared only within the same logical store and generation; namespace barriers remain separate. A failed creation can be retried without permanently poisoning its cache entry.
 
-`Ready(ctx)` waits for connection health and required registration of the cached handles captured when called. A concurrently created store has its own barrier. `store.WaitForRegistration(ctx)` returns a `RegistrationOutcome` and an error, joining a pass or starting a new one after failure. Registration success refers to that generation, not a promise that the connection cannot subsequently fail.
+`Ready(ctx)` waits for connection health and required registration of the cached handles captured when called. A concurrently created store has its own barrier. `store.WaitForRegistration(ctx)` returns a `RegistrationOutcome` and an error, joining a pass or starting a new one after failure. Registration means sent, not that observers are subscribed and caught up; see [Wait for observers before the first append](../reactors.md#wait-for-observers-before-the-first-append) for a known upstream hazard. Registration success refers to that generation, not a promise that the connection cannot subsequently fail.
 
 An outcome contains:
 

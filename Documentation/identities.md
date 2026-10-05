@@ -59,6 +59,13 @@ sentinels remain inspectable alongside unknown outcomes. `IdentityRenameError`
 provides fixed `Phase()` and `Reason()` categories. Audit provider failures retain
 the existing payload-free preparation contract.
 
+## Concurrent renames
+
+A rename holds the store's definition flight for its command. A second concurrent
+`Rename` on the same store, in any namespace, is not dispatched: it returns
+`IdentityRenameNotDispatched` with reason `registration_not_ready`. Retry after the
+first rename completes.
+
 ## Scope, cost, and privacy
 
 The server has no filtered or paginated identity listing for this route. Success

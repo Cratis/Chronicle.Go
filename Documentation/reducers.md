@@ -207,6 +207,10 @@ Bump `WithVersion` when lifecycle implementation changes, as for folds.
 
 ## Failure and shutdown
 
+A reducer that subscribes after events were appended to a key can trigger a kernel
+catch-up that drops later same-key events for other observers on the pinned
+kernel. See [Wait for observers before the first append](reactors.md#wait-for-observers-before-the-first-append).
+
 Folds execute in event order. Failure returns no partial state and reports the
 last successful sequence position; cleanup failure resets it to unavailable.
 The kernel owns partition recovery. Generation-specific payloads are selected
