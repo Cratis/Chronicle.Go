@@ -62,7 +62,7 @@ the existing payload-free preparation contract.
 ## Concurrent renames
 
 A rename holds the per-`Client`, per-store definition flight only during its own
-command RPC; destructive definition registrations (read-model and projection
+command RPC; destructive definition registrations (full-set projection
 registration) use the same flight. Renames are not serialized across their reads.
 A `Rename` on the same `Client` and store (any namespace) that reaches a readiness
 check while anything else holds that flight (another rename's command or a
