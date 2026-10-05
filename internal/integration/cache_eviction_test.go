@@ -12,9 +12,11 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/contracts/clients"
+	"github.com/cratis/chronicle.go/contracts/observation"
 	reactorcontracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/google/uuid"
@@ -25,15 +27,19 @@ import (
 type evictionHeartbeatStream struct {
 	grpc.ClientStream
 	once      sync.Once
-	connected chan<- struct{}
+	connected chan<- string
 }
 
 func (s *evictionHeartbeatStream) RecvMsg(value any) error {
 	err := s.ClientStream.RecvMsg(value)
 	if err == nil {
 		s.once.Do(func() {
+			var id string
+			if alive, ok := value.(*clients.ConnectionKeepAlive); ok {
+				id = alive.GetConnectionId()
+			}
 			select {
-			case s.connected <- struct{}{}:
+			case s.connected <- id:
 			case <-s.Context().Done():
 			}
 		})
@@ -49,7 +55,7 @@ func TestKernelCacheEvictionRetainsWatchAndExplicitReconnect(t *testing.T) {
 		t.Fatal(err)
 	}
 	relay := newRelay(t, uri.Addresses()[0].String())
-	connected := make(chan struct{}, 4)
+	connected := make(chan string, 4)
 	var streams atomic.Int32
 	conn, err := grpc.NewClient(relay.listener.Addr().String(), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})), grpc.WithDisableRetry(), // Test-owned local TLS endpoint.
 		grpc.WithStreamInterceptor(func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, options ...grpc.CallOption) (grpc.ClientStream, error) {
@@ -103,6 +109,10 @@ func TestKernelCacheEvictionRetainsWatchAndExplicitReconnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The reactor stream is open, but the kernel subscribes it asynchronously.
+	// Appending first would start a reactor catch-up for "person" that drops the
+	// projection's later live events (https://github.com/Cratis/Chronicle/issues/4558).
+	awaitObserversObserving(t, f, old.Namespace(), append([]string{"eviction", string(model.Identifier())}, eventLogStatisticsObservers...)...)
 	reader := readmodels.For(old.ReadModels(), model)
 	watch, err := reader.Watch(f.ctx)
 	if err != nil {
@@ -145,8 +155,9 @@ func TestKernelCacheEvictionRetainsWatchAndExplicitReconnect(t *testing.T) {
 	if _, err := watch.Recv(); !errors.Is(err, readmodels.ErrInterrupted) {
 		t.Fatal("old watch did not terminate on generation loss", err)
 	}
+	var reconnected string
 	select {
-	case <-connected:
+	case reconnected = <-connected:
 	case <-f.ctx.Done():
 		t.Fatal(f.ctx.Err())
 	}
@@ -154,6 +165,11 @@ func TestKernelCacheEvictionRetainsWatchAndExplicitReconnect(t *testing.T) {
 	if err != nil || !after.IsSuccess() || after.Generation <= before.Generation {
 		t.Fatal("explicit retained registration", before, after, err)
 	}
+	// The new generation resubscribes the reactor asynchronously; appending first
+	// would start a catch-up for "person" that drops the projection's live event
+	// (https://github.com/Cratis/Chronicle/issues/4558).
+	awaitReactorConnection(t, f, old.Namespace(), "eviction", reconnected)
+	awaitObserversObserving(t, f, old.Namespace(), append([]string{"eviction", string(model.Identifier())}, eventLogStatisticsObservers...)...)
 	next, err := reader.Watch(f.ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -167,4 +183,31 @@ func TestKernelCacheEvictionRetainsWatchAndExplicitReconnect(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("cache eviction: old watch delivered; facades distinct; reactor streams=2 across generations %d -> %d; explicit retained registration and rewatch delivered", before.Generation, after.Generation)
+}
+
+// awaitReactorConnection waits until the kernel's reactor subscription targets
+// exactly the given client connection, so a stale previous-generation
+// subscription cannot satisfy the following observing-state check.
+func awaitReactorConnection(t *testing.T, f *kernelFixture, namespace chronicle.Namespace, id, connectionID string) {
+	t.Helper()
+	if connectionID == "" {
+		t.Fatal("reconnect heartbeat carried no connection id")
+	}
+	client := observation.NewObserversClient(f.conn)
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		connected, err := client.GetConnectedClientsForObserver(f.ctx, &observation.GetConnectedClientsForObserverRequest{EventStore: string(f.storeName), Namespace: string(namespace), ObserverId: id, EventSequenceId: "event-log"})
+		if err != nil {
+			t.Fatalf("observer %s connected clients: %v", id, err)
+		}
+		if items := connected.GetItems(); len(items) == 1 && items[0].GetConnectionId() == connectionID {
+			return
+		}
+		select {
+		case <-f.ctx.Done():
+			t.Fatalf("observer %s not subscribed for connection %s (last %v): %v", id, connectionID, connected, f.ctx.Err())
+		case <-ticker.C:
+		}
+	}
 }
