@@ -158,6 +158,10 @@ func releaseRouteProfile[T any](t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The reducer stream is open, but the kernel subscribes it asynchronously.
+	// Appending first would start a reducer catch-up for "source-not-owner" that
+	// drops the projection's later Ticked event (https://github.com/Cratis/Chronicle/issues/4558).
+	awaitObserversObserving(t, f, store.Namespace(), append([]string{"release-route-reducer", string(model.Identifier())}, eventLogStatisticsObservers...)...)
 	transport := &releaseRouteTransport{ClientConnInterface: f.conn}
 	service, err := readmodels.New(f.storeName, store.Namespace(), store.ReadModels().Catalog(), transport)
 	if err != nil {
