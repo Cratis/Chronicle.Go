@@ -42,7 +42,8 @@ type Client struct {
 	catalogs         map[StoreName]*events.Catalog
 	constraints      []constraints.Definition
 	storeConstraints map[StoreName][]constraints.Definition
-	stores           map[storeKey]*EventStore
+	stores           map[storeKey]*EventStore // Lookup and automatic registration membership only.
+	storeOwners      map[storeKey]*storeOwner // Resource ownership, retained until client shutdown.
 	definitions      map[StoreName]*definitionCoordinator
 	current          *generation
 	supervisor       *supervision

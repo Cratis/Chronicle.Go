@@ -54,8 +54,17 @@ type storeKey struct {
 }
 
 // EventStore is a concurrency-safe registered store/namespace handle.
-// It borrows its Client; Close the client to release resources.
+// It borrows its Client; Close the client to release resources. Cache eviction
+// detaches this facade, not its resources or ability to perform explicit operations.
 type EventStore struct {
+	*storeOwner
+}
+
+// storeOwner retains exactly one resource set per client/store/namespace, even
+// when no facade belongs to the lookup cache. Never copy it: observer managers,
+// sequence subscriptions and reduction feeds have independent live lifetimes.
+// It has no exported methods to promote onto the public facade.
+type storeOwner struct {
 	client        *Client
 	definitions   *definitionCoordinator
 	readerRoot    *definitionRoot
@@ -148,27 +157,12 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 	}
 	store := c.stores[key]
 	if store == nil {
-		snapshot, err := c.selectedStoreSnapshotLocked(key.name)
+		owner, err := c.storeOwnerLocked(key)
 		if err != nil {
 			c.mu.Unlock()
 			return nil, err
 		}
-		store = &EventStore{client: c, name: key.name, namespace: key.namespace, catalog: snapshot.events, constraints: snapshot.constraints, definitions: c.definitions[key.name]}
-		store.log, err = eventsequences.New(key.name, key.namespace, events.EventLog, snapshot.events, &clientTransport{client: c, store: store})
-		if err != nil {
-			c.mu.Unlock()
-			return nil, err
-		}
-		store.sequences = map[events.SequenceID]*eventsequences.Sequence{events.EventLog: store.log}
-		if err = store.initializeReadModelsFromSnapshot(snapshot); err != nil {
-			c.mu.Unlock()
-			return nil, err
-		}
-		store.compliance, err = compliance.New(key.name, key.namespace, &clientTransport{client: c, store: store})
-		if err != nil {
-			c.mu.Unlock()
-			return nil, err
-		}
+		store = &EventStore{storeOwner: owner}
 		c.stores[key] = store
 	}
 	c.mu.Unlock()
@@ -176,6 +170,56 @@ func (c *Client) EventStore(ctx context.Context, name StoreName, options ...Stor
 		return nil, err
 	}
 	return store, nil
+}
+
+// storeOwnerLocked composes callback-free resources once per coordinate. Their
+// transport retains a private binding, not a cached facade or cache membership.
+func (c *Client) storeOwnerLocked(key storeKey) (*storeOwner, error) {
+	if owner := c.storeOwners[key]; owner != nil {
+		return owner, nil
+	}
+	snapshot, err := c.selectedStoreSnapshotLocked(key.name)
+	if err != nil {
+		return nil, err
+	}
+	owner := &storeOwner{client: c, name: key.name, namespace: key.namespace, catalog: snapshot.events, constraints: snapshot.constraints, definitions: c.definitions[key.name]}
+	store := &EventStore{storeOwner: owner}
+	store.log, err = eventsequences.New(key.name, key.namespace, events.EventLog, snapshot.events, &clientTransport{client: c, store: store})
+	if err != nil {
+		return nil, err
+	}
+	store.sequences = map[events.SequenceID]*eventsequences.Sequence{events.EventLog: store.log}
+	if err = store.initializeReadModelsFromSnapshot(snapshot); err != nil {
+		return nil, err
+	}
+	store.compliance, err = compliance.New(key.name, key.namespace, &clientTransport{client: c, store: store})
+	if err != nil {
+		return nil, err
+	}
+	if c.storeOwners == nil {
+		c.storeOwners = make(map[storeKey]*storeOwner)
+	}
+	c.storeOwners[key] = owner
+	return owner, nil
+}
+
+// EvictEventStores clears the store lookup cache and subsequent automatic
+// registration membership. It does no I/O and does not cancel or join work.
+// Already-issued handles, watches and sequences remain usable and client-owned;
+// their explicit use can register the current generation without recaching them.
+// A previously captured Ready/reconnect pass may finish after eviction returns.
+// The next lookup returns a new facade sharing the coordinate's retained resources.
+// Eviction does not invalidate decision evidence, reclaim live resources or delete
+// server data. Repeated eviction succeeds; unprepared/closed clients return their
+// existing ClientStateError. No preparation callbacks are invoked.
+func (c *Client) EvictEventStores() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.requirePreparedLocked("evict event stores", false); err != nil {
+		return err
+	}
+	clear(c.stores)
+	return nil
 }
 
 // EventStores lists authorized logical stores after connection preflight.

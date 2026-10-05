@@ -78,7 +78,7 @@ func TestReadModelReactorsBindCallbackAndEffectMetadataToSelectedStore(t *testin
 					if err != nil {
 						t.Fatal(err)
 					}
-					store := &EventStore{client: client, name: storeName, namespace: DefaultNamespace}
+					store := &EventStore{storeOwner: &storeOwner{client: client, name: storeName, namespace: DefaultNamespace}}
 					if err = store.initializeReadModelsFromSnapshot(snapshot); err != nil {
 						t.Fatal(err)
 					}

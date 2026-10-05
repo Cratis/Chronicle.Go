@@ -16,5 +16,9 @@ func testDefinitionStore(t *testing.T, store *EventStore) *EventStore {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if store.client.storeOwners == nil {
+		store.client.storeOwners = make(map[storeKey]*storeOwner)
+	}
+	store.client.storeOwners[storeKey{store.name, store.namespace}] = store.storeOwner
 	return store
 }

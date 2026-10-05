@@ -61,9 +61,11 @@ func (s *EventStore) WaitForRegistration(ctx context.Context) (RegistrationOutco
 	}
 }
 
-// Ready waits for a healthy generation and registrations for all handles known
-// when called. Connect alone does not imply artifact readiness. Concurrently
-// created stores carry their own barrier. Terminal failures are not retried here.
+// Ready waits for a healthy generation and registrations for cached handles
+// captured when called. A pass captured before EvictEventStores may still finish;
+// later passes omit detached handles, even if they remain in use. Connect alone
+// does not imply artifact readiness. Concurrently created stores carry their own
+// barrier. Terminal failures are not retried here.
 func (c *Client) Ready(ctx context.Context) error {
 	if err := c.requirePrepared("ready", false); err != nil {
 		return err
@@ -129,6 +131,7 @@ func (c *Client) acquireRegistrationReady(ctx context.Context) (*generation, con
 	return g, attemptCtx, func() { stop(); cancel() }, nil
 }
 
+// storeSnapshot is registration membership, never the resource ownership set.
 func (c *Client) storeSnapshot() []*EventStore {
 	c.mu.Lock()
 	stores := make([]*EventStore, 0, len(c.stores))

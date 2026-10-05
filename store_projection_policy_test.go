@@ -37,7 +37,7 @@ func TestMixedAllHistoryIsRefusedBeforeTransport(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	store := &EventStore{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}
+	store := &EventStore{storeOwner: &storeOwner{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}}
 	if err := store.initializeReadModels(); err != nil {
 		t.Fatal(err)
 	}

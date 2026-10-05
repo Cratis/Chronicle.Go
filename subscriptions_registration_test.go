@@ -114,7 +114,7 @@ func TestObserverOriginsBindSequencesModelsAndSubscriptionUnion(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		handle := &EventStore{client: client, name: store, catalog: snapshot.events, reactorSnapshot: snapshot.reactors, reducerSnapshot: snapshot.reducers, projectionSnapshot: snapshot.projections}
+		handle := &EventStore{storeOwner: &storeOwner{client: client, name: store, catalog: snapshot.events, reactorSnapshot: snapshot.reactors, reducerSnapshot: snapshot.reducers, projectionSnapshot: snapshot.projections}}
 		subscriptions := handle.externalSubscriptions()
 		if store == "origin" {
 			if len(subscriptions) != 0 {

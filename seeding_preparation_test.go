@@ -98,11 +98,11 @@ func TestSeedersPrepareInOrderAgainstSelectedFrozenNamingCatalog(t *testing.T) {
 	if !slices.Equal(order, []int{0, 1}) {
 		t.Fatal(order)
 	}
-	global := (&EventStore{client: client, name: "other"}).seedDefinition()
+	global := (&EventStore{storeOwner: &storeOwner{client: client, name: "other"}}).seedDefinition()
 	if got := global.Contract("other").GlobalByEventSource[0].Entries[0].Content; got != `{"name":"seed"}` {
 		t.Fatal(got)
 	}
-	if !(&EventStore{client: client, name: "empty"}).seedDefinition().IsEmpty() {
+	if !(&EventStore{storeOwner: &storeOwner{client: client, name: "empty"}}).seedDefinition().IsEmpty() {
 		t.Fatal("default seeds leaked into replacement store")
 	}
 	bad := NewRegistry()

@@ -13,7 +13,7 @@ import (
 )
 
 // ReductionChanges is a store/namespace-local notification source for successful
-// in-process folds, not a durable kernel change feed. The store facade owns it;
+// in-process folds, not a durable kernel change feed. The client/store coordinate owns it;
 // adapters may construct its zero value, bind a generation, and publish folds.
 // It is concurrency-safe and invokes no callbacks while holding its lock.
 type ReductionChanges struct {

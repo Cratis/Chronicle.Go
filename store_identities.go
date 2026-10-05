@@ -113,7 +113,7 @@ func identityRenameError(phase string, failure identityFailure, disposition Iden
 // invoking unknown error hooks. Independent background operations and borrowed
 // implementations' own logging/explicit reentrant operations are not covered.
 func (m *IdentityManager) Rename(ctx context.Context, subject string, name identities.Name, correlation ...metadata.CorrelationID) (result IdentityRenameResult, err error) {
-	invalid := m == nil || m.store == nil || m.store.client == nil || m.store.definitions == nil || nilValue(ctx) || len(correlation) > 1 ||
+	invalid := m == nil || m.store == nil || m.store.storeOwner == nil || m.store.client == nil || m.store.definitions == nil || nilValue(ctx) || len(correlation) > 1 ||
 		!utf8.ValidString(subject) || !utf8.ValidString(string(name)) || strings.TrimSpace(subject) == "" || strings.TrimSpace(string(name)) == ""
 	if invalid {
 		return result, identityRenameError("prepare", identityFailure{reason: "configuration", category: ErrInvalidConfiguration}, result.Disposition)
