@@ -77,7 +77,7 @@ func watchFixture(t *testing.T, k *watchKernel, model readmodels.Descriptor, opt
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		if err := server.Serve(listener); err != nil {
+		if err := server.Serve(listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			t.Error(err)
 		}
 	}()
