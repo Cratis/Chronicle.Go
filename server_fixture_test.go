@@ -137,12 +137,8 @@ func kernelConnection(t *testing.T, kernel *fakeKernel) *grpc.ClientConn {
 	namespaces.RegisterNamespacesServer(server, kernel)
 	sequences.RegisterEventSequencesServer(server, kernel)
 	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		if err := server.Serve(listener); err != nil {
-			t.Errorf("serve: %v", err)
-		}
-	}()
+	t.Cleanup(func() { server.Stop(); _ = listener.Close(); <-done })
+	go serveKernelFixture(server, listener, done, func(args ...any) { t.Errorf("serve: %v", args[0]) })
 	conn, err := grpc.NewClient("passthrough:///bufnet", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
 	if err != nil {
 		t.Fatal(err)
@@ -151,11 +147,16 @@ func kernelConnection(t *testing.T, kernel *fakeKernel) *grpc.ClientConn {
 		if err := conn.Close(); err != nil {
 			t.Error(err)
 		}
-		server.Stop()
-		_ = listener.Close()
-		<-done
 	})
 	return conn
+}
+
+func serveKernelFixture(server *grpc.Server, listener net.Listener, served chan struct{}, report func(...any)) {
+	defer close(served)
+	// Cleanup can stop the server before this goroutine starts serving.
+	if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
+		report(err)
+	}
 }
 
 func testClient(t *testing.T, kernel *fakeKernel, options ...chronicle.ClientOption) (*chronicle.Client, *grpc.ClientConn) {

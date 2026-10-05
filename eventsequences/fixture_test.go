@@ -75,6 +75,13 @@ func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events
 	}))
 	sequences.RegisterEventSequencesServer(server, &sequences.UnimplementedEventSequencesServer{})
 	done := make(chan struct{})
+	t.Cleanup(func() {
+		server.Stop()
+		if err := listener.Close(); err != nil {
+			t.Error(err)
+		}
+		<-done
+	})
 	go func() {
 		defer close(done)
 		if err := fixtureServeError(server.Serve(listener)); err != nil {
@@ -89,11 +96,6 @@ func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events
 		if err := conn.Close(); err != nil {
 			t.Error(err)
 		}
-		server.Stop()
-		if err := listener.Close(); err != nil {
-			t.Error(err)
-		}
-		<-done
 	})
 	var resolver eventsequences.AppendOriginResolver
 	if len(resolvers) > 0 {

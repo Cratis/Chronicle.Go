@@ -75,12 +75,15 @@ func watchFixture(t *testing.T, k *watchKernel, model readmodels.Descriptor, opt
 	contracts.RegisterMaterializedReadModelsServer(server, k)
 	compliance.RegisterComplianceServer(server, k)
 	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		if err := server.Serve(listener); err != nil {
-			t.Error(err)
+	t.Cleanup(func() {
+		server.Stop()
+		_ = listener.Close()
+		<-done
+		if k.active.Load() != 0 {
+			t.Error("leaked server handler")
 		}
-	}()
+	})
+	go serveServiceFixture(server, listener, done, t.Error)
 	conn, err := grpc.NewClient("passthrough:///watch", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
 	if err != nil {
 		t.Fatal(err)
@@ -88,12 +91,6 @@ func watchFixture(t *testing.T, k *watchKernel, model readmodels.Descriptor, opt
 	t.Cleanup(func() {
 		if err := conn.Close(); err != nil {
 			t.Error(err)
-		}
-		server.Stop()
-		_ = listener.Close()
-		<-done
-		if k.active.Load() != 0 {
-			t.Error("leaked server handler")
 		}
 	})
 	catalog, err := readmodels.NewCatalog(model)

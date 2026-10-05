@@ -44,9 +44,16 @@ func fixture(t *testing.T, handle handler) (context.Context, *eventsequences.Seq
 	}))
 	sequences.RegisterEventSequencesServer(server, &sequences.UnimplementedEventSequencesServer{})
 	done := make(chan struct{})
+	t.Cleanup(func() {
+		server.Stop()
+		if err := listener.Close(); err != nil {
+			t.Error(err)
+		}
+		<-done
+	})
 	go func() {
 		defer close(done)
-		if err := server.Serve(listener); err != nil {
+		if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
 			t.Error(err)
 		}
 	}()
@@ -58,11 +65,6 @@ func fixture(t *testing.T, handle handler) (context.Context, *eventsequences.Seq
 		if err := conn.Close(); err != nil {
 			t.Error(err)
 		}
-		server.Stop()
-		if err := listener.Close(); err != nil {
-			t.Error(err)
-		}
-		<-done
 	})
 	sequence, err := eventsequences.New("store", "tenant", "event-log", catalog, conn)
 	if err != nil {

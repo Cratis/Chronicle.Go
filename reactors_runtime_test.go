@@ -146,12 +146,15 @@ func reactorClient(t *testing.T, k *reactorKernel, registry *chronicle.Registry,
 	contracts.RegisterReactorsServer(server, k)
 	modelcontracts.RegisterReadModelsServer(server, k)
 	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		if err := server.Serve(listener); err != nil {
-			t.Error(err)
+	t.Cleanup(func() {
+		server.Stop()
+		_ = listener.Close()
+		<-done
+		if k.active.Load() != 0 {
+			t.Error("observer server leaked")
 		}
-	}()
+	})
+	go serveKernelFixture(server, listener, done, t.Error)
 	conn, err := grpc.NewClient("passthrough:///reactors", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
 	if err != nil {
 		t.Fatal(err)
@@ -159,12 +162,6 @@ func reactorClient(t *testing.T, k *reactorKernel, registry *chronicle.Registry,
 	t.Cleanup(func() {
 		if err := conn.Close(); err != nil {
 			t.Error(err)
-		}
-		server.Stop()
-		_ = listener.Close()
-		<-done
-		if k.active.Load() != 0 {
-			t.Error("observer server leaked")
 		}
 	})
 	base := []chronicle.ClientOption{chronicle.WithRegistry(registry), chronicle.WithGRPCConnection(conn), chronicle.WithNoAuthentication(), chronicle.WithKeepAliveTimeout(time.Minute)}

@@ -87,12 +87,14 @@ func integrationDefinitionsConnection(t *testing.T, k *integrationDefinitionsKer
 	servicecontracts.RegisterExternalServicesServer(server, k)
 	capturecontracts.RegisterCapturesServer(server, k)
 	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		if err := server.Serve(listener); err != nil {
+	t.Cleanup(func() {
+		server.Stop()
+		if err := listener.Close(); err != nil {
 			t.Error(err)
 		}
-	}()
+		<-done
+	})
+	go serveKernelFixture(server, listener, done, t.Error)
 	conn, err := grpc.NewClient("passthrough:///integrations", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDisableRetry(), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return listener.DialContext(ctx) }))
 	if err != nil {
 		t.Fatal(err)
@@ -101,11 +103,6 @@ func integrationDefinitionsConnection(t *testing.T, k *integrationDefinitionsKer
 		if err := conn.Close(); err != nil {
 			t.Error(err)
 		}
-		server.Stop()
-		if err := listener.Close(); err != nil {
-			t.Error(err)
-		}
-		<-done
 	})
 	return conn
 }
