@@ -43,7 +43,11 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 		targets := enumRootFields(fields)
 		for _, w := range append(slices.Clone(n.all), from.writes...) {
 			target, _ := serialization.FieldAt(fields, w.path)
-			source, _ := serialization.FieldAt(event.Fields(), w.expression.text)
+			var source serialization.Field
+			switch w.expression.kind {
+			case pathExpression, addExpression, subtractExpression:
+				source, _ = serialization.FieldAt(event.Fields(), w.expression.text)
+			}
 			if !binaryField(target) && !binaryField(source) {
 				continue
 			}
