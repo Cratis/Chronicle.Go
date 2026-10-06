@@ -415,11 +415,29 @@ server encryption certificate; ordinary Go tests remain container-free.
 
 Chronicle 19.32.0 through 19.32.3 share wire contracts, so compatibility alone
 does not show which kernel fixes are present. The client records them from the
-server version the compatibility check reports; with
+server version the compatibility check reports, per connection; with
 `WithSkipCompatibilityCheck` or an unrecognized version it assumes none, and
 these routes return `ErrUnsupported` before any RPC
 (`TestKernelCapabilitiesAreRecordedFromVerifiedVersion`). A `-development` image
 counts as its release.
+
+The guarantee holds at dispatch, not only when an operation starts. A gated
+operation records what it needs in its call context, and the transport checks
+those needs against the connection that is about to send each RPC, after
+pinning it. If the client reconnected to an older kernel while the operation was
+running (for example while an enricher or audit provider ran), the RPC is not
+sent and the operation returns `ErrUnsupported`, reported as not dispatched. An
+early check against the current connection still refuses quickly, before
+providers or codecs run; it is not authoritative. Registration checks the
+connection it registers on, and every reconnect registers again, so a store that
+reconnects to an older kernel refuses its nested protection again
+(`TestProtectedReviseRefusesWhenReconnectedToIncapableKernelBeforeDispatch`,
+`TestClassifiedReplayRefusesWhenReconnectedToIncapableKernelBeforeDispatch`,
+`TestMixedAllReplayRefusesWhenReconnectedToIncapableKernelBeforeDispatch`,
+`TestNestedProtectionReRegistrationRefusesAfterReconnectToIncapableKernel`). An
+operation refused by the early check is not retried after a reconnect to a newer
+kernel; call it again (`TestProtectedReviseOnIncapableKernelRefusesBeforeProviders`,
+`TestNestedProtectionRegistersAfterReconnectToCapableKernel`).
 
 | Route | Minimum kernel | Kernel fix |
 | --- | --- | --- |

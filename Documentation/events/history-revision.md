@@ -184,9 +184,12 @@ removes the PII while leaving the encrypted values readable.
 The SDK refuses two revisions with `ErrUnsupported` before serializing or
 dispatching anything:
 
-- A protected replacement when the connected kernel is older than 19.32.2 or
-  its version was not verified (`WithSkipCompatibilityCheck`). Those kernels
-  store revised content and the system request unprotected.
+- A protected replacement when the kernel that would receive it is older than
+  19.32.2 or its version was not verified (`WithSkipCompatibilityCheck`). The
+  check is repeated on the connection that sends the revision, so a reconnect to
+  an older kernel while providers or enrichers run also refuses it, without
+  sending anything. Those kernels store revised content and the system request
+  unprotected.
 - On every kernel, an unclassified replacement whose type ID another registered
   generation classifies. The kernel protects only with the replacement
   generation's schema, so that plaintext could never be erased. Revise with the
