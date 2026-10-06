@@ -31,7 +31,8 @@ type Session[T any] struct {
 // The first Get hydrates; each Get uses that same session. Reducers and models
 // without a declared projection fail with ErrUnsupported. Classified values are
 // released by the kernel with the subject each value was written under (kernel
-// 19.32.2 or later, Chronicle#4561). Call Close even after
+// 19.32.2 or later, Chronicle#4561); against an older or unverified kernel, Get
+// of a classified model fails with ErrUnsupported before RPC. Call Close even after
 // failed Get, because the kernel may already have allocated hydration state.
 func (r *Reader[T]) NewSession(key Key) (*Session[T], error) {
 	d, err := r.descriptor()

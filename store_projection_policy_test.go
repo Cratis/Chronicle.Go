@@ -4,11 +4,13 @@
 package chronicle
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -19,9 +21,16 @@ type historyMixedAllModel struct {
 	Updated time.Time `chronicle:"all(context=occurred)"`
 }
 
+type fixedKernel kernelcapability.Capabilities
+
+func (k fixedKernel) KernelCapabilities(context.Context) (kernelcapability.Capabilities, error) {
+	return kernelcapability.Capabilities(k), nil
+}
+
 // Chronicle#4562 is fixed in 19.32.1: replay and history fold every event the
-// projection handles live, so mixed ALL plus explicit mappings is admitted.
-func TestMixedAllHistoryIsAdmitted(t *testing.T) {
+// projection handles live, so mixed ALL plus explicit mappings is admitted on
+// such a kernel and refused before transport on older or unverified kernels.
+func TestMixedAllHistoryRequiresMixedAllReplayKernel(t *testing.T) {
 	r := NewRegistry()
 	if _, err := RegisterEvent[historyAdmissionEvent](r); err != nil {
 		t.Fatal(err)
@@ -46,13 +55,24 @@ func TestMixedAllHistoryIsAdmitted(t *testing.T) {
 	if len(snapshot.projections) != 1 || !snapshot.projections[0].KernelDefinition().SubscribesToAllEvents || len(snapshot.projections[0].KernelDefinition().From) == 0 {
 		t.Fatal("fixture is not a mixed ALL projection")
 	}
-	validator, err := projectionReplayValidatorFor(snapshot)
-	if err != nil {
-		t.Fatal(err)
-	}
 	d, _ := snapshot.models.LookupIdentifier(m.Identifier())
-	if known, err := validator(t.Context(), d); !known || err != nil {
-		t.Fatal("mixed ALL replay refused", known, err)
+	for _, tc := range []struct {
+		name     string
+		kernel   kernelcapability.Provider
+		admitted bool
+	}{
+		{"unreported", nil, false},
+		{"19.32.0", fixedKernel{}, false},
+		{"19.32.1", fixedKernel{MixedAllReplay: true}, true},
+	} {
+		validator, err := projectionReplayValidatorFor(snapshot, tc.kernel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		known, err := validator(t.Context(), d)
+		if !known || (err == nil) != tc.admitted || (err != nil && !errors.Is(err, ErrUnsupported)) {
+			t.Fatalf("%s: known=%v err=%v", tc.name, known, err)
+		}
 	}
 }
 
@@ -95,7 +115,7 @@ func TestProjectionReplayPolicyOwnsBoundReplacementAndInboxDefinitions(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	validator, err := projectionReplayValidatorFor(snapshot)
+	validator, err := projectionReplayValidatorFor(snapshot, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +135,7 @@ func TestProjectionReplayPolicyOwnsBoundReplacementAndInboxDefinitions(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	fallbackValidator, err := projectionReplayValidatorFor(other)
+	fallbackValidator, err := projectionReplayValidatorFor(other, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

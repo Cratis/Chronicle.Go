@@ -14,6 +14,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/compliance"
 	"github.com/cratis/chronicle.go/contracts/readmodelexplorer"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -33,7 +34,22 @@ type modelKernel struct {
 	release   func(context.Context, *compliance.ReleaseRequest) (*compliance.ReleaseResponse, error)
 	dehydrate func(context.Context, *contracts.DehydrateSessionRequest) (*emptypb.Empty, error)
 	replay    func(context.Context, *contracts.GetAllInstancesRequest) (*contracts.GetAllInstancesResponse, error)
+	// kernel, when set, is reported as the connection's kernel capabilities.
+	kernel *kernelcapability.Capabilities
 }
+
+// capabilityConn reports fixed kernel capabilities over a fixture connection.
+type capabilityConn struct {
+	grpc.ClientConnInterface
+	capabilities kernelcapability.Capabilities
+}
+
+func (c capabilityConn) KernelCapabilities(context.Context) (kernelcapability.Capabilities, error) {
+	return c.capabilities, nil
+}
+
+// protectedReleaseKernel reports a kernel with the 19.32.2 replay release fixes.
+var protectedReleaseKernel = &kernelcapability.Capabilities{MixedAllReplay: true, ProtectedRelease: true}
 
 func (k *modelKernel) AllSnapshotsForReadModel(ctx context.Context, r *readmodelexplorer.AllSnapshotsForReadModelRequest) (*readmodelexplorer.QueryResult_IEnumerable_ReadModelSnapshotResponse, error) {
 	return k.snapshots(ctx, r)
@@ -95,7 +111,11 @@ func serviceFixture(t *testing.T, k *modelKernel, descriptors ...readmodels.Desc
 	if err != nil {
 		t.Fatal(err)
 	}
-	service, err := readmodels.New("store", "tenant-a", catalog, conn, k.options...)
+	var transport grpc.ClientConnInterface = conn
+	if k.kernel != nil {
+		transport = capabilityConn{conn, *k.kernel}
+	}
+	service, err := readmodels.New("store", "tenant-a", catalog, transport, k.options...)
 	if err != nil {
 		t.Fatal(err)
 	}

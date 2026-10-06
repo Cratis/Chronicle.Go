@@ -11,6 +11,7 @@ import (
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 type personalNames []string
@@ -170,5 +171,56 @@ func TestRecursiveOverrideSchemaReferencesAllResolve(t *testing.T) {
 	inspect(schema)
 	if count == 0 {
 		t.Fatal("recursive schema lost its references")
+	}
+}
+
+// Registration on kernels before 19.32.2 refuses exactly these placements.
+func TestNestedCollectionProtectionDetectsOnlyKernelSensitivePlacements(t *testing.T) {
+	pii := compliance.Classification{PII: true}
+	type Coarse struct {
+		Map  map[string]classifiedAddress `chronicle:"pii"`
+		Rows []personalNames              `chronicle:"pii"`
+	}
+	type ScalarItems struct {
+		Names []string `chronicle:"pii"`
+		Rows  [][]string
+		Nodes []classifiedAddress
+	}
+	for _, tc := range []struct {
+		name   string
+		schema func() (string, error)
+		nested bool
+	}{
+		{"map value member", func() (string, error) {
+			d, err := events.Define[nestedProtection](events.WithProtection(compliance.Property("Maps.street", pii)))
+			return d.Descriptor().Schema(), err
+		}, true},
+		{"collection-valued array element", func() (string, error) {
+			d, err := events.Define[nestedProtection](events.WithProtection(compliance.For[personalNames](pii)))
+			return d.Descriptor().Schema(), err
+		}, true},
+		{"map-valued array element", func() (string, error) {
+			d, err := events.Define[nestedProtection](events.WithProtection(compliance.For[personalMap](pii)))
+			return d.Descriptor().Schema(), err
+		}, true},
+		{"coarse containers", func() (string, error) {
+			d, err := events.Define[Coarse](events.WithProtection(compliance.For[personalNames](pii)))
+			return d.Descriptor().Schema(), err
+		}, false},
+		{"scalar items and declared members", func() (string, error) {
+			d, err := events.Define[ScalarItems](events.WithProtection(compliance.For[classifiedAddress](pii)))
+			return d.Descriptor().Schema(), err
+		}, false},
+	} {
+		schema, err := tc.schema()
+		if err != nil {
+			t.Fatal(tc.name, err)
+		}
+		if got := serialization.NestedCollectionProtection(schema); got != tc.nested {
+			t.Errorf("%s: nested = %v", tc.name, got)
+		}
+	}
+	if !serialization.NestedCollectionProtection(`{"properties":`) {
+		t.Fatal("malformed schema must fail closed")
 	}
 }

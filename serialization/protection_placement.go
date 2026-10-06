@@ -4,6 +4,7 @@
 package serialization
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/cratis/chronicle.go/declarations"
@@ -59,4 +60,78 @@ func validateProtectionPlacement(node map[string]any, definitions map[string]any
 		}
 	}
 	return nil
+}
+
+// NestedCollectionProtection reports whether a compiled schema declares
+// protection beneath an unprotected map (Chronicle#4551) or on a
+// collection-valued array element (Chronicle#4552). Kernels before 19.32.2 skip
+// that metadata and store those values unprotected. Malformed schemas and
+// unresolved references report true so callers fail closed.
+func NestedCollectionProtection(schema string) bool {
+	var root map[string]any
+	if json.Unmarshal([]byte(schema), &root) != nil || root == nil {
+		return true
+	}
+	definitions, _ := root["definitions"].(map[string]any)
+	found, err := nestedCollectionProtection(root, definitions, nestedPlacement{}, map[nestedReference]bool{})
+	return found || err
+}
+
+type nestedPlacement struct {
+	covered, mapValue, arrayItem bool
+}
+
+type nestedReference struct {
+	ref string
+	nestedPlacement
+}
+
+func nestedCollectionProtection(node map[string]any, definitions map[string]any, placement nestedPlacement, active map[nestedReference]bool) (bool, bool) {
+	if ref, ok := node["$ref"].(string); ok {
+		key := nestedReference{ref, placement}
+		if active[key] {
+			return false, false
+		}
+		active[key] = true
+		defer delete(active, key)
+		target, ok := definitions[strings.TrimPrefix(ref, "#/definitions/")].(map[string]any)
+		if !ok {
+			return false, true
+		}
+		return nestedCollectionProtection(target, definitions, placement, active)
+	}
+	protected := node["compliance"] != nil || node["security"] != nil
+	if protected && !placement.covered {
+		if placement.mapValue || (placement.arrayItem && (node["items"] != nil || node["additionalProperties"] != nil)) {
+			return true, false
+		}
+	}
+	placement.covered = placement.covered || protected
+	properties, _ := node["properties"].(map[string]any)
+	for _, property := range properties {
+		child, ok := property.(map[string]any)
+		if !ok {
+			continue
+		}
+		next := placement
+		next.arrayItem = false
+		if found, failed := nestedCollectionProtection(child, definitions, next, active); found || failed {
+			return found, failed
+		}
+	}
+	if items, ok := node["items"].(map[string]any); ok {
+		next := placement
+		next.arrayItem = true
+		if found, failed := nestedCollectionProtection(items, definitions, next, active); found || failed {
+			return found, failed
+		}
+	}
+	if values, ok := node["additionalProperties"].(map[string]any); ok {
+		next := placement
+		next.mapValue, next.arrayItem = true, false
+		if found, failed := nestedCollectionProtection(values, definitions, next, active); found || failed {
+			return found, failed
+		}
+	}
+	return false, false
 }

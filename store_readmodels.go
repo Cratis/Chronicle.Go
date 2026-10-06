@@ -40,11 +40,12 @@ func (s *EventStore) initializeReadModelsFromSnapshot(snapshot registrySnapshot)
 	s.reducerSnapshot = snapshot.reducers
 	s.readModelReactorSnapshot = snapshot.readModelReactors
 	s.initializeDecisions(snapshot)
-	replayValidator, err := projectionReplayValidatorFor(snapshot)
+	transport := &clientTransport{client: s.client, store: s, decisionSnapshot: s.decisionCatalog}
+	replayValidator, err := projectionReplayValidatorFor(snapshot, transport)
 	if err != nil {
 		return err
 	}
-	service, err := readmodels.New(s.name, s.namespace, snapshot.models, &clientTransport{client: s.client, store: s, decisionSnapshot: s.decisionCatalog}, readmodels.WithReleasedPassiveReader(s.readPassiveReducer), readmodels.WithReducerCollectionReader(s.readReducerCollection), readmodels.WithProjectionReplayValidator(replayValidator), readmodels.WithSnapshotEventCatalog(snapshot.events), readmodels.WithReductionChanges(&s.readModelChanges))
+	service, err := readmodels.New(s.name, s.namespace, snapshot.models, transport, readmodels.WithReleasedPassiveReader(s.readPassiveReducer), readmodels.WithReducerCollectionReader(s.readReducerCollection), readmodels.WithProjectionReplayValidator(replayValidator), readmodels.WithSnapshotEventCatalog(snapshot.events), readmodels.WithReductionChanges(&s.readModelChanges))
 	if err != nil {
 		return err
 	}
@@ -60,6 +61,11 @@ func (s *EventStore) registerReadModels(ctx context.Context, g *generation, root
 		models := root.snapshot.models.Descriptors()
 		if !full {
 			models = []readmodels.Descriptor{root.delta.Model()}
+		}
+		for _, d := range models {
+			if err := nestedProtectionAdmission(g, d.Schema()); err != nil {
+				return err
+			}
 		}
 		for _, d := range models {
 			sink := d.Sink()

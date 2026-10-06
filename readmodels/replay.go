@@ -22,7 +22,8 @@ func (d Descriptor) KeyProperty() string { return idProperty(d) }
 // result without an RPC.
 // Reducers are explicitly unsupported here. The kernel releases classified values
 // with the subject each was written under (19.32.2 or later, Chronicle#4561); the
-// SDK never decrypts them again. Returned JSON is owned and ID aliases
+// SDK never decrypts them again, and refuses classified models with ErrUnsupported
+// unless the connection reports such a kernel. Returned JSON is owned and ID aliases
 // are normalized by the same path as Get. No local projection engine is used.
 func (s *Service) ReplayProjection(ctx context.Context, model Identifier, eventCount uint64) ([]json.RawMessage, error) {
 	d, ok := s.catalog.LookupIdentifier(model)
@@ -41,6 +42,9 @@ func (s *Service) ReplayProjection(ctx context.Context, model Identifier, eventC
 	}
 	if eventCount == 0 {
 		return []json.RawMessage{}, nil
+	}
+	if err := s.projectionReleaseAdmission(ctx, d); err != nil {
+		return nil, err
 	}
 	// Existing adapters may own producer admission themselves. Reject a known
 	// unsupported shape, but preserve legacy admission for unknown producers.

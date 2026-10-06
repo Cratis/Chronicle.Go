@@ -65,6 +65,7 @@ func TestTypedReadsUseFrozenNamingPlan(t *testing.T) {
 			}
 			var releaseFailure atomic.Bool
 			kernel := &modelKernel{
+				kernel: protectedReleaseKernel,
 				get: func(context.Context, *contracts.GetInstanceByKeyRequest) (*contracts.GetInstanceByKeyResponse, error) {
 					return &contracts.GetInstanceByKeyResponse{ReadModel: string(data), LastHandledEventSequenceNumber: 7}, nil
 				},

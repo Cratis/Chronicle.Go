@@ -103,6 +103,7 @@ func TestAllOneShotReadPathsFailClosedOnRelease(t *testing.T) {
 	for _, path := range []string{"get", "session", "replay"} {
 		t.Run(path, func(t *testing.T) {
 			service, ctx := serviceFixture(t, &modelKernel{
+				kernel: protectedReleaseKernel,
 				get: func(context.Context, *contracts.GetInstanceByKeyRequest) (*contracts.GetInstanceByKeyResponse, error) {
 					// The server owns materialized release and fails the RPC on failure.
 					return nil, errors.New("PRIVATE kernel release failed")

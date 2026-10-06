@@ -40,6 +40,7 @@ type Service struct {
 	snapshotEvents   map[events.TypeRef]events.Descriptor
 	reductionChanges *ReductionChanges
 	decisions        decision.Provider
+	conn             grpc.ClientConnInterface
 }
 
 // New constructs a service without I/O. The caller owns the channel and any
@@ -48,7 +49,7 @@ func New(store metadata.StoreName, namespace metadata.Namespace, catalog *Catalo
 	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || catalog == nil || conn == nil || (reflect.ValueOf(conn).Kind() == reflect.Pointer && reflect.ValueOf(conn).IsNil()) {
 		return nil, invalid("store, namespace, catalog and transport required")
 	}
-	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), materialized: contracts.NewMaterializedReadModelsClient(conn), explorer: readmodelexplorer.NewReadModelExplorerClient(conn), compliance: compliance.NewComplianceClient(conn)}
+	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), materialized: contracts.NewMaterializedReadModelsClient(conn), explorer: readmodelexplorer.NewReadModelExplorerClient(conn), compliance: compliance.NewComplianceClient(conn), conn: conn}
 	service.decisions, _ = conn.(decision.Provider)
 	for _, option := range options {
 		if option == nil {
@@ -79,9 +80,11 @@ type Instance[T any] struct {
 // Get reads raw JSON by registered model identity and key. JSON null means absent;
 // an empty/malformed/non-object response fails with ErrProtocol. Raw JSON is owned
 // by the caller and retains kernel metadata except the root ID alias, which is
-// normalized to the model's serialized property name. Materialized reads are
-// server-released and validated without another decrypt. Classified projection
-// immediate/session reads fail with ErrUnsupported before RPC.
+// normalized to the model's serialized property name. Materialized, projection
+// immediate and session reads are server-released and validated without another
+// decrypt. Classified projection immediate/session reads need Chronicle 19.32.2
+// or later (Chronicle#4561) and fail with ErrUnsupported before RPC unless the
+// connection reports such a kernel.
 func (s *Service) Get(ctx context.Context, model Identifier, key Key) (Instance[json.RawMessage], error) {
 	d, ok := s.catalog.LookupIdentifier(model)
 	if !ok {
@@ -126,6 +129,11 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 			}
 		}
 		return result, nil
+	}
+	if d.Sink().Type == NoSink || session != "" {
+		if err := s.projectionReleaseAdmission(ctx, d); err != nil {
+			return Instance[json.RawMessage]{}, err
+		}
 	}
 	result, err = s.getInstance(ctx, d, key, session)
 	if err != nil || !result.Exists {
