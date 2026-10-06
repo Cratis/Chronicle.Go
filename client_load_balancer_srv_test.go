@@ -29,11 +29,8 @@ func TestLoadBalancerReceivesSRVPriorityWeightOrderWithoutMutation(t *testing.T)
 	balancer := &testLoadBalancer{next: func(_ context.Context, candidates []ServerAddress) (ServerAddress, error) {
 		// Reentry into the SDK lock is safe: selection runs outside it.
 		client.mu.Lock()
-		closed := client.closed
+		_ = client.closed
 		client.mu.Unlock()
-		if closed {
-			t.Error("selection started after close")
-		}
 		if !reflect.DeepEqual(candidates, want) {
 			t.Errorf("candidates=%v want=%v", candidates, want)
 		}

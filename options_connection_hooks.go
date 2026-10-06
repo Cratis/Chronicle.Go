@@ -26,7 +26,9 @@ type ConnectionEvent struct {
 // the caller goroutine or under SDK locks. Supervision, reconnect, RPCs and Ready
 // never wait for hooks; hooks may call Ready, EventStore and WaitForRegistration.
 // If a generation ends before its Connected hooks start, both notifications are
-// skipped (visible as a Generation gap); at most two events remain pending.
+// skipped and its number is never reported; gaps also come from attempts that
+// never became ready, so a gap alone does not prove coalescing. At most two
+// events remain pending.
 // Every delivered Connected gets exactly one Disconnected, including on Close.
 // Connected's context ends with the generation or client; Disconnected uses the
 // client lifetime context, which may already be canceled. Panics are contained,

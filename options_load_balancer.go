@@ -17,6 +17,8 @@ import (
 // canceled by Close; implementations must honor cancellation and must not call
 // Close/Shutdown from Next. Errors, panics and non-candidates fail before dialing
 // or OAuth and become LoadBalancerError; reconnect retries with normal backoff.
+// A selection error matching a context error is treated like an attempt timeout:
+// the first Connect keeps waiting on its own context while the client retries.
 // The selected address is also the OAuth authority. A shared balancer must support
 // concurrent calls from different clients.
 type LoadBalancer interface {
