@@ -111,8 +111,12 @@ C#'s last-choice replacement, Go rejects multiple choices so it cannot silently
 discard a supplied credential. Source selection through `Builder.From` still
 replaces the previous source.
 
-Formatting and structured logging redact `SourceAuthorization`, `Source`,
-`Definition` and `Builder`. JSON marshaling and unmarshaling fail with
+Direct formatting and structured logging redact `SourceAuthorization`, `Source`,
+`Definition` and `Builder`. Authorization credentials remain hidden even when
+these values are nested in a caller's unexported struct fields, where Go cannot
+invoke their formatting methods; other declaration settings can still appear.
+Credential storage is immutable and opaque to formatting, not encrypted memory.
+JSON marshaling and unmarshaling fail with
 `chronicle.ErrUnsupported`, including on zero values; they never export an empty
 object or silently read unknown authorization as None. If you used JSON for these
 configuration values, migrate to explicit authoring; `Declaration()` exports CDL

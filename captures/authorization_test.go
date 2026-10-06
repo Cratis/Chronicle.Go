@@ -35,12 +35,20 @@ func TestCaptureAuthorizationRejectsInvalidOptions(t *testing.T) {
 		{"blank client secret", []captures.WebhookOption{captures.WithOAuth("https://synthetic.invalid/oauth", "synthetic-client", " ")}},
 		{"duplicate", []captures.WebhookOption{captures.WithBearerToken("synthetic-token"), captures.WithBearerToken("synthetic-token")}},
 		{"multiple", syntheticAuthorizations()},
+		{"basic then bearer", []captures.WebhookOption{captures.WithBasicAuth("synthetic-user", "synthetic-password"), captures.WithBearerToken("synthetic-token")}},
+		{"blank bearer whitespace", []captures.WebhookOption{captures.WithBearerToken(" \t\u2003")}},
 		{"invalid then valid", []captures.WebhookOption{captures.WithBearerToken(""), captures.WithBearerToken("synthetic-token")}},
 		{"valid then nil", []captures.WebhookOption{captures.WithBearerToken("synthetic-token"), nil}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := new(captures.Builder).From(captures.Webhook("/synthetic-capture", tc.options...)).Key("id").Build("SyntheticCapture")
+			source := captures.Webhook("/synthetic-capture", tc.options...)
+			_, present := source.Authorization()
+			wantPresent := tc.name != "nil"
+			if present != wantPresent {
+				t.Fatal("authorization presence did not report the supplied option")
+			}
+			_, err := new(captures.Builder).From(source).Key("id").Build("SyntheticCapture")
 			if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
 				t.Fatal("invalid authorization was not refused")
 			}

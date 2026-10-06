@@ -36,14 +36,16 @@ func Webhook(path string, options ...WebhookOption) Source {
 // MessageTopic declares a topic. The pinned kernel cannot run message sources.
 func MessageTopic(topic string) Source { return Source{kind: "message", name: topic} }
 
-// Authorization returns a detached immutable value and whether authorization
-// was supplied. No options (including the zero source) means absent, not None.
+// Authorization returns an immutable value and whether authorization was
+// supplied, not whether the source is valid. Blank values or multiple options
+// are rejected by Build. No options (including the zero source) means absent,
+// not an explicitly supplied None.
 func (s Source) Authorization() (SourceAuthorization, bool) {
 	return s.authorization, s.authorization.kind != ""
 }
 
-// Authorization returns a detached immutable value and whether authorization
-// was supplied on the source. The zero definition has no authorization.
+// Authorization returns an immutable value and whether authorization was
+// supplied on the source. The zero definition has no authorization.
 func (d Definition) Authorization() (SourceAuthorization, bool) {
 	return d.authorization, d.authorization.kind != ""
 }

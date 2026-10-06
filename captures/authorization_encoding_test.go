@@ -39,7 +39,8 @@ func TestSourceAuthorizationPreservesValuesAndDefaultEscaping(t *testing.T) {
 func TestCaptureEmptyDefinitionPrecedesAuthorizationRefusal(t *testing.T) {
 	// Even an internally constructed empty value must retain the existing
 	// empty-declaration error. No connection or context is needed for this path.
-	definition := Definition{authorization: SourceAuthorization{kind: AuthorizationBearer, first: "synthetic-token"}}
+	authorization, _ := Webhook("/synthetic-capture", WithBearerToken("synthetic-token")).Authorization()
+	definition := Definition{authorization: authorization}
 	service := new(Service)
 	for _, submit := range []func(context.Context, Definition) error{service.Validate, service.Save} {
 		if err := submit(context.Background(), definition); !errors.Is(err, faults.ErrInvalidConfiguration) {

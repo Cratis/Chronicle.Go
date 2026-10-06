@@ -29,8 +29,22 @@ const (
 // Copies are safe for concurrent use. JSON import/export fails with ErrUnsupported;
 // no public credential export or decoder is provided.
 type SourceAuthorization struct {
-	kind                 AuthorizationKind
-	first, second, third string
+	kind   AuthorizationKind
+	secret *authorizationSecret
+}
+
+// authorizationSecret is initialized once by an option constructor and never
+// mutated. fmt cannot inspect a closure's captured values. A pointer to inline
+// strings is insufficient: invalid-verb fallbacks (%s/%q) dereference it even
+// when an unexported caller field prevents invoking Format.
+type authorizationSecret struct {
+	values func() (string, string, string)
+}
+
+func newAuthorizationSecret(first, second, third string) *authorizationSecret {
+	return &authorizationSecret{values: func() (string, string, string) {
+		return first, second, third
+	}}
 }
 
 // Kind returns the scheme; the zero value returns AuthorizationNone.
@@ -44,6 +58,10 @@ func (a SourceAuthorization) Kind() AuthorizationKind {
 // kernelJSON reproduces the C# converter solely for internal contract evidence.
 // It is not a supported submission path: capture RPCs carry CDL only.
 func (a SourceAuthorization) kernelJSON() ([]byte, error) {
+	var first, second, third string
+	if a.secret != nil {
+		first, second, third = a.secret.values()
+	}
 	var value any
 	switch a.Kind() {
 	case AuthorizationBasic:
@@ -51,19 +69,19 @@ func (a SourceAuthorization) kernelJSON() ([]byte, error) {
 			Type     AuthorizationKind `json:"type"`
 			Username string            `json:"username"`
 			Password string            `json:"password"`
-		}{a.Kind(), a.first, a.second}
+		}{a.Kind(), first, second}
 	case AuthorizationBearer:
 		value = struct {
 			Type  AuthorizationKind `json:"type"`
 			Token string            `json:"token"`
-		}{a.Kind(), a.first}
+		}{a.Kind(), first}
 	case AuthorizationOAuth:
 		value = struct {
 			Type         AuthorizationKind `json:"type"`
 			Authority    string            `json:"authority"`
 			ClientID     string            `json:"clientId"`
 			ClientSecret string            `json:"clientSecret"`
-		}{a.Kind(), a.first, a.second, a.third}
+		}{a.Kind(), first, second, third}
 	default:
 		value = struct {
 			Type AuthorizationKind `json:"type"`
@@ -87,11 +105,19 @@ type webhookConfiguration struct {
 	invalid       bool
 }
 
-func (c *webhookConfiguration) set(a SourceAuthorization, values ...string) {
+func (c *webhookConfiguration) set(a SourceAuthorization) {
 	c.count++
 	if c.count > 1 {
 		c.invalid = true
 		return
+	}
+	first, second, third := a.secret.values()
+	values := []string{first}
+	if a.Kind() == AuthorizationBasic || a.Kind() == AuthorizationOAuth {
+		values = append(values, second)
+	}
+	if a.Kind() == AuthorizationOAuth {
+		values = append(values, third)
 	}
 	for _, value := range values {
 		if strings.TrimSpace(value) == "" {
@@ -104,23 +130,26 @@ func (c *webhookConfiguration) set(a SourceAuthorization, values ...string) {
 // WithBasicAuth authors inbound username/password authorization. Values are
 // preserved verbatim; blank values fail at Build. It cannot yet be submitted.
 func WithBasicAuth(username, password string) WebhookOption {
+	authorization := SourceAuthorization{kind: AuthorizationBasic, secret: newAuthorizationSecret(username, password, "")}
 	return func(c *webhookConfiguration) {
-		c.set(SourceAuthorization{kind: AuthorizationBasic, first: username, second: password}, username, password)
+		c.set(authorization)
 	}
 }
 
 // WithBearerToken authors inbound bearer authorization. A blank token fails at
 // Build. It cannot yet be submitted to the CDL-only capture transport.
 func WithBearerToken(token string) WebhookOption {
+	authorization := SourceAuthorization{kind: AuthorizationBearer, secret: newAuthorizationSecret(token, "", "")}
 	return func(c *webhookConfiguration) {
-		c.set(SourceAuthorization{kind: AuthorizationBearer, first: token}, token)
+		c.set(authorization)
 	}
 }
 
 // WithOAuth authors inbound authority/client credentials authorization, without
 // contacting an authority. Blank values fail at Build. It cannot yet be submitted.
 func WithOAuth(authority, clientID, clientSecret string) WebhookOption {
+	authorization := SourceAuthorization{kind: AuthorizationOAuth, secret: newAuthorizationSecret(authority, clientID, clientSecret)}
 	return func(c *webhookConfiguration) {
-		c.set(SourceAuthorization{kind: AuthorizationOAuth, first: authority, second: clientID, third: clientSecret}, authority, clientID, clientSecret)
+		c.set(authorization)
 	}
 }
