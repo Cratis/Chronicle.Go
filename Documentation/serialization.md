@@ -157,8 +157,22 @@ requires the same compiled binary representation and ASCII property names;
 CLR Unicode case matching is not qualified. Explicit mappings, binary-to-string
 conversion, initial values, literals, arithmetic, identities, keys, joins and
 runtime ordinary-scalar profiles are unsupported. Read-model identity and subject
-fallback properties cannot be binary, even without a projection. Snapshot naming rebinds
-retain the binary representation and do not decode or reinterpret bytes.
+fallback properties cannot be binary, even without a projection. This includes
+all case variants of serialized `id` and the MongoDB `_id` property. A dotted
+JSON name cannot hide binary from path guards: if any literal-name or nested-path
+candidate contains binary, indexes, uniqueness, subjects, keys, explicit writes
+and single initial values are refused. Whole-model initial values inspect actual
+root ownership, including properties whose JSON names contain dots.
+
+Event migrations involving either binary-containing endpoint are refused by
+`DefineMigration` and catalog `WithMigrations` before I/O. This includes nullable
+and nested binary fields, identity migrations, rename, default, split, combine
+and directional/shared value maps. The pinned kernel's migration operations
+transform JSON strings without binary-aware validation; splitting `"AQ=="` on
+`"="` produces invalid base64. No migration operation has binary qualification.
+Keep binary-bearing generations without migrations until such a path is qualified.
+Snapshot naming rebinds retain the binary representation and do not decode or
+reinterpret bytes.
 
 The [packaged binary capture](../serialization/testdata/binary/README.md) records
 Chronicle 19.29.4, Fundamentals 7.19.6 and both schema generator APIs. Class

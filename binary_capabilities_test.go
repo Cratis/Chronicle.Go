@@ -64,6 +64,20 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 		_, err := b.Build()
 		return err
 	}
+	upgrade, err := events.Define[capabilityBinaryPayload](events.WithGeneration(2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous, err := events.DefineGeneration[capabilityBinaryBase](upgrade, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	migration := func(configure func(*events.MigrationBuilder[capabilityBinaryPayload, capabilityBinaryBase])) error {
+		_, err := events.DefineMigration(upgrade, previous, events.Migration[capabilityBinaryPayload, capabilityBinaryBase]{
+			Upcast: configure, Downcast: func(*events.MigrationBuilder[capabilityBinaryBase, capabilityBinaryPayload]) {},
+		})
+		return err
+	}
 	cases := []struct {
 		name  string
 		check func() error
@@ -173,6 +187,42 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 					projections.EventSourceID(f, projections.Path[capabilityBinaryPayload, []byte]("Payload"))
 				})
 			})
+		}},
+		{"migration identity", func() error {
+			return migration(func(*events.MigrationBuilder[capabilityBinaryPayload, capabilityBinaryBase]) {})
+		}},
+		{"migration rename", func() error {
+			return migration(func(b *events.MigrationBuilder[capabilityBinaryPayload, capabilityBinaryBase]) {
+				b.RenamedFrom("Payload", "ID")
+			})
+		}},
+		{"migration default", func() error {
+			return migration(func(b *events.MigrationBuilder[capabilityBinaryPayload, capabilityBinaryBase]) {
+				b.DefaultValue("Payload", "AQ==")
+			})
+		}},
+		{"migration split", func() error {
+			return migration(func(b *events.MigrationBuilder[capabilityBinaryPayload, capabilityBinaryBase]) {
+				b.Split("Payload", "ID", "=", 0)
+			})
+		}},
+		{"migration combine", func() error {
+			return migration(func(b *events.MigrationBuilder[capabilityBinaryPayload, capabilityBinaryBase]) {
+				b.Combine("Payload", "", "ID")
+			})
+		}},
+		{"migration value map", func() error {
+			return migration(func(b *events.MigrationBuilder[capabilityBinaryPayload, capabilityBinaryBase]) {
+				b.MapValues("Payload", "ID")
+			})
+		}},
+		{"migration shared map", func() error {
+			_, err := events.DefineMigration(upgrade, previous, events.Migration[capabilityBinaryPayload, capabilityBinaryBase]{
+				Upcast:    func(*events.MigrationBuilder[capabilityBinaryPayload, capabilityBinaryBase]) {},
+				Downcast:  func(*events.MigrationBuilder[capabilityBinaryBase, capabilityBinaryPayload]) {},
+				MapValues: func(b *events.ValueMapBuilder[capabilityBinaryPayload, capabilityBinaryBase]) { b.For("Payload", "ID") },
+			})
+			return err
 		}},
 		{"explicit copy", func() error {
 			return build(nil, func(b *projections.Builder[capabilityBinaryPayload]) {
