@@ -21,17 +21,26 @@ import (
 // HasMappings reports whether a registered model bears subscription-producing
 // tags. A key, exclusion or Every alone never creates an empty projection.
 func HasMappings(model readmodels.Descriptor) bool {
+	// A derivative's fields are discovered by the same rule as ordinary fields,
+	// so a fluent derivative's key tag alone never creates a projection.
 	for _, f := range model.Fields() {
-		if derivativeHasProjectionDirective(f) {
+		if derivativeHasDirective(f, subscriptionDirective) {
 			return true
 		}
 		directives, _ := declarations.Parse(declarations.V1, f.Tag)
-		for _, d := range directives {
-			switch d.Name {
-			case "set", "context", "value", "add", "subtract", "increment", "decrement", "count", "clear", "children", "join", "remove", "remove-join", "all":
-				return true
-			}
+		if slices.ContainsFunc(directives, func(d declarations.Directive) bool { return subscriptionDirective(d.Name) }) {
+			return true
 		}
+	}
+	return false
+}
+
+// subscriptionDirective reports whether a model tag directive produces a
+// projection subscription, as opposed to type metadata such as key or no-auto.
+func subscriptionDirective(name string) bool {
+	switch name {
+	case "set", "context", "value", "add", "subtract", "increment", "decrement", "count", "clear", "children", "join", "remove", "remove-join", "all":
+		return true
 	}
 	return false
 }

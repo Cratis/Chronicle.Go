@@ -238,7 +238,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 		}
 		if !structural && n.children[field.Path] == nil {
 			for _, f := range fields {
-				if (f.Path == field.Path || strings.HasPrefix(f.Path, field.Path+".")) && derivativeHasProjectionDirective(f) {
+				if (f.Path == field.Path || strings.HasPrefix(f.Path, field.Path+".")) && derivativeHasDirective(f, derivedDeclarationDirective) {
 					return nil, declarationFailure(c.result.id, Provenance{GoField: f.GoField, Path: f.Path, Offset: -1}, invalid("declarations on a derived type require a children collection of its family"))
 				}
 			}

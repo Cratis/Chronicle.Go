@@ -41,28 +41,36 @@ func (c *compiler) stampDerivedChild(n *nodeDefinition) error {
 	return nil
 }
 
-// derivativeHasProjectionDirective reports whether a derivative registered for
-// the field (or its collection element) declares projection directives. Only a
-// children collection of the family consumes them; anywhere else they would be
-// silently ignored, so compilation refuses them.
-func derivativeHasProjectionDirective(field serialization.Field) bool {
+// derivativeHasDirective reports whether a derivative registered for the field
+// (or its collection element) declares a directive matching the predicate. An
+// unparsable tag matches, retaining fail-closed behavior; tags are validated
+// earlier.
+func derivativeHasDirective(field serialization.Field, match func(name string) bool) bool {
 	for _, derivative := range field.Derivatives() {
 		for _, f := range derivative.Fields() {
 			directives, err := declarations.Parse(declarations.V1, f.Tag)
 			if err != nil {
-				return true // Validated earlier; retain fail-closed behavior.
+				return true
 			}
-			for _, directive := range directives {
-				switch directive.Name {
-				case "index", "pii", "encrypted", "compliance-details":
-					// Protection and indexes are audited by the read-model plan.
-				default:
-					return true
-				}
+			if slices.ContainsFunc(directives, func(d declarations.Directive) bool { return match(d.Name) }) {
+				return true
 			}
 		}
 	}
 	return false
+}
+
+// derivedDeclarationDirective reports whether a derivative field directive
+// declares projection behavior that only a children collection of the family
+// consumes. Anywhere else it would be silently ignored, so compilation refuses
+// it. Key, exclusion, protection and index tags are type metadata: a fluent
+// derivative needs a key, and its family may be held as a whole property.
+func derivedDeclarationDirective(name string) bool {
+	switch name {
+	case "key", "no-auto", "not-projected", "index", "pii", "encrypted", "compliance-details":
+		return false
+	}
+	return true
 }
 
 // validateDerivedChildGlobals rejects a bare-name global write that the kernel
