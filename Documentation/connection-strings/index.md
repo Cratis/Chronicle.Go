@@ -66,8 +66,10 @@ owner controls routing. Nil and typed-nil strategies also fail construction with
 Errors, contained panics and non-candidate results become `*LoadBalancerError`;
 no endpoint is dialed and no OAuth request is made. Its `Error()` and formatting
 are fixed diagnostics, while `Unwrap()` preserves ordinary causes for inspection.
-Panic values are discarded. First `Connect` returns the selection failure; the
-supervisor retries subsequent attempts with normal jittered reconnect backoff.
+Panic values are discarded. First `Connect` returns a non-context selection
+failure. A selection error matching a context error is treated like an attempt
+timeout: `Connect` keeps waiting on its own context while the supervisor retries.
+The supervisor retries subsequent attempts with normal jittered reconnect backoff.
 Selection failures are always transient, even when wrapping `Unauthenticated`.
 
 [The executable custom-balancer example](https://github.com/Cratis/Chronicle.Go/blob/main/example_connection_test.go)
