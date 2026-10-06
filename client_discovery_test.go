@@ -40,15 +40,22 @@ func (r *rotatingResolver) LookupSRV(ctx context.Context, _, _, _ string) (strin
 
 func discoveryServer(t *testing.T) (*supervisedKernel, *net.SRV, *atomic.Int32) {
 	t.Helper()
+	kernel, address, tokens, _ := discoveryServerWithRPCCount(t)
+	return kernel, address, tokens
+}
+
+func discoveryServerWithRPCCount(t *testing.T) (*supervisedKernel, *net.SRV, *atomic.Int32, *atomic.Int32) {
+	t.Helper()
 	kernel := &supervisedKernel{lifecycleKernel: lifecycleKernel{endStream: make(chan error, 1)}, registered: make(chan struct{}, 10), namespaceCounts: make(map[string]int)}
 	rpc := grpc.NewServer()
 	clients.RegisterConnectionServiceServer(rpc, kernel)
 	eventstores.RegisterEventStoresServer(rpc, kernel)
 	eventtypes.RegisterEventTypesServer(rpc, kernel)
 	namespaces.RegisterNamespacesServer(rpc, kernel)
-	tokens := &atomic.Int32{}
+	tokens, requests := &atomic.Int32{}, &atomic.Int32{}
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
+			requests.Add(1)
 			rpc.ServeHTTP(w, r)
 			return
 		}
@@ -69,7 +76,7 @@ func discoveryServer(t *testing.T) (*supervisedKernel, *net.SRV, *atomic.Int32) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	return kernel, &net.SRV{Target: host, Port: uint16(number)}, tokens
+	return kernel, &net.SRV{Target: host, Port: uint16(number)}, tokens, requests
 }
 
 func TestSRVReconnectRefreshesDiscoveryAndOAuthAuthority(t *testing.T) {

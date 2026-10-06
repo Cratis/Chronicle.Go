@@ -38,6 +38,7 @@ type Client struct {
 	uri              ConnectionString
 	tls              *tls.Config
 	balancer         *connection.Balancer
+	hooks            connectionHooks
 	catalog          *events.Catalog
 	catalogs         map[StoreName]*events.Catalog
 	constraints      []constraints.Definition
@@ -103,6 +104,13 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 }
 
 func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) {
+	for _, hooks := range [][]ConnectionHook{config.connectedHooks, config.disconnectedHooks} {
+		for _, hook := range hooks {
+			if hook == nil {
+				return ConnectionString{}, nil, fmt.Errorf("%w: nil connection hook", ErrInvalidConfiguration)
+			}
+		}
+	}
 	if config.loggerSet && config.logger == nil {
 		return ConnectionString{}, nil, fmt.Errorf("%w: nil logger", ErrInvalidConfiguration)
 	}
@@ -121,6 +129,9 @@ func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) 
 	}
 	uri, err := ParseConnectionString(config.uri)
 	if err != nil {
+		return uri, nil, err
+	}
+	if err := validateLoadBalancer(config, uri); err != nil {
 		return uri, nil, err
 	}
 	if uri.apiKey != "" || len(uri.unsupported) > 0 {

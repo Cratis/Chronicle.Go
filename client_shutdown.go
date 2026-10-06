@@ -39,7 +39,7 @@ func (c *Client) beginShutdown(graceful bool) {
 	c.closeOnce.Do(func() {
 		c.mu.Lock()
 		c.closed = true
-		g := c.current
+		g, supervisor := c.current, c.supervisor
 		c.notifyLocked()
 		c.mu.Unlock()
 		if !graceful {
@@ -50,8 +50,14 @@ func (c *Client) beginShutdown(graceful bool) {
 				g.work.Wait()
 			}
 			c.cancel()
+			if supervisor != nil {
+				<-supervisor.done
+			}
+			c.hooks.finish()
 			c.work.Wait()
-			c.balancer.Close()
+			if c.balancer != nil {
+				c.balancer.Close()
+			}
 			diagnostics.Log(c.life, c.config.logger, slog.LevelInfo, "client closed", "client", "close", c.closeError)
 			close(c.closeDone)
 		}()
