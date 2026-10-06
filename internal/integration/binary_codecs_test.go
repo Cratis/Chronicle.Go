@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -91,10 +90,7 @@ func TestKernelBinaryEventsProjectionAndReadModel(t *testing.T) {
 				t.Fatal("binary event not registered")
 			}
 			reader := readmodels.For(store.ReadModels(), model)
-			output := filepath.Join("../../.ai-work/issue64-gate", string(fixture.storeName))
-			if err := os.MkdirAll(output, 0750); err != nil {
-				t.Fatal(err)
-			}
+			output := binaryEvidenceDirectory(t)
 			writes := 0
 			for _, c := range profile.Cases {
 				if c.DeclaredType != "BinaryEvent" || c.Operation != "EventSerializer.Serialize" {
@@ -149,9 +145,7 @@ func TestKernelBinaryEventsProjectionAndReadModel(t *testing.T) {
 						if err != nil || !reflect.DeepEqual(decoded, original) {
 							t.Fatalf("binary event lost bytes: %v", err)
 						}
-						if err := os.WriteFile(filepath.Join(output, string(source)+".event.kernel.json"), []byte(stored[0].Content), 0600); err != nil {
-							t.Fatal(err)
-						}
+						writeBinaryEvidence(t, output, string(source)+".event.kernel.json", []byte(stored[0].Content))
 						readbacks++
 						captureBinaryModel(t, fixture, model.Identifier(), source, stored[0].Context.SequenceNumber, output)
 						awaitProjection(t, fixture.ctx, reader, readmodels.Key(source), func(value BinaryWitnessModel) bool {
@@ -162,9 +156,7 @@ func TestKernelBinaryEventsProjectionAndReadModel(t *testing.T) {
 						if err != nil || !raw.Exists {
 							t.Fatalf("binary model read failed: %v", err)
 						}
-						if err := os.WriteFile(filepath.Join(output, string(source)+".model.kernel.json"), raw.Value, 0600); err != nil {
-							t.Fatal(err)
-						}
+						writeBinaryEvidence(t, output, string(source)+".model.kernel.json", raw.Value)
 						readbacks++
 					})
 				}

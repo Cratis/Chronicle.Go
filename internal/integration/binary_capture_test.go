@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -24,6 +23,9 @@ import (
 // condition; malformed content is retained, never repaired or accepted here.
 func captureBinaryModel(t *testing.T, f *kernelFixture, model readmodels.Identifier, source events.SourceID, position events.SequenceNumber, directory string) {
 	t.Helper()
+	if os.Getenv("CHRONICLE_CAPTURE_BINARY_EVIDENCE") != "1" {
+		return
+	}
 	ctx, cancel := context.WithTimeout(f.ctx, 15*time.Second)
 	defer cancel()
 	ticker := time.NewTicker(50 * time.Millisecond)
@@ -40,16 +42,12 @@ func captureBinaryModel(t *testing.T, f *kernelFixture, model readmodels.Identif
 			t.Fatal("missing raw binary model reply")
 		}
 		if response.LastHandledEventSequenceNumber == uint64(position) && response.ReadModel != "null" {
-			if err := os.WriteFile(filepath.Join(directory, string(source)+".model.raw.kernel.json"), []byte(response.ReadModel), 0600); err != nil {
-				t.Fatal(err)
-			}
+			writeBinaryEvidence(t, directory, string(source)+".model.raw.kernel.json", []byte(response.ReadModel))
 			data, err := json.MarshalIndent(response, "", "  ")
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(directory, string(source)+".model.response.json"), data, 0600); err != nil {
-				t.Fatal(err)
-			}
+			writeBinaryEvidence(t, directory, string(source)+".model.response.json", data)
 			return
 		}
 		select {
