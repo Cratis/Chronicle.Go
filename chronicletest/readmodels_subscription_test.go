@@ -32,9 +32,12 @@ import (
 type subscriptionAdded struct{ Name string }
 type subscriptionRemoved struct{}
 type subscriptionMarker struct{ Name string }
+type subscriptionJoined struct{}
 type subscriptionModel struct {
-	ID   string `json:"id" chronicle:"key"`
-	Name string `json:"name"`
+	ID       string              `json:"id" chronicle:"key"`
+	Name     string              `json:"name"`
+	Children []subscriptionChild `json:"children"`
+	Nested   *subscriptionChild  `json:"nested"`
 }
 type subscriptionBound struct {
 	ID   string `chronicle:"key"`
@@ -167,7 +170,14 @@ func subscriptionRegistry(t *testing.T, kind string) *chronicle.Registry {
 	if err != nil {
 		t.Fatal(err)
 	}
+	joined, err := chronicle.RegisterEvent[subscriptionJoined](r)
+	if err != nil {
+		t.Fatal(err)
+	}
 	options := []projections.Option{projections.RemovedWith(removed)}
+	if kind == "children" || kind == "nested" || kind == "join" {
+		options = nil
+	}
 	if kind == "variant" {
 		options = append(options, projections.VariantOf[subscriptionVariantIdentity](), projections.EntersOn(added))
 	}
@@ -195,9 +205,24 @@ func subscriptionRegistry(t *testing.T, kind string) *chronicle.Registry {
 			projections.EveryMap(e, projections.Path[subscriptionModel, string]("name"), "Name")
 		})
 	}
-	if kind == "join removal" {
+	if kind == "join removal" || kind == "join removal only" {
 		b = projections.NewBuilder("join-removal", model, projections.RemovedWithJoin(removed))
-		projections.From(b, added, nil)
+		if kind == "join removal" {
+			projections.From(b, added, nil)
+		}
+	}
+	switch kind {
+	case "children":
+		projections.Children(b, projections.Path[subscriptionModel, []subscriptionChild]("children"), func(child *projections.Builder[subscriptionChild]) {
+			projections.From(child, removed, nil)
+			child.Configure(projections.RemovedWithJoin(joined))
+		})
+	case "nested":
+		projections.Nested(b, projections.Path[subscriptionModel, *subscriptionChild]("nested"), func(child *projections.Builder[subscriptionChild]) {
+			projections.From(child, removed, nil)
+		})
+	case "join":
+		projections.Join(b, removed, projections.Path[subscriptionModel, string]("id"), nil)
 	}
 	d, err := b.Build()
 	if err != nil {
@@ -250,7 +275,7 @@ func newSubscriptionFixture(t *testing.T, strict bool, kind string) subscription
 	if !ok {
 		t.Fatal("compiled model absent")
 	}
-	s := &ReadModelScenario[subscriptionModel]{config: Config{Store: "strict-store", Namespace: "strict-ns"}, client: client, artifacts: artifacts, model: model, projection: artifacts.Projections[0]}
+	s := &ReadModelScenario[subscriptionModel]{config: Config{Engine: Kernel, Store: "strict-store", Namespace: "strict-ns"}, client: client, artifacts: artifacts, model: model, projection: artifacts.Projections[0]}
 	if strict {
 		s.subscription, err = strictProjectionSubscription(s.projection, artifacts.Events)
 		if err != nil {
@@ -451,7 +476,7 @@ func TestStrictProjectionMembershipUsesCompiledRootSubscriptions(t *testing.T) {
 }
 
 func TestStrictProjectionRefusesUnsupportedProfilesBeforeConnection(t *testing.T) {
-	for _, kind := range []string{"variant", "custom key", "mixed all", "join removal"} {
+	for _, kind := range []string{"variant"} {
 		t.Run(kind, func(t *testing.T) {
 			r := subscriptionRegistry(t, kind)
 			s, err := OpenReadModelScenario[subscriptionModel](t.Context(), Config{Registry: r, Engine: Kernel, ConnectionString: "chronicle://127.0.0.1:1"}, ReadModelOptions[subscriptionModel]{StrictEventSubscription: true})
@@ -563,11 +588,6 @@ type subscriptionChild struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
-type subscriptionComplex struct {
-	ID       string              `json:"id" chronicle:"key"`
-	Children []subscriptionChild `json:"children"`
-	Nested   *subscriptionChild  `json:"nested"`
-}
 type subscriptionProtected struct {
 	ID     string `json:"id" chronicle:"key"`
 	Secret string `json:"secret" chronicle:"pii"`
@@ -666,38 +686,7 @@ func TestStrictProjectionChecksProtectionAcrossSubscribedGenerations(t *testing.
 	}
 }
 
-func TestStrictProjectionRefusesChildrenNestedJoinAndProtectedModel(t *testing.T) {
-	for _, kind := range []string{"children", "nested", "join"} {
-		t.Run(kind, func(t *testing.T) {
-			r := chronicle.NewRegistry()
-			e, err := chronicle.RegisterEvent[subscriptionAdded](r)
-			if err != nil {
-				t.Fatal(err)
-			}
-			m, err := chronicle.RegisterReadModel[subscriptionComplex](r)
-			if err != nil {
-				t.Fatal(err)
-			}
-			b := projections.NewBuilder("complex", m)
-			projections.From(b, e, nil)
-			switch kind {
-			case "children":
-				projections.Children(b, projections.Path[subscriptionComplex, []subscriptionChild]("children"), func(child *projections.Builder[subscriptionChild]) { projections.From(child, e, nil) })
-			case "nested":
-				projections.Nested(b, projections.Path[subscriptionComplex, *subscriptionChild]("nested"), func(child *projections.Builder[subscriptionChild]) { projections.From(child, e, nil) })
-			case "join":
-				projections.Join(b, e, projections.Path[subscriptionComplex, string]("id"), nil)
-			}
-			d, err := b.Build()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := r.AddProjection(d); err != nil {
-				t.Fatal(err)
-			}
-			assertStrictUnsupportedBeforeIO[subscriptionComplex](t, r)
-		})
-	}
+func TestStrictProjectionRefusesProtectedModel(t *testing.T) {
 	t.Run("protected model", func(t *testing.T) {
 		r := chronicle.NewRegistry()
 		e, err := chronicle.RegisterEvent[subscriptionAdded](r)

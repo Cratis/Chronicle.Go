@@ -178,21 +178,33 @@ result processing; Go deliberately raises from its existing error-returning
 Earlier successful seeds remain, even when a later item in the same call fails.
 There is no batch rollback or promise that retrying a failed call is safe.
 
-This first strict profile admits only known, unclassified root source-key
-projections: final root `From`/`RemovedWith` membership by event type ID, regardless
-of generation, or pure `All` membership for all registered types. Ordinary `Every`
-mappings do not subscribe additional event types. Inline replacement uses its
-selected compiled definition, not the original producer. Unsupported
-relationships, children/nested definitions, custom keys, derivative-group wire
-forms, variants (even those with ordinary-looking wire fields), protected models
-or subscribed events, and mixed explicit-plus-`All` subscriptions fail before
-connecting. Projection initial state and nonempty defaults remain refused;
-`SeedReadModel` is not a projected-state overlay.
+Strict membership follows the kernel's key-resolver set from the selected
+compiled definition, by event type ID regardless of generation. Root and child
+`From`, `Join` and `RemovedWith` types count; `RemovedWithJoin` counts only on
+children, not at the root. Children contribute their full subtree recursively.
+Nested objects contribute `From` and `RemovedWith`, plus `Join` only outside a
+child subtree; nested join removals, children and event-property subscriptions do
+not contribute. Derivative-group and root/child event-property types also count.
+Keys and parent keys do not change membership. Pure or mixed `All` admits every
+registered type; ordinary `Every` mappings do not broaden the set. Inline
+replacement uses its selected definition, not the original producer.
+
+Variants (even those with ordinary-looking wire fields), protected models and
+protected subscribed events fail before connecting. Every subscribed generation
+is checked, including child-only members. Projection initial state and nonempty
+defaults remain refused; the upstream
+[initial-state barrier](https://github.com/Cratis/Chronicle/issues/4594) is missing.
+`SeedReadModel` is not a projected-state overlay. Strict scenarios with
+relationships or custom keys can open and check seeds, but result reads still
+return `chronicle.ErrUnsupported` under the separate replay admission profile.
+Strict seed admission does not make these projections replayable.
 
 Strict seed checking does not prove observer attachment, partition/correlation
-routing, retries, durability or distributed completion. The pinned-kernel sibling
-checks persisted history and the synchronous bounded replay result, not asynchronous
-replay-job completion; [#60](https://github.com/Cratis/Chronicle.Go/issues/60)
+routing, retries, durability or distributed completion. The pinned-kernel membership witness
+compares admitted seed IDs with the projection observer's `EventTypes` and an
+independent golden set. It does not claim relationship delivery or replay success.
+The root source-key sibling checks persisted history and synchronous bounded
+replay, not asynchronous replay-job completion; [#60](https://github.com/Cratis/Chronicle.Go/issues/60)
 remains an unknown completion outcome. Projection seeding still serializes before
 production `Append` serializes again; this option does not change that pipeline.
 

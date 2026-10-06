@@ -35,7 +35,11 @@ type ReadModelOptions[M any] struct {
 	Initial *M
 	// StrictEventSubscription rejects registered events not subscribed by the
 	// selected projection. The default is false; reducers ignore this option.
-	// Strict projections require a known unprotected root source-key profile.
+	// Membership follows the kernel key-resolver set across children, joins,
+	// nested objects and removals; keys do not affect membership. Variants and
+	// protected models/subscribed events are refused before connecting. Reads
+	// remain bounded by projection replay admission: relationships and custom
+	// keys still return chronicle.ErrUnsupported.
 	// Given returns ErrUnsubscribedEventSeeded before the offending append,
 	// unlike C# scenarios' lazy result-time error. Always check Given's error.
 	StrictEventSubscription bool
