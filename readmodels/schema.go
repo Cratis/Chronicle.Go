@@ -5,7 +5,6 @@ package readmodels
 
 import (
 	"encoding/json"
-	"slices"
 	"strings"
 
 	"github.com/cratis/chronicle.go/compliance"
@@ -42,13 +41,18 @@ func modelSchema(plan *serialization.Plan, config modelConfig) (string, error) {
 	}
 	for _, path := range config.indexes {
 		field, ok := serialization.FieldAt(plan.Fields(), path)
-		if ok && (field.Format == "byte-array" || slices.ContainsFunc(field.Fields(), func(f serialization.Field) bool { return f.Format == "byte-array" })) {
+		if ok && field.ContainsBinary() {
 			return "", invalid("binary index is not supported: " + path)
+		}
+	}
+	for _, field := range serialization.RootFields(plan.Fields()) {
+		if field.ContainsBinary() && (field.Name == "id" || field.Name == "Id" || strings.EqualFold(field.GoField, "id")) {
+			return "", invalid("binary identity is not supported: " + field.Path)
 		}
 	}
 	if config.subject != "" {
 		field, ok := serialization.FieldAt(plan.Fields(), config.subject)
-		if strings.Contains(config.subject, ".") || !ok || field.Scalar == serialization.NotScalar || field.Format == "byte-array" {
+		if strings.Contains(config.subject, ".") || !ok || !field.Scalar.IsPrimitive() {
 			return "", invalid("subject must name a top-level scalar property")
 		}
 	}

@@ -35,18 +35,19 @@ type Plan struct {
 	binary   bool
 }
 type node struct {
-	typ           reflect.Type
-	fields        []field
-	item          *node
-	schema        map[string]any
-	scalar        bool
-	binary        bool
-	concept       *concepts.Representation
-	enum          *enumDefinition
-	reference     *node
-	readModelRoot bool
-	family        bool
-	derivatives   []derivative
+	typ            reflect.Type
+	fields         []field
+	item           *node
+	schema         map[string]any
+	scalar         bool
+	binary         bool
+	containsBinary bool
+	concept        *concepts.Representation
+	enum           *enumDefinition
+	reference      *node
+	readModelRoot  bool
+	family         bool
+	derivatives    []derivative
 }
 type field struct {
 	index               []int
@@ -152,6 +153,13 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 		}
 	}
 	for _, candidate := range append([]*node{root}, families...) {
+		// Compute capability metadata once, including recursive/reference edges.
+		if err := visitNodes(candidate, map[*node]bool{}, func(n *node) error {
+			n.containsBinary = hasBinary(n)
+			return nil
+		}); err != nil {
+			return nil, err
+		}
 		if err := validateBinaryPlacement(candidate); err != nil {
 			return nil, err
 		}
@@ -168,7 +176,7 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	if err != nil {
 		return nil, err
 	}
-	plan := &Plan{root: root, schema: string(data), typ: typ, config: config, families: families, binary: hasBinary(root)}
+	plan := &Plan{root: root, schema: string(data), typ: typ, config: config, families: families, binary: root.containsBinary}
 	plan.schema, err = plan.ProtectedSchema()
 	if err != nil {
 		return nil, err

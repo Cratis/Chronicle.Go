@@ -49,7 +49,7 @@ func WithInitialValues[M any](value M) Option {
 func WithInitialValue[M, V any](target Field[M, V], value V) Option {
 	return func(d *declaration) {
 		field, ok := serialization.FieldAt(d.model.Fields(), target.path)
-		if target.owner != d.model.GoType() || !ok || field.Type != reflect.TypeFor[V]() || field.Collection || field.Scalar == serialization.NotScalar {
+		if target.owner != d.model.GoType() || !ok || field.Type != reflect.TypeFor[V]() || field.Collection || !field.Scalar.IsPrimitive() {
 			d.err = invalid("initial value requires a matching scalar model path")
 			return
 		}
@@ -144,6 +144,11 @@ func prepareInitialState(model readmodels.Descriptor, state string) (string, err
 	for root := range protected {
 		if _, exists := object[root]; exists {
 			return "", invalid("initial state cannot initialize a protected model root")
+		}
+	}
+	for _, field := range serialization.RootFields(model.Fields()) {
+		if _, present := object[field.Path]; present && field.ContainsBinary() {
+			return "", invalid("initial state cannot initialize a binary model root")
 		}
 	}
 	// Canonical JSON detaches all values and stabilizes definition identity.

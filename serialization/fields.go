@@ -20,7 +20,20 @@ const (
 	Boolean                 // Boolean is a JSON boolean.
 	Integer                 // Integer is a JSON integer.
 	Number                  // Number is a JSON floating-point number.
+	Binary                  // Binary is a base64 leaf, not a general-purpose string.
 )
+
+// IsPrimitive reports whether a scalar supports ordinary primitive operations.
+// Binary requires an explicitly qualified codec path and is excluded by default.
+// Unknown future classifications are excluded too.
+func (s Scalar) IsPrimitive() bool {
+	switch s {
+	case String, Boolean, Integer, Number:
+		return true
+	default:
+		return false
+	}
+}
 
 // Field is a detached snapshot of one serialized field. Type preserves the exact
 // declared type for identity conventions. Index is an owned Go field-index path;
@@ -50,6 +63,20 @@ func (p *Plan) Fields() []Field {
 	var fields []Field
 	collectFields(p.root, "", "", nil, false, &fields, map[*node]bool{})
 	return fields
+}
+
+// ContainsBinary reports whether this field or any compiled descendant requires
+// the binary codec. Capability consumers must explicitly qualify such fields;
+// an object's primitive-looking JSON members do not make it binary-safe.
+func (f Field) ContainsBinary() bool {
+	if f.plan == nil {
+		return false
+	}
+	n := f.plan
+	if n.reference != nil {
+		n = n.reference
+	}
+	return n.containsBinary
 }
 
 // Fields returns the object's (or collection element's) local metadata. Recursive
@@ -100,6 +127,9 @@ func classify(n *node) (Scalar, string) {
 		return classify(n.item)
 	}
 	format, _ := n.schema["format"].(string)
+	if n.binary {
+		return Binary, format
+	}
 	switch n.schema["type"] {
 	case "string":
 		return String, format

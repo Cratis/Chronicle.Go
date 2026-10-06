@@ -118,7 +118,7 @@ func validateLiteral(e expression, target serialization.Field) error {
 	if !representableLiteral(e.text) {
 		return invalid("literal cannot be represented by the kernel expression grammar")
 	}
-	if target.Scalar == serialization.NotScalar {
+	if !target.Scalar.IsPrimitive() {
 		return invalid("literal requires a scalar field")
 	}
 	var data []byte
@@ -172,7 +172,8 @@ func validateLiteral(e expression, target serialization.Field) error {
 // Typed field/key validation separately preserves declared domain identity.
 func scalarCompatible(target, source serialization.Field, targetFields, sourceFields []serialization.Field) bool {
 	if binaryField(target) || binaryField(source) {
-		return target.SameRepresentation(source)
+		// Only the final, qualified AutoMap path admits binary copies.
+		return false
 	}
 	if target.IsEnum() || source.IsEnum() {
 		return target.SameRepresentation(source)
@@ -188,6 +189,9 @@ func scalarCompatible(target, source serialization.Field, targetFields, sourceFi
 			return false
 		}
 		return objectCompatible(target, source, targetFields, sourceFields)
+	}
+	if !target.Scalar.IsPrimitive() || !source.Scalar.IsPrimitive() {
+		return false
 	}
 	if target.Scalar == serialization.String && source.Scalar == serialization.String {
 		return target.Format == "" || source.Format == "" || stringFormat(target.Format) == stringFormat(source.Format)
@@ -325,8 +329,11 @@ func nullableAssignment(target serialization.Field) bool {
 	if !target.Nullable || target.Collection || target.Type.Kind() != reflect.Pointer {
 		return false
 	}
-	if target.Scalar != serialization.NotScalar {
+	if target.Scalar.IsPrimitive() {
 		return true
+	}
+	if target.ContainsBinary() {
+		return false
 	}
 	typ := indirectType(target.Type)
 	if typ.Kind() != reflect.Slice && (typ.Kind() != reflect.Map || typ.Key().Kind() != reflect.String) {
@@ -445,7 +452,7 @@ func validateKey(e expression, expected reflect.Type, fields []serialization.Fie
 		}
 	case pathExpression:
 		field, ok := serialization.FieldAt(fields, e.text)
-		if ok && !binaryField(field) && !field.IsEnum() && !field.Collection && field.Scalar != serialization.NotScalar && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
+		if ok && !field.IsEnum() && !field.Collection && field.Scalar.IsPrimitive() && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
 			return nil
 		}
 	}

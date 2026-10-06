@@ -103,7 +103,7 @@ func (b *CompositeKeyBuilder[K, E]) add(path string, typ reflect.Type, part keyP
 		}
 	}
 	field, ok := serialization.FieldAt(fields, path)
-	if !ok || binaryField(field) || validateTarget(field, typ) != nil || field.Scalar == serialization.NotScalar || field.Nullable {
+	if !ok || validateTarget(field, typ) != nil || !field.Scalar.IsPrimitive() || field.Nullable {
 		b.err = invalid("composite part requires a non-nullable scalar key field")
 		return
 	}
@@ -175,5 +175,5 @@ func numeric(field serialization.Field) bool {
 
 func contextField(path string) (serialization.Field, bool) {
 	field, err := resolveContext(path)
-	return field, err == nil && field.Scalar != serialization.NotScalar
+	return field, err == nil && field.Scalar.IsPrimitive()
 }

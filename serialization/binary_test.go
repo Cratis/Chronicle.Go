@@ -66,7 +66,7 @@ func TestBinaryFieldMetadata(t *testing.T) {
 	p := binaryPlan(t, serialization.PreservePropertyNames)
 	for _, name := range []string{"Payload", "Optional", "Nested.Inner"} {
 		f, ok := serialization.FieldAt(p.Fields(), name)
-		if !ok || f.Scalar != serialization.String || f.Format != "byte-array" || f.Collection || f.Nullable != (name == "Optional") {
+		if !ok || f.Scalar != serialization.Binary || f.Scalar.IsPrimitive() || !f.ContainsBinary() || f.Format != "byte-array" || f.Collection || f.Nullable != (name == "Optional") {
 			t.Fatalf("invalid binary field metadata: %#v", f)
 		}
 		if _, ok := f.Element(); ok {

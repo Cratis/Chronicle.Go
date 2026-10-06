@@ -128,7 +128,10 @@ have no custom JSON/text marshaler. Fixed `[N]byte` arrays remain integer arrays
 Direct and nested object properties share this representation. Missing or null
 non-pointer binary properties decode as owned, non-nil empty slices, including
 on event reads. Nullable pointers remain nil; present strings decode to fresh
-storage. Binary fields are scalar strings in field metadata, not byte collections.
+storage. Absent embedded pointers stay absent: an empty binary default never
+creates an optional object. Field metadata classifies binary as
+`serialization.Binary`, not `String` or a byte collection. `IsPrimitive` excludes
+binary, and `ContainsBinary` also identifies objects owning binary descendants.
 
 Reads require padded standard base64 with zero padding bits. URL-safe and
 unpadded encodings, invalid tokens and whitespace inside the string return
@@ -149,9 +152,12 @@ binary arrays in event history but its projection converter treats each byte
 array as another collection; read models lose their byte values. See the
 [binary kernel limitation](parity.md#baselines-and-evidence) for source citations
 and [Chronicle#4595](https://github.com/Cratis/Chronicle/issues/4595) for the upstream fix.
-Go does not repair these lossy read models or weaken its base64 decoder. Projection copies, including AutoMap, require
-the same compiled binary representation; binary-to-string conversion, literals,
-arithmetic, identities, keys and joins are unsupported. Snapshot naming rebinds
+Go does not repair these lossy read models or weaken its base64 decoder. AutoMap
+requires the same compiled binary representation and ASCII property names;
+CLR Unicode case matching is not qualified. Explicit mappings, binary-to-string
+conversion, initial values, literals, arithmetic, identities, keys, joins and
+runtime ordinary-scalar profiles are unsupported. Read-model identity and subject
+fallback properties cannot be binary, even without a projection. Snapshot naming rebinds
 retain the binary representation and do not decode or reinterpret bytes.
 
 The [packaged binary capture](../serialization/testdata/binary/README.md) records

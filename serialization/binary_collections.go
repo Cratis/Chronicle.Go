@@ -27,7 +27,7 @@ func (n *node) normalizeBinaryCollections(value reflect.Value) error {
 		}
 	case reflect.Struct:
 		for _, f := range n.fields {
-			if !hasBinary(f.value) {
+			if !f.value.containsBinary {
 				continue
 			}
 			child, err := fieldValue(value, f.index, false)
@@ -41,7 +41,7 @@ func (n *node) normalizeBinaryCollections(value reflect.Value) error {
 			}
 		}
 	case reflect.Slice, reflect.Array:
-		if !hasBinary(n.item) {
+		if !n.item.containsBinary {
 			return nil
 		}
 		if value.Kind() == reflect.Slice && value.IsNil() {

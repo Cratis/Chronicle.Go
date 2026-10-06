@@ -11,24 +11,14 @@ import (
 	"github.com/cratis/chronicle.go/serialization"
 )
 
-// Binary is a compiled string leaf, not a Go-slice collection. Include object
-// owners and binary arrays without reconstructing representation from Go kinds.
-func binaryField(field serialization.Field) bool {
-	if field.Format == "byte-array" {
-		return true
-	}
-	if field.Scalar == serialization.NotScalar {
-		if item, ok := field.Element(); ok && item.Format == "byte-array" {
-			return true
-		}
-	}
-	return slices.ContainsFunc(field.Fields(), func(f serialization.Field) bool { return f.Format == "byte-array" })
-}
+// Binary capability metadata comes from the compiled codec, never Go kinds or
+// the JSON string shape. Objects containing binary need the same qualification.
+func binaryField(field serialization.Field) bool { return field.ContainsBinary() }
 
 func validateBinaryGraph(d *definition, catalog *events.Catalog) error {
 	fields := d.model.Fields()
 	for _, f := range serialization.RootFields(fields) {
-		if strings.EqualFold(lastGoName(f.GoField), "Id") && binaryField(f) {
+		if (f.Name == "id" || f.Name == "Id" || strings.EqualFold(lastGoName(f.GoField), "Id")) && binaryField(f) {
 			return enumMappingFailure(d, f, events.TypeRef{}, "key", "binary identities are not supported")
 		}
 	}
@@ -57,12 +47,19 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 			if !binaryField(target) && !binaryField(source) {
 				continue
 			}
-			if w.expression.kind != pathExpression || !eventPropertyPath(w.expression.text) || !enumPropertySegments(target, fields) || !enumPropertySegments(source, event.Fields()) || !target.SameRepresentation(source) {
-				return enumMappingFailure(d, target, from.event, "set", "binary mappings require the same compiled representation")
-			}
+			return enumMappingFailure(d, target, from.event, "set", "binary is only qualified for same-representation AutoMap")
 		}
 		if noAuto || !join && aggregateOnly(from.writes) {
 			return nil
+		}
+		if slices.ContainsFunc(targets, binaryField) || slices.ContainsFunc(sources, binaryField) {
+			// Kernel AutoMap uses CLR OrdinalIgnoreCase, whose Unicode pairs
+			// are not the ASCII-only matcher's pairs. Qualify before matching.
+			if !asciiFieldNames(targets) || !asciiFieldNames(sources) || !asciiWrites(from.writes) {
+				candidates := append(slices.Clone(targets), sources...)
+				field := candidates[slices.IndexFunc(candidates, binaryField)]
+				return enumMappingFailure(d, field, from.event, "AutoMap", "binary auto-map requires ASCII property names; CLR Unicode comparison is not qualified")
+			}
 		}
 		for _, source := range sources {
 			matches := matchingASCIIFields(targets, source.Name)
@@ -73,7 +70,7 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 			if slices.Contains(n.exclusions, target.Path) || autoMapWritten(from.writes, source.Name, join) {
 				continue
 			}
-			if !asciiFieldNames(targets) || !asciiFieldNames(sources) || !eventPropertyPath(source.Name) || !enumPropertySegments(source, event.Fields()) || !enumPropertySegments(target, fields) || len(matches) != 1 || len(matchingASCIIFields(sources, source.Name)) != 1 || !target.SameRepresentation(source) {
+			if !eventPropertyPath(source.Name) || !enumPropertySegments(source, event.Fields()) || !enumPropertySegments(target, fields) || len(matches) != 1 || len(matchingASCIIFields(sources, source.Name)) != 1 || !target.SameRepresentation(source) {
 				return enumMappingFailure(d, target, from.event, "AutoMap", "auto-map binary representations must match unambiguously")
 			}
 		}

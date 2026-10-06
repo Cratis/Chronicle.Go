@@ -19,7 +19,7 @@ func (f Field) Element() (Field, bool) {
 	if n.reference != nil {
 		n = n.reference
 	}
-	if n.binary || n.typ.Kind() != reflect.Slice && n.typ.Kind() != reflect.Array && n.typ.Kind() != reflect.Map {
+	if n.scalar || n.item == nil || n.typ.Kind() != reflect.Slice && n.typ.Kind() != reflect.Array && n.typ.Kind() != reflect.Map {
 		return Field{}, false
 	}
 	f.plan, f.Type, f.Collection = n.item, n.item.typ, true

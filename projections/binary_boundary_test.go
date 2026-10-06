@@ -9,6 +9,7 @@ import (
 
 	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/projections"
+	"github.com/cratis/chronicle.go/readmodels"
 )
 
 type binaryMappedEvent struct{ Payload []byte }
@@ -96,8 +97,6 @@ func TestBinaryProjectionKeysAndJoinsRefuse(t *testing.T) {
 	projections.Join(join, mustEvent[binaryMappedEvent](t), projections.Path[binaryMappedModel, []byte]("Payload"), nil)
 	_, err = join.Build()
 	binaryMappingFailure(t, err)
-	id := projections.NewBuilder("binary-id", mustModel[binaryKeyModel](t))
-	projections.From(id, mustEvent[binaryMappedEvent](t), nil)
-	_, err = id.Build()
+	_, err = readmodels.Define[binaryKeyModel]()
 	binaryMappingFailure(t, err)
 }

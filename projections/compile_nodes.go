@@ -155,7 +155,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			case "children", "nested", "index", "subject", "pii", "compliance-details", "encrypted":
 				continue
 			case "key":
-				if n.keyField != "" || binaryField(field) || field.IsEnum() || field.Scalar == serialization.NotScalar || field.Nullable {
+				if n.keyField != "" || field.IsEnum() || !field.Scalar.IsPrimitive() || field.Nullable {
 					return fail(invalid("one non-nullable scalar key field is required"))
 				}
 				n.keyField = field.Path
@@ -249,7 +249,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 		}
 		if n.identifiedBy != "$eventSourceId" {
 			identity, ok := serialization.FieldAt(fields, n.identifiedBy)
-			if !ok || identity.Collection || identity.Nullable || identity.Scalar == serialization.NotScalar {
+			if !ok || identity.Collection || identity.Nullable || !identity.Scalar.IsPrimitive() {
 				return nil, invalid("child identity requires a non-nullable scalar field")
 			}
 			explicitIdentity := false
@@ -358,7 +358,7 @@ func (c *compiler) addJoin(n *nodeDefinition, j joinDeclaration, fields []serial
 		return invalid("join does not support a parent key")
 	}
 	on, ok := serialization.FieldAt(fields, j.on)
-	if !ok || binaryField(on) || on.IsEnum() || validateTarget(on, j.onType) != nil || on.Scalar == serialization.NotScalar {
+	if !ok || on.IsEnum() || validateTarget(on, j.onType) != nil || !on.Scalar.IsPrimitive() {
 		return invalid("join on requires a scalar model field")
 	}
 	var target *joinDefinition

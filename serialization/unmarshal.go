@@ -139,13 +139,6 @@ func (n *node) decodeContext(data []byte, value reflect.Value, depth int, open b
 					}
 				}
 			}
-			if !ok && field.value.binary {
-				target, err := fieldValue(value, field.index, true)
-				if err != nil {
-					return err
-				}
-				target.Set(reflect.MakeSlice(target.Type(), 0, 0))
-			}
 			if !ok && (field.value.enum != nil || field.value.typ.Kind() == reflect.Slice && field.value.item != nil && field.value.item.enum != nil) {
 				target, err := fieldValue(value, field.index, true)
 				if err != nil {
@@ -175,9 +168,6 @@ func (n *node) decodeContext(data []byte, value reflect.Value, depth int, open b
 			value.Set(reflect.MakeSlice(value.Type(), len(items), len(items)))
 		}
 		for i := 0; i < len(items) && i < value.Len(); i++ {
-			if hasBinary(n.item) && bytes.Equal(bytes.TrimSpace(items[i]), []byte("null")) {
-				return faults.ErrProtocol
-			}
 			if dereference(n.item.typ).Kind() == reflect.Interface && bytes.Equal(bytes.TrimSpace(items[i]), []byte("null")) {
 				return faults.ErrProtocol
 			}

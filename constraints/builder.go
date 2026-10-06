@@ -169,7 +169,7 @@ func (b *Builder) Build() (Definition, error) {
 				return Definition{}, fmt.Errorf("%w: property %q does not exist on event %s", faults.ErrInvalidConfiguration, path, fields.Event.Ref().ID)
 			}
 			field, ok := serialization.FieldAt(fields.Event.Fields(), path)
-			if ok && (field.Format == "byte-array" || slices.ContainsFunc(field.Fields(), func(f serialization.Field) bool { return f.Format == "byte-array" })) {
+			if ok && field.ContainsBinary() {
 				// The pinned kernel hashes value.ToString(), not the binary content
 				// (nor the contents of an ExpandoObject containing binary).
 				return Definition{}, fmt.Errorf("%w: binary unique property %q is not supported", faults.ErrInvalidConfiguration, path)

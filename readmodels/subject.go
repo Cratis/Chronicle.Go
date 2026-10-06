@@ -24,7 +24,7 @@ func collectSubject(plan *serialization.Plan, config *modelConfig) error {
 			if subject != "" {
 				return invalid("only one subject declaration is allowed")
 			}
-			if strings.Contains(field.Path, ".") || field.Collection || field.Scalar == serialization.NotScalar || field.Format == "byte-array" {
+			if strings.Contains(field.Path, ".") || field.Collection || !field.Scalar.IsPrimitive() {
 				return invalid("subject requires a top-level scalar")
 			}
 			subject = field.Path
