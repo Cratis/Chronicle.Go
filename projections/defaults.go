@@ -146,8 +146,8 @@ func prepareInitialState(model readmodels.Descriptor, state string) (string, err
 			return "", invalid("initial state cannot initialize a protected model root")
 		}
 	}
-	for _, field := range serialization.RootFields(model.Fields()) {
-		if _, present := object[field.Path]; present && field.ContainsBinary() {
+	for _, field := range enumRootFields(model.Fields()) {
+		if _, present := object[field.Name]; present && field.ContainsBinary() {
 			return "", invalid("initial state cannot initialize a binary model root")
 		}
 	}
