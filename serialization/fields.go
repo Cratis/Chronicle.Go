@@ -6,6 +6,7 @@ package serialization
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/cratis/chronicle.go/declarations"
@@ -224,13 +225,65 @@ func FieldAt(fields []Field, path string) (Field, bool) {
 	return Field{}, false
 }
 
-// RootFields returns top-level fields from a metadata snapshot.
-func RootFields(fields []Field) []Field {
+// FieldAtWithCapability resolves a path while preferring any candidate with the
+// supplied capability. Literal dotted JSON names may overlap segment-resolved
+// paths; capability guards must not let the first ordinary field hide a sensitive
+// candidate. Recursive paths are resolved finitely, consuming a prefix per step.
+// If no candidate has the capability (or capability is nil), FieldAt is used.
+func FieldAtWithCapability(fields []Field, path string, capability func(Field) bool) (Field, bool) {
+	if capability != nil {
+		for _, field := range fields {
+			if field.Path == path && capability(field) {
+				field.Index = slices.Clone(field.Index)
+				return field, true
+			}
+		}
+		for _, parent := range EmittedRootFields(fields) {
+			if !strings.HasPrefix(path, parent.Path+".") {
+				continue
+			}
+			field, ok := FieldAtWithCapability(parent.Fields(), strings.TrimPrefix(path, parent.Path+"."), capability)
+			if !ok || !capability(field) {
+				continue
+			}
+			field.Path = parent.Path + "." + field.Path
+			field.GoField = parent.GoField + "." + field.GoField
+			field.Index = append(slices.Clone(parent.Index), field.Index...)
+			typ := parent.Type
+			for typ.Kind() == reflect.Pointer {
+				typ = typ.Elem()
+			}
+			field.Collection = field.Collection || parent.Collection || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array || typ.Kind() == reflect.Map
+			return field, true
+		}
+	}
+	return FieldAt(fields, path)
+}
+
+// EmittedRootFields returns emitted top-level fields by Go index ownership,
+// including literal dots in JSON names and flattened embeddings. Use this when
+// matching raw JSON properties rather than segment-oriented paths.
+func EmittedRootFields(fields []Field) []Field {
 	var result []Field
 	for _, f := range fields {
-		if !strings.Contains(f.Path, ".") {
+		if !slices.ContainsFunc(fields, func(owner Field) bool {
+			return len(owner.Index) > 0 && len(owner.Index) < len(f.Index) && slices.Equal(owner.Index, f.Index[:len(owner.Index)])
+		}) {
 			f.Index = append([]int(nil), f.Index...)
 			result = append(result, f)
+		}
+	}
+	return result
+}
+
+// RootFields returns top-level segment-oriented paths from a metadata snapshot.
+// Literal dotted property names are excluded; use EmittedRootFields for raw JSON.
+func RootFields(fields []Field) []Field {
+	var result []Field
+	for _, field := range fields {
+		if !strings.Contains(field.Path, ".") {
+			field.Index = slices.Clone(field.Index)
+			result = append(result, field)
 		}
 	}
 	return result

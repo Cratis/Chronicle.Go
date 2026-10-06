@@ -48,7 +48,7 @@ func WithInitialValues[M any](value M) Option {
 // codec and canonical definition; it is not an event mapping or event filter.
 func WithInitialValue[M, V any](target Field[M, V], value V) Option {
 	return func(d *declaration) {
-		field, ok := serialization.FieldAt(d.model.Fields(), target.path)
+		field, ok := binaryMappingField(d.model.Fields(), target.path)
 		if target.owner != d.model.GoType() || !ok || field.Type != reflect.TypeFor[V]() || field.Collection || !field.Scalar.IsPrimitive() {
 			d.err = invalid("initial value requires a matching scalar model path")
 			return

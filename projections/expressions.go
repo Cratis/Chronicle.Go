@@ -283,7 +283,7 @@ func validateExpression(e expression, target serialization.Field, modelFields, e
 		if !numeric(target) {
 			return invalid("arithmetic requires a numeric target")
 		}
-		source, ok := serialization.FieldAt(eventFields, e.text)
+		source, ok := binaryMappingField(eventFields, e.text)
 		if !ok || !numeric(source) {
 			return invalid("arithmetic requires a numeric event field")
 		}
@@ -294,7 +294,7 @@ func validateExpression(e expression, target serialization.Field, modelFields, e
 			return invalid("arithmetic requires a numeric target")
 		}
 	case pathExpression:
-		source, ok := serialization.FieldAt(eventFields, e.text)
+		source, ok := binaryMappingField(eventFields, e.text)
 		if !eventPropertyPath(e.text) || !ok || source.Collection {
 			return invalid("unknown or unsupported event property path")
 		}
@@ -451,7 +451,7 @@ func validateKey(e expression, expected reflect.Type, fields []serialization.Fie
 			return validateLiteral(e, serialization.Field{Type: reflect.TypeFor[int64](), Scalar: serialization.Integer})
 		}
 	case pathExpression:
-		field, ok := serialization.FieldAt(fields, e.text)
+		field, ok := binaryMappingField(fields, e.text)
 		if ok && !field.IsEnum() && !field.Collection && field.Scalar.IsPrimitive() && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
 			return nil
 		}

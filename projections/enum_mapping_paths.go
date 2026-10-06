@@ -15,17 +15,8 @@ import (
 // Schema matching uses raw root property names, including literal dots. Index
 // ancestry identifies emitted owners without confusing those names with nested
 // paths, or flattened ordinary embeddings with emitted object properties.
-// Keep this local: serialization.RootFields has other, path-oriented consumers.
 func enumRootFields(fields []serialization.Field) []serialization.Field {
-	var roots []serialization.Field
-	for _, field := range fields {
-		if !slices.ContainsFunc(fields, func(owner serialization.Field) bool {
-			return len(owner.Index) < len(field.Index) && fieldIndexContains(owner, field)
-		}) {
-			roots = append(roots, field)
-		}
-	}
-	return roots
+	return serialization.EmittedRootFields(fields)
 }
 
 func fieldIndexContains(owner, field serialization.Field) bool {
@@ -35,12 +26,7 @@ func fieldIndexContains(owner, field serialization.Field) bool {
 // A literal dotted JSON name and a genuine nested path can have the same Path.
 // Do not let a preceding ordinary field hide the enum involved in that ambiguity.
 func enumMappingField(fields []serialization.Field, path string) (serialization.Field, bool) {
-	for _, field := range fields {
-		if field.Path == path && field.IsEnum() {
-			return field, true
-		}
-	}
-	return serialization.FieldAt(fields, path)
+	return serialization.FieldAtWithCapability(fields, path, serialization.Field.IsEnum)
 }
 
 func enumPropertySegments(field serialization.Field, fields []serialization.Field) bool {

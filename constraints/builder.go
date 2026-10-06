@@ -168,7 +168,7 @@ func (b *Builder) Build() (Definition, error) {
 			if !schema.hasPath(path) {
 				return Definition{}, fmt.Errorf("%w: property %q does not exist on event %s", faults.ErrInvalidConfiguration, path, fields.Event.Ref().ID)
 			}
-			field, ok := serialization.FieldAt(fields.Event.Fields(), path)
+			field, ok := serialization.FieldAtWithCapability(fields.Event.Fields(), path, serialization.Field.ContainsBinary)
 			if ok && field.ContainsBinary() {
 				// The pinned kernel hashes value.ToString(), not the binary content
 				// (nor the contents of an ExpandoObject containing binary).

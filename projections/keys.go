@@ -102,7 +102,7 @@ func (b *CompositeKeyBuilder[K, E]) add(path string, typ reflect.Type, part keyP
 			}
 		}
 	}
-	field, ok := serialization.FieldAt(fields, path)
+	field, ok := binaryMappingField(fields, path)
 	if !ok || validateTarget(field, typ) != nil || !field.Scalar.IsPrimitive() || field.Nullable {
 		b.err = invalid("composite part requires a non-nullable scalar key field")
 		return

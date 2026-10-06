@@ -40,18 +40,18 @@ func modelSchema(plan *serialization.Plan, config modelConfig) (string, error) {
 		}
 	}
 	for _, path := range config.indexes {
-		field, ok := serialization.FieldAt(plan.Fields(), path)
+		field, ok := serialization.FieldAtWithCapability(plan.Fields(), path, serialization.Field.ContainsBinary)
 		if ok && field.ContainsBinary() {
 			return "", invalid("binary index is not supported: " + path)
 		}
 	}
-	for _, field := range serialization.RootFields(plan.Fields()) {
+	for _, field := range serialization.EmittedRootFields(plan.Fields()) {
 		if field.ContainsBinary() && (materializedIdentityAlias(field.Name) || strings.EqualFold(field.GoField, "id")) {
 			return "", invalid("binary identity is not supported: " + field.Path)
 		}
 	}
 	if config.subject != "" {
-		field, ok := serialization.FieldAt(plan.Fields(), config.subject)
+		field, ok := serialization.FieldAtWithCapability(plan.Fields(), config.subject, serialization.Field.ContainsBinary)
 		if strings.Contains(config.subject, ".") || !ok || !field.Scalar.IsPrimitive() {
 			return "", invalid("subject must name a top-level scalar property")
 		}

@@ -96,7 +96,7 @@ func Value[M, E, V any](builder *FromBuilder[M, E], target Field[M, V], value V)
 	expression := expression{kind: invalidExpression}
 	var data []byte
 	var err error
-	field, ok := serialization.FieldAt(builder.fields, target.path)
+	field, ok := binaryMappingField(builder.fields, target.path)
 	if !ok || validateTarget(field, reflect.TypeFor[V]()) != nil {
 		// Keep the ordinary located Build/Compile diagnostic, but never execute
 		// application serialization hooks for an invalid target descriptor.

@@ -15,16 +15,20 @@ import (
 // the JSON string shape. Objects containing binary need the same qualification.
 func binaryField(field serialization.Field) bool { return field.ContainsBinary() }
 
+func binaryMappingField(fields []serialization.Field, path string) (serialization.Field, bool) {
+	return serialization.FieldAtWithCapability(fields, path, binaryField)
+}
+
 func validateBinaryGraph(d *definition, catalog *events.Catalog) error {
 	fields := d.model.Fields()
-	for _, f := range serialization.RootFields(fields) {
+	for _, f := range serialization.EmittedRootFields(fields) {
 		if (strings.EqualFold(f.Name, "id") || f.Name == "_id" || strings.EqualFold(lastGoName(f.GoField), "Id")) && binaryField(f) {
 			return enumMappingFailure(d, f, events.TypeRef{}, "key", "binary identities are not supported")
 		}
 	}
 	if d.subscribesAll {
 		for _, w := range d.all {
-			if target, ok := serialization.FieldAt(fields, w.path); ok && binaryField(target) {
+			if target, ok := binaryMappingField(fields, w.path); ok && binaryField(target) {
 				return enumMappingFailure(d, target, events.TypeRef{}, "all", "all-event binary mappings cannot validate unknown representations")
 			}
 		}
@@ -42,11 +46,11 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 		sources := enumRootFields(event.Fields())
 		targets := enumRootFields(fields)
 		for _, w := range append(slices.Clone(n.all), from.writes...) {
-			target, _ := serialization.FieldAt(fields, w.path)
+			target, _ := binaryMappingField(fields, w.path)
 			var source serialization.Field
 			switch w.expression.kind {
 			case pathExpression, addExpression, subtractExpression:
-				source, _ = serialization.FieldAt(event.Fields(), w.expression.text)
+				source, _ = binaryMappingField(event.Fields(), w.expression.text)
 			}
 			if !binaryField(target) && !binaryField(source) {
 				continue
@@ -86,7 +90,7 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 		}
 	}
 	for _, join := range n.joins {
-		if target, ok := serialization.FieldAt(fields, join.on); ok && binaryField(target) {
+		if target, ok := binaryMappingField(fields, join.on); ok && binaryField(target) {
 			return enumMappingFailure(d, target, join.event, "join", "binary correlation keys are not supported")
 		}
 		if err := check(join.fromDefinition, true); err != nil {
