@@ -5,8 +5,9 @@ description: Serialize explicitly registered interface families with stable Chro
 
 Use derived codecs when an event or read model contains an interface with a
 closed set of concrete representations. This is **partial C# compatibility for
-unprotected data**, not support for protected polymorphism or derived-child
-projection inference.
+unprotected data**, not support for protected polymorphism. Projections can
+build children of a family with one registered derivative; see
+[project derived children](#project-derived-children).
 
 ## Declare an isolated family
 
@@ -139,16 +140,58 @@ family/concrete types, the Go field and discriminator property name; it does not
 print discriminator values. It matches `chronicle.ErrInvalidConfiguration`.
 Decode errors match `chronicle.ErrProtocol` and preserve ordinary typed causes.
 
-## Projection and representation limits
+## Project derived children
 
-Whole-family properties or collections can be copied when source and target
-compiled representations agree. Ordinary concrete child objects may contain
-these values. This does **not** implement `children` on interface elements,
-derivative inference or automatic discriminator stamping for newly constructed
-children; those belong to [#27](https://github.com/Cratis/Chronicle.Go/issues/27).
-Live concrete-child updates do not imply replay support: the current replay and
-snapshot APIs refuse relationship projections. Relationship-free projections can
-replay copied derived collections through their frozen codec plans.
+A projection builds each child of a collection from an event, so the kernel, not
+your code, writes the child document. For an interface collection that document
+also needs `_derivedTypeId`, or the family codec cannot read it back. When the
+family has exactly one registered derivative, `children` resolves that concrete
+type and writes its discriminator on the creating event, as the C# client does
+for a `[ChildrenFrom]` collection with one `[DerivedType]` implementation. These
+declarations come from the executable
+[example](../projections/example_derived_children_test.go):
+
+```go
+type Parcel interface{ parcel() }
+
+type Box struct {
+    BoxID  string `json:"boxId" chronicle:"key"`
+    Weight int    `chronicle:"set(BoxPacked,from=Weight)"`
+}
+
+func (*Box) parcel() {}
+
+type Shipment struct {
+    ID      string   `json:"id" chronicle:"key"`
+    Parcels []Parcel `chronicle:"children(BoxPacked,key=BoxID,parent-key=ShipmentID)"`
+}
+
+codecs, err := serialization.NewCodecs(serialization.Derived[Parcel, *Box]("box"))
+model, err := readmodels.Define[Shipment](readmodels.WithCodecs(codecs))
+```
+
+The child node uses `Box`'s fields: its `key` field is the child identity and its
+mapping tags apply to the child, in the derivative's camelCase names. The
+creating event's mapping gains `_derivedTypeId: $value(box)`. Joins, removals
+and other keyed updates edit the existing child and leave its discriminator in
+place. The fluent `projections.Children` accepts the same family with
+`Builder[Box]`; it writes the discriminator on every child `From`, because C#
+fluent children cannot name a concrete type.
+
+Compilation fails rather than writing undecodable children when:
+
+- the family has no or several registered derivatives (C# silently keeps the
+  interface and writes no discriminator),
+- the discriminator is not representable as a kernel literal,
+- a global (`every`/`all`) mapping targets any casing of `_derivedTypeId`,
+- a derivative declares mappings but its family is not a `children` collection,
+  including `nested` interface fields, which C# does not resolve either.
+
+Whole-family properties or collections can still be copied when source and
+target compiled representations agree. Projections with children are
+relationship projections, so `ReadModels.ReplayProjection` refuses them; replay
+the observer instead. Protected families stay refused (see
+[#64](https://github.com/Cratis/Chronicle.Go/issues/64)).
 
 `Field.Derivatives()` exposes detached, variant-qualified fields for future
 compilers. Variant properties are never flattened into ambiguous `FieldAt` paths,
