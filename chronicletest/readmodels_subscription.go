@@ -86,9 +86,6 @@ func strictProjectionSubscription(definition projections.Definition, catalog *ev
 			}
 		}
 	}
-	if len(selected.ids) == 0 && !all {
-		return nil, chronicle.ErrNotRegistered
-	}
 	return selected, nil
 }
 

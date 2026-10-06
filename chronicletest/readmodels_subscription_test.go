@@ -205,9 +205,11 @@ func subscriptionRegistry(t *testing.T, kind string) *chronicle.Registry {
 			projections.EveryMap(e, projections.Path[subscriptionModel, string]("name"), "Name")
 		})
 	}
-	if kind == "join removal" {
+	if kind == "join removal" || kind == "join removal only" {
 		b = projections.NewBuilder("join-removal", model, projections.RemovedWithJoin(removed))
-		projections.From(b, added, nil)
+		if kind == "join removal" {
+			projections.From(b, added, nil)
+		}
 	}
 	switch kind {
 	case "children":
