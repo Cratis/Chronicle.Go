@@ -5,6 +5,7 @@ package captures
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	contracts "github.com/cratis/chronicle.go/contracts/captures"
@@ -45,9 +46,14 @@ func New(store metadata.StoreName, conn grpc.ClientConnInterface) (*Service, err
 
 // Validate checks syntax and runtime capability without persisting or activating.
 // References to missing external services or event types fail explicitly.
+// Source authorization returns ErrUnsupported before dispatch, even if ctx is
+// canceled: this transport carries CDL only and cannot preserve credentials.
 func (s *Service) Validate(ctx context.Context, d Definition) error {
 	if d.text == "" {
 		return invalid("capture definition required")
+	}
+	if _, present := d.Authorization(); present {
+		return unsupportedAuthorizationSubmission()
 	}
 	result, err := s.client.ValidateCaptureDeclaration(ctx, &contracts.ValidateCaptureDeclarationRequest{EventStore: string(s.store), Declaration: d.text})
 	if err != nil {
@@ -65,9 +71,14 @@ func (s *Service) Validate(ctx context.Context, d Definition) error {
 // Save submits an explicit definition under its stable ID, without activating.
 // The kernel can save an inactive definition and then return ValidationError;
 // retain d.ID() to correct or remove it. A transport error has an unknown outcome.
+// Source authorization returns ErrUnsupported before dispatch, regardless of ctx;
+// no definition is persisted when authorization cannot be carried by the transport.
 func (s *Service) Save(ctx context.Context, d Definition) error {
 	if d.text == "" {
 		return invalid("capture definition required")
+	}
+	if _, present := d.Authorization(); present {
+		return unsupportedAuthorizationSubmission()
 	}
 	result, err := s.client.SaveCapture(ctx, &contracts.SaveCaptureRequest{EventStore: string(s.store), Id: wire.Guid(metadata.CorrelationID(d.id)), Declaration: d.text})
 	if err != nil {
@@ -87,6 +98,10 @@ func (s *Service) Save(ctx context.Context, d Definition) error {
 	}
 	return nil
 }
+func unsupportedAuthorizationSubmission() error {
+	return fmt.Errorf("%w: capture source authorization cannot be submitted; the capture declaration transport carries CDL only", faults.ErrUnsupported)
+}
+
 func checkMessages(messages []*contracts.CaptureValidationMessage) error {
 	if len(messages) == 0 {
 		return nil
