@@ -18,7 +18,7 @@ func binaryField(field serialization.Field) bool { return field.ContainsBinary()
 func validateBinaryGraph(d *definition, catalog *events.Catalog) error {
 	fields := d.model.Fields()
 	for _, f := range serialization.RootFields(fields) {
-		if (f.Name == "id" || f.Name == "Id" || strings.EqualFold(lastGoName(f.GoField), "Id")) && binaryField(f) {
+		if (strings.EqualFold(f.Name, "id") || f.Name == "_id" || strings.EqualFold(lastGoName(f.GoField), "Id")) && binaryField(f) {
 			return enumMappingFailure(d, f, events.TypeRef{}, "key", "binary identities are not supported")
 		}
 	}

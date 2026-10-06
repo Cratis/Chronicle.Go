@@ -46,7 +46,7 @@ func modelSchema(plan *serialization.Plan, config modelConfig) (string, error) {
 		}
 	}
 	for _, field := range serialization.RootFields(plan.Fields()) {
-		if field.ContainsBinary() && (field.Name == "id" || field.Name == "Id" || strings.EqualFold(field.GoField, "id")) {
+		if field.ContainsBinary() && (materializedIdentityAlias(field.Name) || strings.EqualFold(field.GoField, "id")) {
 			return "", invalid("binary identity is not supported: " + field.Path)
 		}
 	}
