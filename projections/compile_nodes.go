@@ -568,7 +568,7 @@ func (c *compiler) compileChild(n *nodeDefinition, child childDeclaration, field
 	}
 	if shape.derivative != nil {
 		compiled.derivative = shape.derivative
-		if err := c.stampDerivedChild(compiled, d, creators); err != nil {
+		if err := c.stampDerivedChild(compiled); err != nil {
 			return err
 		}
 	}

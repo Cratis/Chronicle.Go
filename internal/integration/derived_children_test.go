@@ -149,3 +149,88 @@ func TestKernelSingleDerivedChildrenCreateJoinRemoveReaddAndReplay(t *testing.T)
 		})
 	}
 }
+
+// The kernel adds a child for any non-join child From whose identity is absent
+// (ProjectionEventContextExtensions.Project), so a keyed update after removal
+// or before creation recreates the child. It must carry the discriminator so
+// the whole instance still decodes.
+func TestKernelDerivedChildKeyedUpdateRecreatesADecodableChild(t *testing.T) {
+	for _, policy := range []serialization.NamingPolicy{serialization.PreservePropertyNames, serialization.CamelCase} {
+		name := map[serialization.NamingPolicy]string{serialization.PreservePropertyNames: "DefaultNamingPolicy", serialization.CamelCase: "CamelCaseNamingPolicy"}[policy]
+		t.Run(name, func(t *testing.T) {
+			f := newKernelFixture(t)
+			registry := chronicle.NewRegistry()
+			if _, err := chronicle.RegisterEvent[derivedchildrenfixtures.ItemAdded](registry); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := chronicle.RegisterEvent[derivedchildrenfixtures.ItemRemoved](registry); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := chronicle.RegisterEvent[derivedchildrenfixtures.ItemRenamed](registry); err != nil {
+				t.Fatal(err)
+			}
+			updated, err := chronicle.RegisterEvent[derivedchildrenfixtures.ItemUpdated](registry)
+			if err != nil {
+				t.Fatal(err)
+			}
+			codecs, err := derivedchildrenfixtures.Codecs()
+			if err != nil {
+				t.Fatal(err)
+			}
+			model, err := chronicle.RegisterReadModel[derivedchildrenfixtures.Catalog](registry, readmodels.WithCodecs(codecs))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := registry.AddProjection(projections.ModelBound(model, projections.WithIdentifier("derived-children-update"), projections.WithNodes(projections.Node[derivedchildrenfixtures.Line](
+				projections.FromEvent(updated,
+					projections.UsingKey(projections.Path[derivedchildrenfixtures.ItemUpdated, string]("ItemId")),
+					projections.UsingParentKey(projections.Path[derivedchildrenfixtures.ItemUpdated, string]("OrderId"))),
+			)))); err != nil {
+				t.Fatal(err)
+			}
+			store, err := f.client(registry, chronicle.WithNamingPolicy(policy)).EventStore(f.ctx, f.storeName)
+			if err != nil {
+				t.Fatal(err)
+			}
+			reader := readmodels.For(store.ReadModels(), model)
+			observe := func(source events.SourceID, value any) {
+				t.Helper()
+				appended, err := store.EventLog().AppendWithMetadata(f.ctx, source, value)
+				if err != nil || appended.Result().Err() != nil {
+					t.Fatal("append failed", err)
+				}
+				completed, err := appended.WaitForCompletion(f.ctx, store.Observers(), 10*time.Second)
+				if err != nil || !completed.IsSuccess() || completed.Trivial() {
+					t.Fatalf("observation barrier: %+v %v", completed, err)
+				}
+			}
+			recreated := func(key readmodels.Key) {
+				t.Helper()
+				instance, err := reader.Get(f.ctx, key)
+				if err != nil {
+					t.Fatalf("read back %s: %v", key, err)
+				}
+				if !instance.Exists || len(instance.Value.Items) != 1 {
+					t.Fatalf("kernel did not recreate the child of %s: %+v", key, instance)
+				}
+				line, ok := instance.Value.Items[0].(*derivedchildrenfixtures.Line)
+				if !ok || line.ItemID != "line" {
+					t.Fatalf("recreated child of %s: %#v", key, instance.Value.Items[0])
+				}
+				raw, err := store.ReadModels().Get(f.ctx, model.Identifier(), key)
+				if err != nil || !strings.Contains(string(raw.Value), `"_derivedTypeId":"line"`) {
+					t.Fatalf("raw discriminator of %s: %s %v", key, raw.Value, err)
+				}
+				t.Logf("kernel recreated %s child: %s", key, raw.Value)
+			}
+			appendSuccessfully(t, f.ctx, store, "order", derivedchildrenfixtures.ItemAdded{ItemID: "line", OrderID: "order", Name: "created"})
+			awaitProjection(t, f.ctx, reader, "order", func(value derivedchildrenfixtures.Catalog) bool { return len(value.Items) == 1 })
+			appendSuccessfully(t, f.ctx, store, "order", derivedchildrenfixtures.ItemRemoved{ItemID: "line", OrderID: "order"})
+			awaitProjection(t, f.ctx, reader, "order", func(value derivedchildrenfixtures.Catalog) bool { return len(value.Items) == 0 })
+			observe("order", derivedchildrenfixtures.ItemUpdated{ItemID: "line", OrderID: "order", Name: "after removal"})
+			recreated("order")
+			observe("fresh", derivedchildrenfixtures.ItemUpdated{ItemID: "line", OrderID: "fresh", Name: "before creation"})
+			recreated("fresh")
+		})
+	}
+}

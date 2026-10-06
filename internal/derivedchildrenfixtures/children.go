@@ -34,6 +34,15 @@ type ItemRemoved struct {
 	OrderID string `json:"OrderId"`
 }
 
+// ItemUpdated renames the Line identified by ItemID under the order identified
+// by OrderID. It is not a creator, yet the kernel adds the child when its
+// identity is absent, so the update must carry the discriminator too.
+type ItemUpdated struct {
+	ItemID  string `json:"ItemId"`
+	OrderID string `json:"OrderId"`
+	Name    string
+}
+
 // ItemRenamed renames the Line whose itemId equals the event source.
 type ItemRenamed struct{ Name string }
 

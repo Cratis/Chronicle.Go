@@ -19,19 +19,19 @@ const derivedTypeDiscriminator = "_derivedTypeId"
 // stampDerivedChild adds the constant discriminator write that C#
 // ChildrenDefinitionExtensions.AddDerivedTypeDiscriminatorMapping adds to the
 // creating event of a derived children collection. AutoMap cannot discover it:
-// the discriminator is a serialization artifact, not a model field. Model-bound
-// nodes stamp only their children(...) creators, as C# does. Fluent nodes stamp
-// every From of the node because each fluent child From can create the child.
-func (c *compiler) stampDerivedChild(n *nodeDefinition, d *declaration, creators []subscription) error {
+// the discriminator is a serialization artifact, not a model field. C# stamps
+// only the model-bound children(...) creator, but the kernel adds a child for
+// any non-join From whose identity is absent, such as a keyed update after
+// removal or before creation. Go therefore stamps every From of the node, in
+// both front ends; rewriting the constant on an existing child is idempotent.
+// Joins never add a child and stay unstamped.
+func (c *compiler) stampDerivedChild(n *nodeDefinition) error {
 	e := literalValue(declarations.Value{Kind: declarations.String, Text: n.derivative.ID})
 	if err := validateLiteral(e, serialization.Field{Type: reflect.TypeFor[string](), Scalar: serialization.String}); err != nil {
 		return declarationFailure(c.result.id, Provenance{Directive: "derived-child", Offset: -1}, invalid("derived type identifier cannot be represented as a kernel literal"))
 	}
 	for i := range n.from {
 		from := &n.from[i]
-		if d.modelBound && !slices.ContainsFunc(creators, func(s subscription) bool { return s.event.Ref() == from.event }) {
-			continue
-		}
 		p := Provenance{FrontEnd: "convention", Path: derivedTypeDiscriminator, Directive: "derived-child", Offset: -1, Event: from.event}
 		if err := mergeWrite(c.result, &from.writes, write{path: derivedTypeDiscriminator, expression: e, provenance: p, synthetic: true}, false); err != nil {
 			return err
