@@ -116,6 +116,9 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 			if slices.Contains(n.exclusions, target.Path) || autoMapWritten(from.writes, source.Name, join) {
 				continue
 			}
+			if source.Scalar != serialization.Binary || target.Scalar != serialization.Binary {
+				return enumMappingFailure(d, target, from.event, "AutoMap", "binary auto-map only supports leaf-to-leaf copies, not objects containing binary")
+			}
 			if !eventPropertyPath(source.Name) || !enumPropertySegments(source, event.Fields()) || !enumPropertySegments(target, fields) || len(matches) != 1 || len(matchingASCIIFields(sources, source.Name)) != 1 || !target.SameRepresentation(source) {
 				return enumMappingFailure(d, target, from.event, "AutoMap", "auto-map binary representations must match unambiguously")
 			}

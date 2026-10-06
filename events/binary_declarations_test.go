@@ -19,6 +19,11 @@ type binaryDeclarationEvent struct {
 	Nested   struct{ Payload []byte }
 }
 
+type binaryDeclarationModel struct {
+	Payload  []byte
+	Optional *[]byte
+}
+
 type binaryUniqueTag struct {
 	Payload []byte `chronicle:"unique"`
 }
@@ -96,7 +101,7 @@ func TestBinarySubjectsRefuseBeforeRegistration(t *testing.T) {
 	}
 	for _, path := range []string{"Payload", "Optional"} {
 		t.Run("explicit "+path, func(t *testing.T) {
-			_, err := readmodels.Define[binaryDeclarationEvent](readmodels.WithSubjectProperty(path))
+			_, err := readmodels.Define[binaryDeclarationModel](readmodels.WithSubjectProperty(path))
 			if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
 				t.Fatalf("binary subject property admitted: %v", err)
 			}
@@ -107,8 +112,15 @@ func TestBinarySubjectsRefuseBeforeRegistration(t *testing.T) {
 func TestBinaryIndexesRefuseBeforeRegistration(t *testing.T) {
 	for _, path := range []string{"Payload", "Optional", "Nested", "Nested.Payload"} {
 		t.Run(path, func(t *testing.T) {
-			_, err := readmodels.Define[binaryDeclarationEvent](readmodels.WithIndexes(path))
-			if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			var err error
+			want := chronicle.ErrInvalidConfiguration
+			if path == "Nested" || path == "Nested.Payload" {
+				_, err = readmodels.Define[binaryDeclarationEvent](readmodels.WithIndexes(path))
+				want = chronicle.ErrUnsupported // The owning object itself is no longer qualified.
+			} else {
+				_, err = readmodels.Define[binaryDeclarationModel](readmodels.WithIndexes(path))
+			}
+			if !errors.Is(err, want) {
 				t.Fatalf("binary index admitted: %v", err)
 			}
 		})

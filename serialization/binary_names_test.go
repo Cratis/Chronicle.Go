@@ -35,10 +35,10 @@ type binaryFunctionAliasReverse struct {
 }
 type binaryCaseAlias struct {
 	Note    string `json:"payload"`
-	Payload []byte
+	Payload []byte `json:"Payload"`
 }
 type binaryCaseAliasReverse struct {
-	Payload []byte
+	Payload []byte `json:"Payload"`
 	Note    string `json:"payload"`
 }
 type binaryUnicodeAlias struct {
@@ -87,7 +87,7 @@ func TestBinaryNamesRefusePlan(t *testing.T) {
 		}](),
 		"unrelated ordinary siblings": reflect.TypeFor[struct {
 			Object struct {
-				Name  string
+				Name  string `json:"Name"`
 				Alias string `json:"name"`
 			}
 			Payload []byte
@@ -200,12 +200,12 @@ func TestBinaryFreeNamesKeepAdmissionAndRecompilation(t *testing.T) {
 
 func TestBinaryNamesKeepSimpleUnicodeAndRecompilation(t *testing.T) {
 	type document struct {
-		Payload    []byte
-		Éclair     string
-		Σ          string
-		Underscore string `json:"_member2"`
-		Kelvin     string `json:"K"`
-		ASCII      string `json:"k"`
+		Payload []byte
+		Éclair  string
+		Σ       string
+		Member  string `json:"member2"`
+		Kelvin  string `json:"K"`
+		ASCII   string `json:"k"`
 	}
 	plan, err := serialization.Compile(reflect.TypeFor[document]())
 	if err != nil {

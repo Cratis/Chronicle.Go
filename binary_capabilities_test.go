@@ -5,6 +5,7 @@ package chronicle_test
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
@@ -20,7 +21,28 @@ type capabilityBinaryPayload struct {
 	ID       string
 	Payload  []byte
 	Optional *[]byte
-	Nested   struct{ Payload []byte }
+}
+type capabilityBinaryNested struct{ Nested struct{ Payload []byte } }
+type capabilityBinaryValue struct {
+	Blob struct {
+		Value []byte `json:"value"`
+	}
+}
+type capabilityBinaryNestedID struct{ Attachment struct{ ID []byte } }
+type capabilityBinaryNestedAliases struct {
+	Attachment struct {
+		Id      string
+		Payload []byte `json:"_id"`
+	}
+}
+type capabilityBinaryNestedAliasesReverse struct {
+	Attachment struct {
+		Payload []byte `json:"_id"`
+		Id      string
+	}
+}
+type capabilityBinaryWatermark struct {
+	Payload []byte `json:"__lastHandledEventSequenceNumber"`
 }
 type capabilityBinaryUnique struct {
 	Payload []byte `chronicle:"unique"`
@@ -164,6 +186,19 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 		{"Unicode siblings last", func() error { _, err := events.Define[capabilityBinaryUnicodeLast](); return err }},
 		{"reserved event member", func() error { _, err := events.Define[capabilityBinaryReserved](); return err }},
 		{"reserved model member", func() error { _, err := readmodels.Define[capabilityBinaryReserved](); return err }},
+		{"single-value object AutoMap", func() error { _, err := readmodels.Define[capabilityBinaryValue](); return err }},
+		{"single-value event object", func() error { _, err := events.Define[capabilityBinaryValue](); return err }},
+		{"nested read-model binary", func() error { _, err := readmodels.Define[capabilityBinaryNested](); return err }},
+		{"nested ID Preserve", func() error { _, err := events.Define[capabilityBinaryNestedID](); return err }},
+		{"nested ID CamelCase", func() error {
+			_, err := serialization.Compile(reflect.TypeFor[capabilityBinaryNestedID](), serialization.CamelCase)
+			return err
+		}},
+		{"nested ID read model", func() error { _, err := readmodels.Define[capabilityBinaryNestedID](); return err }},
+		{"nested Id/_id first", func() error { _, err := events.Define[capabilityBinaryNestedAliases](); return err }},
+		{"nested Id/_id last", func() error { _, err := events.Define[capabilityBinaryNestedAliasesReverse](); return err }},
+		{"sink-owned event binary", func() error { _, err := events.Define[capabilityBinaryWatermark](); return err }},
+		{"sink-owned read-model binary", func() error { _, err := readmodels.Define[capabilityBinaryWatermark](); return err }},
 		{"unique tag", func() error { _, err := events.Define[capabilityBinaryUnique](); return err }},
 		{"unique builder", func() error {
 			_, err := constraints.UniqueValues("binary").On(event.Descriptor(), "Payload").Build()
@@ -171,7 +206,11 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 		}},
 		{"constraint naming rebind", binaryConstraintNamingAdmission[binaryNamedAliasFirst]},
 		{"unique object", func() error {
-			_, err := constraints.UniqueValues("binary").On(event.Descriptor(), "Nested").Build()
+			nested, err := events.Define[capabilityBinaryNested]()
+			if err != nil {
+				return err
+			}
+			_, err = constraints.UniqueValues("binary").On(nested.Descriptor(), "Nested").Build()
 			return err
 		}},
 		{"event subject", func() error { _, err := events.Define[capabilityBinarySubject](); return err }},
@@ -186,7 +225,7 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 			return err
 		}},
 		{"indexed object", func() error {
-			_, err := readmodels.Define[capabilityBinaryPayload](readmodels.WithIndexes("Nested"))
+			_, err := readmodels.Define[capabilityBinaryNested](readmodels.WithIndexes("Nested"))
 			return err
 		}},
 		{"key tag", func() error {

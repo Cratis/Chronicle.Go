@@ -23,12 +23,18 @@ func (binaryVariant) binaryMember() {}
 
 func TestBinaryMissingNullEmptyAndNullable(t *testing.T) {
 	for _, compile := range []func(reflect.Type, ...serialization.NamingPolicy) (*serialization.Plan, error){serialization.Compile, serialization.CompileReadModel} {
-		p, err := compile(reflect.TypeFor[binaryEvent]())
+		p, err := compile(reflect.TypeFor[struct {
+			Payload  []byte
+			Optional *[]byte
+		}]())
 		if err != nil {
 			t.Fatal(err)
 		}
 		for _, input := range []string{`{}`, `{"Payload":null,"Optional":null}`, `{"Payload":""}`} {
-			var value binaryEvent
+			var value struct {
+				Payload  []byte
+				Optional *[]byte
+			}
 			if err := p.Unmarshal([]byte(input), &value); err != nil {
 				t.Fatal(err)
 			}

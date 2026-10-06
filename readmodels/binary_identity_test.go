@@ -42,7 +42,7 @@ func TestBinaryReadModelIdentitiesRefuseBeforeRegistration(t *testing.T) {
 		"serialized _id":   func() error { _, err := readmodels.Define[binaryMongoIdentity](); return err },
 	} {
 		t.Run(name, func(t *testing.T) {
-			if err := define(); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			if err := define(); !errors.Is(err, chronicle.ErrInvalidConfiguration) && !errors.Is(err, chronicle.ErrUnsupported) {
 				t.Fatalf("binary model identity admitted: %v", err)
 			}
 		})

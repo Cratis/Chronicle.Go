@@ -125,8 +125,20 @@ have no custom JSON/text marshaler. Fixed `[N]byte` arrays remain integer arrays
 | `*[]byte` | String/null schema with `byte-array?` format; nil pointer omitted |
 | `[][]byte` and other collections containing binary | Refused before registration: the pinned kernel's projection conversion loses binary elements |
 
-Direct and nested object properties share this representation. Missing or null
-non-pointer binary properties decode as owned, non-nil empty slices, including
+The admitted shapes are deliberately bounded:
+
+- Event payloads: direct binary leaves, one pointer to a leaf, and these leaves
+  inside nested objects (including pointers to objects).
+- Read-model payloads: binary leaves or one pointer to a leaf emitted directly
+  at the root. Promoted embedded leaves count as root properties. Binary below
+  a nested read-model object is refused, rather than qualifying arbitrary shapes
+  from the witness's former single `Nested.Inner` control.
+- Projection AutoMap: only leaf-to-leaf copies with identical compiled binary
+  representations and qualified ASCII property names. Neither endpoint may be
+  an object containing binary at any depth. Explicit binary copies remain refused;
+  they have no separate kernel witness.
+
+Missing or null non-pointer binary properties decode as owned, non-nil empty slices, including
 on event reads. Nullable pointers remain nil; present strings decode to fresh
 storage. Absent embedded pointers stay absent: an empty binary default never
 creates an optional object. Field metadata classifies binary as
@@ -146,15 +158,18 @@ includes `chronicle:"unique"`, `UniqueValues(...).On(...)`, `chronicle:"subject"
 `WithSubjectProperty`, `chronicle:"index"` and `WithIndexes`. Unique constraints
 and indexes also refuse objects containing binary. The pinned kernel hashes a
 byte array's `ToString()` value, not its contents; subject identities likewise
-lack a qualified cross-client representation. Admission stops at direct/nested
-object properties and one pointer to a binary leaf. The pinned kernel preserves
+lack a qualified cross-client representation. The pinned kernel preserves
 binary arrays in event history but its projection converter treats each byte
 array as another collection; read models lose their byte values. See the
 [binary kernel limitation](parity.md#baselines-and-evidence) for source citations
 and [Chronicle#4595](https://github.com/Cratis/Chronicle/issues/4595) for the upstream fix.
-Go does not repair these lossy read models or weaken its base64 decoder. AutoMap
-requires the same compiled binary representation and ASCII property names;
-CLR Unicode case matching is not qualified. Explicit mappings, binary-to-string
+Go does not repair these lossy read models or weaken its base64 decoder. Whole-object
+binary copies are also refused: the pinned projection converter unwraps any
+single-`value` ExpandoObject even against an object schema, then enumerates its
+bytes into a list instead of preserving the object. That conversion recurses into
+nested objects. See `EventValueProviderExpressionResolvers.cs:113–119,139–158`
+at Chronicle `ae5e00a8` (19.29.4). CLR Unicode AutoMap case matching is not
+qualified. Explicit mappings, binary-to-string
 conversion, initial values, literals, arithmetic, identities, keys, joins and
 runtime ordinary-scalar profiles are unsupported. Read-model identity and subject
 fallback properties cannot be binary, even without a projection. This includes
@@ -166,10 +181,28 @@ This includes ordinary siblings unrelated to the binary leaf, nested objects,
 collection members, embedded/promoted fields and registered derived variants,
 including unused variants in the plan's codec set. Names are checked under the
 active naming policy at compilation and every naming recompilation, before
-registration. Violations return `chronicle.ErrUnsupported` without payload data.
+registration. Binary-only name violations return `chronicle.ErrUnsupported`
+without payload data. Exact duplicate names retain `chronicle.ErrInvalidConfiguration`,
+just as in binary-free types; actual compile errors take precedence over deferred
+name errors.
 
-A simple segment is nonempty: its first character is a Unicode letter or `_`,
-and subsequent characters are Unicode letters, decimal digits or `_`. Dots,
+A simple segment is nonempty: its first character is a Unicode letter,
+and subsequent characters are Unicode letters, decimal digits or `_`. Names
+beginning with `_` are refused at every level, including `_id` and all sink-owned
+properties from `Source/Kernel/Storage/WellKnownProperties.cs` at `ae5e00a8`:
+`__lastHandledEventSequenceNumber`, `__initialized`, `__subject` and `__subjects`.
+Below the root, every case variant of `id` is also refused, even on an ordinary
+sibling in the binary-containing graph. Root identity handling otherwise stays
+unchanged. The MongoDB converter maps every case variant of `id` to `_id`
+recursively, but restores only `id`/`Id`; nested `ID` loses bytes and `Id`/`_id`
+siblings collide. Source: `Source/Kernel/Storage.MongoDB/ExpandoObjectConverter.cs:22–90,330–339`
+and `PropertyExtensions.cs:18–19` at the same revision.
+
+A property named `value` (case-insensitively) is refused inside any object that
+contains binary, preventing the projection converter's single-value unwrapping.
+This includes `Value` under Preserve before a camelCase recompile can make it
+`value`. Objects with no binary descendants retain ordinary `value` properties
+unless another naming rule rejects them. Dots,
 brackets, `$`, parentheses, hyphens, spaces and combining marks are not admitted.
 Chronicle 19.29.4's `PropertyPath` splits dots, recognizes bracketed array access
 and function/accessor segments, then treats the remainder as `PropertyName`;

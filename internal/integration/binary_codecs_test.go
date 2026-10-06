@@ -33,11 +33,13 @@ type BinaryChanged struct {
 	Optional *[]byte
 	Nested   *BinaryWitnessNested
 }
+
+// Read models and AutoMap now qualify only emitted root binary leaves. Nested
+// remains on BinaryChanged to retain the existing event-history round-trip check.
 type BinaryWitnessModel struct {
 	ID       string `json:"id"`
 	Payload  []byte
 	Optional *[]byte
-	Nested   *BinaryWitnessNested
 }
 
 func TestKernelBinaryEventsProjectionAndReadModel(t *testing.T) {
@@ -149,8 +151,7 @@ func TestKernelBinaryEventsProjectionAndReadModel(t *testing.T) {
 						readbacks++
 						captureBinaryModel(t, fixture, model.Identifier(), source, stored[0].Context.SequenceNumber, output)
 						awaitProjection(t, fixture.ctx, reader, readmodels.Key(source), func(value BinaryWitnessModel) bool {
-							got := BinaryChanged{value.Payload, value.Optional, value.Nested}
-							return reflect.DeepEqual(got, original)
+							return reflect.DeepEqual(value.Payload, original.Payload) && reflect.DeepEqual(value.Optional, original.Optional)
 						})
 						raw, err := store.ReadModels().Get(fixture.ctx, model.Identifier(), readmodels.Key(source))
 						if err != nil || !raw.Exists {

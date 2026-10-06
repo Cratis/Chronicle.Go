@@ -75,6 +75,8 @@ func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
 // Go ID field to C#'s Id before applying the naming policy. MongoDB read-model
 // keys round-trip through the kernel only when the schema declares id or Id.
 // Explicit json tags, nested fields and all other initialisms are unchanged.
+// Binary is qualified only for emitted root leaves, including promoted embedded
+// fields; objects containing binary below the root return ErrUnsupported.
 func CompileReadModel(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
 	return compilePlan(typ, true, policies...)
 }
@@ -130,12 +132,6 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	}
 	state := &compileState{active: map[compileKey]*node{}, definitions: map[string]any{}, codecs: config.Codecs}
 	root, err := compile(typ, state, policy, readModel)
-	if state.duplicateNames != nil && (err != nil || !state.binary) {
-		if state.binary {
-			return nil, binaryPropertyNamesError()
-		}
-		return nil, state.duplicateNames
-	}
 	if err != nil {
 		return nil, err
 	}
@@ -175,8 +171,16 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 		}
 		binary = binary || candidate.containsBinary
 	}
-	if state.duplicateNames != nil && !binary {
+	if state.duplicateNames != nil {
 		return nil, state.duplicateNames
+	}
+	if readModel {
+		for _, f := range root.fields {
+			scalar, _ := classify(f.value)
+			if f.value.containsBinary && scalar != Binary {
+				return nil, unsupported(typ, "read-model binary is only qualified at emitted root leaves")
+			}
+		}
 	}
 	if binary {
 		for _, candidate := range candidates {
@@ -217,7 +221,6 @@ type compileState struct {
 	definitions    map[string]any
 	codecs         *Codecs
 	duplicateNames error
-	binary         bool
 }
 
 func compile(typ reflect.Type, state *compileState, policy NamingPolicy, readModelRoot bool) (*node, error) {
@@ -325,7 +328,7 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 			if typ.Elem() != reflect.TypeFor[byte]() {
 				return nil, unsupported(typ, "binary requires the built-in byte element type")
 			}
-			n.binary, n.scalar, state.binary = true, true, true
+			n.binary, n.scalar = true, true
 			n.schema["type"], n.schema["format"] = "string", "byte-array"
 			return n, nil
 		}
