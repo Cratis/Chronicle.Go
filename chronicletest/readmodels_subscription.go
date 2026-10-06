@@ -36,11 +36,8 @@ func strictProjectionSubscription(definition projections.Definition, catalog *ev
 		return nil, fmt.Errorf("%w: strict projection scenario variants", chronicle.ErrUnsupported)
 	}
 	wire := definition.KernelDefinition()
-	if wire.InitialModelState != "{}" || len(wire.Join) != 0 || len(wire.RemovedWithJoin) != 0 || len(wire.Children) != 0 || len(wire.Nested) != 0 || len(wire.FromEvery) != 0 || wire.FromEventProperty != nil {
-		return nil, fmt.Errorf("%w: strict projection scenario relationships or derivative definitions", chronicle.ErrUnsupported)
-	}
-	if wire.SubscribesToAllEvents && (len(wire.From) != 0 || len(wire.RemovedWith) != 0) {
-		return nil, fmt.Errorf("%w: strict projection scenario mixed all-event subscription", chronicle.ErrUnsupported)
+	if wire.InitialModelState != "{}" {
+		return nil, fmt.Errorf("%w: strict projection scenario initial state", chronicle.ErrUnsupported)
 	}
 	roots, err := serialization.ProtectionRoots(definition.Model().Schema())
 	if err != nil {
@@ -76,45 +73,21 @@ func strictProjectionSubscription(definition projections.Definition, catalog *ev
 		selected.ids[id] = struct{}{}
 		return nil
 	}
-	if wire.SubscribesToAllEvents {
-		if !sourceKey(wire.All.GetKey()) {
-			return nil, fmt.Errorf("%w: strict projection scenario custom all-event key", chronicle.ErrUnsupported)
+	ids, all := keyResolverEventTypeIDs(wire)
+	for _, id := range ids {
+		if err := add(id); err != nil {
+			return nil, err
 		}
+	}
+	if all {
 		for _, descriptor := range descriptors {
 			if err := add(descriptor.Ref().ID); err != nil {
 				return nil, err
 			}
 		}
 	}
-	for _, from := range wire.From {
-		if from.Key == nil || from.Value == nil {
-			return nil, chronicle.ErrNotRegistered
-		}
-		if !sourceKey(from.Value.Key) || !sourceKey(from.Value.ParentKey) {
-			return nil, fmt.Errorf("%w: strict projection scenario custom key", chronicle.ErrUnsupported)
-		}
-		if err := add(events.TypeID(from.Key.Id)); err != nil {
-			return nil, err
-		}
-	}
-	for _, removal := range wire.RemovedWith {
-		if removal.Key == nil || removal.Value == nil {
-			return nil, chronicle.ErrNotRegistered
-		}
-		if !sourceKey(removal.Value.Key) || !sourceKey(removal.Value.ParentKey) {
-			return nil, fmt.Errorf("%w: strict projection scenario custom removal key", chronicle.ErrUnsupported)
-		}
-		if err := add(events.TypeID(removal.Key.Id)); err != nil {
-			return nil, err
-		}
-	}
-	if len(selected.ids) == 0 && !wire.SubscribesToAllEvents {
-		return nil, chronicle.ErrNotRegistered
-	}
 	return selected, nil
 }
-
-func sourceKey(key string) bool { return key == "" || key == "$eventSourceId" }
 
 func (s *projectionSubscription) admit(id events.TypeID) error {
 	if s == nil {
