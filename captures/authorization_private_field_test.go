@@ -19,6 +19,9 @@ func privateCaptureWrappers[T any](value T) []any {
 	return []any{
 		struct{ value T }{value},
 		struct{ outer struct{ inner T } }{struct{ inner T }{value}},
+		struct{ values []T }{[]T{value}},
+		struct{ values map[string]T }{map[string]T{"key": value}},
+		struct{ value *T }{&value},
 	}
 }
 
@@ -44,7 +47,7 @@ func TestCaptureAuthorizationHiddenInUnexportedFields(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(string(authorization.Kind())+"/"+tc.name, func(t *testing.T) {
 				for _, wrapper := range tc.wrappers {
-					for _, verb := range []string{"%v", "%+v", "%#v", "%s", "%q", "%x"} {
+					for _, verb := range []string{"%v", "%+v", "%#v", "%s", "%q", "%x", "%X", "%d", "%T", "%p"} {
 						t.Run(verb, func(t *testing.T) {
 							assertCaptureCredentialsHidden(t, fmt.Sprintf(verb, wrapper))
 						})
@@ -69,7 +72,7 @@ func TestCaptureAuthorizationHiddenInUnexportedFields(t *testing.T) {
 func assertCaptureCredentialsHidden(t *testing.T, text string) {
 	t.Helper()
 	for _, secret := range []string{"synthetic-user", "synthetic-password", "synthetic-token", "https://synthetic.invalid/oauth", "synthetic-client", "synthetic-secret"} {
-		if strings.Contains(text, secret) || strings.Contains(text, fmt.Sprintf("%x", secret)) {
+		if strings.Contains(text, secret) || strings.Contains(text, fmt.Sprintf("%x", secret)) || strings.Contains(text, fmt.Sprintf("%X", secret)) {
 			t.Fatal("private-field diagnostic exposed capture credentials")
 		}
 	}
