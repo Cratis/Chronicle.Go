@@ -5,9 +5,11 @@ package readmodels
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/cratis/chronicle.go/compliance"
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -42,12 +44,12 @@ func modelSchema(plan *serialization.Plan, config modelConfig) (string, error) {
 	for _, path := range config.indexes {
 		field, ok := serialization.FieldAtWithCapability(plan.Fields(), path, serialization.Field.ContainsBinary)
 		if ok && field.ContainsBinary() {
-			return "", invalid("binary index is not supported: " + path)
+			return "", fmt.Errorf("%w: binary index is not supported: %s", faults.ErrUnsupported, path)
 		}
 	}
 	for _, field := range serialization.EmittedRootFields(plan.Fields()) {
 		if field.ContainsBinary() && (materializedIdentityAlias(field.Name) || strings.EqualFold(field.GoField, "id")) {
-			return "", invalid("binary identity is not supported: " + field.Path)
+			return "", fmt.Errorf("%w: binary identity is not supported: %s", faults.ErrUnsupported, field.Path)
 		}
 	}
 	if config.subject != "" {

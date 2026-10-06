@@ -86,6 +86,9 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 	compiled.nodeDefinition = *node
 	if d.variantKey != "" {
 		field, ok := binaryMappingField(d.model.Fields(), d.variantKey)
+		if ok && binaryField(field) {
+			return Definition{}, binaryMappingFailure(compiled, field, events.TypeRef{}, "VariantKey", "binary identities are not supported")
+		}
 		if !ok || field.IsEnum() || field.Type != d.variantKeyType || field.Nullable || field.Collection || !field.Scalar.IsPrimitive() {
 			return Definition{}, declarationFailure(d.id, Provenance{GoField: field.GoField, Path: d.variantKey, Directive: "VariantKey", Offset: -1}, invalid("variant key requires a non-nullable non-enum scalar model field"))
 		}

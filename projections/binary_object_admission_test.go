@@ -49,11 +49,7 @@ func TestBinaryObjectAutoMapRefusesEvenIdenticalRepresentations(t *testing.T) {
 			d := &definition{id: "binary-object-copy", model: model.Descriptor(), nodeDefinition: n}
 			// Seed detached object fields: read-model admission is independently
 			// narrowed to root leaves, but the final graph must also reject objects.
-			want := faults.ErrInvalidConfiguration
-			if join {
-				want = faults.ErrUnsupported
-			}
-			if err := validateBinaryNode(d, &n, e.Fields(), bound, false, false); !errors.Is(err, want) {
+			if err := validateBinaryNode(d, &n, e.Fields(), bound, false, false); !errors.Is(err, faults.ErrUnsupported) {
 				t.Fatalf("whole-object binary AutoMap admitted (join=%v, policy=%v): %v", join, policy, err)
 			}
 		}
@@ -86,7 +82,7 @@ func TestBinarySingleValueWholeObjectAutoMapRefusesBeforeRegistration(t *testing
 	}
 	builder := NewBuilder("binary-single-value", model)
 	From(builder, event, nil)
-	if _, err := builder.Build(); !errors.Is(err, faults.ErrInvalidConfiguration) {
+	if _, err := builder.Build(); !errors.Is(err, faults.ErrUnsupported) {
 		t.Fatalf("Blob{value []byte} whole-object AutoMap admitted: %v", err)
 	}
 }

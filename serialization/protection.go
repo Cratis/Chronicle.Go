@@ -162,7 +162,7 @@ func (c *protectionCompiler) walk(n *node, inherited, member compliance.Classifi
 	}
 	if metadata != (compliance.Classification{}) {
 		if hasBinary(n) {
-			return nil, protectionError("protected binary placements are not supported")
+			return nil, &declarations.DeclarationError{Directive: "protection", Offset: -1, Message: "protected binary placements are not supported", Cause: faults.ErrUnsupported}
 		}
 		if hasEnum(n) {
 			return nil, protectionError("protected enum placements are not supported")

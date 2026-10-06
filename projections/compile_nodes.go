@@ -358,6 +358,9 @@ func (c *compiler) addJoin(n *nodeDefinition, j joinDeclaration, fields []serial
 		return invalid("join does not support a parent key")
 	}
 	on, ok := binaryMappingField(fields, j.on)
+	if ok && binaryField(on) {
+		return binaryUnsupported("binary correlation keys are not supported")
+	}
 	if !ok || on.IsEnum() || validateTarget(on, j.onType) != nil || !on.Scalar.IsPrimitive() {
 		return invalid("join on requires a scalar model field")
 	}

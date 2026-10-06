@@ -103,6 +103,10 @@ func (b *CompositeKeyBuilder[K, E]) add(path string, typ reflect.Type, part keyP
 		}
 	}
 	field, ok := binaryMappingField(fields, path)
+	if ok && binaryField(field) {
+		b.err = binaryUnsupported("binary correlation keys are not supported")
+		return
+	}
 	if !ok || validateTarget(field, typ) != nil || !field.Scalar.IsPrimitive() || field.Nullable {
 		b.err = invalid("composite part requires a non-nullable scalar key field")
 		return

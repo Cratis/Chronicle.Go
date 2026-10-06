@@ -17,6 +17,14 @@ import (
 // the JSON string shape. Objects containing binary need the same qualification.
 func binaryField(field serialization.Field) bool { return field.ContainsBinary() }
 
+func binaryUnsupported(message string) error {
+	return fmt.Errorf("%w: %s", faults.ErrUnsupported, message)
+}
+
+func binaryMappingFailure(d *definition, target serialization.Field, event events.TypeRef, directive, message string) error {
+	return declarationFailure(d.id, Provenance{FrontEnd: "compiled", GoField: target.GoField, Path: target.Path, Directive: directive, Offset: -1, Event: event}, binaryUnsupported(message))
+}
+
 func binaryMappingField(fields []serialization.Field, path string) (serialization.Field, bool) {
 	return serialization.FieldAtWithCapability(fields, path, binaryField)
 }
@@ -25,13 +33,13 @@ func validateBinaryGraph(d *definition, catalog *events.Catalog) error {
 	fields := d.model.Fields()
 	for _, f := range serialization.EmittedRootFields(fields) {
 		if (strings.EqualFold(f.Name, "id") || f.Name == "_id" || strings.EqualFold(lastGoName(f.GoField), "Id")) && binaryField(f) {
-			return enumMappingFailure(d, f, events.TypeRef{}, "key", "binary identities are not supported")
+			return binaryMappingFailure(d, f, events.TypeRef{}, "key", "binary identities are not supported")
 		}
 	}
 	if d.subscribesAll {
 		for _, w := range d.all {
 			if target, ok := binaryMappingField(fields, w.path); ok && binaryField(target) {
-				return enumMappingFailure(d, target, events.TypeRef{}, "all", "all-event binary mappings cannot validate unknown representations")
+				return binaryMappingFailure(d, target, events.TypeRef{}, "all", "all-event binary mappings cannot validate unknown representations")
 			}
 		}
 	}
@@ -45,7 +53,7 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 			continue
 		}
 		if field, ok := binaryMappingField(fields, path); ok && binaryField(field) {
-			return enumMappingFailure(d, field, events.TypeRef{}, "key", "binary identities are not supported")
+			return binaryMappingFailure(d, field, events.TypeRef{}, "key", "binary identities are not supported")
 		}
 	}
 	checkKeys := func(ref events.TypeRef, key, parent expression) error {
@@ -55,7 +63,7 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 		}
 		for _, e := range []expression{key, parent} {
 			if field, ok := binaryKeyField(event.Fields(), e); ok {
-				return enumMappingFailure(d, field, ref, "key", "binary correlation keys are not supported")
+				return binaryMappingFailure(d, field, ref, "key", "binary correlation keys are not supported")
 			}
 		}
 		return nil
@@ -85,7 +93,7 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 			if !binaryField(target) && !binaryField(source) {
 				continue
 			}
-			return enumMappingFailure(d, target, from.event, "set", "binary is only qualified for same-representation AutoMap")
+			return binaryMappingFailure(d, target, from.event, "set", "binary is only qualified for same-representation AutoMap")
 		}
 		if noAuto || !join && aggregateOnly(from.writes) {
 			return nil
@@ -96,7 +104,7 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 			if !asciiFieldNames(targets) || !asciiFieldNames(sources) || !asciiWrites(from.writes) {
 				candidates := append(slices.Clone(targets), sources...)
 				field := candidates[slices.IndexFunc(candidates, binaryField)]
-				return enumMappingFailure(d, field, from.event, "AutoMap", "binary auto-map requires ASCII property names; CLR Unicode comparison is not qualified")
+				return binaryMappingFailure(d, field, from.event, "AutoMap", "binary auto-map requires ASCII property names; CLR Unicode comparison is not qualified")
 			}
 		}
 		for _, source := range sources {
@@ -119,13 +127,17 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 				continue
 			}
 			if join || d.variant != nil {
-				return fmt.Errorf("%w: binary copies through joins or variants are not qualified", faults.ErrUnsupported)
+				directive := "VariantOf"
+				if join {
+					directive = "join"
+				}
+				return binaryMappingFailure(d, target, from.event, directive, "binary copies through joins or variants are not qualified")
 			}
 			if source.Scalar != serialization.Binary || target.Scalar != serialization.Binary {
-				return enumMappingFailure(d, target, from.event, "AutoMap", "binary auto-map only supports leaf-to-leaf copies, not objects containing binary")
+				return binaryMappingFailure(d, target, from.event, "AutoMap", "binary auto-map only supports leaf-to-leaf copies, not objects containing binary")
 			}
 			if !eventPropertyPath(source.Name) || !enumPropertySegments(source, event.Fields()) || !enumPropertySegments(target, fields) || len(matches) != 1 || len(matchingASCIIFields(sources, source.Name)) != 1 || !target.SameRepresentation(source) {
-				return enumMappingFailure(d, target, from.event, "AutoMap", "auto-map binary representations must match unambiguously")
+				return binaryMappingFailure(d, target, from.event, "AutoMap", "auto-map binary representations must match unambiguously")
 			}
 		}
 		return nil
@@ -137,7 +149,7 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 	}
 	for _, join := range n.joins {
 		if target, ok := binaryMappingField(fields, join.on); ok && binaryField(target) {
-			return enumMappingFailure(d, target, join.event, "join", "binary correlation keys are not supported")
+			return binaryMappingFailure(d, target, join.event, "join", "binary correlation keys are not supported")
 		}
 		if err := check(join.fromDefinition, true); err != nil {
 			return err

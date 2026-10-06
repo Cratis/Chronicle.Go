@@ -51,7 +51,7 @@ func TestBinaryRebindRechecksEveryKeyLikePath(t *testing.T) {
 			tc.node.noAuto = true
 			d := Definition{data: &definition{id: "binary-key-rebind", model: model.Descriptor(), initialState: "{}", nodeDefinition: tc.node}}
 			_, err := d.Rebind(model.Descriptor(), catalog, catalog)
-			if !errors.Is(err, faults.ErrInvalidConfiguration) {
+			if !errors.Is(err, faults.ErrUnsupported) {
 				t.Fatalf("binary key graph admitted: %v", err)
 			}
 		})
@@ -96,7 +96,7 @@ func TestBinaryAutoMapChecksGeneratedTargetCandidates(t *testing.T) {
 			}
 			n := nodeDefinition{exclusions: []string{"Data"}, from: []fromDefinition{{event: event.Descriptor().Ref()}}}
 			d := &definition{id: "binary-automap-candidates", model: model.Descriptor(), nodeDefinition: n}
-			if err := validateBinaryNode(d, &n, fields, catalog, false, false); !errors.Is(err, faults.ErrInvalidConfiguration) {
+			if err := validateBinaryNode(d, &n, fields, catalog, false, false); !errors.Is(err, faults.ErrUnsupported) {
 				t.Fatalf("generated target hid binary: %v", err)
 			}
 		})

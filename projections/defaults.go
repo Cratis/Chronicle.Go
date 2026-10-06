@@ -49,6 +49,10 @@ func WithInitialValues[M any](value M) Option {
 func WithInitialValue[M, V any](target Field[M, V], value V) Option {
 	return func(d *declaration) {
 		field, ok := binaryMappingField(d.model.Fields(), target.path)
+		if ok && binaryField(field) {
+			d.err = binaryUnsupported("initial state cannot initialize a binary model root")
+			return
+		}
 		if target.owner != d.model.GoType() || !ok || field.Type != reflect.TypeFor[V]() || field.Collection || !field.Scalar.IsPrimitive() {
 			d.err = invalid("initial value requires a matching scalar model path")
 			return
@@ -148,7 +152,7 @@ func prepareInitialState(model readmodels.Descriptor, state string) (string, err
 	}
 	for _, field := range enumRootFields(model.Fields()) {
 		if _, present := object[field.Name]; present && field.ContainsBinary() {
-			return "", invalid("initial state cannot initialize a binary model root")
+			return "", binaryUnsupported("initial state cannot initialize a binary model root")
 		}
 	}
 	// Canonical JSON detaches all values and stabilizes definition identity.

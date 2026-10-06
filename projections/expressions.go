@@ -107,7 +107,7 @@ var kernelArithmeticPath = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9.]*$`)
 
 func validateLiteral(e expression, target serialization.Field) error {
 	if binaryField(target) {
-		return invalid("binary literals are not supported")
+		return binaryUnsupported("binary literals are not supported")
 	}
 	if e.kind == nullExpression {
 		if !nullableAssignment(target) {
@@ -275,6 +275,14 @@ func indirectType(typ reflect.Type) reflect.Type {
 	return typ
 }
 func validateExpression(e expression, target serialization.Field, modelFields, eventFields []serialization.Field, sourceType reflect.Type) error {
+	if binaryField(target) {
+		return binaryUnsupported("binary is only qualified for same-representation AutoMap")
+	}
+	if e.kind == pathExpression || e.kind == addExpression || e.kind == subtractExpression {
+		if source, ok := binaryMappingField(eventFields, e.text); ok && binaryField(source) {
+			return binaryUnsupported("binary is only qualified for same-representation AutoMap")
+		}
+	}
 	switch e.kind {
 	case addExpression, subtractExpression:
 		if !kernelArithmeticPath.MatchString(e.text) {
@@ -452,6 +460,9 @@ func validateKey(e expression, expected reflect.Type, fields []serialization.Fie
 		}
 	case pathExpression:
 		field, ok := binaryMappingField(fields, e.text)
+		if ok && binaryField(field) {
+			return binaryUnsupported("binary correlation keys are not supported")
+		}
 		if ok && !field.IsEnum() && !field.Collection && field.Scalar.IsPrimitive() && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
 			return nil
 		}

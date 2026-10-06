@@ -32,7 +32,7 @@ type binaryKeyModel struct {
 
 func binaryMappingFailure(t *testing.T, err error) {
 	t.Helper()
-	if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+	if !errors.Is(err, chronicle.ErrUnsupported) {
 		t.Fatalf("binary mapping should refuse before dispatch: %v", err)
 	}
 }

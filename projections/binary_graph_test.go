@@ -75,7 +75,7 @@ func checkBinaryUnicodeRebind[M, E any](t *testing.T) {
 				t.Fatal(err)
 			}
 			_, err = (Definition{data: d}).Rebind(bound, before, after)
-			if !errors.Is(err, faults.ErrInvalidConfiguration) {
+			if !errors.Is(err, faults.ErrUnsupported) {
 				t.Fatalf("rebound Unicode binary mapping admitted: %v", err)
 			}
 		})
@@ -93,7 +93,7 @@ func TestBinaryAllEventGraphRefusesUnknownRepresentations(t *testing.T) {
 	}
 	for _, kind := range []expressionKind{pathExpression, literalExpression, nullExpression} {
 		d := &definition{id: "binary-all-final", model: model.Descriptor(), initialState: "{}", subscribesAll: true, nodeDefinition: nodeDefinition{noAuto: true, all: []write{{path: "Payload", expression: expression{kind: kind, text: "Payload"}}}}}
-		if err := validateBinaryGraph(d, catalog); !errors.Is(err, faults.ErrInvalidConfiguration) {
+		if err := validateBinaryGraph(d, catalog); !errors.Is(err, faults.ErrUnsupported) {
 			t.Fatalf("binary All graph admitted: %v", err)
 		}
 	}

@@ -67,7 +67,7 @@ func TestBinaryUniqueConstraintsRefuseBeforeRegistration(t *testing.T) {
 	for _, path := range []string{"Payload", "Optional", "Nested", "Nested.Payload"} {
 		t.Run(path, func(t *testing.T) {
 			_, err := constraints.UniqueValues("binary").On(event.Descriptor(), path).Build()
-			if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			if !errors.Is(err, chronicle.ErrUnsupported) {
 				t.Fatalf("binary unique property admitted: %v", err)
 			}
 		})
@@ -113,14 +113,12 @@ func TestBinaryIndexesRefuseBeforeRegistration(t *testing.T) {
 	for _, path := range []string{"Payload", "Optional", "Nested", "Nested.Payload"} {
 		t.Run(path, func(t *testing.T) {
 			var err error
-			want := chronicle.ErrInvalidConfiguration
 			if path == "Nested" || path == "Nested.Payload" {
 				_, err = readmodels.Define[binaryDeclarationEvent](readmodels.WithIndexes(path))
-				want = chronicle.ErrUnsupported // The owning object itself is no longer qualified.
 			} else {
 				_, err = readmodels.Define[binaryDeclarationModel](readmodels.WithIndexes(path))
 			}
-			if !errors.Is(err, want) {
+			if !errors.Is(err, chronicle.ErrUnsupported) {
 				t.Fatalf("binary index admitted: %v", err)
 			}
 		})

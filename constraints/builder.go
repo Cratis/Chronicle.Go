@@ -138,8 +138,9 @@ func (b *Builder) ForEventSequences(ids ...events.SequenceID) *Builder {
 func (b *Builder) ForEventLog() *Builder { return b.ForEventSequences(events.EventLog) }
 
 // Build validates names, event descriptors and schema property paths, and returns
-// an immutable definition. Failures wrap chronicle.ErrInvalidConfiguration. Adding
-// the definition to a Registry additionally checks membership in that registry.
+// an immutable definition. Invalid declarations wrap chronicle.ErrInvalidConfiguration;
+// unqualified binary capabilities wrap chronicle.ErrUnsupported. Adding the
+// definition to a Registry additionally checks membership in that registry.
 func (b *Builder) Build() (Definition, error) {
 	if b == nil {
 		return Definition{}, fmt.Errorf("%w: nil constraint builder", faults.ErrInvalidConfiguration)
@@ -172,7 +173,7 @@ func (b *Builder) Build() (Definition, error) {
 			if ok && field.ContainsBinary() {
 				// The pinned kernel hashes value.ToString(), not the binary content
 				// (nor the contents of an ExpandoObject containing binary).
-				return Definition{}, fmt.Errorf("%w: binary unique property %q is not supported", faults.ErrInvalidConfiguration, path)
+				return Definition{}, fmt.Errorf("%w: binary unique property %q is not supported", faults.ErrUnsupported, path)
 			}
 		}
 	}
