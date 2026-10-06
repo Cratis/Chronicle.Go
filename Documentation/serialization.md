@@ -137,8 +137,13 @@ accepts the captured leading-space/trailing-newline forms and null binary array
 elements; Go deliberately narrows these reads. Both clients write canonical
 base64, including System.Text.Json's `\u002B` escape for `+`.
 
-Binary under collections, maps, derived variants, concepts, protection or index
-declarations is refused before registration. Admission stops at direct/nested
+Binary under collections, maps, derived variants, concepts, protection, indexes,
+unique constraints or subject declarations is refused before registration. This
+includes `chronicle:"unique"`, `UniqueValues(...).On(...)`, `chronicle:"subject"`,
+`WithSubjectProperty`, `chronicle:"index"` and `WithIndexes`. Unique constraints
+and indexes also refuse objects containing binary. The pinned kernel hashes a
+byte array's `ToString()` value, not its contents; subject identities likewise
+lack a qualified cross-client representation. Admission stops at direct/nested
 object properties and one pointer to a binary leaf. The pinned kernel preserves
 binary arrays in event history but its projection converter treats each byte
 array as another collection; read models lose their byte values. See the

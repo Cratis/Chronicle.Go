@@ -128,7 +128,7 @@ func (d Descriptor) compileDeclarations() (Descriptor, error) {
 				if subject != nil {
 					return Descriptor{}, d.declarationError(field, directive, "only one subject field is allowed")
 				}
-				if field.Scalar == serialization.NotScalar {
+				if field.Scalar == serialization.NotScalar || field.Format == "byte-array" {
 					return Descriptor{}, d.declarationError(field, directive, "subject requires a scalar or scalar concept")
 				}
 				subject = &field
@@ -181,6 +181,9 @@ func taggedSubject(typ reflect.Type, field serialization.Field) func(any) (Subje
 	_, concept := fieldType.MethodByName("ConceptValue") // Validated by the serialization plan.
 	// Shared Fundamentals scalars have codecs and String, but no ConceptValue.
 	return func(value any) (Subject, bool) {
+		if field.Format == "byte-array" {
+			return "", false
+		}
 		v := reflect.ValueOf(value)
 		if v.IsValid() && v.Kind() == reflect.Pointer {
 			if v.IsNil() {

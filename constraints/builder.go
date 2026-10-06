@@ -11,6 +11,7 @@ import (
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // Builder declares kernel-enforced uniqueness; it never checks local event data.
@@ -166,6 +167,12 @@ func (b *Builder) Build() (Definition, error) {
 		for _, path := range fields.Properties {
 			if !schema.hasPath(path) {
 				return Definition{}, fmt.Errorf("%w: property %q does not exist on event %s", faults.ErrInvalidConfiguration, path, fields.Event.Ref().ID)
+			}
+			field, ok := serialization.FieldAt(fields.Event.Fields(), path)
+			if ok && (field.Format == "byte-array" || slices.ContainsFunc(field.Fields(), func(f serialization.Field) bool { return f.Format == "byte-array" })) {
+				// The pinned kernel hashes value.ToString(), not the binary content
+				// (nor the contents of an ExpandoObject containing binary).
+				return Definition{}, fmt.Errorf("%w: binary unique property %q is not supported", faults.ErrInvalidConfiguration, path)
 			}
 		}
 	}

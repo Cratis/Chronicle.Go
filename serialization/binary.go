@@ -73,7 +73,7 @@ func validateBinaryPlacement(root *node) error {
 		active[key] = true
 		defer delete(active, key)
 		if n.binary && (placement.mapValue || placement.derived || placement.restricted) {
-			return unsupported(n.typ, "binary beneath maps, derivatives, protection or indexes is not supported")
+			return unsupported(n.typ, "binary beneath maps, derivatives, protection, indexes, unique constraints or subjects is not supported")
 		}
 		if n.item != nil {
 			if hasBinary(n.item) {
@@ -98,7 +98,7 @@ func validateBinaryPlacement(root *node) error {
 					return err
 				}
 				for _, directive := range directives {
-					child.restricted = child.restricted || directive.Name == "pii" || directive.Name == "encrypted" || directive.Name == "index"
+					child.restricted = child.restricted || directive.Name == "pii" || directive.Name == "encrypted" || directive.Name == "index" || directive.Name == "unique" || directive.Name == "subject"
 				}
 			}
 			if err := walk(f.value, child); err != nil {
