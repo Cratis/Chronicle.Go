@@ -181,12 +181,22 @@ func (r *rebinder) node(n nodeDefinition, old, next []serialization.Field) nodeD
 func (r *rebinder) children(children map[string]*nodeDefinition, old, next []serialization.Field) map[string]*nodeDefinition {
 	result := make(map[string]*nodeDefinition, len(children))
 	for path, child := range children {
+		// An earlier failure leaves no path to resolve; the caller discards the
+		// partial result and reports r.err.
 		newPath := r.path(path, old, next)
+		if r.err != nil {
+			return result
+		}
 		if child.derivative != nil {
 			replacement, ok := binaryMappingField(next, newPath)
-			shape, err := childShape(replacement, false)
-			if r.err == nil && (!ok || err != nil || shape.derivative == nil || shape.derivative.Type != child.derivative.Type || shape.derivative.ID != child.derivative.ID) {
+			if !ok {
 				r.err = invalid("derived child selection changed during rebinding")
+				return result
+			}
+			shape, err := childShape(replacement, false)
+			if err != nil || shape.derivative == nil || shape.derivative.Type != child.derivative.Type || shape.derivative.ID != child.derivative.ID {
+				r.err = invalid("derived child selection changed during rebinding")
+				return result
 			}
 		}
 		copy := r.node(*child, scopedFields(old, path), scopedFields(next, newPath))
