@@ -46,11 +46,11 @@ responses. It never connects, registers schemas, contacts an OAuth authority,
 sends HTTP or starts a kernel. Only fixed synthetic credentials are captured.
 Plaintext representation does not prove encryption or protected persistence.
 
-The existing [Chronicle#4567](https://github.com/Cratis/Chronicle/issues/4567)
-kernel limitation remains: selected non-System stores can lack authorization-event
-schemas despite successful registration envelopes. The four signature-qualified
-integration skips remain skips, not authentication passes. This client-side
-capture neither repairs that defect nor adds a live .NET kernel witness.
+Kernel 19.29.4 registered authorization-event schemas only in the System store
+([Chronicle#4567](https://github.com/Cratis/Chronicle/issues/4567)). Kernel 19.32.3
+fixes that, and the four registration integration tests now require the
+authorization event in the selected store. This client-side capture adds no live
+.NET kernel witness.
 
 [Capture declarations](captures.md) still submit CDL only; CDL has no credential
 fields, no typed authorization-bearing capture submission RPC is exposed, and

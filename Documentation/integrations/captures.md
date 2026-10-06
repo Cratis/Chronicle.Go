@@ -8,7 +8,7 @@ provides explicit authoring, validation and saving through the kernel's Capture
 Declaration Language (CDL) RPCs. **Saving does not start a capture.** There is no
 automatic capture discovery, registry category or SDK polling worker.
 
-The 19.29.4-development kernel has capture validation and storage RPCs, but its
+The 19.32.3-development kernel has capture validation and storage RPCs, but its
 engine only supports API sources with root append rules. Webhook/message sources,
 map operations, nested/child scopes and expression conditions can be authored;
 kernel validation rejects unsupported runtime capabilities explicitly. No

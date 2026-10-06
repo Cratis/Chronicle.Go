@@ -8,7 +8,7 @@ generation instead of overwriting its schema. The Go SDK describes migrations;
 Chronicle applies them when producing generational content. It never runs Go
 callbacks against stored payloads.
 
-This how-to targets Chronicle 19.29.4 and assumes you already
+This how-to targets Chronicle 19.32.3 and assumes you already
 [register event types](event-types.md). Before any history exists, simply change
 the event rather than maintaining unnecessary migrations.
 

@@ -126,7 +126,7 @@ required date is a protocol error; missing repeated data is an empty enumerable,
 indistinguishable on the wire from an explicit empty one.
 
 `TestKernelPatternsQueries` exercises all five workflows against a fresh namespace
-on **19.29.4-development**, through the selected store and real TLS/OAuth transport.
+on **19.32.3-development**, through the selected store and real TLS/OAuth transport.
 Each returned an actual empty typed answer. This proves query availability and
 honest empty handling, **not** nonempty mining, ranking or prediction accuracy.
 No synthetic provider or direct storage mutation populated those answers.

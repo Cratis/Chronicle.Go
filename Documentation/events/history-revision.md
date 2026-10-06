@@ -181,9 +181,9 @@ policy prevents declared protected revisions from leaving the SDK; it does not
 repair earlier plaintext leaks. There is no unsafe opt-out, target pre-read,
 client-side encryption or automatic retry.
 
-### Pinned kernel defect
+### Kernel defect behind the refusal
 
-At kernel pin `ae5e00a8abaa688138b2c2f689e2b4659cccb4fd`,
+At Chronicle 19.29.4 (`ae5e00a8abaa688138b2c2f689e2b4659cccb4fd`),
 `Source/Kernel/Core/Sequences/Revise.cs:62–72` first appends an `EventRevised`
 system request whose `Content` is an unprotected string
 (`Core/EventSequences/EventRevised.cs`). The later application path
@@ -191,8 +191,9 @@ system request whose `Content` is an unprotected string
 `MakeEventCompliant`. Revision therefore bypasses append's schema-driven
 PII/encryption processing and can persist plaintext in both the system request
 and revisions. Erasure does not remove that system request. The defect also
-affects C#'s equivalent wire request and remains tracked in
-[Chronicle#4525](https://github.com/Cratis/Chronicle/issues/4525).
+affects C#'s equivalent wire request. Chronicle 19.32.2 fixes it
+([Chronicle#4525](https://github.com/Cratis/Chronicle/issues/4525)); the SDK still
+refuses protected revisions until that refusal is deliberately revisited.
 
 Default SDK tests do not deliberately send unsafe revisions to reproduce this
 leak. Non-skipped zero-dispatch regressions and a kernel-backed rejection test

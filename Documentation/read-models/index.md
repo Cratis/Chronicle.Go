@@ -191,7 +191,7 @@ Namespace/global confidentiality can release without a subject. See [compliance 
 
 ## Run the example
 
-The [read-model example](../../examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.29.4-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
+The [read-model example](../../examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.32.3-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
 
 ```sh
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \

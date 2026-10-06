@@ -30,4 +30,4 @@ Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Without th
 - [Parity and limitations](parity.md): executable evidence and deliberate C# differences.
 - [Release policy](releases.md): module versioning and experimental compatibility.
 
-Contracts target Chronicle 19.29.4; kernel-backed tests run against 19.29.4-development. Basic projections, event reactors, reducers and supervised recovery are available; advanced observer features remain incomplete. Inclusion in the central Cratis documentation site remains a separate site integration.
+Contracts target Chronicle 19.32.3; kernel-backed tests run against 19.32.3-development. Basic projections, event reactors, reducers and supervised recovery are available; advanced observer features remain incomplete. Inclusion in the central Cratis documentation site remains a separate site integration.

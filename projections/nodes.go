@@ -98,9 +98,10 @@ func RemovedWith[E any](event events.Type[E], options ...FromOption) Option {
 }
 
 // RemovedWithJoin preserves the distinct join-removal contract. The pinned kernel
-// has no root/nested removal implementation. Its MongoDB sink cannot remove
-// collection children identified by id/Id through a join; other identifier names
-// work (https://github.com/Cratis/Chronicle/issues/4538). See the parity map.
+// has no root/nested removal implementation. Kernel 19.29.4's MongoDB sink cannot
+// remove collection children identified by id/Id through a join
+// (https://github.com/Cratis/Chronicle/issues/4538, fixed in 19.32.3). See the
+// parity map.
 func RemovedWithJoin[E any](event events.Type[E], options ...FromOption) Option {
 	s := newSubscription(event.Descriptor(), options)
 	return func(d *declaration) { d.removals = append(d.removals, removalDeclaration{subscription: s, join: true}) }
