@@ -73,9 +73,16 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 	}
 	if g.raw == nil {
 		var conn *grpc.ClientConn
-		conn, err = grpc.NewClient("dns:///"+address, grpc.WithTransportCredentials(credentials.NewTLS(c.tls)),
-			grpc.WithDisableRetry(), grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 60 * time.Second, Timeout: 30 * time.Second}),
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(c.config.maxReceiveMessageSize), grpc.MaxCallSendMsgSize(c.config.maxSendMessageSize)))
+		options := []grpc.DialOption{
+			grpc.WithTransportCredentials(credentials.NewTLS(c.tls)),
+			grpc.WithDisableRetry(),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 60 * time.Second, Timeout: 30 * time.Second}),
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(c.config.maxReceiveMessageSize), grpc.MaxCallSendMsgSize(c.config.maxSendMessageSize)),
+		}
+		if c.config.grpcStatsHandler != nil {
+			options = append(options, grpc.WithStatsHandler(c.config.grpcStatsHandler))
+		}
+		conn, err = grpc.NewClient("dns:///"+address, options...)
 		if err != nil {
 			g.cancel()
 			if g.oauth != nil {

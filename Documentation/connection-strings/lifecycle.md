@@ -121,6 +121,29 @@ Bad OAuth credentials, rejected authentication/authorization, unsupported compat
 
 During an outage, ordinary handle operations fail before dispatch. During replay they wait for their registration barrier within the caller's context. An already dispatched append interrupted by generation loss returns `OutcomeUnknownError`; it is never automatically retried. The kernel may have committed it even though the response was lost.
 
+## Owned gRPC stats handlers
+
+Use `WithGRPCStatsHandler(stats.Handler)` to instrument every SDK-owned gRPC
+connection, including replacement generations after reconnect. The handler is
+borrowed: the application owns its lifetime and any providers/exporters, and
+Chronicle never closes them. The last handler option wins. A final nil (including
+a typed nil) or any combination with `WithGRPCConnection` returns
+`ErrInvalidConfiguration` before network I/O. Instrument borrowed channels when
+constructing them in application code instead.
+
+This is restricted configuration for trusted callbacks, not enforced safety for
+arbitrary code. Callbacks must support concurrent use and return promptly.
+`TagRPC` and `TagConn` must preserve cancellation, deadlines and required context
+values. Do not call blocking client lifecycle methods such as `Close` from a
+callback. A handler can still block or return an unsuitable context.
+
+TLS verification, authentication/admission, message limits, endpoint selection
+and retry policy remain unchanged. This option exposes neither arbitrary dial
+options nor unary/stream interceptors, does not replay writes, and makes no
+stronger outcome promises. The optional pinned OpenTelemetry recipe is separate
+from the root runtime module, tracked in
+[the otelgrpc recipe issue](https://github.com/Cratis/Chronicle.Go/issues/80).
+
 ## Shutdown and ownership
 
 `Shutdown(ctx)` closes admission, lets admitted RPCs finish while the deadline permits, then cancels supervision/streams and joins owned work. It cannot drain an application operation that has not yet entered an RPC. For example, shutdown between a sequence's tail read and append rejects the later append before dispatch.
