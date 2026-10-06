@@ -161,7 +161,7 @@ fallback properties cannot be binary, even without a projection. This includes
 all case variants of serialized `id` and the MongoDB `_id` property. A dotted
 JSON name cannot hide binary from path guards: if any literal-name or nested-path
 candidate contains binary, indexes, uniqueness, subjects, keys, explicit writes
-and single initial values are refused. Whole-model initial values inspect actual
+and single initial values are refused, including after naming rebinds. Whole-model initial values inspect actual
 root ownership, including properties whose JSON names contain dots.
 
 Event migrations involving either binary-containing endpoint are refused by

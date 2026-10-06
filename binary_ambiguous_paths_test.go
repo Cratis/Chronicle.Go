@@ -12,6 +12,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 type binaryAliasFirst struct {
@@ -21,6 +22,49 @@ type binaryAliasFirst struct {
 type binaryAliasLast struct {
 	Data  struct{ Payload []byte }
 	Alias string `json:"Data.Payload"`
+}
+
+type binaryNamedAliasFirst struct {
+	Alias []byte `json:"data.payload"`
+	Data  struct{ Payload string }
+}
+type binaryNamedAliasLast struct {
+	Data  struct{ Payload string }
+	Alias []byte `json:"data.payload"`
+}
+
+func binaryConstraintNamingAdmission[T any]() error {
+	event, err := events.Define[T]()
+	if err != nil {
+		return err
+	}
+	definition, err := constraints.UniqueValues("binary-naming").On(event.Descriptor(), "Data.Payload").Build()
+	if err != nil {
+		return err
+	}
+	named, err := event.Descriptor().WithNamingPolicy(serialization.CamelCase)
+	if err != nil {
+		return err
+	}
+	catalog, err := events.NewCatalog(named)
+	if err != nil {
+		return err
+	}
+	_, err = definition.Rebind(catalog)
+	return err
+}
+
+func TestBinaryConstraintRebindRefusesNewPathAmbiguity(t *testing.T) {
+	for name, check := range map[string]func() error{
+		"alias first": binaryConstraintNamingAdmission[binaryNamedAliasFirst],
+		"alias last":  binaryConstraintNamingAdmission[binaryNamedAliasLast],
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := check(); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+				t.Fatalf("naming introduced unguarded binary constraint ambiguity: %v", err)
+			}
+		})
+	}
 }
 
 func TestBinaryAmbiguousPathsRefuseBeforeIO(t *testing.T) {

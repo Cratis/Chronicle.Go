@@ -87,6 +87,7 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 			_, err := constraints.UniqueValues("binary").On(event.Descriptor(), "Payload").Build()
 			return err
 		}},
+		{"constraint naming rebind", binaryConstraintNamingAdmission[binaryNamedAliasFirst]},
 		{"unique object", func() error {
 			_, err := constraints.UniqueValues("binary").On(event.Descriptor(), "Nested").Build()
 			return err
