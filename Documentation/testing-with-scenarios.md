@@ -16,7 +16,8 @@ C#'s in-process fixtures, the Go substitute cannot load and run the C# kernel.
 | `EventScenario`, `Kernel` | Production client registration, append and reads against a real server | Encryption support or multi-node behavior merely from a successful append |
 | `EventScenario`, `Substitute` (zero-value engine) | Production client over a private in-memory append/read transport | Constraints, concurrency enforcement, hashing, schema migration/validation, encryption, authorization, persistence or observers |
 | `ReadModelScenario[M]`, reducer | Production fold plan in-process, one scope per source | Kernel delivery, storage, retries, quarantine or compliance |
-| `ReadModelScenario[M]`, projection | Production compiler/encoder and real kernel bounded replay RPC | Materialized-sink catch-up, persistence or observer completion |
+| `ReadModelScenario[M]`, projection (default) | Production compiler/encoder and real kernel bounded replay RPC | Materialized-sink catch-up, persistence or observer completion |
+| `ReadModelScenario[M]`, `Materialized: true` | Observer completion evidence, then production reads of the kernel's real sink | Observer lifecycle conformance, delivery metadata or effect acceptance |
 | `ReactorScenario[R]` | Production discovery, scope activation, middleware and invoker; seeded read models and recording effects | Transport acceptance, durable checkpoints, retries, quarantine or exactly-once handling |
 
 ## Arrange an event scenario
@@ -146,6 +147,52 @@ original registry is unchanged. Models with explicitly conflicting producer/sink
 metadata still fail normal production validation. `Initial: &model` supports
 reducer initial state; projection initial state is explicitly unsupported.
 
+### Assert projection initial values from the kernel sink
+
+Set `ReadModelOptions[M].Materialized` to `true` when your projection declares
+`projections.WithInitialValues`. The default bounded replay path still refuses
+nonempty projection initial values with `ErrFidelityUnavailable`: the pinned
+kernel's bounded replay does not apply them.
+
+```go
+options := chronicletest.ReadModelOptions[MaterializedAccount]{
+    Materialized:            true,
+    StrictEventSubscription: true,
+}
+```
+
+The [compiling materialized example](../chronicletest/example_materialized_test.go)
+shows registration, a 30-second context and result selection. It requires a running
+kernel; the example is not executed by ordinary unit tests. This is a Go-specific
+scenario mode, not a port of C#'s in-process projection processor.
+
+Use an isolated store/namespace and let the scenario own the entire selected
+sequence from position zero. Every successful `Given` append must return the next
+position in its own history; foreign history returns `ErrFidelityUnavailable` and
+blocks subsequent result reads. An observer or returned instance beyond the
+scenario tail returns `chronicle.ErrProtocol`.
+
+Result access waits through the production observer-completion API with exact
+seed type references and positions. Because the kernel can report completion
+before an observer exists, the fixture additionally requires that projection
+observer to exist, have handled the subscribed seed tail, and have no failed
+partitions. It retries **processing evidence**, within your context budget, not
+sink contents. Missing or incomplete evidence returns
+`ErrMaterializationIncomplete`, with no partial map or present zero model.
+Then it reads the real sink once through `ReadModels().GetAll(ctx, id, nil)`.
+No seeded events means empty results without I/O. Completion evidence is not a
+transactional sink watermark; this mode adds no durability or lifecycle guarantee
+beyond those production APIs.
+
+Only active, unprotected root source-key projections with a real sink are admitted.
+Passive/NoSink models, joins, children/nested projection definitions, custom keys,
+variants and mixed `All` plus explicit subscriptions are refused before connection.
+Reducers and the Substitute engine return `ErrFidelityUnavailable`.
+`Initial` remains unsupported: **the fixture never overlays or fakes initial
+state**. Defaults come exclusively from the kernel's materializing pipeline.
+`ReadModelStorage` and `ProjectionExecution` are not substituted in this mode;
+`ObserverLifecycle`, `DeliveryMetadata` and `EffectAcceptance` remain unproven.
+
 ### Reject unrelated projection seeds
 
 Opt in when seeding an unrelated registered event should reveal a test mistake:
@@ -186,8 +233,9 @@ selected compiled definition, not the original producer. Unsupported
 relationships, children/nested definitions, custom keys, derivative-group wire
 forms, variants (even those with ordinary-looking wire fields), protected models
 or subscribed events, and mixed explicit-plus-`All` subscriptions fail before
-connecting. Projection initial state and nonempty defaults remain refused;
-`SeedReadModel` is not a projected-state overlay.
+connecting. Membership does not depend on projection initial values;
+nonempty defaults require `Materialized: true`. Projection `Initial` is still
+refused, and `SeedReadModel` is not a projected-state overlay.
 
 Strict seed checking does not prove observer attachment, partition/correlation
 routing, retries, durability or distributed completion. The pinned-kernel sibling
