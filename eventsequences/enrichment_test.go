@@ -35,7 +35,7 @@ func (c *enrichmentConnection) Invoke(_ context.Context, _ string, input, output
 	return errors.New("unexpected RPC")
 }
 
-func TestProtectedRevisionAllGenerationsPrecedeEveryProvider(t *testing.T) {
+func TestProtectedRevisionRunsEveryProviderOnce(t *testing.T) {
 	current, err := events.Define[revisionPII](events.WithID("protected"), events.WithGeneration(2))
 	if err != nil {
 		t.Fatal(err)
@@ -65,9 +65,13 @@ func TestProtectedRevisionAllGenerationsPrecedeEveryProvider(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertProtectedRevisionRejected(t, sequence.Revise(t.Context(), 0, revisionPlain{"before"}))
-	if called != 0 || connection.calls != 0 {
-		t.Fatal("protected revision ran callbacks or I/O", called, connection.calls)
+	if err := sequence.Revise(t.Context(), 0, revisionPII{Name: "before"}); err != nil {
+		t.Fatal(err)
+	}
+	// Protected revisions resolve identity, correlation, causation and enrichers
+	// exactly as unprotected ones; the kernel protects the content (Chronicle#4525).
+	if called != 4 || connection.calls != 1 || connection.revision.EventType.GetGeneration() != 2 {
+		t.Fatal("protected revision did not run the outgoing pipeline once", called, connection.calls)
 	}
 }
 

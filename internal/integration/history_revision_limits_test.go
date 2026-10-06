@@ -6,7 +6,6 @@
 package integration_test
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
@@ -51,46 +50,77 @@ func TestKernelRevisionUsesRegisteredGeneration(t *testing.T) {
 	}
 }
 
-// The SDK rejects unsafe revisions instead of exercising the kernel leak.
-// Kernel defect evidence remains documented separately under Chronicle#4525.
-func TestKernelProtectedRevisionRejected(t *testing.T) {
+type ProtectedRevisionRecorded struct {
+	Owner           string `json:"owner" chronicle:"subject"`
+	Personal        string `json:"personal" chronicle:"pii"`
+	NamespaceSecret string `json:"namespaceSecret" chronicle:"encrypted(scope=namespace)"`
+	GlobalSecret    string `json:"globalSecret" chronicle:"encrypted(scope=global)"`
+}
+
+// Chronicle#4525 (fixed in 19.32.2): the kernel protects revised content and
+// the system revision request with the original event's subject, so the SDK
+// admits protected revisions. The subject deliberately differs from the source.
+func TestKernelProtectedRevisionIsProtectedWithOriginalSubject(t *testing.T) {
 	f := newKernelFixture(t)
-	client := f.client(integrationRegistry[CompliancePersonRegistered](t))
+	client := f.client(integrationRegistry[ProtectedRevisionRecorded](t))
 	store, err := client.EventStore(f.ctx, f.storeName)
 	if err != nil {
 		t.Fatal(err)
 	}
-	subject := uuid.NewString()
-	appended := appendSuccessfully(t, f.ctx, store, "source", CompliancePersonRegistered{Owner: subject, Name: "synthetic-original"})
-	err = store.EventLog().Revise(f.ctx, *appended.Position, CompliancePersonRegistered{Owner: subject, Name: "synthetic-revision-pii"})
-	var unknown *eventsequences.MutationOutcomeUnknownError
-	if !errors.Is(err, chronicle.ErrUnsupported) || errors.As(err, &unknown) {
-		t.Fatalf("protected revision must be rejected before dispatch: %v", err)
+	subject, source := uuid.NewString(), events.SourceID(uuid.NewString())
+	appended := appendSuccessfully(t, f.ctx, store, source, ProtectedRevisionRecorded{Owner: subject, Personal: "synthetic-original-pii", NamespaceSecret: "synthetic-original-namespace", GlobalSecret: "synthetic-original-global"})
+	revised := ProtectedRevisionRecorded{Owner: subject, Personal: "synthetic-revision-pii", NamespaceSecret: "synthetic-revision-namespace", GlobalSecret: "synthetic-revision-global"}
+	if err = store.EventLog().Revise(f.ctx, *appended.Position, revised); err != nil {
+		t.Fatal(err)
 	}
+	history := awaitHistoryMutation(t, f.ctx, store.EventLog(), source, func(h []events.Appended) bool { return len(h) == 1 && len(h[0].Revisions) == 1 })
+	decoded, err := events.Decode[ProtectedRevisionRecorded](store.EventTypes(), history[0])
+	if err != nil || decoded != revised {
+		t.Fatalf("protected revision did not release: %+v %v", decoded, err)
+	}
+	plaintext := []string{"synthetic-revision-pii", "synthetic-revision-namespace", "synthetic-revision-global"}
+	assertRevisionRequestsProtected := func() {
+		t.Helper()
+		system, err := store.EventSequence(events.SystemSequence)
+		if err != nil {
+			t.Fatal(err)
+		}
+		requests, err := system.ReadSource(f.ctx, events.SourceID(events.EventLog), eventsequences.SourceFilter{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := 0
+		for _, request := range requests {
+			if request.Context.EventType.ID != "EventRevised" {
+				continue
+			}
+			found++
+			for _, value := range plaintext {
+				if strings.Contains(string(request.Content), value) {
+					t.Fatalf("system revision request stores plaintext %q", value)
+				}
+			}
+		}
+		if found != 1 {
+			t.Fatalf("expected exactly one system revision request, found %d", found)
+		}
+	}
+	assertRevisionRequestsProtected()
 	if err = store.Compliance().ErasePII(f.ctx, subject); err != nil {
 		t.Fatal(err)
 	}
-	system, err := store.EventSequence(events.SystemSequence)
-	if err != nil {
-		t.Fatal(err)
+	assertRevisionRequestsProtected()
+	history, err = store.EventLog().ReadSource(f.ctx, source, eventsequences.SourceFilter{})
+	if err != nil || len(history) != 1 || len(history[0].Revisions) != 1 {
+		t.Fatalf("history after erasure: %+v %v", history, err)
 	}
-	requests, err := system.ReadSource(f.ctx, events.SourceID(events.EventLog), eventsequences.SourceFilter{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, request := range requests {
-		if request.Context.EventType.ID == "EventRevised" {
-			t.Fatal("rejected revision created a system request")
+	for _, content := range [][]byte{history[0].Content, history[0].OriginalContent, history[0].Revisions[0].Content} {
+		if strings.Contains(string(content), "synthetic-revision-pii") || strings.Contains(string(content), "synthetic-original-pii") {
+			t.Fatalf("erased subject's PII survives in history: %s", content)
 		}
 	}
-	history, err := store.EventLog().ReadSource(f.ctx, "source", eventsequences.SourceFilter{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(history) != 1 || len(history[0].Revisions) != 0 {
-		t.Fatalf("rejected revision changed history: %+v", history)
-	}
-	if strings.Contains(string(history[0].Content), "synthetic-revision-pii") {
-		t.Fatal("rejected replacement reached history")
+	erased, err := events.Decode[ProtectedRevisionRecorded](store.EventTypes(), history[0])
+	if err != nil || erased.Personal != "" || erased.NamespaceSecret != revised.NamespaceSecret || erased.GlobalSecret != revised.GlobalSecret {
+		t.Fatalf("erasure must shred only the subject's PII: %+v %v", erased, err)
 	}
 }
