@@ -181,8 +181,9 @@ func (r *Reader[T]) GetAll(ctx context.Context, count *events.Count) (Collection
 }
 
 // Only admitted routes reach this boundary: materialized stores release using
-// persisted lineage; local reducers fold released events. Protected projection
-// replay/history is refused before I/O because replay does not preserve lineage.
+// persisted lineage; local reducers fold released events; projection replay,
+// history, sessions and immediate projections release with each value's original
+// subject (kernel 19.32.2 or later, Chronicle#4561).
 // Shape validation is not proof of decryption: strings accept ciphertext too.
 // A second Compliance.Release can corrupt legitimate plaintext. Validate the
 // final representation without another RPC, then normalize the root identity.

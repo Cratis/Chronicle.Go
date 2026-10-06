@@ -132,32 +132,29 @@ string is plaintext. The SDK applies this policy on every supported kernel:
 | --- | --- |
 | Materialized collection or keyed Get | Kernel releases using persisted subject lineage; SDK validates without another release RPC |
 | Local reducer fold | Fold already released event history, then validate the result |
-| Bounded/passive projection collection or legacy `ReplayProjection` | `ErrUnsupported` before RPC |
-| Projection snapshot history | `ErrUnsupported` before RPC when the model is classified |
-| Immediate/passive projection Get or hydration session | `ErrUnsupported` before RPC when the model is classified |
+| Bounded/passive projection collection or legacy `ReplayProjection` | Kernel releases each value with the subject it was written under; SDK validates without another release RPC |
+| Projection snapshot history | Same as projection replay |
+| Immediate/passive projection Get or hydration session | Same as projection replay |
 | Explicit `Service.Release` | Accepts **unreleased** sink documents; releases by schema/subject-lineage groups |
 
-The refusal covers PII and subject, namespace and global encryption, including
-nested/reference schemas and provider classifications frozen during registration.
-Zero-count reads still return empty without I/O. Materialized reads remain
-available; renaming `Id` to `id` is not a safe replay workaround.
-
-On kernel 19.29.4, collection replay cannot infer a subject from default `Id`,
-and even lowercase `id` cannot recover per-event lineage; immediate/session replay
-substitutes the source key for the event subject, so a protected string can contain
-ciphertext and still pass shape validation. Kernel 19.32.3 releases these replay
-routes with each event's subject
-([Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561)), but the SDK
-keeps the refusals above. It does not repair older kernels with a ciphertext
-heuristic or an unconditional second decryption.
+Projection replay routes need kernel 19.32.2 or later
+([Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561)). From that
+release the kernel keeps the subject each protected value was written under
+through projection folds, so a value whose subject differs from the read-model
+key releases correctly, for default `Id` and lowercase `id` alike, and erasing
+the subject empties it. This covers PII and subject, namespace and global
+encryption, including nested/reference schemas and provider classifications.
+`TestKernelModelHistoryProtectedReleaseProfile` exercises every route above
+against the pinned kernel before and after erasure. Earlier kernels released
+replayed values with the source key instead, so do not use these routes for
+classified models against them; the SDK has no ciphertext heuristic to detect it.
 
 Snapshot contributions have a separate release owner: the kernel releases each
 event with its generation's schema and event subject **before** projecting.
 Unclassified model history can therefore return protected event contributions.
 Store services validate known protected contribution generations through their
 event codecs; low-level adapters supply `WithSnapshotEventCatalog` for that check.
-Classified-model history remains conservatively unsupported rather than claiming
-a general model-release guarantee. Ordinary unknown event fields remain raw.
+Ordinary unknown event fields remain raw.
 Never call `Release` on server-released results: legitimate plaintext can resemble
 a cipher block and a second release can corrupt it.
 

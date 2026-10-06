@@ -13,13 +13,14 @@ import (
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
-	"github.com/cratis/chronicle.go/serialization"
 	"google.golang.org/grpc"
 )
 
 // Compare the C# selected fields, not complete client/server protobuf equality.
-// Re-admitting the server shape (including parents/All), model generation,
-// protection and actual key schema are deliberate fail-closed additions. There
+// Re-admitting the server shape (including parents/All), model generation and
+// actual key schema are deliberate fail-closed additions. Server-side protection
+// is not compared: the kernel releases session folds with each value's original
+// subject (19.32.2 or later, Chronicle#4561), as C# relies on. There
 // is no definition-bound wire proof.
 func checkDecisionAgreement(ctx context.Context, conn grpc.ClientConnInterface, store string, admitted admittedDecision) error {
 	models, err := contracts.NewReadModelsClient(conn).GetDefinitions(ctx, &contracts.GetDefinitionsRequest{EventStore: store})
@@ -62,13 +63,6 @@ func checkDecisionAgreement(ctx context.Context, conn grpc.ClientConnInterface, 
 		return refused
 	}
 	if projection.IsActive != admitted.projection.IsActive || projection.IsRewindable != admitted.projection.IsRewindable {
-		return refused
-	}
-	// A locally plain model is not proof the latest server schema is plain.
-	// Namespace/global roots have false subject flags but still need release;
-	// session decisions must reject all scopes, unknown metadata and parse errors.
-	roots, err := serialization.ProtectionRoots(model.Schema)
-	if err != nil || len(roots) != 0 {
 		return refused
 	}
 	if model.ObserverType != contracts.ReadModelObserverType_Projection || model.ObserverIdentifier != admitted.projection.Identifier || projection.ReadModel != admitted.projection.ReadModel || projection.EventSequenceId != admitted.projection.EventSequenceId {

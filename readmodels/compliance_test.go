@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/contracts/compliance"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -129,10 +128,19 @@ func TestAllOneShotReadPathsFailClosedOnRelease(t *testing.T) {
 					t.Fatal("unsafe get")
 				}
 			case "session":
+				// The kernel releases session state (Chronicle#4561) and fails
+				// the RPC when release fails; the session surfaces that failure.
 				session, failure := reader.NewSession("owner")
+				if failure != nil {
+					t.Fatal(failure)
+				}
+				value, failure := session.Get(ctx)
 				err = failure
-				if session != nil || !errors.Is(err, chronicle.ErrUnsupported) {
-					t.Fatal("protected session admitted", err)
+				if closeErr := session.Close(ctx); closeErr != nil {
+					t.Fatal(closeErr)
+				}
+				if value.Exists || value.Value.Name != "" {
+					t.Fatal("unsafe session")
 				}
 			case "replay":
 				value, failure := service.ReplayProjection(ctx, model.Identifier(), 1)

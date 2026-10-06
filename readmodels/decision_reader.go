@@ -50,7 +50,7 @@ func (r *DecisionReader[T]) Get(ctx context.Context, key Key) (read DecisionRead
 }
 
 // GetDetached uses at most three fresh projection sessions, without enrolling or
-// creating a unit. Classified models fail local admission before lease/RPC work.
+// creating a unit. Classified models are admitted; the kernel releases their folds.
 // It checks server agreement before and after each fold, captures
 // an unfiltered pre-fold log boundary, and probes the source's dependency types
 // separately. LastHandled is progress, never a proof or replacement boundary.
@@ -208,8 +208,8 @@ func foldDecision(ctx context.Context, service *Service, descriptor Descriptor, 
 	if err != nil {
 		return Instance[json.RawMessage]{}, err
 	}
-	// Admission excludes every classified model. The kernel session response
-	// already owns release; do not decrypt its final representation again.
+	// The kernel session response already owns release, with each value's
+	// original subject (Chronicle#4561); do not decrypt it again.
 	// Protocol/duplicate checks ran in getInstance; codec validation follows
 	// cleanup outside the counted lease, before token issuance.
 	// An empty fold can contain projection initial state. It is still absent;

@@ -5,26 +5,19 @@ package readmodels
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/cratis/chronicle.go/compliance"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
-	"github.com/cratis/chronicle.go/events"
 	"google.golang.org/protobuf/proto"
 )
 
-type decisionProtectedNode struct {
-	Value string                 `json:"value"`
-	Next  *decisionProtectedNode `json:"next"`
-}
-type decisionProtectedModel struct {
-	ID     string                 `json:"id"`
-	Name   string                 `json:"name"`
-	Nested *decisionProtectedNode `json:"nested"`
-}
-
-func TestClassifiedDecisionsRefuseBeforeLeaseOrRPC(t *testing.T) {
+// Chronicle#4561 is fixed in 19.32.2: the kernel releases decision session
+// folds with each value's original subject. Classified models are admitted like
+// C#, and the SDK never sends the released plaintext through Release again.
+func TestClassifiedDecisionsAreAdmittedWithoutSecondRelease(t *testing.T) {
+	// String validation cannot distinguish this from ciphertext.
+	const plaintext = "Q0VOVgEAAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxw="
 	for _, classification := range []struct {
 		name  string
 		value compliance.Classification
@@ -34,70 +27,37 @@ func TestClassifiedDecisionsRefuseBeforeLeaseOrRPC(t *testing.T) {
 		{"namespace", compliance.Classification{Encrypted: true, Scope: compliance.Namespace}},
 		{"global", compliance.Classification{Encrypted: true, Scope: compliance.Global}},
 	} {
-		for _, declaration := range []string{"property", "nested-reference", "type", "provider"} {
+		for _, declaration := range []string{"property", "type", "provider"} {
 			t.Run(classification.name+"/"+declaration, func(t *testing.T) {
-				providerCalls := 0
 				option := compliance.Property("name", classification.value)
 				switch declaration {
-				case "nested-reference":
-					option = compliance.Property("nested.value", classification.value)
 				case "type":
-					option = compliance.For[decisionProtectedNode](classification.value)
+					option = compliance.For[decisionPerson](classification.value)
 				case "provider":
 					option = compliance.Using(func(target compliance.Target) (compliance.Classification, error) {
-						providerCalls++
-						if target.Field == "Value" {
+						if target.Field == "Name" {
 							return classification.value, nil
 						}
 						return compliance.Classification{}, nil
 					})
 				}
-				m, err := Define[decisionProtectedModel](WithIdentifier("person"), WithObserver(Projection, "people"), WithProtection(option))
-				if err != nil {
-					t.Fatal(err)
+				f := newDecisionFixture(t, WithProtection(option))
+				if a := f.reader.Admit(); !a.IsAdmitted {
+					t.Fatalf("classified model refused: %+v", a)
 				}
-				frozenCalls := providerCalls
-				models, err := NewCatalog(m.Descriptor())
-				if err != nil {
-					t.Fatal(err)
-				}
-				f := newDecisionFixture(t)
-				service, err := New("store", "tenant", models, f)
-				if err != nil {
-					t.Fatal(err)
-				}
-				reader := DecisionsFor(service, m)
-				if a := reader.Admit(); a.IsAdmitted || a.Reason != DecisionProtectedModel {
-					t.Fatalf("admitted classified model: %+v", a)
-				}
-				for _, document := range []string{`{}`, `{"id":"source","name":"","nested":null}`, `{"id":"source","name":"PRIVATE cipher-shaped plaintext"}`} {
-					f.handle = func(context.Context, any) (proto.Message, error) {
-						return &contracts.GetInstanceByKeyResponse{ReadModel: document, LastHandledEventSequenceNumber: uint64(events.Unavailable)}, nil
+				// Any Release request fails the fixture as an unexpected RPC.
+				f.handle = func(_ context.Context, request any) (proto.Message, error) {
+					if _, ok := request.(*contracts.GetInstanceByKeyRequest); ok {
+						return &contracts.GetInstanceByKeyResponse{ReadModel: `{"id":"source","name":"` + plaintext + `"}`, LastHandledEventSequenceNumber: 5}, nil
 					}
-					read, err := reader.GetDetached(t.Context(), "source-not-subject")
-					var refused *DecisionReadRefused
-					if !errors.As(err, &refused) || refused.Reason != DecisionProtectedModel || read.Instance.Exists || !read.Token.IsZero() {
-						t.Fatal("classified decision issued evidence", err)
-					}
+					return nil, nil
 				}
-				if f.acquired != 0 || f.released != 0 || len(f.requests) != 0 || providerCalls != frozenCalls {
-					t.Fatal("classification admission acquired a lease, called RPC, or reran a provider")
+				read, err := f.reader.GetDetached(t.Context(), "source-not-subject")
+				if err != nil || !read.Instance.Exists || read.Instance.Value.Name != plaintext || read.Token.IsZero() {
+					t.Fatalf("classified decision read: %+v %v", read, err)
 				}
+				assertDecisionCleanup(t, f)
 			})
 		}
-	}
-}
-
-func TestDecisionProtectionMetadataErrorsRefuseBeforeLease(t *testing.T) {
-	f := newDecisionFixture(t)
-	// Public declarations cannot publish malformed schema; exercise the failure
-	// branch defensively without treating metadata extraction failure as plain.
-	f.model.descriptor.definition.schema = `{"properties":`
-	if a := f.reader.Admit(); a.IsAdmitted || a.Reason != DecisionProtectionMetadata {
-		t.Fatalf("bad metadata admitted: %+v", a)
-	}
-	read, err := f.reader.GetDetached(t.Context(), "source")
-	if !errors.Is(err, ErrDecisionReadRefused) || read.Instance.Exists || !read.Token.IsZero() || f.acquired != 0 || len(f.requests) != 0 {
-		t.Fatal("metadata failure issued work/evidence", err)
 	}
 }

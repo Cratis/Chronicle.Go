@@ -9,13 +9,11 @@ import (
 
 	contracts "github.com/cratis/chronicle.go/contracts/projections"
 	"github.com/cratis/chronicle.go/readmodels"
-	"github.com/cratis/chronicle.go/serialization"
 )
 
 type projectionReadPolicy struct {
 	definition *contracts.ProjectionDefinition
 	model      readmodels.Descriptor
-	protected  bool
 }
 
 // Capture the selected, store-bound snapshot, not a callback into mutable client
@@ -28,11 +26,7 @@ func projectionReplayValidatorFor(snapshot registrySnapshot) (readmodels.Project
 		if !ok {
 			return nil, ErrNotRegistered
 		}
-		roots, err := serialization.ProtectionRoots(model.Schema())
-		if err != nil {
-			return nil, err
-		}
-		policies[model.Identifier()] = projectionReadPolicy{projection.KernelDefinition(), model, len(roots) != 0}
+		policies[model.Identifier()] = projectionReadPolicy{projection.KernelDefinition(), model}
 	}
 	return func(ctx context.Context, model readmodels.Descriptor) (bool, error) {
 		if err := ctx.Err(); err != nil {
@@ -41,9 +35,6 @@ func projectionReplayValidatorFor(snapshot registrySnapshot) (readmodels.Project
 		policy, known := policies[model.Identifier()]
 		if !known {
 			return false, nil
-		}
-		if policy.protected {
-			return true, fmt.Errorf("%w: protected projection replay release", ErrUnsupported)
 		}
 		if model.EventSequence() != policy.model.EventSequence() || model.Schema() != policy.model.Schema() {
 			return true, fmt.Errorf("%w: projection read policy does not match bound model", ErrUnsupported)

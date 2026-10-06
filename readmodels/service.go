@@ -127,11 +127,6 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 		}
 		return result, nil
 	}
-	if d.Sink().Type == NoSink || session != "" {
-		if err := projectionReleaseAdmission(d); err != nil {
-			return Instance[json.RawMessage]{}, err
-		}
-	}
 	result, err = s.getInstance(ctx, d, key, session)
 	if err != nil || !result.Exists {
 		return result, err
