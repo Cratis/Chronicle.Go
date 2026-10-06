@@ -96,19 +96,19 @@ func TestBinaryCompileErrorsPrecedeDeferredDuplicates(t *testing.T) {
 	type invalidDeclaration struct {
 		Hidden string `json:"-" chronicle:"index"`
 	}
+	// reflect.StructOf builds the duplicate tags so go vet's structtag check,
+	// which rejects repeated literal tags, does not apply to these fixtures.
+	withDuplicates := func(invalid reflect.Type) reflect.Type {
+		return reflect.StructOf([]reflect.StructField{
+			{Name: "Payload", Type: reflect.TypeFor[[]byte]()},
+			{Name: "First", Type: reflect.TypeFor[string](), Tag: `json:"duplicate"`},
+			{Name: "Second", Type: reflect.TypeFor[string](), Tag: `json:"duplicate"`},
+			{Name: "Invalid", Type: invalid},
+		})
+	}
 	for name, typ := range map[string]reflect.Type{
-		"declaration": reflect.TypeFor[struct {
-			Payload []byte
-			First   string `json:"duplicate"`
-			Second  string `json:"duplicate"`
-			Invalid invalidDeclaration
-		}](),
-		"unsupported type": reflect.TypeFor[struct {
-			Payload []byte
-			First   string `json:"duplicate"`
-			Second  string `json:"duplicate"`
-			Invalid chan int
-		}](),
+		"declaration":      withDuplicates(reflect.TypeFor[invalidDeclaration]()),
+		"unsupported type": withDuplicates(reflect.TypeFor[chan int]()),
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := serialization.Compile(typ)
