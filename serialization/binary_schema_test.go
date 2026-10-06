@@ -101,8 +101,8 @@ func TestBinaryProviderProtectionRefusesAndUnrelatedProtectionPreservesSchema(t 
 			return compliance.Classification{PII: target.Field == "Payload"}, nil
 		}),
 	} {
-		if _, err := p.ProtectedSchema(option); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
-			t.Fatal("binary protection admitted", err)
+		if _, err := p.ProtectedSchema(option); !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatal("binary protection admitted or misclassified", err)
 		}
 	}
 	type mixed struct {
