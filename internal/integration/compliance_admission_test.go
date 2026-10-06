@@ -7,13 +7,11 @@ package integration_test
 
 import (
 	"encoding/json"
-	"errors"
 	"reflect"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/compliance"
-	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/conceptfixtures"
@@ -21,13 +19,32 @@ import (
 	"github.com/google/uuid"
 )
 
-type UnsupportedMapProtection struct {
-	Contacts map[string]struct {
-		Email string `chronicle:"pii"`
-	}
+type PlacementContact struct {
+	Email string `json:"email" chronicle:"pii"`
 }
+type PlacementSecret struct {
+	Token string `json:"token" chronicle:"encrypted(scope=namespace)"`
+}
+type PlacementToken string
 type ClassifiedNames []string
-type UnsupportedArrayProtection struct{ Rows []ClassifiedNames }
+type ClassifiedLabels map[string]string
+type PlacementRecorded struct {
+	Contacts map[string]PlacementContact     `json:"contacts"`
+	Names    map[string]conceptfixtures.Name `json:"names"`
+	Rows     []ClassifiedNames               `json:"rows"`
+	Labels   []ClassifiedLabels              `json:"labels"`
+	Secrets  map[string]PlacementSecret      `json:"secrets"`
+	Tokens   map[string]PlacementToken       `json:"tokens"`
+}
+
+// Model-bound declarations inside map value structs are projection
+// declarations, so the projected model classifies map values by type.
+type PlacementModel struct {
+	ID     string                          `json:"id" chronicle:"key"`
+	Names  map[string]conceptfixtures.Name `json:"names" chronicle:"set(PlacementRecorded)"`
+	Rows   []ClassifiedNames               `json:"rows" chronicle:"set(PlacementRecorded)"`
+	Tokens map[string]PlacementToken       `json:"tokens" chronicle:"set(PlacementRecorded)"`
+}
 type SupportedCollectionProtection struct {
 	Map       map[string]string        `json:"map" chronicle:"pii"`
 	Coarse    [][]string               `json:"coarse" chronicle:"pii"`
@@ -35,31 +52,15 @@ type SupportedCollectionProtection struct {
 	SecretMap map[string]string        `json:"secretMap" chronicle:"encrypted(scope=namespace)"`
 }
 
-func TestKernelComplianceSupportedCollectionsAndRegistrationRefusal(t *testing.T) {
+func TestKernelComplianceCoarseCollections(t *testing.T) {
 	f := newKernelFixture(t)
 	registry := chronicle.NewRegistry()
-	_, err := chronicle.RegisterEvent[UnsupportedMapProtection](registry)
-	var declaration *declarations.DeclarationError
-	if !errors.As(err, &declaration) {
-		t.Fatalf("map protection reached registration: %v", err)
-	}
-	for _, metadata := range []compliance.Classification{{PII: true}, {Encrypted: true}} {
-		_, err = chronicle.RegisterEvent[UnsupportedArrayProtection](registry, events.WithProtection(compliance.For[ClassifiedNames](metadata)))
-		if !errors.As(err, &declaration) {
-			t.Fatalf("array item protection reached registration: %v", err)
-		}
-	}
 	if _, err := chronicle.RegisterEvent[SupportedCollectionProtection](registry, events.WithProtection(compliance.For[conceptfixtures.Name](compliance.Classification{PII: true}))); err != nil {
 		t.Fatal(err)
 	}
 	store, err := f.client(registry).EventStore(f.ctx, f.storeName)
 	if err != nil {
 		t.Fatal(err)
-	}
-	for _, id := range []events.TypeID{"UnsupportedMapProtection", "UnsupportedArrayProtection"} {
-		if _, exists := store.EventTypes().LookupID(id); exists {
-			t.Fatal("rejected type entered registration catalog")
-		}
 	}
 	source := events.SourceID(uuid.NewString())
 	input := SupportedCollectionProtection{Map: map[string]string{"email": "fixture"}, Coarse: [][]string{{"fixture"}}, Leaves: [][]conceptfixtures.Name{{"fixture"}}, SecretMap: map[string]string{"token": "fixture-secret"}}
@@ -91,6 +92,73 @@ func TestKernelComplianceSupportedCollectionsAndRegistrationRefusal(t *testing.T
 		t.Fatal("supported collection write bypassed erasure fence")
 	}
 	_ = read() // Refused append did not persist a second event.
+}
+
+// Chronicle#4551 and #4552 (fixed in 19.32.2): metadata on a dictionary's value
+// schema applies to every value, and classified collection-valued array
+// elements are protected as a whole. Events and a projected read model are
+// read before and after erasure; namespace encryption survives erasure.
+func TestKernelComplianceProtectionBeneathMapsAndCollectionElements(t *testing.T) {
+	f := newKernelFixture(t)
+	registry := chronicle.NewRegistry()
+	pii := compliance.Classification{PII: true}
+	namespace := compliance.Classification{Encrypted: true, Scope: compliance.Namespace}
+	if _, err := chronicle.RegisterEvent[PlacementRecorded](registry, events.WithProtection(compliance.For[conceptfixtures.Name](pii), compliance.For[ClassifiedNames](pii), compliance.For[ClassifiedLabels](pii), compliance.For[PlacementToken](namespace))); err != nil {
+		t.Fatal(err)
+	}
+	model, err := chronicle.RegisterReadModel[PlacementModel](registry, readmodels.WithProtection(compliance.For[conceptfixtures.Name](pii), compliance.For[ClassifiedNames](pii), compliance.For[PlacementToken](namespace)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := f.client(registry).EventStore(f.ctx, f.storeName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := events.SourceID(uuid.NewString())
+	input := PlacementRecorded{
+		Contacts: map[string]PlacementContact{"home": {Email: "fixture-map-object"}},
+		Names:    map[string]conceptfixtures.Name{"first": "fixture-map-concept"},
+		Rows:     []ClassifiedNames{{"fixture-array-row"}},
+		Labels:   []ClassifiedLabels{{"label": "fixture-array-map"}},
+		Secrets:  map[string]PlacementSecret{"api": {Token: "fixture-map-secret"}},
+		Tokens:   map[string]PlacementToken{"api": "fixture-map-token"},
+	}
+	appendSuccessfully(t, f.ctx, store, source, input)
+	read := func() PlacementRecorded {
+		t.Helper()
+		history, err := store.EventLog().ReadSource(f.ctx, source, eventsequences.SourceFilter{})
+		if err != nil || len(history) != 1 {
+			t.Fatalf("history: %v", err)
+		}
+		value, err := events.Decode[PlacementRecorded](store.EventTypes(), history[0])
+		if err != nil {
+			t.Fatal(err)
+		}
+		return value
+	}
+	if got := read(); !reflect.DeepEqual(got, input) {
+		t.Fatalf("protected placements did not round-trip: %+v", got)
+	}
+	reader := readmodels.For(store.ReadModels(), model)
+	projected := awaitProjection(t, f.ctx, reader, readmodels.Key(source), func(v PlacementModel) bool { return len(v.Names) == 1 })
+	if !reflect.DeepEqual(projected.Value.Names, input.Names) || !reflect.DeepEqual(projected.Value.Rows, input.Rows) || !reflect.DeepEqual(projected.Value.Tokens, input.Tokens) {
+		t.Fatalf("projected placements: %+v", projected.Value)
+	}
+	if err := store.Compliance().ErasePII(f.ctx, string(source)); err != nil {
+		t.Fatal(err)
+	}
+	erased := read()
+	if erased.Contacts["home"].Email != "" || erased.Names["first"] != "" || len(erased.Rows) != 1 || len(erased.Rows[0]) != 0 || len(erased.Labels) != 1 || len(erased.Labels[0]) != 0 || erased.Secrets["api"].Token != "fixture-map-secret" || erased.Tokens["api"] != "fixture-map-token" {
+		t.Fatalf("erasure beneath maps/elements: %+v", erased)
+	}
+	value, err := reader.Get(f.ctx, readmodels.Key(source))
+	if err != nil || !value.Exists || value.Value.Names["first"] != "" || len(value.Value.Rows) != 1 || len(value.Value.Rows[0]) != 0 || value.Value.Tokens["api"] != "fixture-map-token" {
+		t.Fatalf("projected erasure: %+v %v", value, err)
+	}
+	result, err := store.EventLog().Append(f.ctx, source, input)
+	if err == nil && result.Err() == nil {
+		t.Fatal("PII beneath a map bypassed the erasure fence")
+	}
 }
 
 type RecursiveProtection struct {

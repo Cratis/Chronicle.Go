@@ -74,11 +74,14 @@ fail rather than silently doing nothing.
 - Composite object classification descends to its leaves without changing the
   object shape. Classified concepts retain their representation and metadata in
   pointers and collection items. An explicitly classified collection remains
-  coarse container protection, matching C#. Protection beneath an unprotected
-  map, and classified collection-valued array elements, fail registration with
-  `declarations.DeclarationError`: the pinned kernel cannot apply that metadata.
-  Protect the whole map/outer collection property explicitly, or use supported
-  scalar items and declared object members. Metadata is never silently moved.
+  coarse container protection, matching C#. Metadata on map values applies to
+  every value, and a classified collection-valued array element (a nested list
+  or map) is protected as a whole, while array elements with declared members
+  keep per-member protection. Both need Chronicle 19.32.2 or later
+  ([Chronicle#4551](https://github.com/Cratis/Chronicle/issues/4551),
+  [Chronicle#4552](https://github.com/Cratis/Chronicle/issues/4552)); earlier
+  kernels skip that metadata and store such values unprotected. Metadata is
+  never silently moved.
 - Member metadata takes precedence over declaring-type and value-type metadata.
   PII/confidentiality conflicts still fail; precedence cannot bypass that guard.
   Use `DetailsSet: true` to explicitly override an inherited rationale with an

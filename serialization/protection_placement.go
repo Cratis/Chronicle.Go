@@ -10,12 +10,15 @@ import (
 	"github.com/cratis/chronicle.go/internal/faults"
 )
 
-// The kernel only traverses declared object properties and array items. A
-// protected property container is handled as a blob before that traversal.
-// Validate the compiled graph, including references, so providers, tags and
-// inherited classifications obey the same fail-closed placement rules.
+// The kernel traverses declared object properties, dictionary values
+// (additionalProperties) and array items; since 19.32.2 it applies metadata
+// beneath unprotected maps (Chronicle#4551) and protects classified
+// collection-valued array elements as a whole (Chronicle#4552). A protected
+// container is handled as a blob before that traversal. Validate the compiled
+// graph, including references, so providers, tags and inherited
+// classifications obey the same fail-closed binary placement rule.
 type protectionPlacement struct {
-	covered, mapValue, arrayItem bool
+	covered bool
 }
 
 type placementReference struct {
@@ -41,35 +44,18 @@ func validateProtectionPlacement(node map[string]any, definitions map[string]any
 	if format, _ := node["format"].(string); strings.TrimSuffix(format, "?") == "byte-array" && (protected || placement.covered) {
 		return &declarations.DeclarationError{Directive: "protection", Offset: -1, Message: "binary protection is not supported", Cause: faults.ErrUnsupported}
 	}
-	if protected && !placement.covered {
-		if placement.mapValue {
-			return protectionError("protection beneath an unprotected map is not supported by the kernel; protect the entire map property")
-		}
-		if placement.arrayItem && (node["items"] != nil || node["additionalProperties"] != nil) {
-			return protectionError("protection on collection-valued array elements is not supported by the kernel")
-		}
-	}
 	placement.covered = placement.covered || protected
 	properties, _ := node["properties"].(map[string]any)
 	for _, property := range properties {
-		child := placement
-		child.arrayItem = false
-		if err := validateProtectionPlacement(property.(map[string]any), definitions, child, active); err != nil {
+		if err := validateProtectionPlacement(property.(map[string]any), definitions, placement, active); err != nil {
 			return err
 		}
 	}
-	if items, ok := node["items"].(map[string]any); ok {
-		child := placement
-		child.arrayItem = true
-		if err := validateProtectionPlacement(items, definitions, child, active); err != nil {
-			return err
-		}
-	}
-	if values, ok := node["additionalProperties"].(map[string]any); ok {
-		child := placement
-		child.mapValue, child.arrayItem = true, false
-		if err := validateProtectionPlacement(values, definitions, child, active); err != nil {
-			return err
+	for _, key := range []string{"items", "additionalProperties"} {
+		if child, ok := node[key].(map[string]any); ok {
+			if err := validateProtectionPlacement(child, definitions, placement, active); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
