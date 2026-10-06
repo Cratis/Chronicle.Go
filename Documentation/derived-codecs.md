@@ -146,9 +146,9 @@ A projection builds each child of a collection from an event, so the kernel, not
 your code, writes the child document. For an interface collection that document
 also needs `_derivedTypeId`, or the family codec cannot read it back. When the
 family has exactly one registered derivative, `children` resolves that concrete
-type and writes its discriminator on the creating event, as the C# client does
-for a `[ChildrenFrom]` collection with one `[DerivedType]` implementation. These
-declarations come from the executable
+type and writes its discriminator on every child `From`; the C# client stamps
+only the `[ChildrenFrom]` creator for a collection with one `[DerivedType]`
+implementation. These declarations come from the executable
 [example](../projections/example_derived_children_test.go):
 
 ```go
