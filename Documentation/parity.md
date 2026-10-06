@@ -347,7 +347,7 @@ revision. Kernel witnesses use the repository's 19.32.3-development image.
 | Jobs reads and commands / `Jobs/{IJobs,Jobs,Job,JobStep}` | **Implemented**: `EventStore.Jobs().List/Get/Steps/Stop/Resume/Delete`; immutable job/step snapshots | Golden tests cover full requests, .NET UUID byte order and complete progress/status history. Failure tests preserve envelope authorization/validation/exception and RPC errors; Get searches List as C#. Handles and snapshots retain original store/namespace |
 | Job waits / `Jobs/JobsWaitHelpers` | **Implemented**, **Go-specific** safety: predicate/progress/list/deletion/terminal waits, strict successful-status wait, 50ms polling and 5s default | `TestJobWaitRequiresEvidenceAndPreservesDisappearance`, `TestJobWaitHelpersHonorBudgetsAndCallerCancellation`; absence/disappearance stay unknown, failed/stopped states stay distinct. Strict wait adds `AbsentError`/`TerminalError`; terminal-or-absent preserves C# null semantics. `WaitForNoJobs` corrects C#'s inverted selected-status predicate; caller cancellation always propagates |
 | Append completion / `Observation/AppendResultWaitForCompletionExtensions` | **Implemented**: metadata result/notification `Completion`, `WaitForCompletion`, immutable `observation.Completion` and diagnostics | `TestCompletionUsesActualBatchTailsAndOriginalCoordinates`, `TestCompletionBudgetsAbsenceCancellationAndDiagnostics`; actual per-type batch tails, original first/store/namespace/sequence and maximum-position generation, 5s + 200ms/infinite behavior, missing surface vs unavailable tail. Legacy result layouts remain unchanged; metadata-bearing append methods or existing notifications supply exact input types rather than guessing from current catalogs |
-| Completion and lifecycle kernel witnesses | **Partial** beyond the demonstrated single-kernel workflows | `TestKernelOperationsCompletionReplayAndJobEvidence` holds a real handler to distinguish timed-out from successful catch-up, reads replay job/steps, observes replay-end and handles later job absence without fabricated completion. `TestKernelOperationsFailedPartitionDiagnostics` reads failed attempts and completion failure. No durable checkpoint or multi-node guarantee. The 19.29.4 reducer recovery (Chronicle #4540) and catch-up race (Chronicle #4548) defects are fixed in 19.32.3 |
+| Completion and lifecycle kernel witnesses | **Partial** beyond the demonstrated single-kernel workflows | `TestKernelOperationsCompletionReplayAndJobEvidence` holds a real handler to distinguish timed-out from successful catch-up, reads replay job/steps, observes replay-end and handles later job absence without fabricated completion. `TestKernelOperationsFailedPartitionDiagnostics` reads failed attempts and completion failure. No durable checkpoint or multi-node guarantee. The 19.29.4 reducer recovery (Chronicle #4540, witnessed by `TestKernelReducerFailedPrefixRecovery`) and catch-up race (Chronicle #4548) defects are fixed in 19.32.3 |
 | Examples and documentation | **Implemented** for the described APIs | `ExampleService_Replay`, `ExampleService_WaitForCompletion`, `TestOperationsDocumentationMatchesCompiledExample`; offline examples explicitly label their transport. The kernel witnesses separately establish runtime behavior |
 
 All mutation failures after dispatch are conservative `OutcomeUnknownError`
@@ -1124,24 +1124,19 @@ transport test independently verifies the deletion result and its checkpoint.
 | Local watch notifications / `ReducerHandler.OnNext`, `IReducerObservers` | **Implemented** for unclassified models: successful production folds notify namespace/generation-local watches in order before acknowledgement, validating final plaintext without Release. Classified Watch refuses before queue attachment without a delivery-time erasure fence | `TestReadModelReactorInfersFirstSeenLocalReducerAddition`, `TestLocalReducerWatchPlaintextRemovalAndGenerationIsolation`, `TestClassifiedWatchesRefuseBeforeTransportOrLocalAttachment`; namespace/generation isolation and lifecycle remain unchanged, with no sink-write/durable delivery guarantee. `TestKernelReleaseRouteProfiles` covers successful protected fold state before/after erasure, not safe classified local-watch delivery. Reducer sessions remain explicitly unsupported |
 | Definition preparation and borrowed client/store DI facades / `ClientArtifactsActivator`, `ChronicleClientServiceCollectionExtensions` | **Implemented** for config-only projection/constraint/migration factories, seed preparation, two-phase client composition and optional `services.Bind*` helpers | `TestDefinitionFactoriesPlainAndFundamentalsProduceIdenticalFrozenArtifacts`, `TestFacadeConsumerCaptureBindPrepareAndResolveCoordinates`, `TestBorrowedFacadeScopeDisposalKeepsActiveObserverStream`; see [definition factories](#definition-factories) and [facade composition](facade-composition.md). These SDK witnesses do not cover Arc.Go#29 adoption or the separate [runtime projection addition API](#runtime-projection-additions); provider disposal does not transfer ownership of borrowed client resources |
 
-### Shared reducer recovery defect
+### Reducer failed-batch recovery
 
 Go preserves C#'s failed-batch response: last successful observation with no state.
-At Chronicle revision `2e31b0dfba489159b3db323238f16d0f277056b4`,
-`Source/Kernel/Core/Observation/Reducers/ReducerPipeline.cs:59–75` reloads the
-sink state and writes nothing on failure. `Observer.Handling.cs:166–205` advances
-observation progress and records a live failure at the last successful event.
-`Observer.Failing.cs:223–229` and `Jobs/RetryFailedPartition.cs:89–104` restart
-recovery there, inclusively (`Storage.MongoDB/EventSequences/EventSequenceStorage.cs:920–926`).
-They do not rebuild from the beginning of the failed batch or event history.
-Consequently, successful prefix folds before that restart position are lost.
-A failed recovery step additionally checkpoints success and records its next
-failed event (`Jobs/HandleEventsForPartition.cs:182–190,236–272`), again without
-persisting the prefix. This upstream defect is tracked in
-[Chronicle #4540](https://github.com/Cratis/Chronicle/issues/4540), fixed in
-19.32.3; Go does not change the failure wire contract independently. This
-conclusion is based on source inspection of 19.29.4, not a live-kernel recovery
-test.
+Up to 19.32.2 the kernel restarted recovery at that last success and lost the
+unpersisted prefix of the failed batch
+([Chronicle #4540](https://github.com/Cratis/Chronicle/issues/4540)). Kernel
+19.32.3 retries a reducer batch that fails part-way from the start of the batch.
+`TestKernelReducerFailedPrefixRecovery` witnesses this against the pinned kernel:
+one appended batch folds 1, 2 and 3, the fold of 3 fails once, recovery folds the
+whole batch again from 1 and the materialized balance settles at 6 rather than 5.
+The kernel may fold the batch more than once during recovery; each attempt reloads
+the persisted state, so the result stays 6. Go does not change the failure wire
+contract independently.
 
 ## Scenario testing
 
