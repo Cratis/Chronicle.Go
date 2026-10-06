@@ -158,11 +158,22 @@ CLR Unicode case matching is not qualified. Explicit mappings, binary-to-string
 conversion, initial values, literals, arithmetic, identities, keys, joins and
 runtime ordinary-scalar profiles are unsupported. Read-model identity and subject
 fallback properties cannot be binary, even without a projection. This includes
-all case variants of serialized `id` and the MongoDB `_id` property. A dotted
-JSON name cannot hide binary from path guards: if any literal-name or nested-path
-candidate contains binary, indexes, uniqueness, subjects, keys, explicit writes
-and single initial values are refused, including after naming rebinds. Whole-model initial values inspect actual
-root ownership, including properties whose JSON names contain dots.
+all case variants of serialized `id` and the MongoDB `_id` property.
+
+A literal dotted JSON name may collide with a nested serialized path. For example,
+`json:"data.payload"` can name an alias while `Data.Payload` names a different
+property. If any candidate contains binary, plan compilation returns
+`chronicle.ErrUnsupported` before registration, regardless of field order. Naming
+recompilation applies the same check: a collision introduced by `CamelCase` cannot
+reach a projection, constraint, index or read-model payload. Rename the alias or
+nested property so their serialized paths differ. Collisions without binary keep
+the existing behavior, even when an unrelated property contains binary.
+
+Projection rebinding also rechecks model/variant keys, child identities and every
+From, Join and removal key/parent expression, including composite parts. AutoMap
+checks all candidates of its generated source and target paths. Whole-model
+initial values inspect actual root ownership, including properties whose JSON
+names contain dots.
 
 Event migrations involving either binary-containing endpoint are refused by
 `DefineMigration` and catalog `WithMigrations` before I/O. This includes nullable
@@ -172,7 +183,7 @@ transform JSON strings without binary-aware validation; splitting `"AQ=="` on
 `"="` produces invalid base64. No migration operation has binary qualification.
 Keep binary-bearing generations without migrations until such a path is qualified.
 Snapshot naming rebinds retain the binary representation and do not decode or
-reinterpret bytes.
+reinterpret bytes; their destination plan must pass the same ambiguity check.
 
 The [packaged binary capture](../serialization/testdata/binary/README.md) records
 Chronicle 19.29.4, Fundamentals 7.19.6 and both schema generator APIs. Class

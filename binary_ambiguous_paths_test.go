@@ -60,7 +60,7 @@ func TestBinaryConstraintRebindRefusesNewPathAmbiguity(t *testing.T) {
 		"alias last":  binaryConstraintNamingAdmission[binaryNamedAliasLast],
 	} {
 		t.Run(name, func(t *testing.T) {
-			if err := check(); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			if err := check(); !errors.Is(err, chronicle.ErrUnsupported) && !errors.Is(err, chronicle.ErrInvalidConfiguration) {
 				t.Fatalf("naming introduced unguarded binary constraint ambiguity: %v", err)
 			}
 		})
@@ -74,15 +74,15 @@ func TestBinaryAmbiguousPathsRefuseBeforeIO(t *testing.T) {
 
 func testBinaryAmbiguousPaths[T any](t *testing.T) {
 	t.Helper()
-	event, err := events.Define[T]()
-	if err != nil {
-		t.Fatal(err)
-	}
-	model, err := readmodels.Define[T]()
-	if err != nil {
-		t.Fatal(err)
-	}
+	event, eventErr := events.Define[T]()
+	model, modelErr := readmodels.Define[T]()
 	build := func(option projections.Option, configure func(*projections.Builder[T])) error {
+		if eventErr != nil {
+			return eventErr
+		}
+		if modelErr != nil {
+			return modelErr
+		}
 		b := projections.NewBuilder("binary-ambiguous", model, projections.NoAutoMap(), option)
 		configure(b)
 		_, err := b.Build()
@@ -94,6 +94,9 @@ func testBinaryAmbiguousPaths[T any](t *testing.T) {
 	}{
 		{"index", func() error { _, err := readmodels.Define[T](readmodels.WithIndexes("Data.Payload")); return err }},
 		{"unique", func() error {
+			if eventErr != nil {
+				return eventErr
+			}
 			_, err := constraints.UniqueValues("binary-ambiguous").On(event.Descriptor(), "Data.Payload").Build()
 			return err
 		}},

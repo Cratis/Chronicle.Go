@@ -13,6 +13,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 type capabilityBinaryPayload struct {
@@ -82,6 +83,26 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 		name  string
 		check func() error
 	}{
+		{"ambiguous event plan alias first", func() error { _, err := events.Define[binaryAliasFirst](); return err }},
+		{"ambiguous event plan alias last", func() error { _, err := events.Define[binaryAliasLast](); return err }},
+		{"ambiguous model plan alias first", func() error { _, err := readmodels.Define[binaryAliasFirst](); return err }},
+		{"ambiguous model plan alias last", func() error { _, err := readmodels.Define[binaryAliasLast](); return err }},
+		{"event naming plan alias first", func() error {
+			event, err := events.Define[binaryKeyAliasFirst]()
+			if err != nil {
+				return err
+			}
+			_, err = event.Descriptor().WithNamingPolicy(serialization.CamelCase)
+			return err
+		}},
+		{"event naming plan alias last", func() error {
+			event, err := events.Define[binaryKeyAliasLast]()
+			if err != nil {
+				return err
+			}
+			_, err = event.Descriptor().WithNamingPolicy(serialization.CamelCase)
+			return err
+		}},
 		{"unique tag", func() error { _, err := events.Define[capabilityBinaryUnique](); return err }},
 		{"unique builder", func() error {
 			_, err := constraints.UniqueValues("binary").On(event.Descriptor(), "Payload").Build()

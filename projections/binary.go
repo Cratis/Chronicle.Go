@@ -38,7 +38,35 @@ func validateBinaryGraph(d *definition, catalog *events.Catalog) error {
 }
 
 func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization.Field, catalog *events.Catalog, noAuto, projectionNoAuto bool) error {
+	for _, path := range []string{n.keyField, n.identifiedBy} {
+		if path == "" || path == "$eventSourceId" || path == "*NotSet*" {
+			continue
+		}
+		if field, ok := binaryMappingField(fields, path); ok && binaryField(field) {
+			return enumMappingFailure(d, field, events.TypeRef{}, "key", "binary identities are not supported")
+		}
+	}
+	checkKeys := func(ref events.TypeRef, key, parent expression) error {
+		event, ok := catalog.LookupRef(ref)
+		if !ok {
+			return invalid("binary mapping event is not registered")
+		}
+		for _, e := range []expression{key, parent} {
+			if field, ok := binaryKeyField(event.Fields(), e); ok {
+				return enumMappingFailure(d, field, ref, "key", "binary correlation keys are not supported")
+			}
+		}
+		return nil
+	}
+	for _, removal := range n.removals {
+		if err := checkKeys(removal.event, removal.key, removal.parent); err != nil {
+			return err
+		}
+	}
 	check := func(from fromDefinition, join bool) error {
+		if err := checkKeys(from.event, from.key, from.parent); err != nil {
+			return err
+		}
 		event, ok := catalog.LookupRef(from.event)
 		if !ok {
 			return invalid("binary mapping event is not registered")
@@ -71,7 +99,17 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 		}
 		for _, source := range sources {
 			matches := matchingASCIIFields(targets, source.Name)
-			if len(matches) == 0 || !binaryField(source) && !slices.ContainsFunc(matches, binaryField) {
+			if len(matches) == 0 {
+				continue
+			}
+			// AutoMap emits property paths from raw root names. Inspect every
+			// candidate for those paths, not just the matched emitted fields.
+			sourceCandidate, _ := binaryMappingField(event.Fields(), source.Path)
+			binaryTarget := slices.ContainsFunc(matches, func(target serialization.Field) bool {
+				candidate, _ := binaryMappingField(fields, target.Path)
+				return binaryField(candidate)
+			})
+			if !binaryField(sourceCandidate) && !binaryTarget {
 				continue
 			}
 			target := matches[0]

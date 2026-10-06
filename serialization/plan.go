@@ -61,8 +61,9 @@ type field struct {
 
 // Compile validates a struct shape before registration. Recursive types use schema
 // references. Embedded fields follow encoding/json promotion and declaration order.
-// Custom marshalers, interface values and unsupported chronicle directives are
-// rejected rather than generating a schema that disagrees with serialization.
+// Custom marshalers, interface values, unsupported chronicle directives and
+// dotted-name path collisions involving binary are rejected rather than generating
+// a schema that disagrees with serialization or kernel property-path resolution.
 // Recognized directives are metadata; artifact registries must also ValidateRole.
 // Naming defaults to PreservePropertyNames; the last optional policy wins.
 func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
@@ -161,6 +162,9 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 			return nil, err
 		}
 		if err := validateBinaryPlacement(candidate); err != nil {
+			return nil, err
+		}
+		if err := validateBinaryPathAmbiguity(candidate); err != nil {
 			return nil, err
 		}
 	}
