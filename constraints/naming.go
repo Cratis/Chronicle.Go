@@ -46,7 +46,7 @@ func (d Definition) Rebind(catalog *events.Catalog) (Definition, error) {
 			rebound := d.fields[i].Properties[j]
 			field, ok := serialization.FieldAtWithCapability(event.Fields(), rebound, serialization.Field.ContainsBinary)
 			if ok && field.ContainsBinary() {
-				return Definition{}, fmt.Errorf("%w: binary unique property %q is not supported", faults.ErrInvalidConfiguration, rebound)
+				return Definition{}, fmt.Errorf("%w: binary unique property %q is not supported", faults.ErrUnsupported, rebound)
 			}
 		}
 		d.fields[i].Event = event

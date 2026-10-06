@@ -54,6 +54,9 @@ func modelSchema(plan *serialization.Plan, config modelConfig) (string, error) {
 	}
 	if config.subject != "" {
 		field, ok := serialization.FieldAtWithCapability(plan.Fields(), config.subject, serialization.Field.ContainsBinary)
+		if ok && field.ContainsBinary() {
+			return "", fmt.Errorf("%w: binary subject is not supported: %s", faults.ErrUnsupported, config.subject)
+		}
 		if strings.Contains(config.subject, ".") || !ok || !field.Scalar.IsPrimitive() {
 			return "", invalid("subject must name a top-level scalar property")
 		}

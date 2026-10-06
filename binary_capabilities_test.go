@@ -357,12 +357,7 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 	// These APIs only define/compile metadata: no client/connection is created.
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			want := chronicle.ErrUnsupported
-			if tc.name == "subject property" {
-				// This generic scalar-path validation also covers binary-free types.
-				want = chronicle.ErrInvalidConfiguration
-			}
-			if err := tc.check(); !errors.Is(err, want) {
+			if err := tc.check(); !errors.Is(err, chronicle.ErrUnsupported) {
 				t.Fatalf("binary capability admitted before I/O: %v", err)
 			}
 		})

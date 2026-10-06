@@ -3,7 +3,12 @@
 
 package serialization
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/cratis/chronicle.go/declarations"
+	"github.com/cratis/chronicle.go/internal/faults"
+)
 
 // The kernel only traverses declared object properties and array items. A
 // protected property container is handled as a blob before that traversal.
@@ -34,7 +39,7 @@ func validateProtectionPlacement(node map[string]any, definitions map[string]any
 	}
 	protected := node["compliance"] != nil || node["security"] != nil
 	if format, _ := node["format"].(string); strings.TrimSuffix(format, "?") == "byte-array" && (protected || placement.covered) {
-		return protectionError("binary protection is not supported")
+		return &declarations.DeclarationError{Directive: "protection", Offset: -1, Message: "binary protection is not supported", Cause: faults.ErrUnsupported}
 	}
 	if protected && !placement.covered {
 		if placement.mapValue {

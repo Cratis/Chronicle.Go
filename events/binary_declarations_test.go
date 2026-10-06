@@ -102,7 +102,7 @@ func TestBinarySubjectsRefuseBeforeRegistration(t *testing.T) {
 	for _, path := range []string{"Payload", "Optional"} {
 		t.Run("explicit "+path, func(t *testing.T) {
 			_, err := readmodels.Define[binaryDeclarationModel](readmodels.WithSubjectProperty(path))
-			if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			if !errors.Is(err, chronicle.ErrUnsupported) {
 				t.Fatalf("binary subject property admitted: %v", err)
 			}
 		})

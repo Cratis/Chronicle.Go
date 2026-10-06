@@ -60,7 +60,7 @@ func TestBinaryConstraintRebindRefusesNewPathAmbiguity(t *testing.T) {
 		"alias last":  binaryConstraintNamingAdmission[binaryNamedAliasLast],
 	} {
 		t.Run(name, func(t *testing.T) {
-			if err := check(); !errors.Is(err, chronicle.ErrUnsupported) && !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			if err := check(); !errors.Is(err, chronicle.ErrUnsupported) {
 				t.Fatalf("naming introduced unguarded binary constraint ambiguity: %v", err)
 			}
 		})
@@ -129,7 +129,7 @@ func testBinaryAmbiguousPaths[T any](t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := tc.check(); !errors.Is(err, chronicle.ErrUnsupported) && !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+			if err := tc.check(); !errors.Is(err, chronicle.ErrUnsupported) {
 				t.Fatalf("ambiguous binary path admitted before I/O: %v", err)
 			}
 		})
