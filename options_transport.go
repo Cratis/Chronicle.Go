@@ -3,7 +3,25 @@
 
 package chronicle
 
+import "google.golang.org/grpc/stats"
+
 const defaultMaxMessageSize = 100 * 1024 * 1024
+
+// WithGRPCStatsHandler borrows a gRPC stats handler for every owned connection,
+// including replacement generations on reconnect. The last option wins; a final
+// nil (including a typed nil) or combination with WithGRPCConnection is invalid.
+// Chronicle never closes the handler or its providers/exporters.
+//
+// This is restricted configuration for trusted callbacks, not enforced safety
+// for arbitrary code. Callbacks must support concurrent use, return promptly,
+// preserve cancellation, deadlines and required context values in TagRPC/TagConn,
+// and must not reenter blocking client lifecycle methods such as Close. A handler
+// can still block or return an unsuitable context. It does not authorize retries
+// or change write outcome guarantees. No arbitrary dial options or interceptors
+// are exposed by this option.
+func WithGRPCStatsHandler(handler stats.Handler) ClientOption {
+	return func(c *clientConfig) { c.grpcStatsHandler, c.grpcStatsHandlerSet = handler, true }
+}
 
 // WithMaxSendMessageSize sets the maximum serialized gRPC message size in bytes
 // for every RPC. Valid values are 1..2147483647; NewClient validates the final

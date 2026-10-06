@@ -17,6 +17,7 @@ import (
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/serialization"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/stats"
 )
 
 // Token is a bearer credential and optional expiration. Formatting redacts its value.
@@ -56,6 +57,8 @@ type clientConfig struct {
 	loadBalancerSet                                 bool
 	resolver                                        SRVResolver
 	resolverSet                                     bool
+	grpcStatsHandler                                stats.Handler
+	grpcStatsHandlerSet                             bool
 	borrowed                                        grpc.ClientConnInterface
 	tlsSet, tokenSet, borrowedSet, uriSet           bool
 	validateEventTypes                              bool

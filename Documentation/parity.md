@@ -96,6 +96,25 @@ no confidence range/finiteness validation, so Go forwards those values unchanged
 
 See [Use one application-owned logger](facade-composition.md#use-one-application-owned-logger).
 
+## Owned gRPC stats-handler injection
+
+**Go-specific:** `WithGRPCStatsHandler(stats.Handler)` borrows a trusted handler
+for every owned connection generation, including reconnect. This is the bounded
+extension approved in [#53](https://github.com/Cratis/Chronicle.Go/issues/53), not
+C# interceptor parity. The C# connection ownership/lifecycle comparison below
+remains authoritative for existing behavior.
+
+`TestGRPCStatsHandlerValidationAndLastWins` covers nil/typed-nil rejection,
+borrowed-channel conflicts in both option orders, last-wins precedence and
+handler ownership. `TestGRPCStatsHandlerOwnedGenerationsUnaryAndStream` exercises
+real validating TLS connections, unary and streaming callbacks on initial and
+replacement owned channels, and verifies that neither handler is closed.
+Trusted callbacks must preserve contexts, return promptly and support concurrent
+use; arbitrary callback safety is not enforced. No arbitrary dial options,
+interceptors, retries or stronger write-outcome guarantees are added. The pinned
+`otelgrpc` consumer remains separate under
+[#80](https://github.com/Cratis/Chronicle.Go/issues/80).
+
 ## Baselines and evidence
 
 C# reference: `Cratis/Chronicle` revision `2e31b0dfba489159b3db323238f16d0f277056b4`, paths below relative to `Source/Clients/`. Generated contracts independently pin Chronicle **19.29.4**, commit `ae5e00a8abaa688138b2c2f689e2b4659cccb4fd`. Real-kernel evidence uses **19.29.4-development**, including test-owned TLS/TCP connection interruption and recovery against a running kernel. Whole-kernel restart and a real multi-node deployment remain unverified. SDK release numbers are independent of protocol versions.

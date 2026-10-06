@@ -124,6 +124,12 @@ func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) 
 		(config.tokenSet && nilValue(config.tokenSource)) || (config.resolverSet && nilValue(config.resolver)) {
 		return ConnectionString{}, nil, fmt.Errorf("%w: nil TLS, transport, resolver or token source", ErrInvalidConfiguration)
 	}
+	if config.grpcStatsHandlerSet && nilValue(config.grpcStatsHandler) {
+		return ConnectionString{}, nil, fmt.Errorf("%w: nil gRPC stats handler", ErrInvalidConfiguration)
+	}
+	if config.grpcStatsHandlerSet && config.borrowedSet {
+		return ConnectionString{}, nil, fmt.Errorf("%w: gRPC stats handler conflicts with borrowed connection", ErrInvalidConfiguration)
+	}
 	if config.borrowed != nil && !config.uriSet && !config.tokenSet && !config.noAuth {
 		return ConnectionString{}, nil, fmt.Errorf("%w: borrowed connection requires explicit authentication", ErrInvalidConfiguration)
 	}
