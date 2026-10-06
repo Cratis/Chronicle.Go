@@ -86,7 +86,7 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 	compiled.nodeDefinition = *node
 	if d.variantKey != "" {
 		field, ok := serialization.FieldAt(d.model.Fields(), d.variantKey)
-		if !ok || field.IsEnum() || field.Type != d.variantKeyType || field.Nullable || field.Collection || field.Scalar == serialization.NotScalar {
+		if !ok || binaryField(field) || field.IsEnum() || field.Type != d.variantKeyType || field.Nullable || field.Collection || field.Scalar == serialization.NotScalar {
 			return Definition{}, declarationFailure(d.id, Provenance{GoField: field.GoField, Path: d.variantKey, Directive: "VariantKey", Offset: -1}, invalid("variant key requires a non-nullable non-enum scalar model field"))
 		}
 		if compiled.keyField != "" && compiled.keyField != d.variantKey {

@@ -3,7 +3,7 @@
 
 // Package serialization compiles one immutable field plan for JSON and JSON Schema.
 // Primitive named values, structs, pointers, slices, arrays, string-keyed maps,
-// time.Time, uuid.UUID, Fundamentals scalars and concepts are supported. Integers nested under maps are restricted
+// time.Time, uuid.UUID, binary byte slices, Fundamentals scalars and concepts are supported. Integers nested under maps are restricted
 // to -2^53 through 2^53 by the kernel's dictionary conversion; unsigned values
 // above MaxInt64 are rejected by the pinned kernel's MongoDB append path. Unsupported
 // custom/protected shapes fail closed.
@@ -32,6 +32,7 @@ type Plan struct {
 	typ      reflect.Type
 	config   Config
 	families []*node
+	binary   bool
 }
 type node struct {
 	typ           reflect.Type
@@ -39,6 +40,7 @@ type node struct {
 	item          *node
 	schema        map[string]any
 	scalar        bool
+	binary        bool
 	concept       *concepts.Representation
 	enum          *enumDefinition
 	reference     *node
@@ -149,6 +151,11 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 			families = append(families, family)
 		}
 	}
+	for _, candidate := range append([]*node{root}, families...) {
+		if err := validateBinaryPlacement(candidate); err != nil {
+			return nil, err
+		}
+	}
 	state.definitions = reachableDefinitions(root.schema, state.definitions)
 	if len(state.definitions) > 0 {
 		// Clone before adding definitions: a recursive root may itself be a target.
@@ -161,7 +168,7 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	if err != nil {
 		return nil, err
 	}
-	plan := &Plan{root: root, schema: string(data), typ: typ, config: config, families: families}
+	plan := &Plan{root: root, schema: string(data), typ: typ, config: config, families: families, binary: hasBinary(root)}
 	plan.schema, err = plan.ProtectedSchema()
 	if err != nil {
 		return nil, err
@@ -247,6 +254,9 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 		n.item, n.schema = item, maps.Clone(item.schema)
 		if format, ok := n.schema["format"].(string); ok {
 			n.schema["format"] = strings.TrimSuffix(format, "?") + "?"
+			if item.binary {
+				n.schema["type"] = []string{"string", "null"}
+			}
 		} else if kind, ok := n.schema["type"].(string); ok {
 			n.schema["type"] = []string{kind, "null"}
 		}
@@ -281,7 +291,12 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 			}
 		}
 		if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
-			return nil, unsupported(typ, "byte slices need an explicit wire format")
+			if typ.Elem() != reflect.TypeFor[byte]() {
+				return nil, unsupported(typ, "binary requires the built-in byte element type")
+			}
+			n.binary, n.scalar = true, true
+			n.schema["type"], n.schema["format"] = "string", "byte-array"
+			return n, nil
 		}
 		item, err := compile(typ.Elem(), state, policy, false)
 		if err != nil {

@@ -161,6 +161,9 @@ func (c *protectionCompiler) walk(n *node, inherited, member compliance.Classifi
 		return nil, err
 	}
 	if metadata != (compliance.Classification{}) {
+		if hasBinary(n) {
+			return nil, protectionError("protected binary placements are not supported")
+		}
 		if hasEnum(n) {
 			return nil, protectionError("protected enum placements are not supported")
 		}
@@ -217,6 +220,9 @@ func (c *protectionCompiler) walk(n *node, inherited, member compliance.Classifi
 		maps.Copy(result, item)
 		if format, ok := result["format"].(string); ok {
 			result["format"] = strings.TrimSuffix(format, "?") + "?"
+			if n.item.binary {
+				result["type"] = []string{"string", "null"}
+			}
 		} else if kind, ok := result["type"].(string); ok {
 			result["type"] = []string{kind, "null"}
 		}

@@ -30,6 +30,9 @@ func compileConcept(n *node, representation concepts.Representation, state *comp
 		if err != nil {
 			return nil, err
 		}
+		if hasBinary(underlying) {
+			return nil, unsupported(n.typ, "binary concepts are not supported")
+		}
 		if hasEnum(underlying) {
 			return nil, unsupported(n.typ, "enum concepts are not supported")
 		}

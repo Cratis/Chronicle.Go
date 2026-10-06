@@ -106,6 +106,9 @@ var kernelLiteral = regexp.MustCompile(`^[\p{L}\p{Mn}\p{Nd}\p{Pc} ._/:*+\-]*$`)
 var kernelArithmeticPath = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9.]*$`)
 
 func validateLiteral(e expression, target serialization.Field) error {
+	if binaryField(target) {
+		return invalid("binary literals are not supported")
+	}
 	if e.kind == nullExpression {
 		if !nullableAssignment(target) {
 			return invalid("null requires a supported nullable pointer")
@@ -168,6 +171,9 @@ func validateLiteral(e expression, target serialization.Field) error {
 // scalarCompatible checks wire conversion, not exact Go width or nullability.
 // Typed field/key validation separately preserves declared domain identity.
 func scalarCompatible(target, source serialization.Field, targetFields, sourceFields []serialization.Field) bool {
+	if binaryField(target) || binaryField(source) {
+		return target.SameRepresentation(source)
+	}
 	if target.IsEnum() || source.IsEnum() {
 		return target.SameRepresentation(source)
 	}
@@ -439,7 +445,7 @@ func validateKey(e expression, expected reflect.Type, fields []serialization.Fie
 		}
 	case pathExpression:
 		field, ok := serialization.FieldAt(fields, e.text)
-		if ok && !field.IsEnum() && !field.Collection && field.Scalar != serialization.NotScalar && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
+		if ok && !binaryField(field) && !field.IsEnum() && !field.Collection && field.Scalar != serialization.NotScalar && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
 			return nil
 		}
 	}

@@ -33,6 +33,9 @@ func validateProtectionPlacement(node map[string]any, definitions map[string]any
 		return validateProtectionPlacement(target, definitions, placement, active)
 	}
 	protected := node["compliance"] != nil || node["security"] != nil
+	if format, _ := node["format"].(string); strings.TrimSuffix(format, "?") == "byte-array" && (protected || placement.covered) {
+		return protectionError("binary protection is not supported")
+	}
 	if protected && !placement.covered {
 		if placement.mapValue {
 			return protectionError("protection beneath an unprotected map is not supported by the kernel; protect the entire map property")
