@@ -25,6 +25,54 @@ Use `chronicle://one:35000,two:35000` for multiple endpoints or `chronicle+srv:/
 
 API keys, URI certificate/password options and plaintext `disableTls` still return `ErrUnsupported`. Configure PEM material through `WithTLS`.
 
+## Custom load balancing
+
+Supply `WithLoadBalancer(balancer)` to choose an endpoint with your own
+`LoadBalancer.Next(ctx, candidates) (ServerAddress, error)` implementation. Last
+option wins. The client borrows the strategy and never closes it, even if it
+implements `io.Closer`. A strategy shared by multiple clients must support their
+concurrent calls.
+
+This strategy excerpt uses `context` and
+`chronicle "github.com/cratis/chronicle.go"` imports:
+
+```go
+type preferLastServer struct{}
+
+func (preferLastServer) Next(ctx context.Context, candidates []chronicle.ServerAddress) (chronicle.ServerAddress, error) {
+    if err := ctx.Err(); err != nil {
+        return chronicle.ServerAddress{}, err
+    }
+    return candidates[len(candidates)-1], nil
+}
+```
+
+Pass `chronicle.WithLoadBalancer(preferLastServer{})` to `NewClient` or `Dial`.
+
+Each connection attempt calls `Next` once, including single-address URIs, first
+connect and every reconnect. Calls are serialized per client, outside SDK locks.
+Candidates are a fresh copy in URI order, or priority/descending-weight order
+after SRV re-resolution. You may retain or modify the copy, but must return one
+of the original candidates. That address becomes both gRPC endpoint and OAuth
+authority. Honor the attempt context: its deadline covers `WithConnectTimeout`
+and client close cancels it. Do not call Close/Shutdown from `Next`.
+
+Without an explicit strategy, the URI strategy applies (default
+least-connections). Unlike C#'s explicit-over-URI precedence, Go rejects combining
+`WithLoadBalancer` with a `loadBalancer=` URI key or `WithGRPCConnection`, whose
+owner controls routing. Nil and typed-nil strategies also fail construction with
+`ErrInvalidConfiguration`, before I/O.
+
+Errors, contained panics and non-candidate results become `*LoadBalancerError`;
+no endpoint is dialed and no OAuth request is made. Its `Error()` and formatting
+are fixed diagnostics, while `Unwrap()` preserves ordinary causes for inspection.
+Panic values are discarded. First `Connect` returns the selection failure; the
+supervisor retries subsequent attempts with normal jittered reconnect backoff.
+Selection failures are always transient, even when wrapping `Unauthenticated`.
+
+[The executable custom-balancer example](https://github.com/Cratis/Chronicle.Go/blob/main/example_connection_test.go)
+shows a strategy choosing the last candidate without network I/O.
+
 ## TLS and token sources
 
 Certificate validation is **enabled by default**, unlike the C# development default. `WithDevelopmentDefaults()` explicitly permits a self-signed local kernel certificate. `skipTlsValidation=true` is an explicit URI alternative. Neither overrides an explicit `WithTLS` policy; `skipTlsValidation=false` also wins over development defaults.
@@ -43,6 +91,7 @@ Built-in OAuth sends a form POST to the selected kernel's `/connect/token`, cach
 - Concurrent `Connect` calls share startup. Its initiating context bounds that first attempt; other waiters can cancel independently. Later generations use only client-owned lifetimes. Store registrations are single-flight per generation; failed passes remain inspectable and can recover.
 - `EventStore(ctx, name, WithNamespace("tenant"))` caches by both store and namespace. The default namespace is `Default`, matching C# and the kernel (case matters). Namespace selection is not authorization.
 - `EvictEventStores()` clears all lookup/automatic-registration membership without closing issued handles or resources. Later lookups return new facades; retained handles can still perform explicit operations. See [eviction semantics](lifecycle.md#evict-cached-event-stores).
+- `WithOnConnected` and `WithOnDisconnected` observe protocol readiness/loss asynchronously, not artifact registration. See [connection hook ordering and ownership](lifecycle.md#connection-hooks).
 - `Close()` cancels and joins owned work. `CloseContext(ctx)` bounds that wait; `Shutdown(ctx)` first drains admitted RPCs. A context error means cleanup is incomplete, not successful. Later operations return `ErrClosed`. A custom source that ignores cancellation can delay actual cleanup.
 - `WithGRPCConnection(conn)` borrows a channel; you own its security, retry policy and eventual close. The SDK still applies its own admission, metadata and compatibility checks. Multihost/SRV selection on a borrowed channel is rejected because its owner controls routing. You must explicitly select `WithConnectionString` as the OAuth authority, `WithTokenSource`, or `WithNoAuthentication`; the SDK never guesses a localhost authority for a borrowed channel. Use `WithNoAuthentication` if the supplied channel owns credentials. Do not enable application-level append retries on a borrowed channel.
 
@@ -50,6 +99,6 @@ Transient stream loss or missing heartbeats triggers automatic reconnection and 
 
 ## Diagnose connection failures
 
-Check kernel health with `curl` against `/health`, then inspect the returned error. Use `errors.As` for `CompatibilityError` and `EnvelopeError`; use `errors.Is` for `ErrClosed`, `ErrInvalidConfiguration`, `ErrUnsupported` and context cancellation. gRPC status codes remain inspectable with `status.Code` on transport errors.
+Check kernel health with `curl` against `/health`, then inspect the returned error. Use `errors.As` for `CompatibilityError`, `LoadBalancerError` and `EnvelopeError`; use `errors.Is` for `ErrClosed`, `ErrInvalidConfiguration`, `ErrUnsupported` and context cancellation. gRPC status codes remain inspectable with `status.Code` on transport errors.
 
 Compatibility is checked using the embedded canonical descriptor and its independent protocol version, not SDK semver alone. `WithSkipCompatibilityCheck()` or `skipCompatibilityCheck=true` disables preflight at your own risk. Never use it to paper over a missing concurrency capability.
