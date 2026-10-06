@@ -75,35 +75,22 @@ func TestBinaryDottedAmbiguityRefusesNamingPlan(t *testing.T) {
 		"alias last":  reflect.TypeFor[binaryReboundAliasLast](),
 	} {
 		t.Run(name, func(t *testing.T) {
-			plan, err := serialization.Compile(typ)
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, naming := range []serialization.NamingPolicy{serialization.CamelCase, serialization.LegacyGoCamelCase} {
-				next, err := plan.WithNamingPolicy(naming)
-				if !errors.Is(err, faults.ErrUnsupported) || next != nil {
-					t.Fatalf("rebound plan = %v, error = %v, want ErrUnsupported", next, err)
+			for _, naming := range []serialization.NamingPolicy{serialization.PreservePropertyNames, serialization.CamelCase, serialization.LegacyGoCamelCase} {
+				plan, err := serialization.Compile(typ, naming)
+				if !errors.Is(err, faults.ErrUnsupported) || plan != nil {
+					t.Fatalf("named plan = %v, error = %v, want ErrUnsupported", plan, err)
 				}
 			}
 		})
 	}
 }
 
-func TestUnambiguousDottedBinaryPayloadKeepsCodec(t *testing.T) {
-	value := struct {
+func TestUnambiguousDottedBinaryPayloadRefusesPlan(t *testing.T) {
+	plan, err := serialization.Compile(reflect.TypeFor[struct {
 		Payload []byte `json:"data.payload"`
-	}{Payload: []byte{1}}
-	plan, err := serialization.Compile(reflect.TypeOf(value))
-	if err != nil {
-		t.Fatal(err)
-	}
-	next, err := plan.WithNamingPolicy(serialization.CamelCase)
-	if err != nil {
-		t.Fatal(err)
-	}
-	data, err := next.Marshal(value)
-	if err != nil || string(data) != `{"data.payload":"AQ=="}` {
-		t.Fatalf("unambiguous payload = %s, %v", data, err)
+	}]())
+	if plan != nil || !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatalf("dotted binary payload admitted: %v, %v", plan, err)
 	}
 }
 
@@ -111,15 +98,13 @@ func TestNonBinaryDottedCollisionKeepsFirstMatchAndSnapshot(t *testing.T) {
 	for _, aliasFirst := range []bool{true, false} {
 		t.Run(map[bool]string{true: "alias first", false: "alias last"}[aliasFirst], func(t *testing.T) {
 			typ := reflect.TypeFor[struct {
-				Alias  string `json:"data.payload"`
-				Data   struct{ Payload string }
-				Binary []byte
+				Alias string `json:"data.payload"`
+				Data  struct{ Payload string }
 			}]()
 			if !aliasFirst {
 				typ = reflect.TypeFor[struct {
-					Data   struct{ Payload string }
-					Alias  string `json:"data.payload"`
-					Binary []byte
+					Data  struct{ Payload string }
+					Alias string `json:"data.payload"`
 				}]()
 			}
 			before, err := serialization.Compile(typ)

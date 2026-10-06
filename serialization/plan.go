@@ -62,8 +62,9 @@ type field struct {
 // Compile validates a struct shape before registration. Recursive types use schema
 // references. Embedded fields follow encoding/json promotion and declaration order.
 // Custom marshalers, interface values, unsupported chronicle directives and
-// dotted-name path collisions involving binary are rejected rather than generating
-// a schema that disagrees with serialization or kernel property-path resolution.
+// non-simple, reserved or case-insensitively duplicate property names in binary-
+// containing graphs are rejected rather than generating a schema that disagrees
+// with serialization or kernel property-path resolution.
 // Recognized directives are metadata; artifact registries must also ValidateRole.
 // Naming defaults to PreservePropertyNames; the last optional policy wins.
 func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
@@ -129,6 +130,12 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	}
 	state := &compileState{active: map[compileKey]*node{}, definitions: map[string]any{}, codecs: config.Codecs}
 	root, err := compile(typ, state, policy, readModel)
+	if state.duplicateNames != nil && (err != nil || !state.binary) {
+		if state.binary {
+			return nil, binaryPropertyNamesError()
+		}
+		return nil, state.duplicateNames
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +160,9 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 			families = append(families, family)
 		}
 	}
-	for _, candidate := range append([]*node{root}, families...) {
+	candidates := append([]*node{root}, families...)
+	binary := false
+	for _, candidate := range candidates {
 		// Compute capability metadata once, including recursive/reference edges.
 		if err := visitNodes(candidate, map[*node]bool{}, func(n *node) error {
 			n.containsBinary = hasBinary(n)
@@ -164,8 +173,16 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 		if err := validateBinaryPlacement(candidate); err != nil {
 			return nil, err
 		}
-		if err := validateBinaryPathAmbiguity(candidate); err != nil {
-			return nil, err
+		binary = binary || candidate.containsBinary
+	}
+	if state.duplicateNames != nil && !binary {
+		return nil, state.duplicateNames
+	}
+	if binary {
+		for _, candidate := range candidates {
+			if err := validateBinaryPropertyNames(candidate); err != nil {
+				return nil, err
+			}
 		}
 	}
 	state.definitions = reachableDefinitions(root.schema, state.definitions)
@@ -196,9 +213,11 @@ type compileKey struct {
 	derived, root bool
 }
 type compileState struct {
-	active      map[compileKey]*node
-	definitions map[string]any
-	codecs      *Codecs
+	active         map[compileKey]*node
+	definitions    map[string]any
+	codecs         *Codecs
+	duplicateNames error
+	binary         bool
 }
 
 func compile(typ reflect.Type, state *compileState, policy NamingPolicy, readModelRoot bool) (*node, error) {
@@ -306,7 +325,7 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 			if typ.Elem() != reflect.TypeFor[byte]() {
 				return nil, unsupported(typ, "binary requires the built-in byte element type")
 			}
-			n.binary, n.scalar = true, true
+			n.binary, n.scalar, state.binary = true, true, true
 			n.schema["type"], n.schema["format"] = "string", "byte-array"
 			return n, nil
 		}
@@ -362,7 +381,11 @@ func (n *node) compileFields(state *compileState, policy NamingPolicy, readModel
 	if derived {
 		fieldPolicy = CamelCase
 	}
-	fields, err := serializedFields(n.typ, fieldPolicy, readModelRoot)
+	fields, err := serializedFieldsWithDuplicateHandler(n.typ, fieldPolicy, readModelRoot, func(err error) {
+		if state.duplicateNames == nil {
+			state.duplicateNames = err
+		}
+	})
 	if err != nil {
 		return err
 	}

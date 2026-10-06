@@ -24,6 +24,13 @@ type fieldCandidate struct {
 // serializedFields resolves promotion first, then retains index-path order, as
 // encoding/json does. Direct duplicate names still fail closed, as before.
 func serializedFields(typ reflect.Type, policy NamingPolicy, readModelRoot bool) ([]fieldCandidate, error) {
+	return serializedFieldsWithDuplicateHandler(typ, policy, readModelRoot, nil)
+}
+
+// Plans can defer an exact duplicate until the full binary capability graph is
+// known. All other callers retain immediate duplicate refusal. Deferred fields
+// are never published: binary naming admission or the original error rejects them.
+func serializedFieldsWithDuplicateHandler(typ reflect.Type, policy NamingPolicy, readModelRoot bool, duplicate func(error)) ([]fieldCandidate, error) {
 	var candidates []fieldCandidate
 	if err := collectCandidates(typ, policy, readModelRoot, nil, "", false, map[reflect.Type]bool{}, &candidates); err != nil {
 		return nil, err
@@ -53,7 +60,15 @@ func serializedFields(typ reflect.Type, policy NamingPolicy, readModelRoot bool)
 			}
 		}
 		if depth == 1 && len(dominant) > 1 {
-			return nil, fmt.Errorf("%w: %s: duplicate JSON property: %s", faults.ErrInvalidConfiguration, typ, candidate.name)
+			err := fmt.Errorf("%w: %s: duplicate JSON property: %s", faults.ErrInvalidConfiguration, typ, candidate.name)
+			if duplicate == nil {
+				return nil, err
+			}
+			duplicate(err)
+			for _, i := range dominant {
+				selected[i] = true
+			}
+			continue
 		}
 		var tagged []int
 		for _, i := range dominant {

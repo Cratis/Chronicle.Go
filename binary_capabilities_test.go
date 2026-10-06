@@ -45,6 +45,51 @@ type capabilityBinaryIdentity struct {
 }
 type capabilityBinaryComposite struct{ Payload []byte }
 type capabilityBinaryBase struct{ ID string }
+type capabilityBinaryCrossFirst struct {
+	Flat struct{ Value []byte } `json:"a.b"`
+	A    struct {
+		Alias string `json:"b.Value"`
+	} `json:"a"`
+}
+type capabilityBinaryCrossLast struct {
+	A struct {
+		Alias string `json:"b.Value"`
+	} `json:"a"`
+	Flat struct{ Value []byte } `json:"a.b"`
+}
+type capabilityBinaryFunctionFirst struct {
+	Alias   int `json:"Payload.Week"`
+	Payload []byte
+}
+type capabilityBinaryFunctionLast struct {
+	Payload []byte
+	Alias   int `json:"Payload.Week"`
+}
+type capabilityBinaryCaseFirst struct {
+	Note    string `json:"payload"`
+	Payload []byte
+}
+type capabilityBinaryCaseLast struct {
+	Payload []byte
+	Note    string `json:"payload"`
+}
+type capabilityBinaryUnicodeFirst struct {
+	Note    string `json:"é"`
+	Payload []byte `json:"É"`
+}
+type capabilityBinaryUnicodeLast struct {
+	Payload []byte `json:"É"`
+	Note    string `json:"é"`
+}
+type capabilityBinaryReserved struct{ Week []byte }
+type capabilityBinaryKelvinFirst struct {
+	Note string `json:"K"`
+	K    []byte
+}
+type capabilityBinaryKelvinLast struct {
+	K    []byte
+	Note string `json:"K"`
+}
 
 func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 	event, err := events.Define[capabilityBinaryPayload]()
@@ -88,7 +133,7 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 		{"ambiguous model plan alias first", func() error { _, err := readmodels.Define[binaryAliasFirst](); return err }},
 		{"ambiguous model plan alias last", func() error { _, err := readmodels.Define[binaryAliasLast](); return err }},
 		{"event naming plan alias first", func() error {
-			event, err := events.Define[binaryKeyAliasFirst]()
+			event, err := events.Define[capabilityBinaryKelvinFirst]()
 			if err != nil {
 				return err
 			}
@@ -96,13 +141,29 @@ func TestBinaryCapabilitiesRefuseBeforeIO(t *testing.T) {
 			return err
 		}},
 		{"event naming plan alias last", func() error {
-			event, err := events.Define[binaryKeyAliasLast]()
+			event, err := events.Define[capabilityBinaryKelvinLast]()
 			if err != nil {
 				return err
 			}
 			_, err = event.Descriptor().WithNamingPolicy(serialization.CamelCase)
 			return err
 		}},
+		{"cross-level event first", func() error { _, err := events.Define[capabilityBinaryCrossFirst](); return err }},
+		{"cross-level event last", func() error { _, err := events.Define[capabilityBinaryCrossLast](); return err }},
+		{"cross-level model first", func() error { _, err := readmodels.Define[capabilityBinaryCrossFirst](); return err }},
+		{"cross-level model last", func() error { _, err := readmodels.Define[capabilityBinaryCrossLast](); return err }},
+		{"derived function event first", func() error { _, err := events.Define[capabilityBinaryFunctionFirst](); return err }},
+		{"derived function event last", func() error { _, err := events.Define[capabilityBinaryFunctionLast](); return err }},
+		{"derived function model first", func() error { _, err := readmodels.Define[capabilityBinaryFunctionFirst](); return err }},
+		{"derived function model last", func() error { _, err := readmodels.Define[capabilityBinaryFunctionLast](); return err }},
+		{"case siblings event first", func() error { _, err := events.Define[capabilityBinaryCaseFirst](); return err }},
+		{"case siblings event last", func() error { _, err := events.Define[capabilityBinaryCaseLast](); return err }},
+		{"case siblings model first", func() error { _, err := readmodels.Define[capabilityBinaryCaseFirst](); return err }},
+		{"case siblings model last", func() error { _, err := readmodels.Define[capabilityBinaryCaseLast](); return err }},
+		{"Unicode siblings first", func() error { _, err := events.Define[capabilityBinaryUnicodeFirst](); return err }},
+		{"Unicode siblings last", func() error { _, err := events.Define[capabilityBinaryUnicodeLast](); return err }},
+		{"reserved event member", func() error { _, err := events.Define[capabilityBinaryReserved](); return err }},
+		{"reserved model member", func() error { _, err := readmodels.Define[capabilityBinaryReserved](); return err }},
 		{"unique tag", func() error { _, err := events.Define[capabilityBinaryUnique](); return err }},
 		{"unique builder", func() error {
 			_, err := constraints.UniqueValues("binary").On(event.Descriptor(), "Payload").Build()

@@ -3,51 +3,59 @@
 
 package serialization
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+	"unicode"
 
-// A literal dotted name and a segmented path can denote different properties in
-// the kernel. Reject binary-involved collisions in the plan, not one consumer at
-// a time. Ordinary collisions retain their historical first-match behavior.
-func validateBinaryPathAmbiguity(root *node) error {
-	if !root.containsBinary {
-		return nil
-	}
+	"github.com/cratis/chronicle.go/declarations"
+	"github.com/cratis/chronicle.go/internal/faults"
+)
+
+// Binary-containing graphs use only ordinary, non-reserved property segments.
+// Checking all emitted siblings at every level avoids depending on which path
+// partition, accessor or case-insensitive fallback the kernel happens to choose.
+// Binary-free graphs retain their existing naming and lookup behavior.
+func validateBinaryPropertyNames(root *node) error {
 	return visitNodes(root, map[*node]bool{}, func(n *node) error {
+		names := make(map[string]bool, len(n.fields))
 		for _, f := range n.fields {
-			if !strings.Contains(f.name, ".") {
-				continue
+			key := binaryPropertyNameKey(f.name)
+			if strings.Contains(f.name, ".") || !declarations.Path(f.name) || binaryReservedPropertyName(key) || names[key] {
+				return binaryPropertyNamesError()
 			}
-			count, binary := binaryPathCandidates(n, f.name)
-			if count > 1 && binary {
-				return unsupported(n.typ, "binary-involved dotted property path ambiguity is not supported")
-			}
+			names[key] = true
 		}
 		return nil
 	})
 }
 
-// Resolve every partition of a finite serialized path by emitted field names.
-// Unlike flattened metadata this reaches beyond recursive edges, and unlike
-// strings.Split it accounts for literal dots at intermediate object levels too.
-// Each field step consumes a nonempty name, so recursive types terminate.
-func binaryPathCandidates(n *node, path string) (int, bool) {
-	for n.reference != nil || n.item != nil {
-		if n.reference != nil {
-			n = n.reference
-		} else {
-			n = n.item
-		}
+func binaryPropertyNamesError() error {
+	return fmt.Errorf("%w: binary-containing types require simple, case-insensitively unique, non-reserved property names", faults.ErrUnsupported)
+}
+
+// v19.29.4 PropertyPath.ResolvePropertyPathSegment recognizes Week (the entire
+// DerivedPropertyFunctions.All registry) and $this. *NotSet* is its sentinel.
+// LiteralExpressionResolver also intercepts true/false before ordinary event
+// content. Brackets, call syntax and all $-prefixed expression tokens are already
+// excluded by the identifier grammar, but the path tokens are listed explicitly.
+func binaryReservedPropertyName(key string) bool {
+	switch key {
+	case "WEEK", "$THIS", "*NOTSET*", "TRUE", "FALSE":
+		return true
+	default:
+		return false
 	}
-	count, binary := 0, false
-	for _, f := range n.fields {
-		if f.name == path {
-			count++
-			binary = binary || f.value.containsBinary
-		} else if remainder, ok := strings.CutPrefix(path, f.name+"."); ok {
-			candidates, contains := binaryPathCandidates(f.value, remainder)
-			count += candidates
-			binary = binary || contains
+}
+
+// OrdinalIgnoreCase uses simple uppercase, not Unicode full case folding:
+// no expansions or normalization; Kelvin sign stays distinct from ASCII K.
+// CLR ordinal casing leaves dotless i and long s distinct from ASCII I and S.
+func binaryPropertyNameKey(name string) string {
+	return strings.Map(func(r rune) rune {
+		if r == '\u0131' || r == '\u017f' {
+			return r
 		}
-	}
-	return count, binary
+		return unicode.ToUpper(r)
+	}, name)
 }

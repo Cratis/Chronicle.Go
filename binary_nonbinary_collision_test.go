@@ -14,14 +14,12 @@ import (
 )
 
 type ordinaryDottedAliasFirst struct {
-	Alias  string `json:"data.payload"`
-	Data   struct{ Payload string }
-	Binary []byte
+	Alias string `json:"data.payload"`
+	Data  struct{ Payload string }
 }
 type ordinaryDottedAliasLast struct {
-	Data   struct{ Payload string }
-	Alias  string `json:"data.payload"`
-	Binary []byte
+	Data  struct{ Payload string }
+	Alias string `json:"data.payload"`
 }
 
 func TestNonBinaryCollisionKeepsArtifactNamingBehavior(t *testing.T) {
@@ -74,8 +72,7 @@ func testNonBinaryCollisionArtifacts[T any](t *testing.T) {
 	if _, err := definition.Rebind(namedModel, before, after); err != nil {
 		t.Fatal(err)
 	}
-	// Existing nonbinary alias matching remains valid alongside a qualified
-	// binary-to-binary AutoMap pair in the same schemas.
+	// Binary-free alias matching retains its existing AutoMap behavior.
 	auto := projections.NewBuilder("ordinary-dotted-automap", model)
 	projections.From(auto, event, nil)
 	d, err := auto.Build()

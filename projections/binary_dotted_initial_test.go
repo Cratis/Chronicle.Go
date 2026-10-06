@@ -4,9 +4,11 @@
 package projections_test
 
 import (
+	"errors"
 	"testing"
 
-	"github.com/cratis/chronicle.go/projections"
+	chronicle "github.com/cratis/chronicle.go"
+	"github.com/cratis/chronicle.go/readmodels"
 )
 
 type binaryDottedInitialLeaf struct {
@@ -17,18 +19,16 @@ type binaryDottedInitialOwner struct {
 }
 
 func TestBinaryDottedInitialValuesRefuse(t *testing.T) {
+	// Neither descriptor can reach WithInitialValues: naming admission now
+	// refuses even unambiguous dotted binary leaves and owning objects.
 	t.Run("leaf", func(t *testing.T) {
-		b := projections.NewBuilder("binary-dotted-leaf", mustModel[binaryDottedInitialLeaf](t), projections.NoAutoMap(), projections.WithInitialValues(binaryDottedInitialLeaf{Payload: []byte{1}}))
-		projections.From(b, mustEvent[binaryMappedEvent](t), nil)
-		_, err := b.Build()
-		binaryMappingFailure(t, err)
+		if _, err := readmodels.Define[binaryDottedInitialLeaf](); !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatalf("dotted binary leaf admitted: %v", err)
+		}
 	})
 	t.Run("owner", func(t *testing.T) {
-		value := binaryDottedInitialOwner{}
-		value.Data.Payload = []byte{1}
-		b := projections.NewBuilder("binary-dotted-owner", mustModel[binaryDottedInitialOwner](t), projections.NoAutoMap(), projections.WithInitialValues(value))
-		projections.From(b, mustEvent[binaryMappedEvent](t), nil)
-		_, err := b.Build()
-		binaryMappingFailure(t, err)
+		if _, err := readmodels.Define[binaryDottedInitialOwner](); !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatalf("dotted binary owner admitted: %v", err)
+		}
 	})
 }

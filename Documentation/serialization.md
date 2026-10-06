@@ -160,14 +160,36 @@ runtime ordinary-scalar profiles are unsupported. Read-model identity and subjec
 fallback properties cannot be binary, even without a projection. This includes
 all case variants of serialized `id` and the MongoDB `_id` property.
 
-A literal dotted JSON name may collide with a nested serialized path. For example,
-`json:"data.payload"` can name an alias while `Data.Payload` names a different
-property. If any candidate contains binary, plan compilation returns
-`chronicle.ErrUnsupported` before registration, regardless of field order. Naming
-recompilation applies the same check: a collision introduced by `CamelCase` cannot
-reach a projection, constraint, index or read-model payload. Rename the alias or
-nested property so their serialized paths differ. Collisions without binary keep
-the existing behavior, even when an unrelated property contains binary.
+If a type graph contains binary anywhere, **every serialized property name** in
+that graph must be a simple, case-insensitively unique, non-reserved segment.
+This includes ordinary siblings unrelated to the binary leaf, nested objects,
+collection members, embedded/promoted fields and registered derived variants,
+including unused variants in the plan's codec set. Names are checked under the
+active naming policy at compilation and every naming recompilation, before
+registration. Violations return `chronicle.ErrUnsupported` without payload data.
+
+A simple segment is nonempty: its first character is a Unicode letter or `_`,
+and subsequent characters are Unicode letters, decimal digits or `_`. Dots,
+brackets, `$`, parentheses, hyphens, spaces and combining marks are not admitted.
+Chronicle 19.29.4's `PropertyPath` splits dots, recognizes bracketed array access
+and function/accessor segments, then treats the remainder as `PropertyName`;
+this identifier subset deliberately avoids those alternate interpretations.
+The full pinned derived-function registry contains only `Week` (also recognized
+as `Week()`); the path accessor is `$this` and the unset sentinel is `*NotSet*`.
+The additional words `true` and `false` are reserved because the kernel's literal
+resolver intercepts them. All reserved names are compared case-insensitively.
+
+Sibling uniqueness is local to each object, not global to the graph. Comparison
+uses Unicode simple uppercase, with dotless `ı` and long `ſ` kept distinct from
+ASCII `I` and `S`, matching CLR ordinal casing. It performs no full case folding,
+multicharacter expansion or Unicode normalization: `é`/`É` and `σ`/`ς` collide,
+but `k`/`K` and `ß`/`ẞ` do not. The kernel's schema lookup and JSON conversion
+use `OrdinalIgnoreCase`; without this boundary they can select a different
+property from the one Go's capability guards checked. Rename unsafe properties
+rather than relying on field order or an exact-case match. Types with **no binary**
+retain their existing naming, dotted-path lookup and exact-duplicate behavior;
+this rule does not fix their pre-existing kernel ambiguities. See the
+[binary admission source references](parity.md#baselines-and-evidence).
 
 Projection rebinding also rechecks model/variant keys, child identities and every
 From, Join and removal key/parent expression, including composite parts. AutoMap
@@ -183,7 +205,7 @@ transform JSON strings without binary-aware validation; splitting `"AQ=="` on
 `"="` produces invalid base64. No migration operation has binary qualification.
 Keep binary-bearing generations without migrations until such a path is qualified.
 Snapshot naming rebinds retain the binary representation and do not decode or
-reinterpret bytes; their destination plan must pass the same ambiguity check.
+reinterpret bytes; their destination plan must pass the same property-name rule.
 
 The [packaged binary capture](../serialization/testdata/binary/README.md) records
 Chronicle 19.29.4, Fundamentals 7.19.6 and both schema generator APIs. Class
