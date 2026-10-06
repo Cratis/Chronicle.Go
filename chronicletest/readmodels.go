@@ -25,10 +25,12 @@ import (
 // Projection replaces the discovered producer (including a reducer). Initial
 // supplies reducer state, copied through production serialization at construction;
 // initial projection state is unsupported and fails explicitly. Projection
-// declarations with nonempty initial state are also refused: the pinned kernel's
-// all-instance replay omits that state (Chronicle.Go#38). Use a production
-// EventScenario and materialized reads to witness initial values instead.
+// initial values require Materialized because bounded replay omits them.
 type ReadModelOptions[M any] struct {
+	// Materialized reads the kernel's materialized sink after observer completion
+	// evidence instead of bounded replay. Required for projection initial values;
+	// Kernel only. It never overlays state.
+	Materialized bool
 	// Projection replaces the registered producer for M in this fixture only.
 	Projection *projections.Declaration
 	// Initial is a serialized snapshot used at the start of each source's fold.
@@ -42,22 +44,27 @@ type ReadModelOptions[M any] struct {
 }
 
 // ReadModelScenario folds reducers in-process or replays projections on the real
-// kernel. It never implements projection evaluation in Go. Result reads replay
-// collected events; handler code should be deterministic. One fold scope is opened
+// kernel. It never implements projection evaluation in Go. Default reads replay
+// collected events; Materialized reads the real sink after processing evidence.
+// Handler code should be deterministic. One fold scope is opened
 // per source; unlike C#'s multi-source single fold, sources cannot corrupt each other.
 type ReadModelScenario[M any] struct {
-	config        Config
-	client        *chronicle.Client
-	eventScenario *EventScenario
-	artifacts     chronicle.Artifacts
-	model         readmodels.Descriptor
-	reducer       *reducers.Plan
-	projection    projections.Definition
-	subscription  *projectionSubscription
-	history       []reducers.Event
-	initial       json.RawMessage
-	seeds         *seededModels
-	closed        bool
+	config             Config
+	client             *chronicle.Client
+	eventScenario      *EventScenario
+	artifacts          chronicle.Artifacts
+	model              readmodels.Descriptor
+	reducer            *reducers.Plan
+	projection         projections.Definition
+	materialized       bool
+	membership         *projectionSubscription
+	materializedSeeds  []materializedSeed
+	materializationErr error
+	subscription       *projectionSubscription
+	history            []reducers.Event
+	initial            json.RawMessage
+	seeds              *seededModels
+	closed             bool
 }
 
 // OpenReadModelScenario selects the registered producer for M. At most one options
@@ -91,7 +98,7 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 	if err != nil {
 		return nil, err
 	}
-	s := &ReadModelScenario[M]{config: config, client: client}
+	s := &ReadModelScenario[M]{config: config, client: client, materialized: option.Materialized}
 	fail := func(err error) (*ReadModelScenario[M], error) { return nil, errors.Join(err, s.Close()) }
 	s.artifacts, err = client.Artifacts(config.Store)
 	if err != nil {
@@ -116,7 +123,13 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 			s.projection = definition
 		}
 	}
+	if option.Materialized && option.Initial != nil {
+		return fail(fmt.Errorf("%w: materialized scenarios cannot overlay Initial", chronicle.ErrUnsupported))
+	}
 	if s.reducer != nil {
+		if option.Materialized {
+			return fail(fmt.Errorf("%w: materialized scenarios require a kernel projection", ErrFidelityUnavailable))
+		}
 		if config.Engine == Kernel {
 			return fail(fmt.Errorf("%w: reducer scenarios require Substitute for in-process folding; use a kernel EventScenario for append constraints", ErrFidelityUnavailable))
 		}
@@ -137,8 +150,14 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 	if option.Initial != nil {
 		return fail(fmt.Errorf("%w: projection initial state", chronicle.ErrUnsupported))
 	}
-	if s.projection.KernelDefinition().InitialModelState != "{}" {
-		return fail(fmt.Errorf("%w: kernel all-instance replay omits projection initial state; use materialized reads (Chronicle.Go#38)", ErrFidelityUnavailable))
+	if !option.Materialized && s.projection.KernelDefinition().InitialModelState != "{}" {
+		return fail(fmt.Errorf("%w: kernel all-instance replay omits projection initial state; set Materialized (Chronicle.Go#38)", ErrFidelityUnavailable))
+	}
+	if option.Materialized {
+		s.membership, err = materializedProjectionMembership(s.projection, s.artifacts.Events)
+		if err != nil {
+			return fail(err)
+		}
 	}
 	if len(s.artifacts.Reactors) != 0 || len(s.artifacts.Reducers) != 0 {
 		return fail(fmt.Errorf("%w: projection scenario registry contains other Go observers; isolate the registry or use EventScenario for live lifecycle", chronicle.ErrUnsupported))
@@ -171,14 +190,18 @@ func NewReadModelScenario[M any](t testing.TB, config Config, options ...ReadMod
 	return s
 }
 
-// Fidelity reports local fold substitutions or kernel replay boundaries. Projection
-// replay does not establish sink persistence or observer catch-up even on a kernel.
+// Fidelity reports local fold, kernel replay or materialized-sink boundaries.
+// Materialized proves neither lifecycle conformance nor delivery/effect acceptance.
 func (s *ReadModelScenario[M]) Fidelity() Fidelity {
 	if s.reducer != nil {
 		return localFidelity()
 	}
 	f := kernelFidelity()
-	f.substituted = append(f.substituted, ObserverLifecycle, ReadModelStorage, DurableStorage, DeliveryMetadata, EffectAcceptance)
+	if s.materialized {
+		f.substituted = append(f.substituted, ObserverLifecycle, DeliveryMetadata, EffectAcceptance)
+	} else {
+		f.substituted = append(f.substituted, ObserverLifecycle, ReadModelStorage, DurableStorage, DeliveryMetadata, EffectAcceptance)
+	}
 	return f
 }
 
@@ -191,6 +214,9 @@ func (s *ReadModelScenario[M]) Fidelity() Fidelity {
 func (s *ReadModelScenario[M]) Given(ctx context.Context, source events.SourceID, values ...any) error {
 	if s.closed {
 		return chronicle.ErrClosed
+	}
+	if s.materializationErr != nil {
+		return s.materializationErr
 	}
 	if strings.TrimSpace(string(source)) == "" {
 		return chronicle.ErrInvalidConfiguration
@@ -228,6 +254,13 @@ func (s *ReadModelScenario[M]) Given(ctx context.Context, source events.SourceID
 			if err = result.Err(); err != nil {
 				return err
 			}
+			if s.materialized {
+				if result.Position == nil || *result.Position != events.SequenceNumber(len(s.history)) {
+					s.materializationErr = fmt.Errorf("%w: materialized scenario requires exclusive sequence ownership from position zero", ErrFidelityUnavailable)
+					return s.materializationErr
+				}
+				s.materializedSeeds = append(s.materializedSeeds, materializedSeed{descriptor.Ref(), *result.Position})
+			}
 		}
 		s.history = append(s.history, reducers.Event{Content: content, Context: ec})
 	}
@@ -235,8 +268,8 @@ func (s *ReadModelScenario[M]) Given(ctx context.Context, source events.SourceID
 }
 
 // Instances returns owned values keyed by the actual projected key. Kernel replay
-// includes all roots, not just seeded source IDs, so joins/custom keys remain valid.
-// A missing/duplicate key in the kernel response fails rather than guessing.
+// includes all roots, not just seeded source IDs. Materialized reads the real sink
+// after observer evidence. A missing/duplicate key fails rather than guessing.
 func (s *ReadModelScenario[M]) Instances(ctx context.Context) (map[readmodels.Key]M, error) {
 	if s.closed {
 		return nil, chronicle.ErrClosed
@@ -247,7 +280,13 @@ func (s *ReadModelScenario[M]) Instances(ctx context.Context) (map[readmodels.Ke
 	if s.reducer != nil {
 		return s.reduce(ctx)
 	}
-	documents, err := s.eventScenario.Store.ReadModels().ReplayProjection(ctx, s.model.Identifier(), uint64(len(s.history)))
+	var documents []json.RawMessage
+	var err error
+	if s.materialized {
+		documents, err = s.materializedDocuments(ctx)
+	} else {
+		documents, err = s.eventScenario.Store.ReadModels().ReplayProjection(ctx, s.model.Identifier(), uint64(len(s.history)))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +396,7 @@ func (s *ReadModelScenario[M]) Instance(ctx context.Context) (readmodels.Instanc
 	if s.closed {
 		return readmodels.Instance[M]{}, chronicle.ErrClosed
 	}
-	if s.eventScenario != nil {
+	if s.eventScenario != nil && !s.materialized {
 		documents, err := s.eventScenario.Store.ReadModels().ReplayProjection(ctx, s.model.Identifier(), uint64(len(s.history)))
 		if err != nil {
 			return readmodels.Instance[M]{}, err

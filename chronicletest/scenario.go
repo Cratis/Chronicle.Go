@@ -65,6 +65,8 @@ var (
 	ErrFidelityUnavailable = errors.New("scenario cannot prove requested fidelity")
 	// ErrKernelUnavailable means no kernel connection string was supplied.
 	ErrKernelUnavailable = errors.New("kernel scenario requires a connection string")
+	// ErrMaterializationIncomplete means observer evidence cannot establish catch-up.
+	ErrMaterializationIncomplete = errors.New("scenario materialization incomplete")
 	// ErrAmbiguousInstance requires selection by key when multiple instances exist.
 	ErrAmbiguousInstance = errors.New("multiple read model instances; select a key")
 )

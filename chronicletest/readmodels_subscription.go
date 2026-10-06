@@ -27,6 +27,12 @@ type projectionSubscription struct {
 }
 
 func strictProjectionSubscription(definition projections.Definition, catalog *events.Catalog) (*projectionSubscription, error) {
+	return projectionMembership(definition, catalog)
+}
+
+// projectionMembership admits the shared root source-key scenario profile.
+// Initial values do not alter event membership.
+func projectionMembership(definition projections.Definition, catalog *events.Catalog) (*projectionSubscription, error) {
 	if definition.Identifier() == "" || catalog == nil || definition.Model().GoType() == nil {
 		return nil, chronicle.ErrNotRegistered
 	}
@@ -36,7 +42,7 @@ func strictProjectionSubscription(definition projections.Definition, catalog *ev
 		return nil, fmt.Errorf("%w: strict projection scenario variants", chronicle.ErrUnsupported)
 	}
 	wire := definition.KernelDefinition()
-	if wire.InitialModelState != "{}" || len(wire.Join) != 0 || len(wire.RemovedWithJoin) != 0 || len(wire.Children) != 0 || len(wire.Nested) != 0 || len(wire.FromEvery) != 0 || wire.FromEventProperty != nil {
+	if len(wire.Join) != 0 || len(wire.RemovedWithJoin) != 0 || len(wire.Children) != 0 || len(wire.Nested) != 0 || len(wire.FromEvery) != 0 || wire.FromEventProperty != nil {
 		return nil, fmt.Errorf("%w: strict projection scenario relationships or derivative definitions", chronicle.ErrUnsupported)
 	}
 	if wire.SubscribesToAllEvents && (len(wire.From) != 0 || len(wire.RemovedWith) != 0) {
