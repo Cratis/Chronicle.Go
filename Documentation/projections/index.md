@@ -275,7 +275,8 @@ registration barrier, and replay from frozen snapshots on reconnect. Adding to a
 registry after `NewClient` does not alter that client. Definitions expose a
 `Hash()` of their finalized wire shape, stable only within one build. Do not
 persist it across upgrades; neither the kernel nor C# uses a client hash. Runtime
-registry extension and derived-child codecs remain unimplemented. Inbox sequences now
+registry extension remains unimplemented. Children of a single-derivative family
+are covered in [derived children](../derived-codecs.md#project-derived-children). Inbox sequences now
 [provision external subscriptions](../integrations/index.md); see
 [variants, recursive children and queries](variants.md) and the
 [attribute parity map](../parity.md) for the remaining boundaries.

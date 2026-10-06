@@ -129,7 +129,11 @@ func IdentifiedBy[C, V any](field Field[C, V]) ChildOption {
 	}
 }
 
-// Children declares a collection node. V must be a slice/array of C or *C.
+// Children declares a collection node. V must be a slice/array of C or *C, or a
+// slice/array of a derived-type family whose single registered derivative is C
+// or *C. A derived child node writes the derivative's _derivedTypeId on every
+// From so the family codec can read it back; zero or several registered
+// derivatives fail Build/Compile.
 // Child From subscriptions stay child-scoped. AutoMap defaults to Inherit;
 // parent keys and identity mappings require explicit fluent declarations.
 // The callback runs once and is snapshotted, including all recursive builders.
