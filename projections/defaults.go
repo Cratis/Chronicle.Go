@@ -48,8 +48,12 @@ func WithInitialValues[M any](value M) Option {
 // codec and canonical definition; it is not an event mapping or event filter.
 func WithInitialValue[M, V any](target Field[M, V], value V) Option {
 	return func(d *declaration) {
-		field, ok := serialization.FieldAt(d.model.Fields(), target.path)
-		if target.owner != d.model.GoType() || !ok || field.Type != reflect.TypeFor[V]() || field.Collection || field.Scalar == serialization.NotScalar {
+		field, ok := binaryMappingField(d.model.Fields(), target.path)
+		if ok && binaryField(field) {
+			d.err = binaryUnsupported("initial state cannot initialize a binary model root")
+			return
+		}
+		if target.owner != d.model.GoType() || !ok || field.Type != reflect.TypeFor[V]() || field.Collection || !field.Scalar.IsPrimitive() {
 			d.err = invalid("initial value requires a matching scalar model path")
 			return
 		}
@@ -144,6 +148,11 @@ func prepareInitialState(model readmodels.Descriptor, state string) (string, err
 	for root := range protected {
 		if _, exists := object[root]; exists {
 			return "", invalid("initial state cannot initialize a protected model root")
+		}
+	}
+	for _, field := range enumRootFields(model.Fields()) {
+		if _, present := object[field.Name]; present && field.ContainsBinary() {
+			return "", binaryUnsupported("initial state cannot initialize a binary model root")
 		}
 	}
 	// Canonical JSON detaches all values and stabilizes definition identity.

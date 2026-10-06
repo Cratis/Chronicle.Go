@@ -75,6 +75,9 @@ func rebindJSON(data json.RawMessage, before, after *node, depth int) (json.RawM
 	if after.reference != nil {
 		after = after.reference
 	}
+	if before.binary != after.binary {
+		return nil, unsupported(before.typ, "snapshot binary representation changed")
+	}
 	if string(data) == "null" || before.scalar || before.concept != nil {
 		return data, nil
 	}

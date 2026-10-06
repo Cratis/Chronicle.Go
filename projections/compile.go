@@ -85,8 +85,11 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 	}
 	compiled.nodeDefinition = *node
 	if d.variantKey != "" {
-		field, ok := serialization.FieldAt(d.model.Fields(), d.variantKey)
-		if !ok || field.IsEnum() || field.Type != d.variantKeyType || field.Nullable || field.Collection || field.Scalar == serialization.NotScalar {
+		field, ok := binaryMappingField(d.model.Fields(), d.variantKey)
+		if ok && binaryField(field) {
+			return Definition{}, binaryMappingFailure(compiled, field, events.TypeRef{}, "VariantKey", "binary identities are not supported")
+		}
+		if !ok || field.IsEnum() || field.Type != d.variantKeyType || field.Nullable || field.Collection || !field.Scalar.IsPrimitive() {
 			return Definition{}, declarationFailure(d.id, Provenance{GoField: field.GoField, Path: d.variantKey, Directive: "VariantKey", Offset: -1}, invalid("variant key requires a non-nullable non-enum scalar model field"))
 		}
 		if compiled.keyField != "" && compiled.keyField != d.variantKey {
@@ -135,7 +138,7 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 }
 
 func addWrite(d *definition, from *fromDefinition, w write, modelFields, eventFields []serialization.Field, overwrite bool) error {
-	target, ok := serialization.FieldAt(modelFields, w.path)
+	target, ok := binaryMappingField(modelFields, w.path)
 	if !ok {
 		return declarationFailure(d.id, w.provenance, invalid("unknown serialized model property"))
 	}

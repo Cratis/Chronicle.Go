@@ -111,6 +111,160 @@ These checks inspect the codec's actual scalar JSON, so a struct wrapper cannot
 bypass kernel limits. Concept map keys and arbitrary custom schema codecs are
 not supported by this slice.
 
+## Binary values
+
+Use `[]byte` for binary content. No codec declaration is needed. Named slice types
+whose element is the built-in `byte` have the same representation, provided they
+have no custom JSON/text marshaler. Fixed `[N]byte` arrays remain integer arrays.
+
+| Declaration/value | JSON and schema |
+| --- | --- |
+| `[]byte{1}` | `"AQ=="`; string with `byte-array` format |
+| Empty non-nil `[]byte{}` | `""`, not `[]` |
+| Nil byte-slice property | Omitted |
+| `*[]byte` | String/null schema with `byte-array?` format; nil pointer omitted |
+| `[][]byte` and other collections containing binary | Refused before registration: the pinned kernel's projection conversion loses binary elements |
+
+### Admitted binary shapes
+
+Admission is limited to these shapes, with ASCII property names throughout an
+acyclic type graph. A named slice over built-in `byte`, or a promoted embedded
+leaf, has the same emitted binary schema and payload as its plain/root spelling;
+neither introduces a new kernel shape.
+
+| Shape | Witness or captured golden |
+| --- | --- |
+| Event binary leaf (`[]byte`, including named slices without custom codecs) and one nullable pointer to a leaf | Packaged `BinaryEvent.Payload` / `Optional` writes, reads and both schema APIs in `serialization/testdata/binary/profile.json`; kernel `BinaryChanged.Payload` / `Optional` in `TestKernelBinaryEventsProjectionAndReadModel` |
+| Binary event leaves inside acyclic objects, including pointers to objects | Packaged `BinaryEvent.Nested.Inner`; kernel event-history readback of `BinaryChanged.Nested.Inner` in the same witness |
+| Read-model binary leaf or one nullable pointer emitted at the root, including promoted embedded leaves | Packaged `BinaryModel.Payload` / `Optional` schemas and Expando conversion pairs; kernel `BinaryWitnessModel.Payload` / `Optional` Get readbacks |
+| Ordinary projection **From** AutoMap leaf-to-leaf copy with identical compiled binary representations and ASCII names | `TestKernelBinaryEventsProjectionAndReadModel` uses only `projections.From` for root `Payload` / `Optional`, under Preserve and CamelCase |
+
+### Refused binary shapes
+
+- Binary copies through **Join** or **VariantOf**, including entering handlers
+  and generated self-joins: neither the witness nor the capture qualifies them.
+- Any recursive type graph containing binary, including a binary-free recursive
+  sibling: no recursive/`$ref` binary schema is captured or witnessed.
+- Any non-ASCII serialized property name anywhere in a binary-containing graph,
+  including ordinary siblings. Kelvin sign `K` and long s `ſ` are refused rather
+  than letting Go's `EqualFold` select a different field from CLR ordinal casing.
+- Binary below a nested read-model object; whole-object binary AutoMap; explicit
+  binary copies. These are not generalized from the former `Nested.Inner` model
+  control. Neither AutoMap endpoint may be an object containing binary.
+
+The remaining capability refusals are listed below; captured collection/map
+controls do not expand admission.
+
+Missing or null non-pointer binary properties decode as owned, non-nil empty slices, including
+on event reads. Nullable pointers remain nil; present strings decode to fresh
+storage. Absent embedded pointers stay absent: an empty binary default never
+creates an optional object. Field metadata classifies binary as
+`serialization.Binary`, not `String` or a byte collection. `IsPrimitive` excludes
+binary, and `ContainsBinary` also identifies objects owning binary descendants.
+
+Reads require padded standard base64 with zero padding bits. URL-safe and
+unpadded encodings, invalid tokens and whitespace inside the string return
+`chronicle.ErrProtocol` without exposing the payload. The packaged C# client
+accepts the captured leading-space/trailing-newline forms and null binary array
+elements; Go deliberately narrows these reads. Both clients write canonical
+base64, including System.Text.Json's `\u002B` escape for `+`.
+
+Binary under collections, maps, derived variants, concepts, protection, indexes,
+unique constraints or subject declarations is refused before registration. This
+includes `chronicle:"unique"`, `UniqueValues(...).On(...)`, `chronicle:"subject"`,
+`WithSubjectProperty`, `chronicle:"index"` and `WithIndexes`. Unique constraints
+and indexes also refuse objects containing binary. The pinned kernel hashes a
+byte array's `ToString()` value, not its contents; subject identities likewise
+lack a qualified cross-client representation. The pinned kernel preserves
+binary arrays in event history but its projection converter treats each byte
+array as another collection; read models lose their byte values. See the
+[binary kernel limitation](parity.md#baselines-and-evidence) for source citations
+and [Chronicle#4595](https://github.com/Cratis/Chronicle/issues/4595) for the upstream fix.
+Go does not repair these lossy read models or weaken its base64 decoder. Whole-object
+binary copies are also refused: the pinned projection converter unwraps any
+single-`value` ExpandoObject even against an object schema, then enumerates its
+bytes into a list instead of preserving the object. That conversion recurses into
+nested objects. See `EventValueProviderExpressionResolvers.cs:113–119,139–158`
+at Chronicle `ae5e00a8` (19.29.4). CLR Unicode AutoMap case matching is not
+qualified. Explicit mappings, binary-to-string
+conversion, initial values, literals, arithmetic, identities, keys, joins,
+projection variants and runtime ordinary-scalar profiles are unsupported. Read-model identity and subject
+fallback properties cannot be binary, even without a projection. This includes
+all case variants of serialized `id` and the MongoDB `_id` property.
+
+If a type graph contains binary anywhere, **every serialized property name** in
+that graph must be an ASCII, case-insensitively unique, non-reserved segment.
+This includes ordinary siblings unrelated to the binary leaf, nested objects,
+collection members, embedded/promoted fields and registered derived variants,
+including unused variants in the plan's codec set. Names are checked under the
+active naming policy at compilation and every naming recompilation, before
+registration. Binary-only name violations return `chronicle.ErrUnsupported`
+without payload data. Exact duplicate names retain `chronicle.ErrInvalidConfiguration`,
+just as in binary-free types. In binary-containing types, actual compile errors
+take precedence over deferred duplicates. Binary-free types still refuse a direct
+duplicate immediately, before compiling later fields, preserving the original
+error ordering even if a later field has an unsupported type.
+
+A simple segment is nonempty: its first character is an ASCII letter,
+and subsequent characters are ASCII letters, digits or `_`. Names
+beginning with `_` are refused at every level, including `_id` and all sink-owned
+properties from `Source/Kernel/Storage/WellKnownProperties.cs` at `ae5e00a8`:
+`__lastHandledEventSequenceNumber`, `__initialized`, `__subject` and `__subjects`.
+Below the root, every case variant of `id` is also refused, even on an ordinary
+sibling in the binary-containing graph. Root identity handling otherwise stays
+unchanged. The MongoDB converter maps every case variant of `id` to `_id`
+recursively, but restores only `id`/`Id`; nested `ID` loses bytes and `Id`/`_id`
+siblings collide. Source: `Source/Kernel/Storage.MongoDB/ExpandoObjectConverter.cs:22–90,330–339`
+and `PropertyExtensions.cs:18–19` at the same revision.
+
+A property named `value` (case-insensitively) is refused inside any object that
+contains binary, preventing the projection converter's single-value unwrapping.
+This includes `Value` under Preserve before a camelCase recompile can make it
+`value`. Objects with no binary descendants retain ordinary `value` properties
+unless another naming rule rejects them. Dots,
+brackets, `$`, parentheses, hyphens, spaces and combining marks are not admitted.
+Chronicle 19.29.4's `PropertyPath` splits dots, recognizes bracketed array access
+and function/accessor segments, then treats the remainder as `PropertyName`;
+this identifier subset deliberately avoids those alternate interpretations.
+The full pinned derived-function registry contains only `Week` (also recognized
+as `Week()`); the path accessor is `$this` and the unset sentinel is `*NotSet*`.
+The additional words `true` and `false` are reserved because the kernel's literal
+resolver intercepts them. All reserved names are compared case-insensitively.
+
+Sibling uniqueness is local to each object, not global to the graph. ASCII
+case-insensitive comparison agrees with both CLR `OrdinalIgnoreCase` and Go's
+`EqualFold` for admitted property names. Non-ASCII serialized names under the
+active naming policy are refused, not normalized by the admission check. Without this boundary decoding
+could populate multiple fields for one differently cased input property. Rename unsafe properties
+rather than relying on field order or an exact-case match. Types with **no binary**
+retain their existing naming, dotted-path lookup and exact-duplicate behavior;
+this rule does not fix their pre-existing kernel ambiguities. See the
+[binary admission source references](parity.md#baselines-and-evidence).
+
+Projection rebinding also rechecks model/variant keys, child identities and every
+From, Join and removal key/parent expression, including composite parts. AutoMap
+checks all candidates of its generated source and target paths. Whole-model
+initial values inspect actual root ownership, including properties whose JSON
+names contain dots.
+
+Event migrations involving either binary-containing endpoint are refused by
+`DefineMigration` and catalog `WithMigrations` before I/O. This includes nullable
+and nested binary fields, identity migrations, rename, default, split, combine
+and directional/shared value maps. The pinned kernel's migration operations
+transform JSON strings without binary-aware validation; splitting `"AQ=="` on
+`"="` produces invalid base64. No migration operation has binary qualification.
+Keep binary-bearing generations without migrations until such a path is qualified.
+Snapshot naming rebinds retain the binary representation and do not decode or
+reinterpret bytes; their destination plan must pass the same property-name rule.
+
+The [packaged binary capture](../serialization/testdata/binary/README.md) records
+Chronicle 19.29.4, Fundamentals 7.19.6 and both schema generator APIs. Class
+properties in C# have no required list; its record control requires `Payload`.
+Go retains its existing field-required rules: slice and pointer properties are
+not required, while ordinary value-struct containers can be required. Binary
+admission does not overwrite persisted schemas: enable generation validation
+and plan a new generation when a historical representation differs.
+
 ## Shared correlation context
 
 `metadata.WithCorrelation` and `metadata.Correlation` share Fundamentals'

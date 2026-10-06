@@ -106,6 +106,9 @@ var kernelLiteral = regexp.MustCompile(`^[\p{L}\p{Mn}\p{Nd}\p{Pc} ._/:*+\-]*$`)
 var kernelArithmeticPath = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9.]*$`)
 
 func validateLiteral(e expression, target serialization.Field) error {
+	if binaryField(target) {
+		return binaryUnsupported("binary literals are not supported")
+	}
 	if e.kind == nullExpression {
 		if !nullableAssignment(target) {
 			return invalid("null requires a supported nullable pointer")
@@ -115,7 +118,7 @@ func validateLiteral(e expression, target serialization.Field) error {
 	if !representableLiteral(e.text) {
 		return invalid("literal cannot be represented by the kernel expression grammar")
 	}
-	if target.Scalar == serialization.NotScalar {
+	if !target.Scalar.IsPrimitive() {
 		return invalid("literal requires a scalar field")
 	}
 	var data []byte
@@ -168,6 +171,10 @@ func validateLiteral(e expression, target serialization.Field) error {
 // scalarCompatible checks wire conversion, not exact Go width or nullability.
 // Typed field/key validation separately preserves declared domain identity.
 func scalarCompatible(target, source serialization.Field, targetFields, sourceFields []serialization.Field) bool {
+	if binaryField(target) || binaryField(source) {
+		// Only the final, qualified AutoMap path admits binary copies.
+		return false
+	}
 	if target.IsEnum() || source.IsEnum() {
 		return target.SameRepresentation(source)
 	}
@@ -182,6 +189,9 @@ func scalarCompatible(target, source serialization.Field, targetFields, sourceFi
 			return false
 		}
 		return objectCompatible(target, source, targetFields, sourceFields)
+	}
+	if !target.Scalar.IsPrimitive() || !source.Scalar.IsPrimitive() {
+		return false
 	}
 	if target.Scalar == serialization.String && source.Scalar == serialization.String {
 		return target.Format == "" || source.Format == "" || stringFormat(target.Format) == stringFormat(source.Format)
@@ -265,6 +275,14 @@ func indirectType(typ reflect.Type) reflect.Type {
 	return typ
 }
 func validateExpression(e expression, target serialization.Field, modelFields, eventFields []serialization.Field, sourceType reflect.Type) error {
+	if binaryField(target) {
+		return binaryUnsupported("binary is only qualified for same-representation AutoMap")
+	}
+	if e.kind == pathExpression || e.kind == addExpression || e.kind == subtractExpression {
+		if source, ok := binaryMappingField(eventFields, e.text); ok && binaryField(source) {
+			return binaryUnsupported("binary is only qualified for same-representation AutoMap")
+		}
+	}
 	switch e.kind {
 	case addExpression, subtractExpression:
 		if !kernelArithmeticPath.MatchString(e.text) {
@@ -273,7 +291,7 @@ func validateExpression(e expression, target serialization.Field, modelFields, e
 		if !numeric(target) {
 			return invalid("arithmetic requires a numeric target")
 		}
-		source, ok := serialization.FieldAt(eventFields, e.text)
+		source, ok := binaryMappingField(eventFields, e.text)
 		if !ok || !numeric(source) {
 			return invalid("arithmetic requires a numeric event field")
 		}
@@ -284,7 +302,7 @@ func validateExpression(e expression, target serialization.Field, modelFields, e
 			return invalid("arithmetic requires a numeric target")
 		}
 	case pathExpression:
-		source, ok := serialization.FieldAt(eventFields, e.text)
+		source, ok := binaryMappingField(eventFields, e.text)
 		if !eventPropertyPath(e.text) || !ok || source.Collection {
 			return invalid("unknown or unsupported event property path")
 		}
@@ -319,8 +337,11 @@ func nullableAssignment(target serialization.Field) bool {
 	if !target.Nullable || target.Collection || target.Type.Kind() != reflect.Pointer {
 		return false
 	}
-	if target.Scalar != serialization.NotScalar {
+	if target.Scalar.IsPrimitive() {
 		return true
+	}
+	if target.ContainsBinary() {
+		return false
 	}
 	typ := indirectType(target.Type)
 	if typ.Kind() != reflect.Slice && (typ.Kind() != reflect.Map || typ.Key().Kind() != reflect.String) {
@@ -438,8 +459,11 @@ func validateKey(e expression, expected reflect.Type, fields []serialization.Fie
 			return validateLiteral(e, serialization.Field{Type: reflect.TypeFor[int64](), Scalar: serialization.Integer})
 		}
 	case pathExpression:
-		field, ok := serialization.FieldAt(fields, e.text)
-		if ok && !field.IsEnum() && !field.Collection && field.Scalar != serialization.NotScalar && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
+		field, ok := binaryMappingField(fields, e.text)
+		if ok && binaryField(field) {
+			return binaryUnsupported("binary correlation keys are not supported")
+		}
+		if ok && !field.IsEnum() && !field.Collection && field.Scalar.IsPrimitive() && !field.Nullable && eventPropertyPath(e.text) && (expected == nil || expected == field.Type) {
 			return nil
 		}
 	}

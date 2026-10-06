@@ -19,7 +19,7 @@ func (f Field) Element() (Field, bool) {
 	if n.reference != nil {
 		n = n.reference
 	}
-	if n.typ.Kind() != reflect.Slice && n.typ.Kind() != reflect.Array && n.typ.Kind() != reflect.Map {
+	if n.scalar || n.item == nil || n.typ.Kind() != reflect.Slice && n.typ.Kind() != reflect.Array && n.typ.Kind() != reflect.Map {
 		return Field{}, false
 	}
 	f.plan, f.Type, f.Collection = n.item, n.item.typ, true
@@ -49,7 +49,7 @@ func sameRepresentation(a, b *node, seen map[[2]*node]bool) bool {
 	if !sameEnum(a.enum, b.enum) {
 		return false
 	}
-	if a.typ != b.typ || a.family != b.family || a.scalar != b.scalar || len(a.fields) != len(b.fields) || len(a.derivatives) != len(b.derivatives) {
+	if a.typ != b.typ || a.family != b.family || a.scalar != b.scalar || a.binary != b.binary || len(a.fields) != len(b.fields) || len(a.derivatives) != len(b.derivatives) {
 		return false
 	}
 	pair := [2]*node{a, b}

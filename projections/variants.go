@@ -172,6 +172,9 @@ func CompileGroup(declarations []Declaration, catalog *events.Catalog, currentSt
 		if err := validateEnumGraph(d, catalog); err != nil {
 			return nil, err
 		}
+		if err := validateBinaryGraph(d, catalog); err != nil {
+			return nil, err
+		}
 		sortNode(&d.nodeDefinition)
 	}
 	slices.SortFunc(compiled, func(a, b Definition) int { return strings.Compare(a.Identifier(), b.Identifier()) })

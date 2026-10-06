@@ -201,7 +201,7 @@ func ordinaryModel(model readmodels.Descriptor) error {
 		return fmt.Errorf("%w: runtime protected model", ErrUnsupported)
 	}
 	for _, field := range model.Fields() {
-		if field.Collection || field.Scalar == serialization.NotScalar {
+		if field.Collection || !field.Scalar.IsPrimitive() {
 			return fmt.Errorf("%w: runtime non-scalar model", ErrUnsupported)
 		}
 	}
@@ -221,7 +221,7 @@ func ordinaryEvent(catalog *events.Catalog, ref events.TypeRef) error {
 		return fmt.Errorf("%w: runtime protected input", ErrUnsupported)
 	}
 	for _, field := range event.Fields() {
-		if field.Collection || field.Scalar == serialization.NotScalar {
+		if field.Collection || !field.Scalar.IsPrimitive() {
 			return fmt.Errorf("%w: runtime non-scalar input", ErrUnsupported)
 		}
 	}

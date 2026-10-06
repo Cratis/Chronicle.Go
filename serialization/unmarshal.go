@@ -41,6 +41,11 @@ func (p *Plan) Unmarshal(data []byte, target any) error {
 	if err := p.root.decode(data, decoded, 0); err != nil {
 		return &UnmarshalError{cause: err}
 	}
+	if p.binary {
+		if err := p.root.normalizeBinaryCollections(decoded); err != nil {
+			return &UnmarshalError{cause: err}
+		}
+	}
 	if p.root.readModelRoot {
 		if err := p.root.normalizeCollections(decoded); err != nil {
 			return &UnmarshalError{cause: err}
@@ -69,6 +74,9 @@ func (n *node) decodeContext(data []byte, value reflect.Value, depth int, open b
 	}
 	if n.reference != nil {
 		return n.reference.decodeContext(data, value, depth, open)
+	}
+	if n.binary {
+		return decodeBinary(data, value)
 	}
 	if n.enum != nil {
 		return n.decodeEnum(data, value)
@@ -131,7 +139,7 @@ func (n *node) decodeContext(data []byte, value reflect.Value, depth int, open b
 					}
 				}
 			}
-			if !ok && (field.value.enum != nil || field.value.typ.Kind() == reflect.Slice && field.value.item.enum != nil) {
+			if !ok && (field.value.enum != nil || field.value.typ.Kind() == reflect.Slice && field.value.item != nil && field.value.item.enum != nil) {
 				target, err := fieldValue(value, field.index, true)
 				if err != nil {
 					return err

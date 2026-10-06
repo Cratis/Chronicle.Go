@@ -12,6 +12,12 @@ func (n *node) normalizeCollections(value reflect.Value) error {
 	if n.reference != nil {
 		return n.reference.normalizeCollections(value)
 	}
+	if n.binary {
+		if value.IsNil() {
+			value.Set(reflect.MakeSlice(value.Type(), 0, 0))
+		}
+		return nil
+	}
 	if n.scalar || n.concept != nil {
 		return nil
 	}

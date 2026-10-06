@@ -3,7 +3,7 @@
 
 // Package serialization compiles one immutable field plan for JSON and JSON Schema.
 // Primitive named values, structs, pointers, slices, arrays, string-keyed maps,
-// time.Time, uuid.UUID, Fundamentals scalars and concepts are supported. Integers nested under maps are restricted
+// time.Time, uuid.UUID, binary byte slices, Fundamentals scalars and concepts are supported. Integers nested under maps are restricted
 // to -2^53 through 2^53 by the kernel's dictionary conversion; unsigned values
 // above MaxInt64 are rejected by the pinned kernel's MongoDB append path. Unsupported
 // custom/protected shapes fail closed.
@@ -32,19 +32,22 @@ type Plan struct {
 	typ      reflect.Type
 	config   Config
 	families []*node
+	binary   bool
 }
 type node struct {
-	typ           reflect.Type
-	fields        []field
-	item          *node
-	schema        map[string]any
-	scalar        bool
-	concept       *concepts.Representation
-	enum          *enumDefinition
-	reference     *node
-	readModelRoot bool
-	family        bool
-	derivatives   []derivative
+	typ            reflect.Type
+	fields         []field
+	item           *node
+	schema         map[string]any
+	scalar         bool
+	binary         bool
+	containsBinary bool
+	concept        *concepts.Representation
+	enum           *enumDefinition
+	reference      *node
+	readModelRoot  bool
+	family         bool
+	derivatives    []derivative
 }
 type field struct {
 	index               []int
@@ -56,10 +59,13 @@ type field struct {
 	isZero              func(reflect.Value) bool
 }
 
-// Compile validates a struct shape before registration. Recursive types use schema
-// references. Embedded fields follow encoding/json promotion and declaration order.
-// Custom marshalers, interface values and unsupported chronicle directives are
-// rejected rather than generating a schema that disagrees with serialization.
+// Compile validates a struct shape before registration. Binary-free recursive
+// types use schema references; recursive graphs containing binary are refused.
+// Embedded fields follow encoding/json promotion and declaration order.
+// Custom marshalers, interface values, unsupported chronicle directives and
+// non-simple, reserved or case-insensitively duplicate property names in binary-
+// containing graphs are rejected rather than generating a schema that disagrees
+// with serialization or kernel property-path resolution.
 // Recognized directives are metadata; artifact registries must also ValidateRole.
 // Naming defaults to PreservePropertyNames; the last optional policy wins.
 func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
@@ -70,6 +76,8 @@ func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
 // Go ID field to C#'s Id before applying the naming policy. MongoDB read-model
 // keys round-trip through the kernel only when the schema declares id or Id.
 // Explicit json tags, nested fields and all other initialisms are unchanged.
+// Binary is qualified only for emitted root leaves, including promoted embedded
+// fields; objects containing binary below the root return ErrUnsupported.
 func CompileReadModel(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
 	return compilePlan(typ, true, policies...)
 }
@@ -123,7 +131,10 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	if typ == nil || typ.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("%w: event must be a named struct", faults.ErrInvalidConfiguration)
 	}
-	state := &compileState{active: map[compileKey]*node{}, definitions: map[string]any{}, codecs: config.Codecs}
+	state := &compileState{
+		active: map[compileKey]*node{}, definitions: map[string]any{}, codecs: config.Codecs,
+		deferDuplicates: binaryTypeCandidate(typ, policy, readModel, config.Codecs),
+	}
 	root, err := compile(typ, state, policy, readModel)
 	if err != nil {
 		return nil, err
@@ -149,6 +160,42 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 			families = append(families, family)
 		}
 	}
+	candidates := append([]*node{root}, families...)
+	binary := false
+	for _, candidate := range candidates {
+		// Compute capability metadata once, including recursive/reference edges.
+		if err := visitNodes(candidate, map[*node]bool{}, func(n *node) error {
+			n.containsBinary = hasBinary(n)
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		if err := validateBinaryPlacement(candidate); err != nil {
+			return nil, err
+		}
+		binary = binary || candidate.containsBinary
+	}
+	if state.duplicateNames != nil {
+		return nil, state.duplicateNames
+	}
+	if readModel {
+		for _, f := range root.fields {
+			scalar, _ := classify(f.value)
+			if f.value.containsBinary && scalar != Binary {
+				return nil, unsupported(typ, "read-model binary is only qualified at emitted root leaves")
+			}
+		}
+	}
+	if binary {
+		for _, candidate := range candidates {
+			if err := validateBinaryRecursion(candidate); err != nil {
+				return nil, err
+			}
+			if err := validateBinaryPropertyNames(candidate); err != nil {
+				return nil, err
+			}
+		}
+	}
 	state.definitions = reachableDefinitions(root.schema, state.definitions)
 	if len(state.definitions) > 0 {
 		// Clone before adding definitions: a recursive root may itself be a target.
@@ -161,7 +208,7 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	if err != nil {
 		return nil, err
 	}
-	plan := &Plan{root: root, schema: string(data), typ: typ, config: config, families: families}
+	plan := &Plan{root: root, schema: string(data), typ: typ, config: config, families: families, binary: root.containsBinary}
 	plan.schema, err = plan.ProtectedSchema()
 	if err != nil {
 		return nil, err
@@ -177,9 +224,11 @@ type compileKey struct {
 	derived, root bool
 }
 type compileState struct {
-	active      map[compileKey]*node
-	definitions map[string]any
-	codecs      *Codecs
+	active          map[compileKey]*node
+	definitions     map[string]any
+	codecs          *Codecs
+	duplicateNames  error
+	deferDuplicates bool
 }
 
 func compile(typ reflect.Type, state *compileState, policy NamingPolicy, readModelRoot bool) (*node, error) {
@@ -247,6 +296,9 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 		n.item, n.schema = item, maps.Clone(item.schema)
 		if format, ok := n.schema["format"].(string); ok {
 			n.schema["format"] = strings.TrimSuffix(format, "?") + "?"
+			if item.binary {
+				n.schema["type"] = []string{"string", "null"}
+			}
 		} else if kind, ok := n.schema["type"].(string); ok {
 			n.schema["type"] = []string{kind, "null"}
 		}
@@ -281,7 +333,12 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 			}
 		}
 		if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
-			return nil, unsupported(typ, "byte slices need an explicit wire format")
+			if typ.Elem() != reflect.TypeFor[byte]() {
+				return nil, unsupported(typ, "binary requires the built-in byte element type")
+			}
+			n.binary, n.scalar = true, true
+			n.schema["type"], n.schema["format"] = "string", "byte-array"
+			return n, nil
 		}
 		item, err := compile(typ.Elem(), state, policy, false)
 		if err != nil {
@@ -335,7 +392,15 @@ func (n *node) compileFields(state *compileState, policy NamingPolicy, readModel
 	if derived {
 		fieldPolicy = CamelCase
 	}
-	fields, err := serializedFields(n.typ, fieldPolicy, readModelRoot)
+	var duplicate func(error)
+	if state.deferDuplicates {
+		duplicate = func(err error) {
+			if state.duplicateNames == nil {
+				state.duplicateNames = err
+			}
+		}
+	}
+	fields, err := serializedFieldsWithDuplicateHandler(n.typ, fieldPolicy, readModelRoot, duplicate)
 	if err != nil {
 		return err
 	}

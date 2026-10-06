@@ -120,7 +120,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 		}
 	}
 	for _, child := range d.children {
-		field, ok := serialization.FieldAt(fields, child.path)
+		field, ok := binaryMappingField(fields, child.path)
 		if !ok || field.Type != child.fieldType || strings.Contains(field.Path, ".") {
 			return nil, invalid("unknown or incompatible child field")
 		}
@@ -155,7 +155,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			case "children", "nested", "index", "subject", "pii", "compliance-details", "encrypted":
 				continue
 			case "key":
-				if n.keyField != "" || field.IsEnum() || field.Scalar == serialization.NotScalar || field.Nullable {
+				if n.keyField != "" || field.IsEnum() || !field.Scalar.IsPrimitive() || field.Nullable {
 					return fail(invalid("one non-nullable scalar key field is required"))
 				}
 				n.keyField = field.Path
@@ -248,8 +248,8 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			n.identifiedBy = discoverIdentity(fields, n.keyField, key)
 		}
 		if n.identifiedBy != "$eventSourceId" {
-			identity, ok := serialization.FieldAt(fields, n.identifiedBy)
-			if !ok || identity.Collection || identity.Nullable || identity.Scalar == serialization.NotScalar {
+			identity, ok := binaryMappingField(fields, n.identifiedBy)
+			if !ok || identity.Collection || identity.Nullable || !identity.Scalar.IsPrimitive() {
 				return nil, invalid("child identity requires a non-nullable scalar field")
 			}
 			explicitIdentity := false
@@ -357,8 +357,11 @@ func (c *compiler) addJoin(n *nodeDefinition, j joinDeclaration, fields []serial
 	if j.subscription.parent.kind != emptyExpression {
 		return invalid("join does not support a parent key")
 	}
-	on, ok := serialization.FieldAt(fields, j.on)
-	if !ok || on.IsEnum() || validateTarget(on, j.onType) != nil || on.Scalar == serialization.NotScalar {
+	on, ok := binaryMappingField(fields, j.on)
+	if ok && binaryField(on) {
+		return binaryUnsupported("binary correlation keys are not supported")
+	}
+	if !ok || on.IsEnum() || validateTarget(on, j.onType) != nil || !on.Scalar.IsPrimitive() {
 		return invalid("join on requires a scalar model field")
 	}
 	var target *joinDefinition
@@ -410,7 +413,7 @@ func (c *compiler) addRemoval(n *nodeDefinition, r removalDeclaration, overwrite
 
 func (c *compiler) addGlobal(n *nodeDefinition, g globalDeclaration, fields []serialization.Field, overwrite bool) error {
 	w := g.write
-	target, ok := serialization.FieldAt(fields, w.path)
+	target, ok := binaryMappingField(fields, w.path)
 	if !ok || validateTarget(target, w.targetType) != nil {
 		return declarationFailure(c.result.id, w.provenance, invalid("unknown global target field"))
 	}
@@ -427,7 +430,7 @@ func (c *compiler) addGlobal(n *nodeDefinition, g globalDeclaration, fields []se
 			if !g.all && !nodeUsesEvent(n, event.Ref()) {
 				continue
 			}
-			if source, exists := serialization.FieldAt(event.Fields(), w.expression.text); exists && !scalarCompatible(target, source, fields, event.Fields()) {
+			if source, exists := binaryMappingField(event.Fields(), w.expression.text); exists && !scalarCompatible(target, source, fields, event.Fields()) {
 				return declarationFailure(c.result.id, w.provenance, invalid("incompatible global event property"))
 			}
 		}
@@ -508,7 +511,7 @@ func (c *compiler) compileChild(n *nodeDefinition, child childDeclaration, field
 	}
 	local := scopedFields(fields, field.Path)
 	if child.identifiedBy != "" && child.identityType != nil {
-		identity, ok := serialization.FieldAt(local, child.identifiedBy)
+		identity, ok := binaryMappingField(local, child.identifiedBy)
 		if !ok || identity.Type != child.identityType {
 			return invalid("child identity descriptor has wrong type")
 		}
@@ -581,7 +584,7 @@ func nodeType(field serialization.Field, nested bool) (reflect.Type, error) {
 }
 
 func scopedFields(fields []serialization.Field, path string) []serialization.Field {
-	if field, ok := serialization.FieldAt(fields, path); ok {
+	if field, ok := binaryMappingField(fields, path); ok {
 		return field.Fields()
 	}
 	return nil
