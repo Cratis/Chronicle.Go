@@ -13,9 +13,11 @@ import (
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/preparation"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
+	"github.com/cratis/chronicle.go/serialization"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -95,7 +97,12 @@ func (s *Sequence) RedactForEventSource(ctx context.Context, source events.Sourc
 // replacement generation's PII and encryption metadata with the ORIGINAL event's
 // subject (falling back to its event source) to both the revision and its system
 // request, so a replacement cannot move protected data to another subject.
-// Zero is valid; the three highest positions are reserved and invalid targets.
+// A protected replacement returns ErrUnsupported before serialization or dispatch
+// unless the connection reports such a kernel. Because the kernel protects only
+// with the replacement generation's schema, an unclassified replacement for a
+// type ID that another registered generation classifies is always refused with
+// ErrUnsupported: its plaintext could not be erased. Schema inspection failures
+// are refused the same way. Zero is valid; the three highest positions are reserved and invalid targets.
 // It has no reason field on the wire: record the non-sensitive reason in
 // metadata.WithCausation. Nil error means
 // accepted, not applied or replayed. Inputs must not be mutated during the call.
@@ -110,6 +117,9 @@ func (s *Sequence) Revise(ctx context.Context, position events.SequenceNumber, r
 	descriptor, ok := s.catalog.Lookup(replacement)
 	if !ok {
 		return faults.ErrNotRegistered
+	}
+	if err := s.admitRevision(ctx, descriptor); err != nil {
+		return err
 	}
 	audit, err := s.outgoing.Resolve(ctx, metadata.CorrelationID{}, false, metadata.CorrelationID{})
 	if err != nil {
@@ -138,6 +148,41 @@ func (s *Sequence) Revise(ctx context.Context, position events.SequenceNumber, r
 		Causation: causationContract(metadata.CausationChain(ctx)), CausedBy: identityContract(metadata.Identity(ctx)),
 	})
 	return mutationOutcome(response, err)
+}
+
+// Keep refusals stable and payload-free. None is an ambiguous mutation outcome:
+// nothing has been dispatched.
+var errProtectedRevisionUnsupported = fmt.Errorf("%w: protected revision is unsupported", faults.ErrUnsupported)
+
+func (s *Sequence) admitRevision(ctx context.Context, replacement events.Descriptor) error {
+	protected, err := revisionSchemaProtected(replacement.Schema())
+	if err != nil {
+		return err
+	}
+	if !protected {
+		for _, generation := range s.catalog.Descriptors() {
+			if generation.Ref().ID != replacement.Ref().ID {
+				continue
+			}
+			if other, err := revisionSchemaProtected(generation.Schema()); err != nil || other {
+				return errProtectedRevisionUnsupported
+			}
+		}
+		return nil
+	}
+	capabilities, err := kernelcapability.Of(ctx, s.conn)
+	if err != nil {
+		return err
+	}
+	return kernelcapability.Require(capabilities.ProtectedRelease, "protected revision", kernelcapability.ProtectedReleaseVersion)
+}
+
+func revisionSchemaProtected(schema string) (bool, error) {
+	roots, err := serialization.ProtectionRoots(schema)
+	if err != nil {
+		return false, errProtectedRevisionUnsupported
+	}
+	return len(roots) != 0, nil
 }
 
 func validateMutation(ctx context.Context, position events.SequenceNumber, reason events.RedactionReason) error {

@@ -12,6 +12,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/identities"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/outgoing"
 	"github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
@@ -22,6 +23,11 @@ type enrichmentConnection struct {
 	config   outgoing.Config
 	calls    int
 	revision *sequences.ReviseRequest
+	kernel   kernelcapability.Capabilities
+}
+
+func (c *enrichmentConnection) KernelCapabilities(context.Context) (kernelcapability.Capabilities, error) {
+	return c.kernel, nil
 }
 
 func (c *enrichmentConnection) OutgoingConfiguration() outgoing.Config { return c.config }
@@ -49,7 +55,7 @@ func TestProtectedRevisionRunsEveryProviderOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	called := 0
-	connection := &enrichmentConnection{config: outgoing.Config{
+	connection := &enrichmentConnection{kernel: *protectedReleaseKernel, config: outgoing.Config{
 		Identity: func(context.Context) (identities.Identity, bool, error) {
 			called++
 			return identities.Identity{}, false, nil

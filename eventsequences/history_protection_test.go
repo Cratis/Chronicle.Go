@@ -10,10 +10,12 @@ import (
 	"strings"
 	"testing"
 
+	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -60,7 +62,7 @@ func revisionDescriptor[T any](t *testing.T, options ...events.TypeOption) event
 func reviseCapture(t *testing.T, catalog *events.Catalog, replacement any) *sequences.ReviseRequest {
 	t.Helper()
 	var captured *sequences.ReviseRequest
-	sequence, calls := parityFixture(t, map[string]rpcHandler{"Revise": func(_ context.Context, request any) (any, error) {
+	sequence, calls := kernelFixture(t, protectedReleaseKernel, map[string]rpcHandler{"Revise": func(_ context.Context, request any) (any, error) {
 		captured = request.(*sequences.ReviseRequest)
 		return &sequences.CommandResult{IsAuthorized: true}, nil
 	}}, catalog, eventsequences.ConcurrencyPolicy{})
@@ -125,7 +127,7 @@ func TestProtectedRevisionStillRejectsInvalidContentBeforeDispatch(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sequence, calls := parityFixture(t, nil, catalog, eventsequences.ConcurrencyPolicy{})
+	sequence, calls := kernelFixture(t, protectedReleaseKernel, nil, catalog, eventsequences.ConcurrencyPolicy{})
 	err = sequence.Revise(testContext(t), 0, revisionPII{Name: "synthetic-private", Amount: math.NaN()})
 	var unknown *eventsequences.MutationOutcomeUnknownError
 	if err == nil || errors.As(err, &unknown) || calls.Load() != 0 {
@@ -133,7 +135,38 @@ func TestProtectedRevisionStillRejectsInvalidContentBeforeDispatch(t *testing.T)
 	}
 }
 
-func TestRevisionOfAnyGenerationOfProtectedIdentityIsDispatched(t *testing.T) {
+// Kernels before 19.32.2, and connections whose kernel version was not
+// verified, persist revised content without protection (Chronicle#4525).
+func TestProtectedRevisionRefusesWithoutProtectedReleaseKernel(t *testing.T) {
+	catalog, err := events.NewCatalog(revisionDescriptor[revisionEncryptedGlobal](t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, kernel := range map[string]*kernelcapability.Capabilities{"unreported": nil, "19.32.1": {MixedAllReplay: true}} {
+		sequence, calls := kernelFixture(t, kernel, nil, catalog, eventsequences.ConcurrencyPolicy{})
+		err := sequence.Revise(testContext(t), 0, revisionEncryptedGlobal{"synthetic-private"})
+		var unknown *eventsequences.MutationOutcomeUnknownError
+		if !errors.Is(err, chronicle.ErrUnsupported) || errors.As(err, &unknown) || strings.Contains(err.Error(), "synthetic-private") || calls.Load() != 0 {
+			t.Fatalf("%s: protected revision error=%v calls=%d", name, err, calls.Load())
+		}
+	}
+	plain, err := events.NewCatalog(revisionDescriptor[revisionPlain](t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sequence, calls := kernelFixture(t, nil, map[string]rpcHandler{"Revise": func(context.Context, any) (any, error) {
+		return &sequences.CommandResult{IsAuthorized: true}, nil
+	}}, plain, eventsequences.ConcurrencyPolicy{})
+	if err := sequence.Revise(testContext(t), 0, revisionPlain{"ordinary"}); err != nil || calls.Load() != 1 {
+		t.Fatalf("unprotected revision needs no kernel capability: %v %d", err, calls.Load())
+	}
+}
+
+// The kernel protects a revision with the replacement generation's schema only.
+// An unclassified generation of an identity another generation classifies would
+// store plaintext that erasure cannot remove, so it is refused on every kernel.
+// C# dispatches it; this is a deliberate Go-specific safety difference.
+func TestRevisionRefusesUnclassifiedGenerationOfProtectedIdentity(t *testing.T) {
 	protectedCurrent, err := events.Define[revisionPII](events.WithID("shared-revision-id"), events.WithGeneration(2))
 	if err != nil {
 		t.Fatal(err)
@@ -142,14 +175,37 @@ func TestRevisionOfAnyGenerationOfProtectedIdentityIsDispatched(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	catalog, err := events.NewCatalog(plainPrevious.Descriptor(), protectedCurrent.Descriptor())
+	plainCurrent, err := events.Define[revisionPlain](events.WithID("shared-revision-id"), events.WithGeneration(2))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if request := reviseCapture(t, catalog, revisionPlain{"historical"}); request.EventType.GetGeneration() != 1 || request.Content != `{"Name":"historical"}` {
-		t.Fatalf("historical revision request = %+v", request)
+	protectedPrevious, err := events.DefineGeneration[revisionClassified](plainCurrent, 1, events.WithProtection(compliance.For[revisionClassified](compliance.Classification{PII: true})))
+	if err != nil {
+		t.Fatal(err)
 	}
-	if request := reviseCapture(t, catalog, revisionPII{Name: "current"}); request.EventType.GetGeneration() != 2 || !strings.Contains(request.Content, "current") {
-		t.Fatalf("current revision request = %+v", request)
+	for _, tc := range []struct {
+		name              string
+		descriptors       []events.Descriptor
+		plain, classified any
+	}{
+		{"unclassified historical generation", []events.Descriptor{plainPrevious.Descriptor(), protectedCurrent.Descriptor()}, revisionPlain{"synthetic-private"}, revisionPII{Name: "current"}},
+		{"unclassified current generation", []events.Descriptor{plainCurrent.Descriptor(), protectedPrevious.Descriptor()}, revisionPlain{"synthetic-private"}, revisionClassified{"historical"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			catalog, err := events.NewCatalog(tc.descriptors...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sequence, calls := kernelFixture(t, protectedReleaseKernel, map[string]rpcHandler{"Revise": func(context.Context, any) (any, error) {
+				return &sequences.CommandResult{IsAuthorized: true}, nil
+			}}, catalog, eventsequences.ConcurrencyPolicy{})
+			err = sequence.Revise(testContext(t), 0, tc.plain)
+			if !errors.Is(err, chronicle.ErrUnsupported) || strings.Contains(err.Error(), "synthetic-private") || calls.Load() != 0 {
+				t.Fatalf("unclassified generation of a protected identity: %v calls=%d", err, calls.Load())
+			}
+			if err := sequence.Revise(testContext(t), 0, tc.classified); err != nil || calls.Load() != 1 {
+				t.Fatalf("classified generation: %v calls=%d", err, calls.Load())
+			}
+		})
 	}
 }

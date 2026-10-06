@@ -15,6 +15,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
@@ -63,6 +64,26 @@ func (c policyConnection) AppendOriginResolver() eventsequences.AppendOriginReso
 
 func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events.Catalog, policy eventsequences.ConcurrencyPolicy, resolvers ...eventsequences.AppendOriginResolver) (*eventsequences.Sequence, *atomic.Int32) {
 	t.Helper()
+	return kernelFixture(t, nil, handlers, catalog, policy, resolvers...)
+}
+
+// capabilityConnection reports fixed kernel capabilities.
+type capabilityConnection struct {
+	policyConnection
+	capabilities kernelcapability.Capabilities
+}
+
+func (c capabilityConnection) KernelCapabilities(context.Context) (kernelcapability.Capabilities, error) {
+	return c.capabilities, nil
+}
+
+// protectedReleaseKernel reports a kernel with the 19.32.2 protection fixes.
+var protectedReleaseKernel = &kernelcapability.Capabilities{MixedAllReplay: true, ProtectedRelease: true}
+
+// kernelFixture is parityFixture over a connection that reports kernel, or no
+// capabilities when kernel is nil.
+func kernelFixture(t *testing.T, kernel *kernelcapability.Capabilities, handlers map[string]rpcHandler, catalog *events.Catalog, policy eventsequences.ConcurrencyPolicy, resolvers ...eventsequences.AppendOriginResolver) (*eventsequences.Sequence, *atomic.Int32) {
+	t.Helper()
 	calls := &atomic.Int32{}
 	listener := bufconn.Listen(1024 * 1024)
 	server := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context, request any, info *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (any, error) {
@@ -101,7 +122,11 @@ func parityFixture(t *testing.T, handlers map[string]rpcHandler, catalog *events
 	if len(resolvers) > 0 {
 		resolver = resolvers[0]
 	}
-	sequence, err := eventsequences.New("store", "tenant", "event-log", catalog, policyConnection{ClientConnInterface: conn, policy: policy, resolver: resolver})
+	var transport grpc.ClientConnInterface = policyConnection{ClientConnInterface: conn, policy: policy, resolver: resolver}
+	if kernel != nil {
+		transport = capabilityConnection{policyConnection{ClientConnInterface: conn, policy: policy, resolver: resolver}, *kernel}
+	}
+	sequence, err := eventsequences.New("store", "tenant", "event-log", catalog, transport)
 	if err != nil {
 		t.Fatal(err)
 	}
