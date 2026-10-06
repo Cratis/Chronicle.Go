@@ -15,7 +15,7 @@ jobs:
       GOTOOLCHAIN: local
     services:
       chronicle:
-        image: cratis/chronicle:19.29.4-development
+        image: cratis/chronicle:19.32.3-development
         ports:
           - 35000:35000
     steps:

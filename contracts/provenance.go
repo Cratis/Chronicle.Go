@@ -5,7 +5,7 @@
 package contracts
 
 // ProtocolVersion is the upstream Chronicle release.
-const ProtocolVersion = "19.29.4"
+const ProtocolVersion = "19.32.3"
 
 // ProtocolCommit is the immutable schema source revision.
-const ProtocolCommit = "ae5e00a8abaa688138b2c2f689e2b4659cccb4fd"
+const ProtocolCommit = "e72af7ead164425141f29db61a9fe7b4915767e6"

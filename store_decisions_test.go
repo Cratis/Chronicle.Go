@@ -44,13 +44,13 @@ func TestDecisionCapabilitiesRequireVerifiedVersionAndPreflight(t *testing.T) {
 		name, version, protocol string
 		skip, supported         bool
 	}{
-		{"pinned", "19.29.4", "19.29.4", false, true},
-		{"development", "19.29.4-development", "19.29.4", false, true},
+		{"pinned", "19.32.3", "19.32.3", false, true},
+		{"development", "19.32.3-development", "19.32.3", false, true},
 		{"old-compatible", "19.28.0", "19.28.0", false, false},
-		{"future-compatible", "20.0.0", "19.29.4", false, false},
-		{"unknown", "", "19.29.4", false, false},
-		{"wrong-protocol", "19.29.4", "19.28.0", false, false},
-		{"skip", "19.29.4", "19.29.4", true, false},
+		{"future-compatible", "20.0.0", "19.32.3", false, false},
+		{"unknown", "", "19.32.3", false, false},
+		{"wrong-protocol", "19.32.3", "19.28.0", false, false},
+		{"skip", "19.32.3", "19.32.3", true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			kernel := &supervisedKernel{}
@@ -105,7 +105,7 @@ func (f decisionTokenSource) Token(ctx context.Context) (Token, error) { return 
 func TestDecisionEpochIsCheckedAfterAuthorizationBeforeDispatch(t *testing.T) {
 	kernel := &supervisedKernel{}
 	client, ctx := supervisionClient(t, kernel)
-	raw := &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.29.4", protocol: "19.29.4"}
+	raw := &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.32.3", protocol: "19.32.3"}
 	client.config.borrowed = raw
 	var invalidate atomic.Bool
 	var catalog *decision.Catalog
@@ -143,7 +143,7 @@ func TestDecisionEpochIsCheckedAfterAuthorizationBeforeDispatch(t *testing.T) {
 func TestDecisionLeaseCannotSpliceRPCsAcrossGenerationLoss(t *testing.T) {
 	kernel := &supervisedKernel{}
 	client, ctx := supervisionClient(t, kernel)
-	client.config.borrowed = &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.29.4", protocol: "19.29.4"}
+	client.config.borrowed = &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.32.3", protocol: "19.32.3"}
 	store, err := client.EventStore(ctx, "store")
 	if err != nil {
 		t.Fatal(err)

@@ -63,7 +63,7 @@ func TestDecisionErrorCallbacksRemainInsideRecovery(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					raw := &decisionCodecConn{ClientConnInterface: &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.29.4", protocol: "19.29.4"}, document: `{"id":"source","name":` + string(value) + `}`}
+					raw := &decisionCodecConn{ClientConnInterface: &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.32.3", protocol: "19.32.3"}, document: `{"id":"source","name":` + string(value) + `}`}
 					client.config.borrowed = raw
 					store, err := client.EventStore(ctx, "store")
 					if err != nil {

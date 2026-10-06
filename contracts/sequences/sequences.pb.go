@@ -932,6 +932,7 @@ type AppendRequest struct {
 	Causation        []*Causation                `protobuf:"bytes,14,rep,name=Causation,proto3" json:"Causation,omitempty"`
 	CausedBy         *Identity                   `protobuf:"bytes,15,opt,name=CausedBy,proto3" json:"CausedBy,omitempty"`
 	ConcurrencyScope *ConcurrencyScope           `protobuf:"bytes,16,opt,name=ConcurrencyScope,proto3" json:"ConcurrencyScope,omitempty"`
+	EventSource      string                      `protobuf:"bytes,17,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1078,6 +1079,13 @@ func (x *AppendRequest) GetConcurrencyScope() *ConcurrencyScope {
 	return nil
 }
 
+func (x *AppendRequest) GetEventSource() string {
+	if x != nil {
+		return x.EventSource
+	}
+	return ""
+}
+
 type AppendResponse struct {
 	state                     protoimpl.MessageState `protogen:"open.v1"`
 	CorrelationId             *bcl.Guid              `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -1213,6 +1221,7 @@ type AppendWithNamedTagsRequest struct {
 	Causation        []*Causation                `protobuf:"bytes,15,rep,name=Causation,proto3" json:"Causation,omitempty"`
 	CausedBy         *Identity                   `protobuf:"bytes,16,opt,name=CausedBy,proto3" json:"CausedBy,omitempty"`
 	ConcurrencyScope *ConcurrencyScope           `protobuf:"bytes,17,opt,name=ConcurrencyScope,proto3" json:"ConcurrencyScope,omitempty"`
+	EventSource      string                      `protobuf:"bytes,18,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1364,6 +1373,13 @@ func (x *AppendWithNamedTagsRequest) GetConcurrencyScope() *ConcurrencyScope {
 		return x.ConcurrencyScope
 	}
 	return nil
+}
+
+func (x *AppendWithNamedTagsRequest) GetEventSource() string {
+	if x != nil {
+		return x.EventSource
+	}
+	return ""
 }
 
 type AppendedEventResponse struct {
@@ -2379,6 +2395,7 @@ type EventContext struct {
 	ObservationState EventObservationState       `protobuf:"varint,13,opt,name=ObservationState,proto3,enum=Cratis.Chronicle.Contracts.Sequences.EventObservationState" json:"ObservationState,omitempty"`
 	Subject          string                      `protobuf:"bytes,14,opt,name=Subject,proto3" json:"Subject,omitempty"`
 	NamedTags        []*NamedTag                 `protobuf:"bytes,15,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
+	EventSource      string                      `protobuf:"bytes,16,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2518,6 +2535,13 @@ func (x *EventContext) GetNamedTags() []*NamedTag {
 	return nil
 }
 
+func (x *EventContext) GetEventSource() string {
+	if x != nil {
+		return x.EventSource
+	}
+	return ""
+}
+
 type EventForEventSourceId struct {
 	state           protoimpl.MessageState      `protogen:"open.v1"`
 	EventSourceId   string                      `protobuf:"bytes,1,opt,name=EventSourceId,proto3" json:"EventSourceId,omitempty"`
@@ -2530,6 +2554,7 @@ type EventForEventSourceId struct {
 	Occurred        *SerializableDateTimeOffset `protobuf:"bytes,8,opt,name=Occurred,proto3" json:"Occurred,omitempty"`
 	Subject         string                      `protobuf:"bytes,9,opt,name=Subject,proto3" json:"Subject,omitempty"`
 	Causation       []*Causation                `protobuf:"bytes,10,rep,name=Causation,proto3" json:"Causation,omitempty"`
+	EventSource     string                      `protobuf:"bytes,11,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2634,6 +2659,13 @@ func (x *EventForEventSourceId) GetCausation() []*Causation {
 	return nil
 }
 
+func (x *EventForEventSourceId) GetEventSource() string {
+	if x != nil {
+		return x.EventSource
+	}
+	return ""
+}
+
 type EventForEventSourceIdWithNamedTags struct {
 	state           protoimpl.MessageState      `protogen:"open.v1"`
 	EventSourceId   string                      `protobuf:"bytes,1,opt,name=EventSourceId,proto3" json:"EventSourceId,omitempty"`
@@ -2647,6 +2679,7 @@ type EventForEventSourceIdWithNamedTags struct {
 	Occurred        *SerializableDateTimeOffset `protobuf:"bytes,9,opt,name=Occurred,proto3" json:"Occurred,omitempty"`
 	Subject         string                      `protobuf:"bytes,10,opt,name=Subject,proto3" json:"Subject,omitempty"`
 	Causation       []*Causation                `protobuf:"bytes,11,rep,name=Causation,proto3" json:"Causation,omitempty"`
+	EventSource     string                      `protobuf:"bytes,12,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2756,6 +2789,13 @@ func (x *EventForEventSourceIdWithNamedTags) GetCausation() []*Causation {
 		return x.Causation
 	}
 	return nil
+}
+
+func (x *EventForEventSourceIdWithNamedTags) GetEventSource() string {
+	if x != nil {
+		return x.EventSource
+	}
+	return ""
 }
 
 type EventRevision struct {
@@ -5814,7 +5854,7 @@ const file_sequences_proto_rawDesc = "" +
 	"\tCausation\x18\t \x03(\v2/.Cratis.Chronicle.Contracts.Sequences.CausationR\tCausation\x12J\n" +
 	"\bCausedBy\x18\n" +
 	" \x01(\v2..Cratis.Chronicle.Contracts.Sequences.IdentityR\bCausedBy\x12b\n" +
-	"\x10ConcurrencyScope\x18\v \x01(\v26.Cratis.Chronicle.Contracts.Sequences.ConcurrencyScopeR\x10ConcurrencyScope\"\xbc\x06\n" +
+	"\x10ConcurrencyScope\x18\v \x01(\v26.Cratis.Chronicle.Contracts.Sequences.ConcurrencyScopeR\x10ConcurrencyScope\"\xde\x06\n" +
 	"\rAppendRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -5834,7 +5874,8 @@ const file_sequences_proto_rawDesc = "" +
 	"\aSubject\x18\r \x01(\tR\aSubject\x12M\n" +
 	"\tCausation\x18\x0e \x03(\v2/.Cratis.Chronicle.Contracts.Sequences.CausationR\tCausation\x12J\n" +
 	"\bCausedBy\x18\x0f \x01(\v2..Cratis.Chronicle.Contracts.Sequences.IdentityR\bCausedBy\x12b\n" +
-	"\x10ConcurrencyScope\x18\x10 \x01(\v26.Cratis.Chronicle.Contracts.Sequences.ConcurrencyScopeR\x10ConcurrencyScope\"\xd0\x04\n" +
+	"\x10ConcurrencyScope\x18\x10 \x01(\v26.Cratis.Chronicle.Contracts.Sequences.ConcurrencyScopeR\x10ConcurrencyScope\x12 \n" +
+	"\vEventSource\x18\x11 \x01(\tR\vEventSource\"\xd0\x04\n" +
 	"\x0eAppendResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12&\n" +
 	"\x0eSequenceNumber\x18\x02 \x01(\x04R\x0eSequenceNumber\x12\x1c\n" +
@@ -5846,7 +5887,7 @@ const file_sequences_proto_rawDesc = "" +
 	"\x14ConstraintViolations\x18\b \x03(\v29.Cratis.Chronicle.Contracts.Sequences.ConstraintViolationR\x14ConstraintViolations\x12\x16\n" +
 	"\x06Errors\x18\t \x03(\tR\x06Errors\x12n\n" +
 	"\x14ConcurrencyViolation\x18\n" +
-	" \x01(\v2:.Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolationR\x14ConcurrencyViolation\"\x97\a\n" +
+	" \x01(\v2:.Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolationR\x14ConcurrencyViolation\"\xb9\a\n" +
 	"\x1aAppendWithNamedTagsRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -5867,7 +5908,8 @@ const file_sequences_proto_rawDesc = "" +
 	"\aSubject\x18\x0e \x01(\tR\aSubject\x12M\n" +
 	"\tCausation\x18\x0f \x03(\v2/.Cratis.Chronicle.Contracts.Sequences.CausationR\tCausation\x12J\n" +
 	"\bCausedBy\x18\x10 \x01(\v2..Cratis.Chronicle.Contracts.Sequences.IdentityR\bCausedBy\x12b\n" +
-	"\x10ConcurrencyScope\x18\x11 \x01(\v26.Cratis.Chronicle.Contracts.Sequences.ConcurrencyScopeR\x10ConcurrencyScope\"\xff\x02\n" +
+	"\x10ConcurrencyScope\x18\x11 \x01(\v26.Cratis.Chronicle.Contracts.Sequences.ConcurrencyScopeR\x10ConcurrencyScope\x12 \n" +
+	"\vEventSource\x18\x12 \x01(\tR\vEventSource\"\xff\x02\n" +
 	"\x15AppendedEventResponse\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\tR\x02Id\x12L\n" +
 	"\aContext\x18\x02 \x01(\v22.Cratis.Chronicle.Contracts.Sequences.EventContextR\aContext\x12\x18\n" +
@@ -5962,7 +6004,7 @@ const file_sequences_proto_rawDesc = "" +
 	"\x05Start\x18\x01 \x01(\v2@.Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffsetR\x05Start\x12Y\n" +
 	"\n" +
 	"Resolution\x18\x02 \x01(\x0e29.Cratis.Chronicle.Contracts.Sequences.HistogramResolutionR\n" +
-	"Resolution\"\xc8\x06\n" +
+	"Resolution\"\xea\x06\n" +
 	"\fEventContext\x12M\n" +
 	"\tEventType\x18\x01 \x01(\v2/.Cratis.Chronicle.Contracts.Sequences.EventTypeR\tEventType\x12(\n" +
 	"\x0fEventSourceType\x18\x02 \x01(\tR\x0fEventSourceType\x12$\n" +
@@ -5979,7 +6021,8 @@ const file_sequences_proto_rawDesc = "" +
 	"\x04Hash\x18\f \x01(\tR\x04Hash\x12g\n" +
 	"\x10ObservationState\x18\r \x01(\x0e2;.Cratis.Chronicle.Contracts.Sequences.EventObservationStateR\x10ObservationState\x12\x18\n" +
 	"\aSubject\x18\x0e \x01(\tR\aSubject\x12L\n" +
-	"\tNamedTags\x18\x0f \x03(\v2..Cratis.Chronicle.Contracts.Sequences.NamedTagR\tNamedTags\"\xfb\x03\n" +
+	"\tNamedTags\x18\x0f \x03(\v2..Cratis.Chronicle.Contracts.Sequences.NamedTagR\tNamedTags\x12 \n" +
+	"\vEventSource\x18\x10 \x01(\tR\vEventSource\"\x9d\x04\n" +
 	"\x15EventForEventSourceId\x12$\n" +
 	"\rEventSourceId\x18\x01 \x01(\tR\rEventSourceId\x12(\n" +
 	"\x0fEventSourceType\x18\x02 \x01(\tR\x0fEventSourceType\x12(\n" +
@@ -5991,7 +6034,8 @@ const file_sequences_proto_rawDesc = "" +
 	"\bOccurred\x18\b \x01(\v2@.Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffsetR\bOccurred\x12\x18\n" +
 	"\aSubject\x18\t \x01(\tR\aSubject\x12M\n" +
 	"\tCausation\x18\n" +
-	" \x03(\v2/.Cratis.Chronicle.Contracts.Sequences.CausationR\tCausation\"\xd6\x04\n" +
+	" \x03(\v2/.Cratis.Chronicle.Contracts.Sequences.CausationR\tCausation\x12 \n" +
+	"\vEventSource\x18\v \x01(\tR\vEventSource\"\xf8\x04\n" +
 	"\"EventForEventSourceIdWithNamedTags\x12$\n" +
 	"\rEventSourceId\x18\x01 \x01(\tR\rEventSourceId\x12(\n" +
 	"\x0fEventSourceType\x18\x02 \x01(\tR\x0fEventSourceType\x12(\n" +
@@ -6004,7 +6048,8 @@ const file_sequences_proto_rawDesc = "" +
 	"\bOccurred\x18\t \x01(\v2@.Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffsetR\bOccurred\x12\x18\n" +
 	"\aSubject\x18\n" +
 	" \x01(\tR\aSubject\x12M\n" +
-	"\tCausation\x18\v \x03(\v2/.Cratis.Chronicle.Contracts.Sequences.CausationR\tCausation\"\x99\x02\n" +
+	"\tCausation\x18\v \x03(\v2/.Cratis.Chronicle.Contracts.Sequences.CausationR\tCausation\x12 \n" +
+	"\vEventSource\x18\f \x01(\tR\vEventSource\"\x99\x02\n" +
 	"\rEventRevision\x12\x1e\n" +
 	"\n" +
 	"Generation\x18\x01 \x01(\rR\n" +

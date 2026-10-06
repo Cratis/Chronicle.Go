@@ -330,6 +330,7 @@ type EventContext struct {
 	Hash             string                      `protobuf:"bytes,15,opt,name=Hash,proto3" json:"Hash,omitempty"`
 	Subject          string                      `protobuf:"bytes,16,opt,name=Subject,proto3" json:"Subject,omitempty"`
 	NamedTags        []*NamedTag                 `protobuf:"bytes,17,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
+	EventSource      string                      `protobuf:"bytes,18,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -481,6 +482,13 @@ func (x *EventContext) GetNamedTags() []*NamedTag {
 		return x.NamedTags
 	}
 	return nil
+}
+
+func (x *EventContext) GetEventSource() string {
+	if x != nil {
+		return x.EventSource
+	}
+	return ""
 }
 
 type EventRevision struct {
@@ -1414,7 +1422,7 @@ const file_observation_reactors_proto_rawDesc = "" +
 	"Properties\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc8\a\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xea\a\n" +
 	"\fEventContext\x12X\n" +
 	"\tEventType\x18\x01 \x01(\v2:.Cratis.Chronicle.Contracts.Observation.Reactors.EventTypeR\tEventType\x12(\n" +
 	"\x0fEventSourceType\x18\x02 \x01(\tR\x0fEventSourceType\x12$\n" +
@@ -1435,7 +1443,8 @@ const file_observation_reactors_proto_rawDesc = "" +
 	"\x04Tags\x18\x0e \x03(\tR\x04Tags\x12\x12\n" +
 	"\x04Hash\x18\x0f \x01(\tR\x04Hash\x12\x18\n" +
 	"\aSubject\x18\x10 \x01(\tR\aSubject\x12W\n" +
-	"\tNamedTags\x18\x11 \x03(\v29.Cratis.Chronicle.Contracts.Observation.Reactors.NamedTagR\tNamedTags\"\xaf\x02\n" +
+	"\tNamedTags\x18\x11 \x03(\v29.Cratis.Chronicle.Contracts.Observation.Reactors.NamedTagR\tNamedTags\x12 \n" +
+	"\vEventSource\x18\x12 \x01(\tR\vEventSource\"\xaf\x02\n" +
 	"\rEventRevision\x12\x1e\n" +
 	"\n" +
 	"Generation\x18\x01 \x01(\rR\n" +
