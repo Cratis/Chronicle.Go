@@ -13,6 +13,7 @@ import (
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	readmodelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -70,6 +71,62 @@ type countingReadModels struct {
 func (k countingReadModels) RegisterMany(context.Context, *readmodelcontracts.RegisterManyRequest) (*emptypb.Empty, error) {
 	k.registrations.Add(1)
 	return &emptypb.Empty{}, nil
+}
+
+// Registration is shared per generation and may run on whichever caller's
+// context arrives first. A gated operation's tracked needs must not leak into it:
+// otherwise an incapable kernel refuses, and caches as failed, every artifact.
+func TestRegistrationIgnoresCallerTrackedNeeds(t *testing.T) {
+	registry := NewRegistry()
+	if _, err := RegisterEvent[capabilityRevised](registry); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterReadModel[capabilityClassifiedModel](registry, readmodels.WithObserver(readmodels.Projection, "classified")); err != nil {
+		t.Fatal(err)
+	}
+	var eventTypeRPCs, modelRPCs atomic.Int32
+	_, projections := readModelServers()
+	kernel := &supervisedKernel{registerEventTypes: func(context.Context, *eventtypes.RegisterEventTypesRequest) error {
+		eventTypeRPCs.Add(1)
+		return nil
+	}, readModels: countingReadModels{registrations: &modelRPCs}, projections: projections}
+	client, ctx := supervisionClient(t, kernel, WithRegistry(registry))
+	client.config.borrowed = &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.32.1", protocol: "19.32.3"}
+	gated := kernelcapability.With(ctx, kernelcapability.NeedProtectedProjectionRead)
+	store, err := client.EventStore(gated, "store")
+	if err != nil {
+		t.Fatal("registration inherited a caller's tracked need:", err)
+	}
+	if outcome, err := store.WaitForRegistration(gated); err != nil || !outcome.IsSuccess() || eventTypeRPCs.Load() == 0 || modelRPCs.Load() == 0 {
+		t.Fatal("registration", outcome, err, eventTypeRPCs.Load(), modelRPCs.Load())
+	}
+}
+
+// Definition registration sends through definitionTransport, which must enforce
+// the needs tracked by admission against the generation it is pinned to.
+func TestDefinitionTransportRefusesTrackedNeedBeforeDispatch(t *testing.T) {
+	for _, destructive := range []bool{false, true} {
+		var modelRPCs atomic.Int32
+		client, ctx := supervisionClient(t, &supervisedKernel{readModels: countingReadModels{registrations: &modelRPCs}})
+		client.config.borrowed = &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.32.1", protocol: "19.32.3"}
+		store, err := client.EventStore(ctx, "store")
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.mu.Lock()
+		g := client.current
+		client.mu.Unlock()
+		baseline := modelRPCs.Load()
+		tracked := kernelcapability.With(ctx, kernelcapability.NeedNestedCollectionProtection)
+		_, err = readmodelcontracts.NewReadModelsClient(store.definitionTransport(g, store.definitionRoot(), destructive)).RegisterMany(tracked, &readmodelcontracts.RegisterManyRequest{EventStore: "store"})
+		var before *faults.BeforeDispatch
+		if !errors.As(err, &before) || !errors.Is(err, ErrUnsupported) || !strings.Contains(err.Error(), "requires Chronicle 19.32.2") {
+			t.Fatalf("destructive=%v: tracked need was not refused before dispatch: %v", destructive, err)
+		}
+		if modelRPCs.Load() != baseline {
+			t.Fatalf("destructive=%v: refused definition reached the kernel", destructive)
+		}
+	}
 }
 
 // Kernels before 19.32.2 skip metadata beneath maps and on collection-valued

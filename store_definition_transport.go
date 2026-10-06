@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,6 +29,12 @@ func (s *EventStore) definitionTransport(g *generation, root *definitionRoot, de
 func (t *definitionTransport) Invoke(ctx context.Context, method string, args, reply any, options ...grpc.CallOption) error {
 	ctx, err := authorize(ctx, t.generation.tokens)
 	if err != nil {
+		return &faults.BeforeDispatch{Cause: err}
+	}
+	// Authoritative kernel-fix check, as in generationTransport.Invoke: this
+	// transport is pinned to one generation, so definitions that tracked a need
+	// (see nestedProtectionAdmission) are never sent to a kernel without the fix.
+	if err = kernelcapability.Check(ctx, t.generation.capabilities); err != nil {
 		return &faults.BeforeDispatch{Cause: err}
 	}
 	c, d, g := t.store.client, t.store.definitions, t.generation

@@ -10,6 +10,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/registration"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -186,6 +187,10 @@ func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, w
 }
 
 func (s *EventStore) registerRoot(ctx context.Context, g *generation, waitReady bool, root *definitionRoot) (RegistrationOutcome, error) {
+	// Registration is shared by every caller of this generation, whichever one
+	// drives it; a gated caller's needs would refuse, and fail, all artifacts.
+	// Stages that need a fix track it themselves (nestedProtectionAdmission).
+	ctx = kernelcapability.Without(ctx)
 	outcome := g.registrations.For(registrationKey(s.name, s.namespace, root.revision)).Run(ctx, g.number, s.client.config.registrationRetry, retryRegistration, func(ctx context.Context) ([]ArtifactRegistration, error) { return s.registerStages(ctx, g, root) })
 	if outcome.Failure != nil {
 		return outcome, &RegistrationError{Outcome: outcome}

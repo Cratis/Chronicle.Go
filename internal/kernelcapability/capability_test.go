@@ -91,3 +91,24 @@ func TestTrackedNeedsAreCheckedAgainstTheDispatchingKernel(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestWithoutDropsTrackedNeedsForSharedWork(t *testing.T) {
+	gated := With(context.Background(), NeedProtectedRevision)
+	shared := Without(gated)
+	if err := Check(shared, Capabilities{}); err != nil {
+		t.Fatal("shared work inherited a tracked need:", err)
+	}
+	if Add(shared, NeedMixedAllReplay) {
+		t.Fatal("untracked shared context accepted a need")
+	}
+	if err := Check(gated, Capabilities{}); !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatal("Without changed the gated context", err)
+	}
+	// Stages that need a fix still track it on top of the detached context.
+	if err := Check(With(shared, NeedMixedAllReplay), Capabilities{}); !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatal("re-tracked need not checked", err)
+	}
+	if plain := context.Background(); Without(plain) != plain {
+		t.Fatal("untracked context replaced")
+	}
+}

@@ -150,17 +150,28 @@ func (r *requirements) snapshot() []Need {
 // already tracked by ctx. Adding to it never changes the parent's set.
 func Track(ctx context.Context) context.Context {
 	tracked := &requirements{}
-	if parent, ok := ctx.Value(requirementsKey{}).(*requirements); ok {
+	if parent, ok := ctx.Value(requirementsKey{}).(*requirements); ok && parent != nil {
 		tracked.needs = parent.snapshot()
 	}
 	return context.WithValue(ctx, requirementsKey{}, tracked)
+}
+
+// Without returns ctx with no tracked requirements, keeping its other values
+// and cancellation. Shared work that a gated operation merely triggers, such as
+// connecting or registering a generation, must not inherit that operation's
+// needs: it serves every caller and needs none of their kernel fixes.
+func Without(ctx context.Context) context.Context {
+	if tracked, _ := ctx.Value(requirementsKey{}).(*requirements); tracked == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, requirementsKey{}, (*requirements)(nil))
 }
 
 // Add records n for every later dispatch under ctx. It reports false when ctx
 // is not tracked; callers must then refuse rather than dispatch unchecked.
 func Add(ctx context.Context, n Need) bool {
 	tracked, ok := ctx.Value(requirementsKey{}).(*requirements)
-	if !ok {
+	if !ok || tracked == nil {
 		return false
 	}
 	tracked.mu.Lock()
@@ -181,7 +192,7 @@ func With(ctx context.Context, n Need) context.Context {
 // before dispatching; a failure must be reported as not dispatched.
 func Check(ctx context.Context, have Capabilities) error {
 	tracked, ok := ctx.Value(requirementsKey{}).(*requirements)
-	if !ok {
+	if !ok || tracked == nil {
 		return nil
 	}
 	for _, n := range tracked.snapshot() {

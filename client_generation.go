@@ -105,6 +105,8 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 }
 
 func (c *Client) establish(ctx context.Context, g *generation) error {
+	// A lazily connecting gated operation must not gate the connection itself.
+	ctx = kernelcapability.Without(ctx)
 	service := clients.NewConnectionServiceClient(g.transport)
 	if !c.config.skipCompatibility {
 		response, err := service.CheckCompatibility(ctx, &clients.CompatibilityRequest{ClientType: "Go", ClientVersion: "0.1.0-dev", ProtocolVersion: contracts.ProtocolVersion, DescriptorSet: contracts.DescriptorSet()})

@@ -17,6 +17,7 @@ import (
 	readmodelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/readmodels"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -185,10 +186,14 @@ type capabilityClassifiedModel struct {
 }
 
 // blockingValidator runs inner, then signals and waits, so the read is admitted
-// on one generation and dispatched after a reconnect.
-func blockingValidator(inner readmodels.ProjectionReplayValidator, entered, release chan struct{}) readmodels.ProjectionReplayValidator {
+// on one generation and dispatched after a reconnect. The inner validator must
+// admit the read: a refusal before the reconnect is not the behavior under test.
+func blockingValidator(t *testing.T, inner readmodels.ProjectionReplayValidator, entered, release chan struct{}) readmodels.ProjectionReplayValidator {
 	return func(ctx context.Context, d readmodels.Descriptor) (bool, error) {
 		known, err := inner(ctx, d)
+		if err != nil {
+			t.Errorf("replay refused at admission, before the reconnect: %v", err)
+		}
 		close(entered)
 		<-release
 		return known, err
@@ -203,7 +208,7 @@ func readModelServers() (*readModelKernel, *projectionKernel) {
 func runBlockedReplay(t *testing.T, f *reconnectFixture, store *EventStore, model readmodels.Identifier, catalog *readmodels.Catalog, validator readmodels.ProjectionReplayValidator, previous uint64) error {
 	t.Helper()
 	entered, release := make(chan struct{}), make(chan struct{})
-	service, err := readmodels.New(store.name, store.namespace, catalog, &clientTransport{client: f.client, store: store}, readmodels.WithProjectionReplayValidator(blockingValidator(validator, entered, release)))
+	service, err := readmodels.New(store.name, store.namespace, catalog, &clientTransport{client: f.client, store: store}, readmodels.WithProjectionReplayValidator(blockingValidator(t, validator, entered, release)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,6 +229,17 @@ func runBlockedReplay(t *testing.T, f *reconnectFixture, store *EventStore, mode
 	}
 }
 
+// assertDispatchRefusal requires the dispatch-time capability refusal, not an
+// admission pre-check refusal with the same message. The read error hides its
+// cause's text, so the message is checked on the unwrapped BeforeDispatch.
+func assertDispatchRefusal(t *testing.T, err error, message string) {
+	t.Helper()
+	var before *faults.BeforeDispatch
+	if !errors.As(err, &before) || !errors.Is(before, ErrUnsupported) || !strings.Contains(before.Error(), message) {
+		t.Fatalf("replay after reconnect = %v; want dispatch-time refusal %q", err, message)
+	}
+}
+
 // A classified projection replay admitted against 19.32.2 that reconnects to
 // an older kernel while admission completes must not dispatch.
 func TestClassifiedReplayRefusesWhenReconnectedToIncapableKernelBeforeDispatch(t *testing.T) {
@@ -240,9 +256,7 @@ func TestClassifiedReplayRefusesWhenReconnectedToIncapableKernelBeforeDispatch(t
 	}
 	first := f.awaitConnected(t)
 	err = runBlockedReplay(t, f, store, model.Identifier(), store.ReadModels().Catalog(), func(context.Context, readmodels.Descriptor) (bool, error) { return true, nil }, first.Generation)
-	if !errors.Is(err, ErrUnsupported) {
-		t.Fatalf("classified replay after reconnect = %v", err)
-	}
+	assertDispatchRefusal(t, err, "protected projection replay release requires Chronicle 19.32.2")
 	if calls := f.conn.count("GetAllInstances"); calls != 0 {
 		t.Fatalf("GetAllInstances RPCs = %d", calls)
 	}
@@ -276,9 +290,7 @@ func TestMixedAllReplayRefusesWhenReconnectedToIncapableKernelBeforeDispatch(t *
 		t.Fatal(err)
 	}
 	err = runBlockedReplay(t, f, store, model.Identifier(), snapshot.models, validator, first.Generation)
-	if !errors.Is(err, ErrUnsupported) {
-		t.Fatalf("mixed replay after reconnect = %v", err)
-	}
+	assertDispatchRefusal(t, err, "mixed all-event projection replay requires Chronicle 19.32.1")
 	if calls := f.conn.count("GetAllInstances"); calls != 0 {
 		t.Fatalf("GetAllInstances RPCs = %d", calls)
 	}
