@@ -106,6 +106,11 @@ func TestKernelProtectedRevisionIsProtectedWithOriginalSubject(t *testing.T) {
 		}
 	}
 	assertRevisionRequestsProtected()
+	// At rest: the original, the revision and the system request hold no
+	// plaintext for any profile. The unprotected subject is the scan control.
+	persisted := []string{"synthetic-original-pii", "synthetic-original-namespace", "synthetic-original-global"}
+	persisted = append(persisted, plaintext...)
+	assertStoredWithout(t, string(f.storeName), subject, persisted...)
 	if err = store.Compliance().ErasePII(f.ctx, subject); err != nil {
 		t.Fatal(err)
 	}

@@ -116,7 +116,7 @@ func TestKernelComplianceProtectionBeneathMapsAndCollectionElements(t *testing.T
 	}
 	source := events.SourceID(uuid.NewString())
 	input := PlacementRecorded{
-		Contacts: map[string]PlacementContact{"home": {Email: "fixture-map-object"}},
+		Contacts: map[string]PlacementContact{"placement-control-key": {Email: "fixture-map-object"}},
 		Names:    map[string]conceptfixtures.Name{"first": "fixture-map-concept"},
 		Rows:     []ClassifiedNames{{"fixture-array-row"}},
 		Labels:   []ClassifiedLabels{{"label": "fixture-array-map"}},
@@ -144,11 +144,15 @@ func TestKernelComplianceProtectionBeneathMapsAndCollectionElements(t *testing.T
 	if !reflect.DeepEqual(projected.Value.Names, input.Names) || !reflect.DeepEqual(projected.Value.Rows, input.Rows) || !reflect.DeepEqual(projected.Value.Tokens, input.Tokens) {
 		t.Fatalf("projected placements: %+v", projected.Value)
 	}
+	// At rest: events (every stored generation) and the read-model sink hold no
+	// plaintext beneath maps or in collection elements, including namespace
+	// encryption. The unprotected map key is the scan control.
+	assertStoredWithout(t, string(f.storeName), "placement-control-key", "fixture-map-object", "fixture-map-concept", "fixture-array-row", "fixture-array-map", "fixture-map-secret", "fixture-map-token")
 	if err := store.Compliance().ErasePII(f.ctx, string(source)); err != nil {
 		t.Fatal(err)
 	}
 	erased := read()
-	if erased.Contacts["home"].Email != "" || erased.Names["first"] != "" || len(erased.Rows) != 1 || len(erased.Rows[0]) != 0 || len(erased.Labels) != 1 || len(erased.Labels[0]) != 0 || erased.Secrets["api"].Token != "fixture-map-secret" || erased.Tokens["api"] != "fixture-map-token" {
+	if erased.Contacts["placement-control-key"].Email != "" || erased.Names["first"] != "" || len(erased.Rows) != 1 || len(erased.Rows[0]) != 0 || len(erased.Labels) != 1 || len(erased.Labels[0]) != 0 || erased.Secrets["api"].Token != "fixture-map-secret" || erased.Tokens["api"] != "fixture-map-token" {
 		t.Fatalf("erasure beneath maps/elements: %+v", erased)
 	}
 	value, err := reader.Get(f.ctx, readmodels.Key(source))
