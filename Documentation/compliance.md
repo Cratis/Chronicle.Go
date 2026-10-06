@@ -9,7 +9,10 @@ removing events. The kernel owns encryption, erasure fences and replacement keys
 the Go SDK never holds keys or performs local cryptography.
 
 **Runtime limits:** use Chronicle 19.32.3 or later for global confidentiality and
-protected numeric scalars. The 19.29.4 MongoDB kernel cannot provision global
+protected numeric scalars. Protected revisions, classified projection replay and
+nested map/array-element protection need 19.32.2 or later and are refused on
+older or unverified kernels; see the
+[minimum kernel versions](parity.md#minimum-kernel-versions). The 19.29.4 MongoDB kernel cannot provision global
 confidentiality keys and releases protected numbers as JSON strings; see the
 [compatibility limits](parity.md#compliance-and-confidentiality). String PII, nested
 string values, numeric scalars, subject/namespace/global confidentiality and the
@@ -74,14 +77,17 @@ fail rather than silently doing nothing.
 - Composite object classification descends to its leaves without changing the
   object shape. Classified concepts retain their representation and metadata in
   pointers and collection items. An explicitly classified collection remains
-  coarse container protection, matching C#. Metadata on map values applies to
-  every value, and a classified collection-valued array element (a nested list
-  or map) is protected as a whole, while array elements with declared members
-  keep per-member protection. Both need Chronicle 19.32.2 or later
+  coarse container protection, matching C#. Protection beneath an unprotected
+  map applies to each map value's classified members (or the value itself when
+  its type is classified), and a classified list- or map-valued array element is
+  protected as a whole element, while array elements with declared members keep
+  per-member protection. Both need Chronicle 19.32.2 or later
   ([Chronicle#4551](https://github.com/Cratis/Chronicle/issues/4551),
   [Chronicle#4552](https://github.com/Cratis/Chronicle/issues/4552)); earlier
-  kernels skip that metadata and store such values unprotected. Metadata is
-  never silently moved.
+  kernels skip that metadata and store such values unprotected, so store
+  registration refuses these placements with `ErrUnsupported` unless the
+  connected kernel's verified version is 19.32.2 or later. Metadata is never
+  silently moved.
 - Member metadata takes precedence over declaring-type and value-type metadata.
   PII/confidentiality conflicts still fail; precedence cannot bypass that guard.
   Use `DetailsSet: true` to explicitly override an inherited rationale with an

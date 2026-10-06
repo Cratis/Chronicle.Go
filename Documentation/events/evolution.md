@@ -150,7 +150,10 @@ event as another generation, or observing it with a historical-generation
 reactor or reducer, therefore returns ciphertext in classified fields. Do not
 read or observe classified events at a generation other than the one the
 kernel returns as current. `TestKernelProtectedEventGenerationMigrationProfile`
-records this kernel behavior.
+records this kernel behavior, tracked upstream as
+[Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623). A fail-closed
+SDK guard for such decodes is tracked in
+[Chronicle.Go#90](https://github.com/Cratis/Chronicle.Go/issues/90).
 
 Continue with [reading events](reading-events.md) and the
 [behavior-level parity map](../parity.md#event-evolution).

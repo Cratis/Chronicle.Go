@@ -58,8 +58,11 @@ func (r *HistoricalProtectedPersonReactor) Observe(ctx context.Context, e Protec
 // release correctly, before and after erasure. The kernel still releases only
 // the current representation, though: other generations in GenerationalContent
 // reach clients as ciphertext, both on reads and on observer delivery to a
-// historical-generation handler. Reading a protected event at another
-// generation therefore stays unsupported; this test fails once that changes.
+// historical-generation handler (Chronicle#4623,
+// https://github.com/Cratis/Chronicle/issues/4623). Reading a protected event at
+// another generation therefore stays unsupported, and a fail-closed SDK decode
+// guard is tracked in https://github.com/Cratis/Chronicle.Go/issues/90. This test
+// fails once the kernel releases other generations.
 func TestKernelProtectedEventGenerationMigrationProfile(t *testing.T) {
 	f := newKernelFixture(t)
 	first := f.client(integrationRegistry[ProtectedPersonV1](t, events.WithID("protected-person")), chronicle.WithEventTypeGenerationValidation(true))

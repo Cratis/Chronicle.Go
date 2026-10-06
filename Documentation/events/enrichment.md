@@ -74,7 +74,9 @@ remain usable. No enriched payload is decoded to rerun subject discovery.
 
 Existing protection classifications stay frozen. Append protection is unchanged.
 Revision, protected or not, enriches once and sends the selected actor/causes;
-the kernel protects revised content with the original event's subject. Its
+the kernel protects revised content with the original event's subject. The
+[protected revision](history-revision.md#protected-revisions) refusals run
+before audit providers, subject resolvers, enrichers, codecs or RPCs. Its
 selected correlation is available to enrichers, but the pinned kernel assigns a
 fresh correlation to the revision system event; the revision RPC has no explicit
 correlation field.

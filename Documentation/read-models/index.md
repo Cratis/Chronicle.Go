@@ -171,7 +171,7 @@ Leaving a window is not proof of document deletion.
 
 ## Hydration sessions
 
-`reader.NewSession(key)` returns a lazy `*readmodels.Session[T]`. It requires a declared projection identifier. `session.Get(ctx)` hydrates and subsequently reads using one opaque session ID. A session is permanently bound to its model, key, store, namespace and event sequence. Reducer sessions fail with `ErrUnsupported` before RPC. Classified projection models are supported: from kernel 19.32.2 the session releases each value with the subject it was written under ([Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561)).
+`reader.NewSession(key)` returns a lazy `*readmodels.Session[T]`. It requires a declared projection identifier. `session.Get(ctx)` hydrates and subsequently reads using one opaque session ID. A session is permanently bound to its model, key, store, namespace and event sequence. Reducer sessions fail with `ErrUnsupported` before RPC. Classified projection models are supported from kernel 19.32.2, where the session releases each value with the subject it was written under ([Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561)); against an older or unverified kernel, `session.Get` refuses them with `ErrUnsupported` before RPC.
 
 Call `session.Close(cleanupCtx)` **before closing the client**, including after a failed or canceled read. The kernel may have hydrated state even when the response was lost. Cleanup uses the actual sequence, not an unconditional event-log request. Close is idempotent after success; failed cleanup returns its error and can be retried with a fresh, bounded context. Once cleanup starts, further reads return `ErrClosed`.
 

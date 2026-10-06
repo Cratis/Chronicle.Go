@@ -116,7 +116,8 @@ Collections and snapshots are partial kernel replay capabilities:
   mixed with explicit event mappings. Mixed shapes need kernel 19.32.1 or later
   ([Chronicle#4562](https://github.com/Cratis/Chronicle/issues/4562)): earlier
   kernels filter replay and history to the explicit IDs and omit other events the
-  projection handles live.
+  projection handles live, so the SDK refuses mixed shapes with `ErrUnsupported`
+  before any RPC unless the connected kernel's verified version is 19.32.1 or later.
 - Catalog-only remote projections remain readable from their materialized sink,
   but replay/history fails without producer fidelity evidence. Low-level adapter
   constructors can supply `WithProjectionReplayValidator`; the adapter owns that
@@ -145,8 +146,11 @@ the subject empties it. This covers PII and subject, namespace and global
 encryption, including nested/reference schemas and provider classifications.
 `TestKernelModelHistoryProtectedReleaseProfile` exercises every route above
 against the pinned kernel before and after erasure. Earlier kernels released
-replayed values with the source key instead, so do not use these routes for
-classified models against them; the SDK has no ciphertext heuristic to detect it.
+replayed values with the source key instead. The SDK therefore refuses classified
+models on these routes with `ErrUnsupported`, before any RPC, unless the
+connected kernel's verified version is 19.32.2 or later; a connection made with
+`WithSkipCompatibilityCheck` is refused too. See the
+[minimum kernel versions](../parity.md#minimum-kernel-versions).
 
 Snapshot contributions have a separate release owner: the kernel releases each
 event with its generation's schema and event subject **before** projecting.
