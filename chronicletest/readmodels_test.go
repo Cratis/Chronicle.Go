@@ -180,7 +180,7 @@ func TestReadModelScenarioRefusesProjectionDefaultsBeforeConnection(t *testing.T
 	}
 	declaration := projections.ModelBound(model, projections.WithInitialValues(ProjectedAccount{Name: "default"}))
 	scenario, err := chronicletest.OpenReadModelScenario[ProjectedAccount](t.Context(), chronicletest.Config{Registry: registry, Engine: chronicletest.Kernel, ConnectionString: "chronicle://127.0.0.1:1"}, chronicletest.ReadModelOptions[ProjectedAccount]{Projection: &declaration})
-	if scenario != nil || !errors.Is(err, chronicletest.ErrFidelityUnavailable) || !strings.Contains(err.Error(), "initial state") {
+	if scenario != nil || !errors.Is(err, chronicletest.ErrFidelityUnavailable) || !strings.Contains(err.Error(), "initial state") || !strings.Contains(err.Error(), "Materialized") {
 		t.Fatalf("projection defaults did not fail before I/O: %v %v", scenario, err)
 	}
 }

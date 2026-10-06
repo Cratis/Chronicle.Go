@@ -233,7 +233,7 @@ func TestKernelProjectionDefaultsAutoMapAndAggregateOnly(t *testing.T) {
 	}
 }
 
-func TestKernelReadModelScenarioRefusesUnfaithfulProjectionDefaults(t *testing.T) {
+func TestKernelReadModelScenarioNonMaterializedRefusesProjectionDefaults(t *testing.T) {
 	f := newKernelFixture(t)
 	registry, _, declaration := defaultsRegistry(t)
 	scenario, err := chronicletest.OpenReadModelScenario[DefaultsAccount](f.ctx, chronicletest.Config{Registry: registry, Store: f.storeName, Engine: chronicletest.Kernel, ConnectionString: f.endpoint, Development: true}, chronicletest.ReadModelOptions[DefaultsAccount]{Projection: &declaration})
