@@ -106,16 +106,44 @@ func TestKernelBinaryEventsProjectionAndReadModel(t *testing.T) {
 					if _, err := chronicle.RegisterReadModel[BinaryArrayControl](chronicle.NewRegistry()); !errors.Is(err, chronicle.ErrUnsupported) {
 						t.Fatal("binary array model registration was not refused", err)
 					}
-					continue
+					c.ID = "nested"
 				}
 				writes++
 				var payload string
 				if c.Result.Status != "accepted" || json.Unmarshal(c.Result.Output, &payload) != nil {
 					t.Fatal("invalid packaged write")
 				}
+				if c.ID == "nested" {
+					// Retain the captured C# byte strings; remove only the refused
+					// collection so the nested leaf is exercised independently.
+					var properties map[string]json.RawMessage
+					if err := json.Unmarshal([]byte(payload), &properties); err != nil {
+						t.Fatal(err)
+					}
+					chunks := "Chunks"
+					if policy == serialization.CamelCase {
+						chunks = "chunks"
+					}
+					if _, ok := properties[chunks]; !ok {
+						t.Fatal("captured chunks property is missing")
+					}
+					delete(properties, chunks)
+					data, err := json.Marshal(properties)
+					if err != nil {
+						t.Fatal(err)
+					}
+					payload = string(data)
+				}
 				var original BinaryChanged
 				if err := descriptor.Unmarshal([]byte(payload), &original); err != nil {
 					t.Fatal(err)
+				}
+				if c.ID == "nested" {
+					want := BinaryChanged{Payload: []byte{}, Nested: &BinaryWitnessNested{Inner: []byte{1, 2}}}
+					if !reflect.DeepEqual(original, want) {
+						t.Fatalf("captured nested case = %#v, want %#v", original, want)
+					}
+					original = want
 				}
 				for _, producer := range []string{"go", "csharp"} {
 					t.Run(c.ID+"/"+producer, func(t *testing.T) {
@@ -162,13 +190,13 @@ func TestKernelBinaryEventsProjectionAndReadModel(t *testing.T) {
 					})
 				}
 			}
-			if writes != 10 {
+			if writes != 11 {
 				t.Fatalf("incomplete binary writes: %d", writes)
 			}
 		})
 	}
-	if readbacks != 80 {
-		t.Fatalf("binary event/model readbacks = %d, want 80", readbacks)
+	if readbacks != 88 {
+		t.Fatalf("binary event/model readbacks = %d, want 88", readbacks)
 	}
 	t.Logf("verified %d Go/C# binary event and AutoMap model readbacks", readbacks)
 }
