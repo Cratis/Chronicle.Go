@@ -245,11 +245,12 @@ Release ownership and capability boundaries use **v19.29.4**:
   values above MaxInt32 fail rather than clamp; reducer snapshots fail before RPC instead of
   adopting the kernel's unconditional empty result. Nonempty defaults and unproven
   custom/relationship-key replay are refused (`TestProjectionHistoryRefusesDefaultsAndCustomKeysWithoutRPC`).
-  Mixed ALL plus explicit event mappings also fails before RPC because the kernel
-  query drops types handled live; pure ALL with an empty type filter is characterized
-  by `TestKernelModelHistoryMixedAllReplayRefusalAndPureAll` (A/B/A).
-  Kernel 19.32.3 fixes that query ([Chronicle#4562](https://github.com/Cratis/Chronicle/issues/4562)),
-  and the test now witnesses the complete kernel fold; the SDK refusal is not lifted yet.
+  Mixed ALL plus explicit event mappings is admitted: kernel 19.32.1 and later fold
+  every event handled live ([Chronicle#4562](https://github.com/Cratis/Chronicle/issues/4562)).
+  `TestMixedAllHistoryIsAdmitted` and `TestKernelModelHistoryMixedAndPureAllReplay`
+  cover it; the kernel witness reads a bounded replay that must include an event
+  only the ALL subscription handles, the complete replay, legacy replay and A/B/A
+  history, beside pure ALL with an empty type filter.
   No local evaluator/default overlay or decision guard is inferred.
 - **Route-specific release ownership:** materialized keyed/collection reads use
   persisted model lineage; the SDK validates their final representation without a

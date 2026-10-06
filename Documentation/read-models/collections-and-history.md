@@ -112,12 +112,11 @@ Collections and snapshots are partial kernel replay capabilities:
   empty initial state and source-ID root keys. Nonempty defaults, custom keys,
   joins, joined removal, children and nested projections are refused. The SDK
   neither evaluates a local projection nor overlays defaults onto replay results.
-- Mixed ALL subscriptions with explicit event mappings are refused before RPC:
-  kernel 19.29.4 filters replay to the explicit IDs, omitting other events handled
-  live. Kernel 19.32.3 fixes this
-  ([Chronicle#4562](https://github.com/Cratis/Chronicle/issues/4562)), but the SDK
-  still refuses the shape. Pure ALL with an empty event-type list is supported for
-  the same simple source-ID shape.
+- ALL subscriptions are supported for the same simple source-ID shape, alone or
+  mixed with explicit event mappings. Mixed shapes need kernel 19.32.1 or later
+  ([Chronicle#4562](https://github.com/Cratis/Chronicle/issues/4562)): earlier
+  kernels filter replay and history to the explicit IDs and omit other events the
+  projection handles live.
 - Catalog-only remote projections remain readable from their materialized sink,
   but replay/history fails without producer fidelity evidence. Low-level adapter
   constructors can supply `WithProjectionReplayValidator`; the adapter owns that

@@ -7,11 +7,9 @@ package integration_test
 
 import (
 	"encoding/json"
-	"errors"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
-	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/metadata"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -33,7 +31,7 @@ type HistoryOnlyAll struct {
 	Marker string `chronicle:"all(from=Marker)"`
 }
 
-func TestKernelModelHistoryMixedAllReplayRefusalAndPureAll(t *testing.T) {
+func TestKernelModelHistoryMixedAndPureAllReplay(t *testing.T) {
 	f := newKernelFixture(t)
 	r := chronicle.NewRegistry()
 	if _, err := chronicle.RegisterEvent[HistoryAllA](r); err != nil {
@@ -70,22 +68,27 @@ func TestKernelModelHistoryMixedAllReplayRefusalAndPureAll(t *testing.T) {
 	awaitHistoryCollection(t, f.ctx, reader, func(c readmodels.Collection[HistoryMixedAll]) bool {
 		return len(c.Instances) == 1 && c.Instances[0].Value.Marker == "A2"
 	})
-	if v, err := reader.GetAll(f.ctx, new(events.Count(3))); v.Instances != nil || !errors.Is(err, chronicle.ErrUnsupported) {
-		t.Fatal("incomplete mixed ALL replay admitted", err)
+	// Chronicle#4562 (fixed in 19.32.1): replay and history no longer filter
+	// to the explicit IDs and fold every event the projection handles live.
+	// Two events must include B, which only the ALL subscription handles.
+	bounded, err := reader.GetAll(f.ctx, new(events.Count(2)))
+	if err != nil || len(bounded.Instances) != 1 || bounded.ProcessedEventsCount != 2 || bounded.Instances[0].Value.Name != "first" || bounded.Instances[0].Value.Marker != "B" {
+		t.Fatalf("mixed ALL bounded replay: %+v %v", bounded, err)
 	}
-	if v, err := reader.GetSnapshots(f.ctx, "source"); v != nil || !errors.Is(err, chronicle.ErrUnsupported) {
-		t.Fatal("incomplete mixed ALL snapshots admitted", err)
+	complete, err := reader.GetAll(f.ctx, new(events.Count(3)))
+	if err != nil || len(complete.Instances) != 1 || complete.ProcessedEventsCount != 3 || complete.Instances[0].Value.Name != "third" || complete.Instances[0].Value.Marker != "A2" {
+		t.Fatalf("mixed ALL complete replay: %+v %v", complete, err)
 	}
-	raw, err := contracts.NewReadModelsClient(f.conn).GetAllInstances(f.ctx, &contracts.GetAllInstancesRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ReadModelIdentifier: string(mixed.Identifier()), EventSequenceId: "event-log", EventCount: 3})
-	// Chronicle#4562, fixed in 19.32.3: replay no longer filters to the explicit
-	// IDs and folds every event handled live. The SDK refusal above stays until
-	// it is lifted deliberately.
-	if err != nil || raw.ProcessedEventsCount != 3 || len(raw.Instances) != 1 {
-		t.Fatal("mixed ALL kernel replay witness changed", err)
-	}
+	legacy, err := store.ReadModels().ReplayProjection(f.ctx, mixed.Identifier(), 2)
 	var replayed HistoryMixedAll
-	if err := json.Unmarshal([]byte(raw.Instances[0]), &replayed); err != nil || replayed.Name != "third" || replayed.Marker != "A2" {
-		t.Fatal("mixed ALL kernel replay folded the wrong state", raw.Instances[0], err)
+	if err != nil || len(legacy) != 1 || json.Unmarshal(legacy[0], &replayed) != nil || replayed.Name != "first" || replayed.Marker != "B" {
+		t.Fatalf("mixed ALL legacy replay: %s %v", legacy, err)
+	}
+	// Groups fold cumulatively in returned group order (A then B), as for pure
+	// ALL below: the B group keeps A's final Name and applies B's Marker.
+	mixedHistory, err := reader.GetSnapshots(f.ctx, "source")
+	if err != nil || len(mixedHistory) != 2 || mixedHistory[0].CorrelationID != a || mixedHistory[1].CorrelationID != b || len(mixedHistory[0].Events) != 2 || len(mixedHistory[1].Events) != 1 || mixedHistory[0].Instance.Marker != "A2" || mixedHistory[0].Instance.Name != "third" || mixedHistory[1].Instance.Marker != "B" || mixedHistory[1].Instance.Name != "third" {
+		t.Fatalf("mixed ALL A/B/A history: %+v %v", mixedHistory, err)
 	}
 	all, err := readmodels.For(store.ReadModels(), pure).GetAll(f.ctx, new(events.Count(3)))
 	if err != nil || len(all.Instances) != 1 || all.ProcessedEventsCount != 3 || all.Instances[0].Value.Marker != "A2" {

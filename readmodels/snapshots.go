@@ -39,7 +39,7 @@ type Snapshot[T any] struct {
 // GetSnapshots reads correlation-grouped projection history for a nonblank key.
 // Reducers fail with ErrUnsupported before any RPC: kernel 19.29.4 returns an
 // uninformative empty history for every non-projection. Replay fidelity admission
-// also refuses unknown/defaulted/relationship/mixed-ALL producers. Classified
+// also refuses unknown/defaulted/relationship producers. Classified
 // states are released by the kernel with their original subjects. Success returns a non-nil
 // slice. Any error or cancellation discards all results. No sessions are created.
 func (s *Service) GetSnapshots(ctx context.Context, model Identifier, key Key) ([]Snapshot[json.RawMessage], error) {

@@ -45,12 +45,6 @@ func projectionReplayValidatorFor(snapshot registrySnapshot) (readmodels.Project
 		if definition.InitialModelState != "{}" || len(definition.Join) != 0 || len(definition.RemovedWithJoin) != 0 || len(definition.Children) != 0 || len(definition.Nested) != 0 {
 			return true, fmt.Errorf("%w: projection defaults or relationship replay", ErrUnsupported)
 		}
-		// GetEventTypes returns explicit IDs even when live subscription also
-		// accepts ALL. An empty filter handles pure ALL; a nonempty filter loses
-		// other event types. Never report the resulting incomplete history.
-		if definition.SubscribesToAllEvents && (len(definition.From) != 0 || len(definition.FromEvery) != 0 || len(definition.RemovedWith) != 0 || definition.FromEventProperty != nil) {
-			return true, fmt.Errorf("%w: mixed all-event projection replay", ErrUnsupported)
-		}
 		for _, from := range definition.From {
 			if from.Value.Key != "" && from.Value.Key != "$eventSourceId" {
 				return true, fmt.Errorf("%w: custom-key projection replay", ErrUnsupported)

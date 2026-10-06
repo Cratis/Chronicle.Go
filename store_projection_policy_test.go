@@ -19,7 +19,9 @@ type historyMixedAllModel struct {
 	Updated time.Time `chronicle:"all(context=occurred)"`
 }
 
-func TestMixedAllHistoryIsRefusedBeforeTransport(t *testing.T) {
+// Chronicle#4562 is fixed in 19.32.1: replay and history fold every event the
+// projection handles live, so mixed ALL plus explicit mappings is admitted.
+func TestMixedAllHistoryIsAdmitted(t *testing.T) {
 	r := NewRegistry()
 	if _, err := RegisterEvent[historyAdmissionEvent](r); err != nil {
 		t.Fatal(err)
@@ -37,19 +39,20 @@ func TestMixedAllHistoryIsRefusedBeforeTransport(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	store := &EventStore{storeOwner: &storeOwner{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}}
-	if err := store.initializeReadModels(); err != nil {
+	snapshot, err := client.selectedStoreSnapshot("store")
+	if err != nil {
 		t.Fatal(err)
 	}
-	reader := readmodels.For(store.ReadModels(), m)
-	if v, err := reader.GetAll(t.Context(), new(events.Count(3))); v.Instances != nil || !errors.Is(err, ErrUnsupported) {
-		t.Fatal("mixed ALL collection admitted", err)
+	if len(snapshot.projections) != 1 || !snapshot.projections[0].KernelDefinition().SubscribesToAllEvents || len(snapshot.projections[0].KernelDefinition().From) == 0 {
+		t.Fatal("fixture is not a mixed ALL projection")
 	}
-	if v, err := reader.GetSnapshots(t.Context(), "source"); v != nil || !errors.Is(err, ErrUnsupported) {
-		t.Fatal("mixed ALL history admitted", err)
+	validator, err := projectionReplayValidatorFor(snapshot)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if v, err := store.ReadModels().ReplayProjection(t.Context(), m.Identifier(), 3); v != nil || !errors.Is(err, ErrUnsupported) {
-		t.Fatal("legacy mixed ALL replay admitted", err)
+	d, _ := snapshot.models.LookupIdentifier(m.Identifier())
+	if known, err := validator(t.Context(), d); !known || err != nil {
+		t.Fatal("mixed ALL replay refused", known, err)
 	}
 }
 
