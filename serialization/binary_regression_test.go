@@ -205,7 +205,10 @@ func TestBinaryFreeArrayDecodeAllocationsIgnoreAbsentItemGraph(t *testing.T) {
 		t.Fatal("allocation test decoded no elements")
 	}
 	t.Logf("small graph %.0f allocations; large graph %.0f allocations for 32 elements", smallAllocs, largeAllocs)
-	if largeAllocs > smallAllocs+1 {
+	// A per-element graph walk costs at least one allocation for each of the 32
+	// elements. Allow a small constant difference: the race detector and
+	// larger struct metadata add a few allocations that do not scale with rows.
+	if largeAllocs >= smallAllocs+16 {
 		t.Fatalf("binary-free item graph adds per-element allocations: small=%.0f large=%.0f", smallAllocs, largeAllocs)
 	}
 }
