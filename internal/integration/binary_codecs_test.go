@@ -7,6 +7,7 @@ package integration_test
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -26,18 +27,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type BinaryArrayControl struct{ Chunks [][]byte }
 type BinaryWitnessNested struct{ Inner []byte }
 type BinaryChanged struct {
 	Payload  []byte
 	Optional *[]byte
-	Chunks   [][]byte
 	Nested   *BinaryWitnessNested
 }
 type BinaryWitnessModel struct {
 	ID       string `json:"id"`
 	Payload  []byte
 	Optional *[]byte
-	Chunks   [][]byte
 	Nested   *BinaryWitnessNested
 }
 
@@ -91,10 +91,23 @@ func TestKernelBinaryEventsProjectionAndReadModel(t *testing.T) {
 				t.Fatal("binary event not registered")
 			}
 			reader := readmodels.For(store.ReadModels(), model)
-			output := t.TempDir()
+			output := filepath.Join("../../.ai-work/issue64-gate", string(fixture.storeName))
+			if err := os.MkdirAll(output, 0750); err != nil {
+				t.Fatal(err)
+			}
 			writes := 0
 			for _, c := range profile.Cases {
 				if c.DeclaredType != "BinaryEvent" || c.Operation != "EventSerializer.Serialize" {
+					continue
+				}
+				if c.ID == "chunks" {
+					// Array admission is refused, not silently decoded or asserted equal.
+					if _, err := chronicle.RegisterEvent[BinaryArrayControl](chronicle.NewRegistry()); !errors.Is(err, chronicle.ErrUnsupported) {
+						t.Fatal("binary array event registration was not refused", err)
+					}
+					if _, err := chronicle.RegisterReadModel[BinaryArrayControl](chronicle.NewRegistry()); !errors.Is(err, chronicle.ErrUnsupported) {
+						t.Fatal("binary array model registration was not refused", err)
+					}
 					continue
 				}
 				writes++
@@ -107,59 +120,62 @@ func TestKernelBinaryEventsProjectionAndReadModel(t *testing.T) {
 					t.Fatal(err)
 				}
 				for _, producer := range []string{"go", "csharp"} {
-					source := events.SourceID(producer + "-" + c.ID)
-					if producer == "go" {
-						appendSuccessfully(t, fixture.ctx, store, source, original)
-					} else {
-						response, err := sequences.NewEventSequencesClient(fixture.conn).Append(fixture.ctx, &sequences.AppendRequest{
-							EventStore: string(fixture.storeName), Namespace: string(chronicle.DefaultNamespace), EventSequenceId: "event-log", EventSourceId: string(source),
-							EventType: &sequences.EventType{Id: string(event.Ref().ID), Generation: 1}, Content: payload,
-							CorrelationId: wire.Guid(metadata.CorrelationID(uuid.New())), Occurred: &sequences.SerializableDateTimeOffset{Value: wire.DateTimeOffset(time.Now().UTC())},
-							CausedBy: &sequences.Identity{}, ConcurrencyScope: &sequences.ConcurrencyScope{SequenceNumber: uint64(events.Unavailable)},
+					t.Run(c.ID+"/"+producer, func(t *testing.T) {
+						source := events.SourceID(producer + "-" + c.ID)
+						if producer == "go" {
+							appendSuccessfully(t, fixture.ctx, store, source, original)
+						} else {
+							response, err := sequences.NewEventSequencesClient(fixture.conn).Append(fixture.ctx, &sequences.AppendRequest{
+								EventStore: string(fixture.storeName), Namespace: string(chronicle.DefaultNamespace), EventSequenceId: "event-log", EventSourceId: string(source),
+								EventType: &sequences.EventType{Id: string(event.Ref().ID), Generation: 1}, Content: payload,
+								CorrelationId: wire.Guid(metadata.CorrelationID(uuid.New())), Occurred: &sequences.SerializableDateTimeOffset{Value: wire.DateTimeOffset(time.Now().UTC())},
+								CausedBy: &sequences.Identity{}, ConcurrencyScope: &sequences.ConcurrencyScope{SequenceNumber: uint64(events.Unavailable)},
+							})
+							if err != nil {
+								t.Fatal(err)
+							}
+							if err := wire.CheckEnvelope(response); err != nil {
+								t.Fatal(err)
+							}
+							if response.Response == nil || !response.Response.IsSuccess {
+								t.Fatalf("captured C# binary append failed for %s", c.ID)
+							}
+						}
+						stored, err := store.EventLog().ReadSource(fixture.ctx, source, eventsequences.SourceFilter{})
+						if err != nil || len(stored) != 1 {
+							t.Fatalf("binary event read failed: %v", err)
+						}
+						decoded, err := events.Decode[BinaryChanged](artifacts.Events, stored[0])
+						if err != nil || !reflect.DeepEqual(decoded, original) {
+							t.Fatalf("binary event lost bytes: %v", err)
+						}
+						if err := os.WriteFile(filepath.Join(output, string(source)+".event.kernel.json"), []byte(stored[0].Content), 0600); err != nil {
+							t.Fatal(err)
+						}
+						readbacks++
+						captureBinaryModel(t, fixture, model.Identifier(), source, stored[0].Context.SequenceNumber, output)
+						awaitProjection(t, fixture.ctx, reader, readmodels.Key(source), func(value BinaryWitnessModel) bool {
+							got := BinaryChanged{value.Payload, value.Optional, value.Nested}
+							return reflect.DeepEqual(got, original)
 						})
-						if err != nil {
+						raw, err := store.ReadModels().Get(fixture.ctx, model.Identifier(), readmodels.Key(source))
+						if err != nil || !raw.Exists {
+							t.Fatalf("binary model read failed: %v", err)
+						}
+						if err := os.WriteFile(filepath.Join(output, string(source)+".model.kernel.json"), raw.Value, 0600); err != nil {
 							t.Fatal(err)
 						}
-						if err := wire.CheckEnvelope(response); err != nil {
-							t.Fatal(err)
-						}
-						if response.Response == nil || !response.Response.IsSuccess {
-							t.Fatalf("captured C# binary append failed for %s", c.ID)
-						}
-					}
-					stored, err := store.EventLog().ReadSource(fixture.ctx, source, eventsequences.SourceFilter{})
-					if err != nil || len(stored) != 1 {
-						t.Fatalf("binary event read failed: %v", err)
-					}
-					decoded, err := events.Decode[BinaryChanged](artifacts.Events, stored[0])
-					if err != nil || !reflect.DeepEqual(decoded, original) {
-						t.Fatalf("binary event lost bytes: %v", err)
-					}
-					if err := os.WriteFile(filepath.Join(output, string(source)+".event.kernel.json"), []byte(stored[0].Content), 0600); err != nil {
-						t.Fatal(err)
-					}
-					readbacks++
-					awaitProjection(t, fixture.ctx, reader, readmodels.Key(source), func(value BinaryWitnessModel) bool {
-						got := BinaryChanged{value.Payload, value.Optional, value.Chunks, value.Nested}
-						return reflect.DeepEqual(got, original)
+						readbacks++
 					})
-					raw, err := store.ReadModels().Get(fixture.ctx, model.Identifier(), readmodels.Key(source))
-					if err != nil || !raw.Exists {
-						t.Fatalf("binary model read failed: %v", err)
-					}
-					if err := os.WriteFile(filepath.Join(output, string(source)+".model.kernel.json"), raw.Value, 0600); err != nil {
-						t.Fatal(err)
-					}
-					readbacks++
 				}
 			}
-			if writes != 11 {
+			if writes != 10 {
 				t.Fatalf("incomplete binary writes: %d", writes)
 			}
 		})
 	}
-	if readbacks != 88 {
-		t.Fatalf("binary event/model readbacks = %d, want 88", readbacks)
+	if readbacks != 80 {
+		t.Fatalf("binary event/model readbacks = %d, want 80", readbacks)
 	}
 	t.Logf("verified %d Go/C# binary event and AutoMap model readbacks", readbacks)
 }

@@ -11,26 +11,18 @@ import (
 	"github.com/cratis/chronicle.go/projections"
 )
 
-type binaryMappedEvent struct {
-	Payload []byte
-	Chunks  [][]byte
-}
-type binaryStringEvent struct {
-	Payload string
-	Chunks  []string
-}
+type binaryMappedEvent struct{ Payload []byte }
+type binaryStringEvent struct{ Payload string }
 type binaryLowerEvent struct {
 	Payload string `json:"payload"`
 }
 type binaryMappedModel struct {
 	ID      string
 	Payload []byte
-	Chunks  [][]byte
 }
 type binaryStringModel struct {
 	ID      string
 	Payload string
-	Chunks  []string
 }
 type binaryKeyModel struct {
 	ID      []byte

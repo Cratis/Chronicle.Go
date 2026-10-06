@@ -19,7 +19,7 @@ type binaryNested struct{ Inner []byte }
 type binaryEvent struct {
 	Payload  []byte
 	Optional *[]byte
-	Chunks   [][]byte
+	Chunks   [][]byte `json:"-"` // Capture-only control; binary arrays are not admitted.
 	Nested   binaryNested
 }
 
@@ -104,7 +104,7 @@ func TestBinaryPackagedWritesMatchCSharp(t *testing.T) {
 					value = &struct {
 						Payload  []byte
 						Optional *[]byte
-						Chunks   [][]byte
+						Chunks   [][]byte `json:"-"`
 						Nested   *binaryNested
 					}{}
 					var err error
@@ -118,7 +118,9 @@ func TestBinaryPackagedWritesMatchCSharp(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				assertEnumCaptureString(t, c.Result.Output, string(got))
+				if string(got) != binaryLeafCaptureJSON(t, c.Result.Output, profile.NamingPolicy) {
+					t.Fatal("binary leaf write differs from packaged capture")
+				}
 			})
 		}
 	}
@@ -132,7 +134,7 @@ func TestBinaryReadsFollowQualifiedProfile(t *testing.T) {
 	for _, profile := range loadBinaryCapture(t).Profiles {
 		p := binaryPlan(t, binaryPolicy(profile.NamingPolicy))
 		for _, c := range profile.Cases {
-			if c.Operation != "EventSerializer.Deserialize" {
+			if c.Operation != "EventSerializer.Deserialize" || strings.HasPrefix(c.ID, "chunks/") {
 				continue
 			}
 			reads++
@@ -143,7 +145,7 @@ func TestBinaryReadsFollowQualifiedProfile(t *testing.T) {
 				}
 				var value binaryEvent
 				err := p.Unmarshal([]byte(input), &value)
-				narrow := strings.HasSuffix(c.ID, "/leading-space") || strings.HasSuffix(c.ID, "/trailing-newline") || c.ID == "chunks/null-element"
+				narrow := strings.HasSuffix(c.ID, "/leading-space") || strings.HasSuffix(c.ID, "/trailing-newline")
 				if narrow {
 					narrowed++
 					if c.Result.Status != "accepted" {
@@ -161,6 +163,7 @@ func TestBinaryReadsFollowQualifiedProfile(t *testing.T) {
 				}
 				var want binaryEvent
 				populateBinarySnapshot(t, reflect.ValueOf(&want).Elem(), c.Result.Output)
+				want.Chunks = nil // Capture-only control excluded from the admitted schema.
 				if !reflect.DeepEqual(value, want) {
 					t.Fatalf("typed read differs from C#: %#v != %#v", value, want)
 				}
@@ -168,11 +171,13 @@ func TestBinaryReadsFollowQualifiedProfile(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				assertEnumCaptureString(t, c.Result.Reserialize.Output, string(got))
+				if string(got) != binaryLeafCaptureJSON(t, c.Result.Reserialize.Output, profile.NamingPolicy) {
+					t.Fatal("binary leaf read differs from packaged capture")
+				}
 			})
 		}
 	}
-	if reads != 102 || narrowed != 14 {
+	if reads != 92 || narrowed != 12 {
 		t.Fatal("incomplete read classifications")
 	}
 }

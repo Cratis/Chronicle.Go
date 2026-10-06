@@ -77,11 +77,11 @@ func validateBinaryPlacement(root *node) error {
 		}
 		if n.item != nil {
 			if hasBinary(n.item) {
-				if (n.typ.Kind() == reflect.Slice || n.typ.Kind() == reflect.Array) && (n.typ.Kind() != reflect.Slice || !n.item.binary) {
-					return unsupported(n.typ, "binary collections require a single slice of binary leaves")
+				if n.typ.Kind() == reflect.Slice || n.typ.Kind() == reflect.Array {
+					return unsupported(n.typ, "binary arrays lose values in the pinned kernel projection converter")
 				}
 				if n.typ.Kind() == reflect.Pointer && (n.item.typ.Kind() == reflect.Pointer || n.item.typ.Kind() == reflect.Slice && !n.item.binary) {
-					return unsupported(n.typ, "binary requires a single nullable pointer or nonnullable binary array")
+					return unsupported(n.typ, "binary requires a single nullable pointer")
 				}
 			}
 			child := placement

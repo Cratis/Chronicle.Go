@@ -49,3 +49,8 @@ dotnet run --project BinaryCapture.csproj --no-restore -- ../recaptured.json
 The output path must not exist. Compare the new output with the committed
 profile; never overwrite goldens by hand. Build outputs are locally ignored.
 Live-kernel admission is separately exercised by the Go integration witness.
+Binary arrays remain capture controls, not admitted Go declarations: the pinned
+kernel preserves their events but projects them into arrays of empty documents.
+Go tests compare an explicitly leaf-only view of these unchanged package goldens
+and separately require binary-array registration to fail. See the
+[binary parity boundary](../../../Documentation/parity.md#baselines-and-evidence).

@@ -36,25 +36,12 @@ func TestBinaryMissingNullEmptyAndNullable(t *testing.T) {
 				t.Fatal("missing/null binary was not normalized")
 			}
 		}
-		var value binaryEvent
-		if err := p.Unmarshal([]byte(`{"Chunks":["","AQ=="]}`), &value); err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(value.Chunks, [][]byte{{}, {1}}) {
-			t.Fatal("binary collection lost empty element")
-		}
-		if err := p.Unmarshal([]byte(`{"Chunks":[null]}`), &value); !errors.Is(err, chronicle.ErrProtocol) {
-			t.Fatal("null binary element accepted")
-		}
-		if _, err := p.Marshal(binaryEvent{Chunks: [][]byte{nil}}); err == nil {
-			t.Fatal("nil binary element written")
-		}
 	}
 }
 
 func TestBinaryDecodedValuesDoNotAliasInput(t *testing.T) {
 	p := binaryPlan(t, serialization.PreservePropertyNames)
-	input := []byte(`{"Payload":"AQ==","Optional":"AQ==","Chunks":["AQ=="]}`)
+	input := []byte(`{"Payload":"AQ==","Optional":"AQ==","Nested":{"Inner":"AQ=="}}`)
 	var a, b binaryEvent
 	if err := p.Unmarshal(input, &a); err != nil {
 		t.Fatal(err)
@@ -66,7 +53,7 @@ func TestBinaryDecodedValuesDoNotAliasInput(t *testing.T) {
 		input[i] = 0
 	}
 	a.Payload[0] = 9
-	if b.Payload[0] != 1 || (*a.Optional)[0] != 1 || a.Chunks[0][0] != 1 {
+	if b.Payload[0] != 1 || (*a.Optional)[0] != 1 || a.Nested.Inner[0] != 1 {
 		t.Fatal("decoded binary storage aliases")
 	}
 	original := b
@@ -85,14 +72,6 @@ func TestBinaryFieldMetadata(t *testing.T) {
 		if _, ok := f.Element(); ok {
 			t.Fatal("binary leaf exposed byte element")
 		}
-	}
-	chunks, _ := serialization.FieldAt(p.Fields(), "Chunks")
-	element, ok := chunks.Element()
-	if !ok || element.Scalar != serialization.String || element.Format != "byte-array" || !element.Collection {
-		t.Fatal("binary collection metadata lost")
-	}
-	if _, ok := element.Element(); ok {
-		t.Fatal("binary array item exposed byte element")
 	}
 }
 

@@ -59,6 +59,11 @@ func TestBinarySchemaMatchesPackagedGenerators(t *testing.T) {
 			if strings.Contains(profile.NamingPolicy, "CamelCase") {
 				key = "nested"
 			}
+			chunks := "Chunks"
+			if strings.Contains(profile.NamingPolicy, "CamelCase") {
+				chunks = "chunks"
+			}
+			delete(want.Properties, chunks) // Kernel-unqualified array control stays in the immutable C# fixture.
 			delete(want.Properties[key].(map[string]any), "title")
 			delete(got.Properties[key].(map[string]any), "required")
 			if !reflect.DeepEqual(got.Properties, want.Properties) || len(want.Required) != 0 || !reflect.DeepEqual(got.Required, []string{key}) {
@@ -78,7 +83,7 @@ func TestBinaryProviderProtectionRefusesAndUnrelatedProtectionPreservesSchema(t 
 		compliance.Property("Optional", compliance.Classification{Encrypted: true}),
 		compliance.For[binaryNested](compliance.Classification{PII: true}),
 		compliance.Using(func(target compliance.Target) (compliance.Classification, error) {
-			return compliance.Classification{PII: target.Field == "Chunks"}, nil
+			return compliance.Classification{PII: target.Field == "Payload"}, nil
 		}),
 	} {
 		if _, err := p.ProtectedSchema(option); !errors.Is(err, chronicle.ErrInvalidConfiguration) {

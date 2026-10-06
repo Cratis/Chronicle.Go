@@ -123,7 +123,7 @@ have no custom JSON/text marshaler. Fixed `[N]byte` arrays remain integer arrays
 | Empty non-nil `[]byte{}` | `""`, not `[]` |
 | Nil byte-slice property | Omitted |
 | `*[]byte` | String/null schema with `byte-array?` format; nil pointer omitted |
-| `[][]byte` | Array of base64 strings; null elements refused |
+| `[][]byte` and other collections containing binary | Refused before registration: the pinned kernel's projection conversion loses binary elements |
 
 Direct and nested object properties share this representation. Missing or null
 non-pointer binary properties decode as owned, non-nil empty slices, including
@@ -137,10 +137,13 @@ accepts the captured leading-space/trailing-newline forms and null binary array
 elements; Go deliberately narrows these reads. Both clients write canonical
 base64, including System.Text.Json's `\u002B` escape for `+`.
 
-Binary under maps, derived variants, concepts, protection or index declarations
-is refused before registration. Admission stops at one pointer to a binary leaf
-or one nonnullable slice of binary leaves; deeper/fixed/nullable binary arrays
-and binary within object collections remain unsupported. Projection copies, including AutoMap, require
+Binary under collections, maps, derived variants, concepts, protection or index
+declarations is refused before registration. Admission stops at direct/nested
+object properties and one pointer to a binary leaf. The pinned kernel preserves
+binary arrays in event history but its projection converter treats each byte
+array as another collection; read models lose their byte values. See the
+[binary kernel limitation](parity.md#baselines-and-evidence) for source citations.
+Go does not repair these lossy read models or weaken its base64 decoder. Projection copies, including AutoMap, require
 the same compiled binary representation; binary-to-string conversion, literals,
 arithmetic, identities, keys and joins are unsupported. Snapshot naming rebinds
 retain the binary representation and do not decode or reinterpret bytes.
