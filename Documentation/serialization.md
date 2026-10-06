@@ -111,6 +111,48 @@ These checks inspect the codec's actual scalar JSON, so a struct wrapper cannot
 bypass kernel limits. Concept map keys and arbitrary custom schema codecs are
 not supported by this slice.
 
+## Binary values
+
+Use `[]byte` for binary content. No codec declaration is needed. Named slice types
+whose element is the built-in `byte` have the same representation, provided they
+have no custom JSON/text marshaler. Fixed `[N]byte` arrays remain integer arrays.
+
+| Declaration/value | JSON and schema |
+| --- | --- |
+| `[]byte{1}` | `"AQ=="`; string with `byte-array` format |
+| Empty non-nil `[]byte{}` | `""`, not `[]` |
+| Nil byte-slice property | Omitted |
+| `*[]byte` | String/null schema with `byte-array?` format; nil pointer omitted |
+| `[][]byte` | Array of base64 strings; null elements refused |
+
+Direct and nested object properties share this representation. Missing or null
+non-pointer binary properties decode as owned, non-nil empty slices, including
+on event reads. Nullable pointers remain nil; present strings decode to fresh
+storage. Binary fields are scalar strings in field metadata, not byte collections.
+
+Reads require padded standard base64 with zero padding bits. URL-safe and
+unpadded encodings, invalid tokens and whitespace inside the string return
+`chronicle.ErrProtocol` without exposing the payload. The packaged C# client
+accepts the captured leading-space/trailing-newline forms and null binary array
+elements; Go deliberately narrows these reads. Both clients write canonical
+base64, including System.Text.Json's `\u002B` escape for `+`.
+
+Binary under maps, derived variants, concepts, protection or index declarations
+is refused before registration. Admission stops at one pointer to a binary leaf
+or one nonnullable slice of binary leaves; deeper/fixed/nullable binary arrays
+and binary within object collections remain unsupported. Projection copies, including AutoMap, require
+the same compiled binary representation; binary-to-string conversion, literals,
+arithmetic, identities, keys and joins are unsupported. Snapshot naming rebinds
+retain the binary representation and do not decode or reinterpret bytes.
+
+The [packaged binary capture](../serialization/testdata/binary/README.md) records
+Chronicle 19.29.4, Fundamentals 7.19.6 and both schema generator APIs. Class
+properties in C# have no required list; its record control requires `Payload`.
+Go retains its existing field-required rules: slice and pointer properties are
+not required, while ordinary value-struct containers can be required. Binary
+admission does not overwrite persisted schemas: enable generation validation
+and plan a new generation when a historical representation differs.
+
 ## Shared correlation context
 
 `metadata.WithCorrelation` and `metadata.Correlation` share Fundamentals'
