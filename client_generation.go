@@ -36,6 +36,7 @@ type generation struct {
 	transport     *generationTransport
 	stream        grpc.ServerStreamingClient[clients.ConnectionKeepAlive]
 	id            string
+	address       string
 	work          sync.WaitGroup
 	registrations registration.Cache
 	initialStores []*EventStore
@@ -54,11 +55,14 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 			return nil, err
 		}
 	}
-	address, err := c.balancer.Next(ctx, addresses)
+	address, err := c.selectAddress(ctx, addresses)
 	if err != nil {
 		return nil, err
 	}
 	g := &generation{client: c, raw: c.config.borrowed, tokens: c.config.tokenSource}
+	if g.raw == nil {
+		g.address = address
+	}
 	g.ctx, g.cancel = context.WithCancel(c.life)
 	c.nextGeneration++
 	g.number = c.nextGeneration
@@ -155,56 +159,6 @@ func drainStream(stream grpc.ServerStreamingClient[clients.ConnectionKeepAlive])
 	for {
 		if _, err := stream.Recv(); err != nil {
 			return
-		}
-	}
-}
-
-func (c *Client) runGeneration(g *generation) error {
-	if c.config.skipKeepAlive {
-		registered := make(chan struct{})
-		go func() { defer close(registered); c.replayRegistrations(g) }()
-		<-g.ctx.Done()
-		<-registered
-		return g.ctx.Err()
-	}
-	heartbeat := make(chan struct{}, 1)
-	received := make(chan error, 1)
-	registered := make(chan struct{})
-	receiverDone := make(chan struct{})
-	go func() {
-		defer close(receiverDone)
-		received <- c.receiveKeepAlive(g, heartbeat)
-		g.cancel()
-		drainStream(g.stream)
-	}()
-	go func() { defer close(registered); c.replayRegistrations(g) }()
-	err := connection.Watch(g.ctx, c.config.keepAliveTimeout, heartbeat, received)
-	g.cancel()
-	// Watch always leaves joining the receiver to its owner.
-	<-receiverDone
-	<-registered
-	return err
-}
-
-func (c *Client) receiveKeepAlive(g *generation, heartbeat chan<- struct{}) error {
-	service := clients.NewConnectionServiceClient(g.transport)
-	for {
-		message, err := g.stream.Recv()
-		if err != nil {
-			return err
-		}
-		if message == nil || message.ConnectionId != g.id {
-			return ErrProtocol
-		}
-		select {
-		case heartbeat <- struct{}{}:
-		default:
-		}
-		ctx, cancel := context.WithTimeout(g.ctx, c.config.connectTimeout)
-		_, err = service.ConnectionKeepAlive(ctx, message)
-		cancel()
-		if err != nil {
-			return err
 		}
 	}
 }

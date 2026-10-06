@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ type cuttableRelay struct {
 	connections map[net.Conn]struct{}
 	accepted    chan struct{}
 	workers     sync.WaitGroup
+	acceptCount atomic.Int32
 }
 
 func newRelay(t *testing.T, target string) *cuttableRelay {
@@ -50,6 +52,7 @@ func (r *cuttableRelay) accept() {
 		if err != nil {
 			return
 		}
+		r.acceptCount.Add(1)
 		r.mu.Lock()
 		r.connections[incoming] = struct{}{}
 		r.mu.Unlock()

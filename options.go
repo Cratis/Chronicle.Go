@@ -51,6 +51,9 @@ type clientConfig struct {
 	maxSendMessageSize, maxReceiveMessageSize       int
 	maxSendMessageSizeSet, maxReceiveMessageSizeSet bool
 	registrationRetry                               RegistrationRetry
+	connectedHooks, disconnectedHooks               []ConnectionHook
+	loadBalancer                                    LoadBalancer
+	loadBalancerSet                                 bool
 	resolver                                        SRVResolver
 	resolverSet                                     bool
 	borrowed                                        grpc.ClientConnInterface

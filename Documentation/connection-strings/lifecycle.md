@@ -22,6 +22,44 @@ An outcome contains:
 
 Event-type registration acknowledges a batch, not separate server verdicts for individual definitions. This surface currently covers event types only. It makes no readiness claim for unimplemented reactors, reducers or other artifacts. Registry additions after `NewClient` are still excluded from its frozen snapshot.
 
+## Connection hooks
+
+Use `WithOnConnected(ConnectionHook)` and `WithOnDisconnected(ConnectionHook)` to
+observe application connection transitions. These are notifications, not the SDK's
+internal registration mechanism. A hook cannot reject a connection, and its
+completion is never a readiness barrier.
+
+For example, this function-body excerpt uses `context`, `fmt` and
+`chronicle "github.com/cratis/chronicle.go"` imports:
+
+```go
+client, err := chronicle.NewClient(chronicle.WithOnConnected(func(_ context.Context, event chronicle.ConnectionEvent) {
+    fmt.Printf("connected generation %d\n", event.Generation)
+}))
+if err != nil {
+    panic(err)
+}
+defer func() { _ = client.Close() }()
+// Call client.Connect(ctx) to start supervision and receive notifications.
+```
+
+| Contract | Behavior |
+| --- | --- |
+| Registration | Options accumulate in declaration order without deduplication. Nil hooks fail construction with `ErrInvalidConfiguration` before I/O. Hook collections freeze at `CaptureClient` and apply to every owned or borrowed generation. |
+| Connected | The generation reached authenticated protocol readiness, the same point `Connect` returns. This does not prove artifact registration or observer attachment; use `WaitForRegistration` and `Ready` for their documented barriers. |
+| Event | `ConnectionEvent` carries `Generation` (matching `RegistrationOutcome.Generation`), `ConnectionID`, selected `Address`, and `Err`. Connected has no error; Disconnected carries the termination cause. |
+| Dispatch | One client-owned dispatcher orders Connected(N), Disconnected(N), Connected(N+1). Each event's hooks run concurrently and are joined before the next event. Hooks never run on the caller goroutine or under SDK locks. |
+| Progress | Supervision, reconnect, RPCs and `Ready` never wait for hooks. A hook may call `Ready`, `EventStore` or `WaitForRegistration` without deadlocking dispatch. |
+| Coalescing | If a generation ends before its Connected hooks start, both notifications are skipped. Its generation number is never reported; attempts that never become ready also leave gaps, so a gap alone does not prove coalescing. At most two events are pending. Every delivered Connected has exactly one Disconnected. |
+| Cancellation | Connected uses the generation context, canceled on loss or client close. Disconnected uses the client lifetime context, which may already be canceled. |
+| Failure | Panics are contained and their values discarded. `WithLogger` receives fixed operation `client`, stage `connected`/`disconnected`, category `panic` diagnostics without panic text. |
+| Shutdown | Close and Shutdown pair delivered Connected events with Disconnected carrying `ErrClosed`. Both join running hooks. Hooks must not call Close or Shutdown themselves; use `CloseContext` to bound waiting for a hook that ignores cancellation. |
+| Borrowed channel | Events describe logical sessions, not physical channel state; `Address` is empty. |
+| Skipped session | With `WithSkipKeepAlive`, `ConnectionID` is empty and Disconnected occurs only on Close/Shutdown. There is no session stream to detect loss or drive reconnect. |
+
+See the executable `ExampleWithOnConnected` and `ExampleWithOnDisconnected` in
+[the connection examples](https://github.com/Cratis/Chronicle.Go/blob/main/example_connection_test.go).
+
 ## Evict cached event stores
 
 Call `client.EvictEventStores()` to clear all store/namespace lookup entries and
@@ -91,6 +129,6 @@ During an outage, ordinary handle operations fail before dispatch. During replay
 
 A deadline or cancellation error means cleanup is still incomplete. Cleanup continues, and no new work is admitted. Go cannot forcibly terminate a token-source or resolver callback that ignores its context; honoring cancellation is part of those extension contracts. The SDK never holds its internal state locks while invoking them.
 
-The client closes only its own gRPC and HTTP transports. Borrowed gRPC channels and external token sources remain caller-owned, including after failure, replacement and shutdown. The caller is responsible for disabling ambiguous write retries on a borrowed channel.
+The client closes only its own gRPC and HTTP transports. Borrowed gRPC channels, custom load balancers and external token sources remain caller-owned, including after failure, replacement and shutdown. The caller is responsible for disabling ambiguous write retries on a borrowed channel.
 
 [Configure endpoints and authentication](index.md) for the discovery, balancing and TLS options.

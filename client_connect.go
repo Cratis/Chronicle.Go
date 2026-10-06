@@ -6,14 +6,11 @@ package chronicle
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/internal/diagnostics"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type supervision struct {
@@ -113,6 +110,7 @@ func (c *Client) waitConnected(ctx context.Context, s *supervision) error {
 
 func (c *Client) supervise(startup context.Context, s *supervision) {
 	defer c.work.Done()
+	c.hooks.start(c)
 	defer func() {
 		c.mu.Lock()
 		c.supervisor = nil
@@ -159,9 +157,15 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 			startup = nil
 		}
 		if err == nil {
+			c.hooks.publishConnected(g)
 			diagnostics.Log(c.life, c.config.logger, slog.LevelInfo, "client connected", "client", "connect", nil)
 			attempt = 0
 			err = c.runGeneration(g)
+			cause := err
+			if c.life.Err() != nil {
+				cause = ErrClosed
+			}
+			c.hooks.publishDisconnected(g, cause)
 		}
 		c.mu.Lock()
 		c.current = nil
@@ -183,51 +187,5 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 		if connection.Wait(c.life, connection.Backoff(attempt, time.Second, 30*time.Second)) != nil {
 			return
 		}
-	}
-}
-
-func terminalConnectionError(err error) bool {
-	var incompatible *CompatibilityError
-	var auth *connection.AuthenticationError
-	if errors.As(err, &incompatible) || errors.As(err, &auth) || errors.Is(err, ErrProtocol) || errors.Is(err, ErrClosed) {
-		return true
-	}
-	switch status.Code(err) {
-	case codes.Unauthenticated, codes.PermissionDenied, codes.Unimplemented, codes.InvalidArgument:
-		return true
-	default:
-		return false
-	}
-}
-
-func (c *Client) retire(g *generation) {
-	c.mu.Lock()
-	g.cancel()
-	c.mu.Unlock()
-	if g.stream != nil {
-		drainStream(g.stream)
-	}
-	g.work.Wait()
-	// The supervisor still holds c.work while admitting this retirement worker.
-	// Slow user handlers cannot prevent the next generation from connecting, but
-	// Close/CloseContext still join them before closing the retired channel.
-	c.work.Add(1)
-	go func() {
-		defer c.work.Done()
-		c.joinRetired(g)
-	}()
-}
-
-func (c *Client) joinRetired(g *generation) {
-	g.observers.Wait()
-	if g.closer != nil {
-		if err := g.closer.Close(); err != nil {
-			c.mu.Lock()
-			c.closeError = errors.Join(c.closeError, fmt.Errorf("chronicle: close channel: %w", err))
-			c.mu.Unlock()
-		}
-	}
-	if g.oauth != nil {
-		g.oauth.Close()
 	}
 }
