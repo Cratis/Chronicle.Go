@@ -18,8 +18,8 @@ these evidence sources distinct.
 
 | Surface | Actual package observation | Go boundary |
 | --- | --- | --- |
-| Inbound `WebhookSourceBuilder` | Default null, explicit None, Basic, Bearer, OAuth and last-choice replacement | Authorization authoring is **not implemented** |
-| Inbound JSON | Preserve-name and Fundamentals camelCase outer names; fixed inner `type`, `username`, `password`, `token`, `authority`, `clientId`, `clientSecret` | Fixture validation only; no Go authorization decoder |
+| Inbound `WebhookSourceBuilder` | Default null, explicit None, Basic, Bearer, OAuth and last-choice replacement | **Partial**: Go authors Basic/Bearer/OAuth and retains absent authorization; explicit None is not authorable, blanks and multiple choices are rejected |
+| Inbound JSON | Preserve-name and Fundamentals camelCase outer names; fixed inner `type`, `username`, `password`, `token`, `authority`, `clientId`, `clientSecret` | Internal converter bytes match both policies; public JSON import/export fails closed, with no decoder |
 | Outgoing `Webhooks.Register` | None, Basic and Bearer requests, catalog/selected generations, headers and true/false flags | Existing Go Register requests match observed semantics |
 | Outgoing OAuth authoring | No public C# OAuth builder method | Go `WithOAuth` is a converter/contract-backed convenience, not demonstrated C# Register-factory parity |
 
@@ -28,7 +28,10 @@ Inbound null omits the authorization property. Explicit None instead produces
 discriminator is a string. Missing, unknown and case-changed discriminators read
 as None in this package, while missing required credential properties fail. Reads
 and subsequent writes have independently recorded outcomes. This fallback is an
-observation, **not** a recommended fail-open policy for future Go APIs.
+observation, **not** a Go policy. Go rejects all JSON imports with
+`chronicle.ErrUnsupported` rather than dropping credentials through a None
+fallback. Public JSON exports also fail with that error; only internal golden
+tests encode authorization, with no public credential-export API.
 
 C# protobuf-net omits default-true activity/replay flags; Go sends explicit true.
 Both preserve explicit false. The tests check presence separately from semantics
@@ -51,8 +54,14 @@ capture neither repairs that defect nor adds a live .NET kernel witness.
 
 [Capture declarations](captures.md) still submit CDL only; CDL has no credential
 fields, no typed authorization-bearing capture submission RPC is exposed, and
-the pinned kernel refuses non-API capture runtime sources. No credential-accepting
-Go constructor that drops authorization has been added.
+the pinned kernel refuses non-API capture runtime sources. Go retains authored
+credentials on source/definition copies, but `Validate` and `Save` refuse them
+with `chronicle.ErrUnsupported` before dispatch, including with canceled or
+expired contexts. [Chronicle#4591: capture authorization transport and kernel
+boundary](https://github.com/Cratis/Chronicle/issues/4591) tracks the contracts,
+kernel authorization handling and converter None fallback. No authenticated
+capture submission, credential storage, OAuth acquisition or delivery claim is
+made.
 
 ## Evidence and checks
 
@@ -67,3 +76,22 @@ lost secondary outcomes and invented OAuth Register success.
 `TestRegisterMatchesActualAuthenticationCapture` compares existing Go requests
 with the six actual packaged C# Register requests. None of these tests claims
 credential storage, token acquisition or delivery success.
+
+`TestSourceAuthorizationMatchesActualPackage` checks all four converter arms
+under both naming policies byte-for-byte. `TestWebhookSourceAuthorizationMatchesActualSerialize`
+checks single-option nested bytes and absent defaults; explicit None is compared
+only as a zero value. Its replacement cases are deliberately **Go-refused**, not
+claimed as C# last-wins parity. `TestSourceAuthorizationHasNoDecoder` refuses all
+12 deserialize inputs under both policies. The fixture loader validates hashes
+before any comparison.
+
+`TestCaptureAuthorizationRejectsInvalidOptions`, `TestCaptureDeclarationNeverCarriesCredentials`,
+`TestCaptureAuthorizationRedacted` and `TestCaptureAuthorizationSurvivesCopies`
+cover configuration, CDL exclusion, diagnostics and immutable ownership.
+`TestCaptureAuthorizationSubmissionRefusedBeforeDispatch` proves zero RPC/stream
+calls for Basic/Bearer/OAuth with active, canceled and expired contexts; the
+no-authorization control still submits identical CDL. The kernel witness
+`TestKernelCaptureAuthorizationSubmissionBoundary` contrasts an unprotected
+webhook saved as stopped with a locally refused bearer definition whose ID is
+absent from `GetCaptures`. It proves refusal without remote mutation, not kernel
+authentication enforcement.

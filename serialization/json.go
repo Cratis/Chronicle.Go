@@ -5,7 +5,8 @@ package serialization
 
 import (
 	"encoding/json"
-	"unicode/utf16"
+
+	"github.com/cratis/chronicle.go/internal/jsonescape"
 )
 
 // Structs retain the plan's field order; dictionaries still use encoding/json's
@@ -42,62 +43,9 @@ func (object orderedObject) MarshalJSON() ([]byte, error) {
 // or decoding numbers (which would lose precision). Chronicle's default options
 // leave Encoder unset: System.Text.Json uses JavaScriptEncoder.Default.
 func escapeJSONStrings(data []byte) ([]byte, error) {
-	result := make([]byte, 0, len(data))
-	for i := 0; i < len(data); {
-		if data[i] != '"' {
-			result = append(result, data[i])
-			i++
-			continue
-		}
-		start := i
-		i++
-		for i < len(data) && data[i] != '"' {
-			if data[i] == '\\' {
-				i++ // Skip an escaped quote or backslash, too.
-			}
-			i++
-		}
-		i++
-		var value string
-		if err := json.Unmarshal(data[start:i], &value); err != nil {
-			return nil, err
-		}
-		result = appendJSONString(result, value)
-	}
-	return result, nil
+	return jsonescape.Strings(data)
 }
 
 func appendJSONString(data []byte, value string) []byte {
-	data = append(data, '"')
-	for _, r := range value {
-		switch r {
-		case '\b':
-			data = append(data, '\\', 'b')
-		case '\t':
-			data = append(data, '\\', 't')
-		case '\n':
-			data = append(data, '\\', 'n')
-		case '\f':
-			data = append(data, '\\', 'f')
-		case '\r':
-			data = append(data, '\\', 'r')
-		case '\\':
-			data = append(data, '\\', '\\')
-		default:
-			if r >= ' ' && r <= '~' && r != '"' && r != '&' && r != '\'' && r != '+' && r != '<' && r != '>' && r != '`' {
-				data = append(data, byte(r))
-			} else if r <= 0xffff {
-				data = appendUnicodeEscape(data, r)
-			} else {
-				high, low := utf16.EncodeRune(r)
-				data = appendUnicodeEscape(appendUnicodeEscape(data, high), low)
-			}
-		}
-	}
-	return append(data, '"')
-}
-
-func appendUnicodeEscape(data []byte, r rune) []byte {
-	const hex = "0123456789ABCDEF"
-	return append(data, '\\', 'u', hex[r>>12&15], hex[r>>8&15], hex[r>>4&15], hex[r&15])
+	return jsonescape.AppendString(data, value)
 }
