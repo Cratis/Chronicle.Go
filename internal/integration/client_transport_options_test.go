@@ -230,5 +230,5 @@ func TestKernelClientTransportOptions(t *testing.T) {
 			t.Fatalf("skipped client registered an own-process Connect session: %s", connected.GetConnectionId())
 		}
 	}
-	t.Logf("19.29.4 rejects anonymous probe; authenticated skip registration/append/read adds no own-process session; startup probe decoded protobuf=%d bounded at %d; compatibility send=%d and immutable event read wire protobuf receive=%d (decoded=%d) enforce equality/one-byte-short", proto.Size(before), startupReceiveBound, sendSize, receiveSize, proto.Size(readResponse))
+	t.Logf("19.32.3 rejects anonymous probe; authenticated skip registration/append/read adds no own-process session; startup probe decoded protobuf=%d bounded at %d; compatibility send=%d and immutable event read wire protobuf receive=%d (decoded=%d) enforce equality/one-byte-short", proto.Size(before), startupReceiveBound, sendSize, receiveSize, proto.Size(readResponse))
 }

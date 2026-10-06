@@ -76,7 +76,7 @@ func TestKernelGlobalSeedsReachFutureNamespaces(t *testing.T) {
 		case <-fixture.ctx.Done():
 			t.Fatal(fixture.ctx.Err())
 		case <-deadline.C:
-			t.Skip("19.29.4 kernel retains global seeds but does not apply them to later namespaces: https://github.com/Cratis/Chronicle/issues/4547")
+			t.Skip("19.32.3 kernel retains global seeds but does not apply them to later namespaces: https://github.com/Cratis/Chronicle/issues/4547")
 		case <-ticker.C:
 		}
 	}

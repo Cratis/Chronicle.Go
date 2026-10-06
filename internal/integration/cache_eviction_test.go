@@ -110,8 +110,9 @@ func TestKernelCacheEvictionRetainsWatchAndExplicitReconnect(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The reactor stream is open, but the kernel subscribes it asynchronously.
-	// Appending first would start a reactor catch-up for "person" that drops the
-	// projection's later live events (https://github.com/Cratis/Chronicle/issues/4558).
+	// Chronicle#4558 (dropped live delivery) is fixed in 19.32.3, but without
+	// this wait 19.32.3 redelivered "after-eviction" to the reactor after the
+	// explicit reconnect below. Keep both waits until that is understood.
 	awaitObserversObserving(t, f, old.Namespace(), append([]string{"eviction", string(model.Identifier())}, eventLogStatisticsObservers...)...)
 	reader := readmodels.For(old.ReadModels(), model)
 	watch, err := reader.Watch(f.ctx)
@@ -165,9 +166,8 @@ func TestKernelCacheEvictionRetainsWatchAndExplicitReconnect(t *testing.T) {
 	if err != nil || !after.IsSuccess() || after.Generation <= before.Generation {
 		t.Fatal("explicit retained registration", before, after, err)
 	}
-	// The new generation resubscribes the reactor asynchronously; appending first
-	// would start a catch-up for "person" that drops the projection's live event
-	// (https://github.com/Cratis/Chronicle/issues/4558).
+	// The new generation resubscribes the reactor asynchronously; wait until it
+	// observes before appending (see the first wait above).
 	awaitReactorConnection(t, f, old.Namespace(), "eviction", reconnected)
 	awaitObserversObserving(t, f, old.Namespace(), append([]string{"eviction", string(model.Identifier())}, eventLogStatisticsObservers...)...)
 	next, err := reader.Watch(f.ctx)

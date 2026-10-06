@@ -66,10 +66,6 @@ func TestKernelHistoryMutationsReplayProjectionsAndReactors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The reactor stream is open, but the kernel subscribes it asynchronously.
-	// Appending first would start a reactor catch-up for this source that drops
-	// the projection's later live events (https://github.com/Cratis/Chronicle/issues/4558).
-	awaitObserversObserving(t, f, store.Namespace(), append([]string{"history-observer", string(model.Identifier())}, eventLogStatisticsObservers...)...)
 	sequence := store.EventLog()
 	source := events.SourceID(uuid.NewString())
 	appendSuccessfully(t, f.ctx, store, source, ProjectionAccountOpened{FullName: "original"})

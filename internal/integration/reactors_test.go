@@ -57,13 +57,9 @@ func TestKernelReactorOrderingReturnedEventsAndFailedPartition(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The reactor stream is open, but the kernel subscribes it asynchronously.
-	// Appending first would start a reactor catch-up that drops later live
-	// events (https://github.com/Cratis/Chronicle/issues/4558).
 	if _, err = store.WaitForRegistration(f.ctx); err != nil {
 		t.Fatal(err)
 	}
-	awaitObserversObserving(t, f, store.Namespace(), append([]string{"go-orders"}, eventLogStatisticsObservers...)...)
 	appended, err := store.EventLog().AppendMany(f.ctx, "order", []any{ReactorOrderPlaced{0}, ReactorOrderPlaced{1}, ReactorOrderPlaced{2}})
 	if err != nil {
 		t.Fatal(err)

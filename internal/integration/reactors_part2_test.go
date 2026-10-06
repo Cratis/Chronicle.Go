@@ -36,13 +36,9 @@ func TestKernelReactorRichEffects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The reactor stream is open, but the kernel subscribes it asynchronously.
-	// Appending first would start a reactor catch-up that drops later live
-	// events (https://github.com/Cratis/Chronicle/issues/4558).
 	if _, err = store.WaitForRegistration(f.ctx); err != nil {
 		t.Fatal(err)
 	}
-	awaitObserversObserving(t, f, store.Namespace(), append([]string{"go-rich-effects"}, eventLogStatisticsObservers...)...)
 	for _, mode := range []string{"bare", "targeted", "mixed", "scoped"} {
 		appendSuccessfully(t, f.ctx, store, events.SourceID(mode), KernelEffectTrigger{Mode: mode})
 	}
@@ -139,13 +135,9 @@ func TestKernelReactorReplayReplacementOnceOnlyAndNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The reactor/reducer stream is open, but the kernel subscribes it asynchronously.
-	// Appending first would start a catch-up that drops later live events
-	// (https://github.com/Cratis/Chronicle/issues/4558).
 	if _, err = store.WaitForRegistration(f.ctx); err != nil {
 		t.Fatal(err)
 	}
-	awaitObserversObserving(t, f, store.Namespace(), append([]string{"replay-parity"}, eventLogStatisticsObservers...)...)
 	first := appendSuccessfully(t, f.ctx, store, "one", KernelReplayInput{1})
 	last := appendSuccessfully(t, f.ctx, store, "one", KernelOnceInput{2})
 	ctx, cancel := context.WithTimeout(f.ctx, 20*time.Second)

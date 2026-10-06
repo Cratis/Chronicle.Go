@@ -45,7 +45,6 @@ func TestKernelProjectionChildRemovedWithJoin(t *testing.T) {
 		testKernelChildRemovedWithJoin(t, "GroupId", func(g JoinRemovalGroup) string { return g.GroupID })
 	})
 	t.Run("Id", func(t *testing.T) {
-		t.Skip("MongoDB join removal does not translate child Id to _id: https://github.com/Cratis/Chronicle/issues/4538")
 		testKernelChildRemovedWithJoin(t, "Id", func(g JoinRemovalIDGroup) string { return g.ID })
 	})
 }

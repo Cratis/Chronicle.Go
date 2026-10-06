@@ -158,10 +158,6 @@ func releaseRouteProfile[T any](t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The reducer stream is open, but the kernel subscribes it asynchronously.
-	// Appending first would start a reducer catch-up for "source-not-owner" that
-	// drops the projection's later Ticked event (https://github.com/Cratis/Chronicle/issues/4558).
-	awaitObserversObserving(t, f, store.Namespace(), append([]string{"release-route-reducer", string(model.Identifier())}, eventLogStatisticsObservers...)...)
 	transport := &releaseRouteTransport{ClientConnInterface: f.conn}
 	service, err := readmodels.New(f.storeName, store.Namespace(), store.ReadModels().Catalog(), transport)
 	if err != nil {
@@ -280,15 +276,10 @@ func releaseRouteProfile[T any](t *testing.T) {
 				t.Fatal("release response shape witness changed")
 			}
 			if document.route == "watch" {
-				// Chronicle#4566: lowercase identity and loaded-state updates
-				// corrupt already-plaintext values before SDK decoding.
-				watchName, watchSecret := plaintext, plaintext
-				var zero T
-				_, lowercase := any(zero).(ReleaseRouteLower)
-				if erased || lowercase {
-					watchName, watchSecret = "", ""
-				}
-				checkReleaseRouteValue(t, "unsupported server watch", json.RawMessage(document.data), nil, watchName, watchSecret)
+				// Chronicle#4566: loaded-state updates corrupt already-plaintext
+				// values before SDK decoding. Kernel 19.32.3 empties them for
+				// default Id as well as lowercase id; 19.29.4 kept default Id.
+				checkReleaseRouteValue(t, "unsupported server watch", json.RawMessage(document.data), nil, "", "")
 			} else {
 				checkReleaseRouteValue(t, "pre-decode server "+document.route, json.RawMessage(document.data), nil, want, plaintext)
 			}

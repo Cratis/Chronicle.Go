@@ -147,7 +147,6 @@ func TestKernelProjectionQueryAndPreview(t *testing.T) {
 }
 
 func TestKernelProjectionQueryInfersSchema(t *testing.T) {
-	t.Skip("19.29.4 Preview returns an empty inferred schema and drops projected properties: https://github.com/Cratis/Chronicle/issues/4539")
 	kernelProjectionQuery(t, false)
 }
 

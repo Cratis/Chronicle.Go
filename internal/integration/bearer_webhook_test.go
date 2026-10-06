@@ -128,16 +128,14 @@ func TestKernelWebhookBearerRegistrationCSharpSourceEquivalent(t *testing.T) {
 				contracts.AuthorizationType_Basic:  "BasicAuthorizationSetForWebhook",
 				contracts.AuthorizationType_OAuth:  "OAuthAuthorizationSetForWebhook",
 			}[profile.kind]
-			missingSchema := !bearerRegistrationSchemaExists(t, f.ctx, conn, string(f.storeName), eventID)
-			if missingSchema && !bearerRegistrationSchemaExists(t, f.ctx, conn, "System", eventID) {
-				t.Fatal("authorization schema absent from System too; not the known non-System registration defect")
+			// Chronicle#4567 (fixed in 19.32.3): the authorization schema was
+			// registered only in System, so the store persisted only WebhookAdded.
+			if !bearerRegistrationSchemaExists(t, f.ctx, conn, string(f.storeName), eventID) {
+				t.Fatalf("%s schema is missing from the event store", eventID)
 			}
-			awaitBearerRegistrationNames(t, f.ctx, client, string(f.storeName), profile.kind, missingSchema, sdkID, rawID)
+			awaitBearerRegistrationNames(t, f.ctx, client, string(f.storeName), profile.kind, sdkID, rawID)
 			for _, id := range []string{sdkID, rawID} {
-				assertBearerRegistrationHistory(t, f.ctx, conn, string(f.storeName), id, eventID, missingSchema)
-			}
-			if missingSchema {
-				t.Skipf("https://github.com/Cratis/Chronicle/issues/4567: %s schema exists only in System; both accepted requests persisted only WebhookAdded and read back AuthorizationType=None", eventID)
+				assertBearerRegistrationHistory(t, f.ctx, conn, string(f.storeName), id, eventID)
 			}
 		})
 	}
@@ -215,7 +213,7 @@ func logBearerRegistrationResult(t *testing.T, route string, response *contracts
 	}
 }
 
-func awaitBearerRegistrationNames(t *testing.T, ctx context.Context, client contracts.WebhooksClient, store string, kind contracts.AuthorizationType, missingSchema bool, names ...string) {
+func awaitBearerRegistrationNames(t *testing.T, ctx context.Context, client contracts.WebhooksClient, store string, kind contracts.AuthorizationType, names ...string) {
 	t.Helper()
 	deadline, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -232,16 +230,12 @@ func awaitBearerRegistrationNames(t *testing.T, ctx context.Context, client cont
 				if definition.Identifier != name {
 					continue
 				}
-				// WebhookAdded and authorization materialize separately. With a
-				// schema present, None is an intermediate state, never a pass.
-				if !missingSchema && definition.AuthorizationType == contracts.AuthorizationType_None {
+				// WebhookAdded and authorization materialize separately, so
+				// None is an intermediate state, never a pass.
+				if definition.AuthorizationType == contracts.AuthorizationType_None {
 					continue
 				}
-				wantKind := kind
-				if missingSchema {
-					wantKind = contracts.AuthorizationType_None
-				}
-				if definition.AuthorizationType != wantKind || definition.EventSequenceId != "event-log" || len(definition.EventTypes) != 1 || definition.EventTypes[0].Id != "IntegrationPublished" || definition.EventTypes[0].Generation != 1 || definition.IsReplayable {
+				if definition.AuthorizationType != kind || definition.EventSequenceId != "event-log" || len(definition.EventTypes) != 1 || definition.EventTypes[0].Id != "IntegrationPublished" || definition.EventTypes[0].Generation != 1 || definition.IsReplayable {
 					t.Fatalf("named webhook definition differs: name=%s kind=%s sequence=%s events=%d replayable=%v (authorization payload not exposed)", name, definition.AuthorizationType, definition.EventSequenceId, len(definition.EventTypes), definition.IsReplayable)
 				}
 				found++
@@ -258,9 +252,8 @@ func awaitBearerRegistrationNames(t *testing.T, ctx context.Context, client cont
 	}
 }
 
-// An empty successful schema query is the only recognized missing-schema state.
-// Transport/envelope failures never authorize a skip. The System positive control
-// distinguishes the proven registration-scope defect from a missing kernel type.
+// An empty successful schema query reports a missing schema; transport and
+// envelope failures fail the test.
 func bearerRegistrationSchemaExists(t *testing.T, ctx context.Context, conn *grpc.ClientConn, store, eventID string) bool {
 	t.Helper()
 	response, err := eventtypes.NewEventTypesClient(conn).AllEventTypeGenerations(ctx, &eventtypes.AllEventTypeGenerationsRequest{EventStore: store, EventTypeId: eventID})
@@ -279,7 +272,7 @@ func bearerRegistrationSchemaExists(t *testing.T, ctx context.Context, conn *grp
 	return false
 }
 
-func assertBearerRegistrationHistory(t *testing.T, ctx context.Context, conn *grpc.ClientConn, store, id, eventID string, missingSchema bool) {
+func assertBearerRegistrationHistory(t *testing.T, ctx context.Context, conn *grpc.ClientConn, store, id, eventID string) {
 	t.Helper()
 	response, err := sequences.NewEventSequencesClient(conn).ForEventSourceIdAndEventTypes(ctx, &sequences.ForEventSourceIdAndEventTypesRequest{
 		EventStore: store, Namespace: string(chronicle.DefaultNamespace), EventSequenceId: string(events.SystemSequence), EventSourceId: id,
@@ -288,18 +281,15 @@ func assertBearerRegistrationHistory(t *testing.T, ctx context.Context, conn *gr
 		t.Fatal("webhook system history query failed")
 	}
 	want := []string{"WebhookAdded", eventID}
-	if missingSchema {
-		want = want[:1]
-	}
 	if len(response.Data) != len(want) {
-		t.Fatal("unexpected webhook system history length; not the documented missing-authorization signature")
+		t.Fatalf("webhook system history has %d events, want WebhookAdded and %s", len(response.Data), eventID)
 	}
 	for i, event := range response.Data {
 		if event.GetContext().GetEventType().GetId() != want[i] || event.GetContext().GetEventType().GetGeneration() != 1 || event.GetContext().GetEventSourceId() != id {
 			t.Fatal("unexpected webhook system event identity or generation")
 		}
 	}
-	t.Logf("named history verified: events=%d authorizationEventPresent=%v", len(want), !missingSchema)
+	t.Logf("named history verified: events=%d", len(want))
 }
 
 // Marshal is the actual client codec boundary, not a second serialization of a

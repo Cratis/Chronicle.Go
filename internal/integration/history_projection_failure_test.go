@@ -29,9 +29,7 @@ func awaitInitialHistoryProjection(t *testing.T, f *kernelFixture, store *chroni
 		return
 	}
 	// Diagnose before client cleanup, but never turn an unexplained projection
-	// failure into a skip. Public snapshots cannot establish the shared-set
-	// cause in https://github.com/Cratis/Chronicle/issues/4558; disappeared jobs
-	// do not prove successful catch-up and one matching symptom is insufficient.
+	// failure into a skip; disappeared jobs do not prove successful catch-up.
 	if err != errInitialHistoryProjectionPollExhausted || f.ctx.Err() != nil {
 		t.Fatalf("initial history projection: %+v: %v", last, err)
 	}

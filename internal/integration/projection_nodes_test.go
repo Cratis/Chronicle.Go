@@ -143,7 +143,6 @@ func TestKernelProjectionArithmeticChildrenJoinNestedAndClear(t *testing.T) {
 	appendEvent(order, NodeItemAdded{ItemID: item, OrderID: order, Name: "Book"})
 	awaitProjection(t, fixture.ctx, reader, readmodels.Key(order), func(o NodeOrder) bool { return len(o.Items) == 1 })
 	t.Run("remove_join_of_readded_id_child", func(t *testing.T) {
-		t.Skip("MongoDB join removal does not translate child id to _id: https://github.com/Cratis/Chronicle/issues/4538")
 		result, err := store.EventLog().Append(fixture.ctx, events.SourceID(item), NodeItemRemovedEverywhere{ItemID: item}, eventsequences.WithOccurred(occurred))
 		if err != nil {
 			t.Fatal(err)

@@ -21,13 +21,11 @@ var eventLogStatisticsObservers = []string{"$system.statistics.event-types", "$s
 // subscription in the kernel's observing state (running state Active).
 //
 // WaitForRegistration only proves that client reactor and reducer streams are
-// open; the kernel subscribes those observers asynchronously afterwards. An
-// observer that subscribes after an append to a key starts a catch-up job for
-// that partition, and on the pinned kernel that catch-up drops live delivery of
-// later appends to the same key in unrelated observers
-// (https://github.com/Cratis/Chronicle/issues/4558). Call this before appending
-// events whose live delivery a test asserts. With no unhandled events in the
-// observed range, the observing state means routing found nothing to catch up.
+// open; the kernel subscribes those observers asynchronously afterwards. Kernel
+// 19.32.3 fixed dropped live delivery after a first-subscription catch-up
+// (https://github.com/Cratis/Chronicle/issues/4558), so most tests append right
+// after registration. The explicit-reconnect cache test still needs this wait:
+// without it the reactor received the previous event again after reconnect.
 // It polls server state; it does not retry or relax any assertion.
 func awaitObserversObserving(t *testing.T, f *kernelFixture, namespace chronicle.Namespace, ids ...string) {
 	t.Helper()
