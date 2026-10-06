@@ -182,15 +182,6 @@ func awaitSeedObserver(t *testing.T, fixture *kernelFixture, observed <-chan str
 			if err != nil {
 				t.Fatal(err)
 			}
-			// 19.29.4 can reuse the finishing global catch-up job for the newly
-			// appended default-only partition, leaving it Active but one behind.
-			// Do not turn missing events, failed decoding or disconnection into a skip.
-			if slices.Equal(names, []string{"Global", "Global"}) && info != nil && failures != nil && len(failures.Items) == 0 &&
-				info.RunningState == observation.ObserverRunningState_Active && info.IsSubscribed &&
-				info.LastHandledEventSequenceNumber == 1 && info.NextEventSequenceNumber == 2 &&
-				info.TailEventSequenceNumber == 2 && info.HandledEventCount == 2 {
-				t.Skip("kernel catch-up completion strands the persisted default-only seed: https://github.com/Cratis/Chronicle/issues/4548")
-			}
 			t.Fatalf("seed delivery timed out: observed %v, observer %v, failures %v", names, info, failures)
 		}
 	}

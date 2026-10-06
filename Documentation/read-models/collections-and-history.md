@@ -114,8 +114,10 @@ Collections and snapshots are partial kernel replay capabilities:
   neither evaluates a local projection nor overlays defaults onto replay results.
 - Mixed ALL subscriptions with explicit event mappings are refused before RPC:
   kernel 19.29.4 filters replay to the explicit IDs, omitting other events handled
-  live. Pure ALL with an empty event-type list is supported for the same simple
-  source-ID shape. See [Chronicle#4562](https://github.com/Cratis/Chronicle/issues/4562).
+  live. Kernel 19.32.3 fixes this
+  ([Chronicle#4562](https://github.com/Cratis/Chronicle/issues/4562)), but the SDK
+  still refuses the shape. Pure ALL with an empty event-type list is supported for
+  the same simple source-ID shape.
 - Catalog-only remote projections remain readable from their materialized sink,
   but replay/history fails without producer fidelity evidence. Low-level adapter
   constructors can supply `WithProjectionReplayValidator`; the adapter owns that
@@ -123,8 +125,8 @@ Collections and snapshots are partial kernel replay capabilities:
 
 ## Protection, failure and lifetime
 
-Release ownership is route-specific in kernel **19.29.4**, not a general promise
-that every returned string is plaintext:
+Release ownership is route-specific, not a general promise that every returned
+string is plaintext. The SDK applies this policy on every supported kernel:
 
 | Route | Protected-model policy |
 | --- | --- |
@@ -140,12 +142,14 @@ nested/reference schemas and provider classifications frozen during registration
 Zero-count reads still return empty without I/O. Materialized reads remain
 available; renaming `Id` to `id` is not a safe replay workaround.
 
-Collection replay cannot infer a subject from default `Id`, and even lowercase
-`id` cannot recover per-event lineage. Immediate/session replay substitutes the
-source key for the event subject. A protected string can contain ciphertext and
-still pass shape validation. These defects are tracked in
-[Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561); the SDK does not
-repair them with a ciphertext heuristic or an unconditional second decryption.
+On kernel 19.29.4, collection replay cannot infer a subject from default `Id`,
+and even lowercase `id` cannot recover per-event lineage; immediate/session replay
+substitutes the source key for the event subject, so a protected string can contain
+ciphertext and still pass shape validation. Kernel 19.32.3 releases these replay
+routes with each event's subject
+([Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561)), but the SDK
+keeps the refusals above. It does not repair older kernels with a ciphertext
+heuristic or an unconditional second decryption.
 
 Snapshot contributions have a separate release owner: the kernel releases each
 event with its generation's schema and event subject **before** projecting.

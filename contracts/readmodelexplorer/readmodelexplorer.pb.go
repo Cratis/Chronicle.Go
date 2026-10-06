@@ -336,6 +336,7 @@ type EventContext struct {
 	ObservationState EventObservationState       `protobuf:"varint,13,opt,name=ObservationState,proto3,enum=Cratis.Chronicle.Contracts.ReadModelExplorer.EventObservationState" json:"ObservationState,omitempty"`
 	Subject          string                      `protobuf:"bytes,14,opt,name=Subject,proto3" json:"Subject,omitempty"`
 	NamedTags        []*NamedTag                 `protobuf:"bytes,15,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
+	EventSource      string                      `protobuf:"bytes,16,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -473,6 +474,13 @@ func (x *EventContext) GetNamedTags() []*NamedTag {
 		return x.NamedTags
 	}
 	return nil
+}
+
+func (x *EventContext) GetEventSource() string {
+	if x != nil {
+		return x.EventSource
+	}
+	return ""
 }
 
 type EventType struct {
@@ -937,7 +945,7 @@ const file_readmodelexplorer_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"w\n" +
 	"\x05Event\x12T\n" +
 	"\aContext\x18\x01 \x01(\v2:.Cratis.Chronicle.Contracts.ReadModelExplorer.EventContextR\aContext\x12\x18\n" +
-	"\aContent\x18\x02 \x01(\tR\aContent\"\xf8\x06\n" +
+	"\aContent\x18\x02 \x01(\tR\aContent\"\x9a\a\n" +
 	"\fEventContext\x12U\n" +
 	"\tEventType\x18\x01 \x01(\v27.Cratis.Chronicle.Contracts.ReadModelExplorer.EventTypeR\tEventType\x12(\n" +
 	"\x0fEventSourceType\x18\x02 \x01(\tR\x0fEventSourceType\x12$\n" +
@@ -954,7 +962,8 @@ const file_readmodelexplorer_proto_rawDesc = "" +
 	"\x04Hash\x18\f \x01(\tR\x04Hash\x12o\n" +
 	"\x10ObservationState\x18\r \x01(\x0e2C.Cratis.Chronicle.Contracts.ReadModelExplorer.EventObservationStateR\x10ObservationState\x12\x18\n" +
 	"\aSubject\x18\x0e \x01(\tR\aSubject\x12T\n" +
-	"\tNamedTags\x18\x0f \x03(\v26.Cratis.Chronicle.Contracts.ReadModelExplorer.NamedTagR\tNamedTags\"Y\n" +
+	"\tNamedTags\x18\x0f \x03(\v26.Cratis.Chronicle.Contracts.ReadModelExplorer.NamedTagR\tNamedTags\x12 \n" +
+	"\vEventSource\x18\x10 \x01(\tR\vEventSource\"Y\n" +
 	"\tEventType\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\tR\x02Id\x12\x1e\n" +
 	"\n" +

@@ -96,7 +96,7 @@ never returns the credentials. Do not reuse read-back as a credential-preserving
 update template.
 
 The SDK sends explicit false fields to preserve C# protobuf defaults. In
-19.29.4-development, MongoDB's webhook conversion still loses `IsActive=false`
+19.32.3-development, MongoDB's webhook conversion still loses `IsActive=false`
 on read-back, including C#-equivalent requests
 ([Chronicle#4394](https://github.com/Cratis/Chronicle/issues/4394)). Do not rely on
 inactive webhook behavior on that kernel. Definition management is tested; HTTP

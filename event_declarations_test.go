@@ -207,7 +207,7 @@ func TestDescriptorMetadataRegistrationContract(t *testing.T) {
 	if ref, ok := descriptor.CompensationFor(); !ok || ref != original.Ref() || !descriptor.IsTombstone() || descriptor.Tags()[0] != "static" {
 		t.Fatal("descriptor metadata lost")
 	}
-	// 19.29.4 has no registration labels field: labels stay static append tags.
+	// 19.32.3 has no registration labels field: labels stay static append tags.
 	if compensation.ProtoReflect().Descriptor().Fields().ByName("Tags") != nil {
 		t.Fatal("revisit registration label parity")
 	}

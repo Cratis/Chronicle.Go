@@ -187,11 +187,11 @@ empty acknowledgement messages cannot establish more than their wire contract:
 for example a default removal outcome represents `Removed`, and an empty partition
 replay acknowledgement carries no completion evidence.
 
-The pinned 19.29.4-development kernel supports the replay/job, failure-diagnostic
+The pinned 19.32.3-development kernel supports the replay/job, failure-diagnostic
 and blocked-versus-completed processing workflows above. Replay jobs can disappear
-before a terminal snapshot is read. Existing
+before a terminal snapshot is read. Kernel 19.32.3 fixes the
 [reducer recovery](https://github.com/Cratis/Chronicle/issues/4540) and
-[catch-up race](https://github.com/Cratis/Chronicle/issues/4548) defects remain
-kernel limitations. The SDK does not clear failures, append replacement events
+[catch-up race](https://github.com/Cratis/Chronicle/issues/4548) defects that
+19.29.4 had. The SDK does not clear failures, append replacement events
 or replay automatically to conceal them. See the per-feature
 [parity map](parity.md#observer-and-job-administration).

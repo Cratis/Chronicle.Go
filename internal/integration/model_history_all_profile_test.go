@@ -6,6 +6,7 @@
 package integration_test
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -76,8 +77,15 @@ func TestKernelModelHistoryMixedAllReplayRefusalAndPureAll(t *testing.T) {
 		t.Fatal("incomplete mixed ALL snapshots admitted", err)
 	}
 	raw, err := contracts.NewReadModelsClient(f.conn).GetAllInstances(f.ctx, &contracts.GetAllInstancesRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ReadModelIdentifier: string(mixed.Identifier()), EventSequenceId: "event-log", EventCount: 3})
-	if err != nil || raw.ProcessedEventsCount != 2 {
-		t.Fatal("mixed ALL kernel filter witness changed", err)
+	// Chronicle#4562, fixed in 19.32.3: replay no longer filters to the explicit
+	// IDs and folds every event handled live. The SDK refusal above stays until
+	// it is lifted deliberately.
+	if err != nil || raw.ProcessedEventsCount != 3 || len(raw.Instances) != 1 {
+		t.Fatal("mixed ALL kernel replay witness changed", err)
+	}
+	var replayed HistoryMixedAll
+	if err := json.Unmarshal([]byte(raw.Instances[0]), &replayed); err != nil || replayed.Name != "third" || replayed.Marker != "A2" {
+		t.Fatal("mixed ALL kernel replay folded the wrong state", raw.Instances[0], err)
 	}
 	all, err := readmodels.For(store.ReadModels(), pure).GetAll(f.ctx, new(events.Count(3)))
 	if err != nil || len(all.Instances) != 1 || all.ProcessedEventsCount != 3 || all.Instances[0].Value.Marker != "A2" {

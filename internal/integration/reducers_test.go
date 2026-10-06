@@ -7,7 +7,6 @@ package integration_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -112,13 +111,9 @@ func TestKernelReducerMaterializationDeletionAndFailedPartition(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The reactor/reducer stream is open, but the kernel subscribes it asynchronously.
-	// Appending first would start a catch-up that drops later live events
-	// (https://github.com/Cratis/Chronicle/issues/4558).
 	if _, err = store.WaitForRegistration(f.ctx); err != nil {
 		t.Fatal(err)
 	}
-	awaitObserversObserving(t, f, store.Namespace(), append([]string{"go-balance"}, eventLogStatisticsObservers...)...)
 	reader := readmodels.For(store.ReadModels(), model)
 	appendSuccessfully(t, f.ctx, store, "balance", ReducedAmountChanged{-10})
 	appendSuccessfully(t, f.ctx, store, "balance", ReducedAmountChanged{8})
@@ -132,10 +127,6 @@ func TestKernelReducerMaterializationDeletionAndFailedPartition(t *testing.T) {
 		info, infoErr := contracts.NewObserversClient(f.conn).GetObserverInformation(ctx, &contracts.GetObserverInformationRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), EventSequenceId: "event-log", ObserverId: "go-balance"})
 		failures, failuresErr := contracts.NewFailedPartitionsClient(f.conn).GetFailedPartitions(ctx, &contracts.GetFailedPartitionsRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ObserverId: "go-balance"})
 		history, historyErr := store.EventLog().ReadSource(ctx, "balance", eventsequences.SourceFilter{})
-		if infoErr == nil && failuresErr == nil && historyErr == nil && f.ctx.Err() == nil &&
-			strandedReducerDeletion(err, last, deletions.Load(), info, failures, history) {
-			t.Skip("kernel reuses a finishing catch-up job and never delivers deletion event 2: https://github.com/Cratis/Chronicle/issues/4548")
-		}
 		t.Fatalf("store %s last %+v error %v observer %v (%v), failures %v (%v), history %v (%v), deletion calls %d", f.storeName, last, err, info, infoErr, failures, failuresErr, history, historyErr, deletions.Load())
 	}
 	appendSuccessfully(t, f.ctx, store, "balance", ReducedAmountChanged{3})
@@ -175,30 +166,6 @@ func TestKernelReducerMaterializationDeletionAndFailedPartition(t *testing.T) {
 	if err := store.UnregisterReducer(f.ctx, "go-balance"); err != nil {
 		t.Fatal(err)
 	}
-}
-
-// strandedReducerDeletion recognizes only the reproduced 19.29.4 catch-up race.
-// A delivered deletion, a failed/disconnected observer, a different watermark,
-// missing history, or an ordinary RPC failure must remain a test failure.
-func strandedReducerDeletion(err error, last readmodels.Instance[ReducedBalance], deletions uint32, info *contracts.ObserverInformation, failures *contracts.IEnumerable_FailedPartition, history []events.Appended) bool {
-	if !errors.Is(err, context.DeadlineExceeded) || deletions != 0 ||
-		!last.Exists || last.Value != (ReducedBalance{ID: "balance", Amount: -6}) || last.LastHandled == nil || *last.LastHandled != 1 ||
-		info == nil || info.Id != "go-balance" || info.Type != contracts.ObserverType_Reducer ||
-		info.EventSequenceId != "event-log" || info.Owner != contracts.ObserverOwner_Client ||
-		info.RunningState != contracts.ObserverRunningState_Active || !info.IsSubscribed ||
-		info.LastHandledEventSequenceNumber != 1 || info.NextEventSequenceNumber != 2 ||
-		info.TailEventSequenceNumber != 2 || info.HandledEventCount != 2 ||
-		failures == nil || len(failures.Items) != 0 || len(history) != 3 {
-		return false
-	}
-	for i, id := range []events.TypeID{"ReducedAmountChanged", "ReducedAmountChanged", "ReducedAccountDeleted"} {
-		ec := history[i].Context
-		if ec.SequenceNumber != events.SequenceNumber(i) || ec.SourceID != "balance" || ec.EventType != (events.TypeRef{ID: id, Generation: 1}) {
-			return false
-		}
-	}
-	var content map[string]json.RawMessage
-	return json.Unmarshal(history[2].Content, &content) == nil && content != nil && len(content) == 0
 }
 
 func TestKernelPassiveReducerReadsFoldLocallyWithAbsenceDeletionAndFailure(t *testing.T) {

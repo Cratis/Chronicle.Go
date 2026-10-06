@@ -8,6 +8,9 @@ managed:
       path: google/protobuf
   override:
     - file_option: go_package
+      path: alerts.proto
+      value: github.com/cratis/chronicle.go/contracts/alerts
+    - file_option: go_package
       path: captures.proto
       value: github.com/cratis/chronicle.go/contracts/captures
     - file_option: go_package
@@ -22,6 +25,9 @@ managed:
     - file_option: go_package
       path: eventsequences.proto
       value: github.com/cratis/chronicle.go/contracts/eventsequences
+    - file_option: go_package
+      path: eventsources.proto
+      value: github.com/cratis/chronicle.go/contracts/eventsources
     - file_option: go_package
       path: eventstores.proto
       value: github.com/cratis/chronicle.go/contracts/eventstores

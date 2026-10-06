@@ -278,14 +278,18 @@ retry independently; unregistering during an open releases readiness waiters.
 ### Wait for observers before the first append
 
 `EventStore` and `WaitForRegistration` mean registration was sent, not that the
-kernel has subscribed your observers. On the pinned 19.29.4 kernel, an observer
-that subscribes after events were appended to a key makes the kernel start
-a catch-up for that partition. Events appended to the same key during that catch-up
-can be dropped for other observers, including projections. This is an upstream
-defect ([Chronicle#4558](https://github.com/Cratis/Chronicle/issues/4558)); the
-client cannot repair it.
+kernel has subscribed your observers. From Chronicle **19.32.3** you no longer
+need to wait before appending: an observer that subscribes after events exist for
+a key catches that partition up without dropping later live events for other
+observers.
 
-As a startup mitigation, wait until your observers are subscribed and `Active`
+Kernels before 19.32.3, including 19.29.4, have an upstream defect
+([Chronicle#4558](https://github.com/Cratis/Chronicle/issues/4558)): the late
+subscription starts a catch-up for that partition, and events appended to the same
+key during the catch-up can be dropped for other observers, including
+projections. The client cannot repair it.
+
+On those older kernels, wait until your observers are subscribed and `Active`
 before the first append whose live delivery matters, using a bounded context:
 
 ```go

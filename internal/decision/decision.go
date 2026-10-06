@@ -32,7 +32,7 @@ var (
 // Supported deliberately recognizes only the characterized release. Descriptor
 // compatibility, a newer version and skipped preflight are not positive evidence.
 func Supported(version, protocol string) bool {
-	return (version == "19.29.4" || version == "19.29.4-development") && protocol == contracts.ProtocolVersion
+	return (version == "19.32.3" || version == "19.32.3-development") && protocol == contracts.ProtocolVersion
 }
 
 // Target includes client identity, not merely wire coordinates.
@@ -190,5 +190,5 @@ func ValidateDispatch(ctx context.Context) error {
 }
 
 func Unsupported() error {
-	return fmt.Errorf("%w: decision guards require the verified Chronicle 19.29.4 profile and compatibility preflight", faults.ErrUnsupported)
+	return fmt.Errorf("%w: decision guards require the verified Chronicle 19.32.3 profile and compatibility preflight", faults.ErrUnsupported)
 }

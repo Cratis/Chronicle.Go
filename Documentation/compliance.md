@@ -8,11 +8,12 @@ Mark personal data with `chronicle:"pii"` and use
 removing events. The kernel owns encryption, erasure fences and replacement keys;
 the Go SDK never holds keys or performs local cryptography.
 
-**Runtime limits:** the pinned 19.29.4 MongoDB kernel cannot provision global
-confidentiality keys, and protected numeric scalars release with the wrong JSON
-kind. These are [tracked compatibility limits](parity.md#compliance-and-confidentiality),
-not successful encryption/release claims. String PII, nested string values,
-subject/namespace confidentiality and the subject-key lifecycle have kernel tests.
+**Runtime limits:** use Chronicle 19.32.3 or later for global confidentiality and
+protected numeric scalars. The 19.29.4 MongoDB kernel cannot provision global
+confidentiality keys and releases protected numbers as JSON strings; see the
+[compatibility limits](parity.md#compliance-and-confidentiality). String PII, nested
+string values, numeric scalars, subject/namespace/global confidentiality and the
+subject-key lifecycle have kernel tests.
 
 ## Declare classifications
 
@@ -164,7 +165,7 @@ nor erasure removes copies exported outside Chronicle, including logs and backup
 The [compiling example](../examples/compliance/main.go) creates a unique store and
 random subject, erases synthetic personal data, verifies confidentiality survives,
 checks write refusal and explicitly reauthorizes. It prints no values or keys.
-Use a disposable 19.29.4 development kernel with an encryption certificate.
+Use a disposable 19.32.3 development kernel with an encryption certificate.
 `scripts/configure-compliance-integration.sh CONTAINER` creates an ephemeral test
 certificate inside a **fresh disposable** container and restarts it. Never use
 that script on an existing data store or production deployment.

@@ -916,6 +916,7 @@ type EventContext struct {
 	Hash             string                      `protobuf:"bytes,15,opt,name=Hash,proto3" json:"Hash,omitempty"`
 	Subject          string                      `protobuf:"bytes,16,opt,name=Subject,proto3" json:"Subject,omitempty"`
 	NamedTags        []*NamedTag                 `protobuf:"bytes,17,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
+	EventSource      string                      `protobuf:"bytes,18,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1067,6 +1068,13 @@ func (x *EventContext) GetNamedTags() []*NamedTag {
 		return x.NamedTags
 	}
 	return nil
+}
+
+func (x *EventContext) GetEventSource() string {
+	if x != nil {
+		return x.EventSource
+	}
+	return ""
 }
 
 type EventType struct {
@@ -2035,7 +2043,7 @@ const file_captures_proto_rawDesc = "" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12'\n" +
-	"\tCaptureId\x18\x02 \x01(\v2\t.bcl.GuidR\tCaptureId\"\x80\a\n" +
+	"\tCaptureId\x18\x02 \x01(\v2\t.bcl.GuidR\tCaptureId\"\xa2\a\n" +
 	"\fEventContext\x12L\n" +
 	"\tEventType\x18\x01 \x01(\v2..Cratis.Chronicle.Contracts.Captures.EventTypeR\tEventType\x12(\n" +
 	"\x0fEventSourceType\x18\x02 \x01(\tR\x0fEventSourceType\x12$\n" +
@@ -2056,7 +2064,8 @@ const file_captures_proto_rawDesc = "" +
 	"\x04Tags\x18\x0e \x03(\tR\x04Tags\x12\x12\n" +
 	"\x04Hash\x18\x0f \x01(\tR\x04Hash\x12\x18\n" +
 	"\aSubject\x18\x10 \x01(\tR\aSubject\x12K\n" +
-	"\tNamedTags\x18\x11 \x03(\v2-.Cratis.Chronicle.Contracts.Captures.NamedTagR\tNamedTags\"Y\n" +
+	"\tNamedTags\x18\x11 \x03(\v2-.Cratis.Chronicle.Contracts.Captures.NamedTagR\tNamedTags\x12 \n" +
+	"\vEventSource\x18\x12 \x01(\tR\vEventSource\"Y\n" +
 	"\tEventType\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\tR\x02Id\x12\x1e\n" +
 	"\n" +

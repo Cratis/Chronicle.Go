@@ -55,7 +55,7 @@ Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Wor
 
 ## Contracts and kernel integration
 
-Contracts live in this module under public `contracts/` packages. `contracts-source.json` pins Chronicle 19.29.4 at an immutable commit, input hashes and generator versions. Install Buf 1.73.0; Python 3 and Go are the other prerequisites. Generation installs its pinned Go plugins into isolated staging, fetches canonical upstream inputs and promotes only generator-owned files:
+Contracts live in this module under public `contracts/` packages. `contracts-source.json` pins Chronicle 19.32.3 at an immutable commit, input hashes and generator versions. Install Buf 1.73.0; Python 3 and Go are the other prerequisites. Generation installs its pinned Go plugins into isolated staging, fetches canonical upstream inputs and promotes only generator-owned files:
 
 ```sh
 go generate ./...
@@ -67,7 +67,7 @@ The check also detects stale or unexpected generated files; it does not require 
 Run the real-kernel tests against the development image matching the contract release:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.4-development
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.32.3-development
 # In another terminal, after https://localhost:35000/health reports Healthy:
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
   go test -tags=integration -count=1 -timeout=4m ./internal/integration

@@ -10,7 +10,7 @@ By the end, you will have a registered event type and a persisted customer event
 Use Go 1.26 or newer and Docker. Start the integration kernel matching the contract release:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.29.4-development
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.32.3-development
 ```
 
 Wait until `curl -skf https://localhost:35000/health` returns `Healthy`. The development image includes MongoDB and a self-signed certificate. Never expose its built-in credentials on a production endpoint.
@@ -83,7 +83,7 @@ func appendCustomer(ctx context.Context) (err error) {
 
 An empty namespace starts at position `0`; later runs append at higher sequence-wide positions. Every successful run appends another fact. The program does not retry a failed write: a lost response may hide a committed event.
 
-`EventStore` connects, ensures the default namespace and waits for event registration before publishing the handle. `Close` releases the client, including its keep-alive worker. Generated contracts target Chronicle **19.29.4**; the real-kernel smoke test exercises **19.29.4-development**, including protected first append and read-back through the public contracts.
+`EventStore` connects, ensures the default namespace and waits for event registration before publishing the handle. `Close` releases the client, including its keep-alive worker. Generated contracts target Chronicle **19.32.3**; the real-kernel smoke test exercises **19.32.3-development**, including protected first append and read-back through the public contracts.
 
 ## Continue
 

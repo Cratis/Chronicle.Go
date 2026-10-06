@@ -5,7 +5,7 @@ description: Read admitted projection state and reject stale decisions in one at
 
 Use a decision read when events depend on projection state that must not become stale before the append. Enroll the read in a [unit of work](../events/unit-of-work.md), stage the resulting events, and let its owner commit once. A competing matching append rejects the entire batch, including events for other sources.
 
-This API is experimental in the v0.x SDK. It implements **client-issued optimistic guards, not signed or server-authenticated read proofs**. It requires the characterized Chronicle **19.29.4** profile, including session reads, explicit no-match scopes and eventless plain-batch validation. Unknown, older and uncharacterized newer versions return `chronicle.ErrUnsupported`; structural compatibility alone does not establish these behaviors. `WithSkipCompatibilityCheck` supplies no positive evidence and cannot enable decision reads.
+This API is experimental in the v0.x SDK. It implements **client-issued optimistic guards, not signed or server-authenticated read proofs**. It requires the characterized Chronicle **19.32.3** profile, including session reads, explicit no-match scopes and eventless plain-batch validation. Unknown, older and uncharacterized newer versions return `chronicle.ErrUnsupported`; structural compatibility alone does not establish these behaviors. `WithSkipCompatibilityCheck` supplies no positive evidence and cannot enable decision reads.
 
 ## Read, decide and commit
 

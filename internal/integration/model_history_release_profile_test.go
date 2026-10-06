@@ -28,7 +28,7 @@ type HistorySecretAudit struct {
 	Count int32 `chronicle:"count(HistorySecretChanged)"`
 }
 
-// This is a characterization of 19.29.4, not a promise that all server reads are
+// This is a characterization of 19.32.3, not a promise that all server reads are
 // safe. Raw RPCs below deliberately bypass SDK refusal to witness its reason.
 func TestKernelModelHistoryProtectedReleaseProfile(t *testing.T) {
 	f := newKernelFixture(t)
@@ -103,8 +103,10 @@ func TestKernelModelHistoryProtectedReleaseProfile(t *testing.T) {
 				t.Fatal("event release used model/source instead of event subject", err)
 			}
 		}
-		// Default Id is not a release-subject alias. Raw collection replay still
-		// returns encrypted strings after erasure, and includes no reliable lineage.
+		// Chronicle#4561, fixed in 19.32.3: collection replay releases each value
+		// with its event subject, for default Id and lowercase id alike, and
+		// returns no lineage fields. The SDK refusals above stay until they are
+		// lifted deliberately.
 		raw, err := contracts.NewReadModelsClient(f.conn).GetAllInstances(f.ctx, &contracts.GetAllInstancesRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ReadModelIdentifier: string(model.Identifier()), EventSequenceId: "event-log", EventCount: 2})
 		if err != nil || len(raw.Instances) != 2 {
 			t.Fatal("raw default replay witness", err)
@@ -114,23 +116,12 @@ func TestKernelModelHistoryProtectedReleaseProfile(t *testing.T) {
 			if err := json.Unmarshal([]byte(document), &fields); err != nil {
 				t.Fatal(err)
 			}
-			if fields["Id"] == nil || fields["__subjects"] != nil || string(fields["name"]) == `""` || string(fields["name"]) == `"`+plaintext+`"` {
-				t.Fatal("default Id/lineage defect witness changed")
-			}
-			// Supplying the actual event owner to the explicit unreleased API
-			// proves these were encrypted values, without a ciphertext heuristic.
-			fields["__subject"] = json.RawMessage(`"owner"`)
-			unreleased, err := json.Marshal(fields)
-			if err != nil {
-				t.Fatal(err)
-			}
-			released, err := store.ReadModels().Release(f.ctx, model.Identifier(), unreleased)
-			if err != nil {
-				t.Fatal(err)
-			}
 			var value HistoryDefaultSecret
-			if err := json.Unmarshal(released, &value); err != nil || value.Name != want {
-				t.Fatal("default replay release witness", err)
+			if err := json.Unmarshal([]byte(document), &value); err != nil {
+				t.Fatal(err)
+			}
+			if fields["Id"] == nil || fields["__subject"] != nil || fields["__subjects"] != nil || value.Name != want {
+				t.Fatal("default Id replay release witness changed")
 			}
 		}
 		lowerRaw, err := contracts.NewReadModelsClient(f.conn).GetAllInstances(f.ctx, &contracts.GetAllInstancesRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ReadModelIdentifier: string(lower.Identifier()), EventSequenceId: "event-log", EventCount: 2})
@@ -142,17 +133,12 @@ func TestKernelModelHistoryProtectedReleaseProfile(t *testing.T) {
 			if err := json.Unmarshal([]byte(document), &value); err != nil {
 				t.Fatal(err)
 			}
-			expected := want
-			if value.ID == "different-source" {
-				expected = ""
-			}
-			if value.Name != expected {
-				t.Fatal("lowercase replay source-subject witness changed")
+			if value.Name != want {
+				t.Fatal("lowercase replay event-subject witness changed")
 			}
 		}
-		// Keyed immediate/session replay substitutes the source for the subject.
-		// Same-subject sessions release once, preserving cipher-shaped plaintext;
-		// source != subject loses the value even before erasure. SDK refuses both.
+		// Keyed immediate/session replay also releases with the event subject
+		// rather than the source key, preserving cipher-shaped plaintext once.
 		for _, source := range []string{"owner", "different-source"} {
 			id := uuid.NewString()
 			request := &contracts.GetInstanceByKeyRequest{EventStore: string(f.storeName), Namespace: string(store.Namespace()), ReadModelIdentifier: string(model.Identifier()), EventSequenceId: "event-log", ReadModelKey: source, SessionId: id}
@@ -168,12 +154,8 @@ func TestKernelModelHistoryProtectedReleaseProfile(t *testing.T) {
 			if err := json.Unmarshal([]byte(raw.ReadModel), &value); err != nil {
 				t.Fatal(err)
 			}
-			expected := want
-			if source != "owner" {
-				expected = ""
-			}
-			if value.Name != expected {
-				t.Fatal("session source-subject witness changed")
+			if value.Name != want {
+				t.Fatal("session event-subject witness changed")
 			}
 		}
 	}

@@ -157,14 +157,13 @@ explicit `AutoMap()` or `NoAutoMap()` overrides inheritance. Exclusions remain l
   child, including on grandchild collection properties. On other fields it removes
   the containing instance. Root `RemovedWith` and fluent child `Configure` accept
   the same key options. Removal parent keys default to source, not inference.
-- `remove-join` and `RemovedWithJoin` preserve the C# contract. In Chronicle
-  19.29.4-development, the MongoDB sink does **not** remove children identified by
-  `id` or `Id`: it stores those names as `_id` but does not translate the join-removal
-  filter ([Chronicle#4538](https://github.com/Cratis/Chronicle/issues/4538)). This
-  affects both event-source and event-property removal keys, with or without a
-  prior remove/re-add. A child identified by `GroupId`, as in the C# integration
-  scenario, does work. Do not rewrite client definitions to MongoDB's `_id` name;
-  the API and wire encoding remain sink-independent.
+- `remove-join` and `RemovedWithJoin` preserve the C# contract. From Chronicle
+  19.32.1 the MongoDB sink removes children identified by `id` or `Id` as well as
+  other identifier names such as `GroupId`. On 19.29.4 it stores `id`/`Id` as `_id`
+  but does not translate the join-removal filter, so those children are not removed
+  ([Chronicle#4538](https://github.com/Cratis/Chronicle/issues/4538)). Do not rewrite
+  client definitions to MongoDB's `_id` name; the API and wire encoding remain
+  sink-independent.
   Compilation diagnoses root `RemovedWithJoin` while retaining its wire definition.
   The kernel explicitly does **not** support root join removals
   ([Chronicle#4263](https://github.com/Cratis/Chronicle/issues/4263)) or nested-object

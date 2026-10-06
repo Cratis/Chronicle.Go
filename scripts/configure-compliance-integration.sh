@@ -2,7 +2,7 @@
 # Copyright (c) Cratis. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-# Only for a fresh, disposable 19.29.4-development test container. Never use on
+# Only for a fresh, disposable 19.32.3-development test container. Never use on
 # an existing store: losing this ephemeral certificate loses encrypted data.
 set -euo pipefail
 container=${1:?Pass the disposable integration container name or ID}

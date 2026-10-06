@@ -165,8 +165,9 @@ C#, even an explicitly selected `inbox-<store>` provisions. See
 
 For an ad-hoc PDL query, use `store.QueryProjection(ctx, declaration)` or its
 historical alias `PreviewProjection`. An optional sequence defaults to
-`events.EventLog`. On 19.29.4, use an explicit target: inferred-schema previews
-can drop projected properties ([Chronicle#4539](https://github.com/Cratis/Chronicle/issues/4539)).
+`events.EventLog`. On kernel 19.29.4, use an explicit target: inferred-schema
+previews can drop projected properties
+([Chronicle#4539](https://github.com/Cratis/Chronicle/issues/4539), fixed in 19.32.1).
 Assuming a read model registered with identifier `PreviewIssue` and a `title`
 property, this declaration queries its shape without registering a projection:
 
