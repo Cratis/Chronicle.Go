@@ -142,7 +142,8 @@ declarations is refused before registration. Admission stops at direct/nested
 object properties and one pointer to a binary leaf. The pinned kernel preserves
 binary arrays in event history but its projection converter treats each byte
 array as another collection; read models lose their byte values. See the
-[binary kernel limitation](parity.md#baselines-and-evidence) for source citations.
+[binary kernel limitation](parity.md#baselines-and-evidence) for source citations
+and [Chronicle#4595](https://github.com/Cratis/Chronicle/issues/4595) for the upstream fix.
 Go does not repair these lossy read models or weaken its base64 decoder. Projection copies, including AutoMap, require
 the same compiled binary representation; binary-to-string conversion, literals,
 arithmetic, identities, keys and joins are unsupported. Snapshot naming rebinds
