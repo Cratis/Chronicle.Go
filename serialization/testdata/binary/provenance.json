@@ -1,0 +1,51 @@
+{
+  "fixture": "profile.json",
+  "generator": "capture/Program.cs",
+  "project": "capture/BinaryCapture.csproj",
+  "declarations": "capture/Declarations.cs",
+  "isolation": "capture/Isolation.cs",
+  "sdk": "10.0.401",
+  "sdkRollForward": "disable",
+  "runtime": "10.0.12",
+  "runtimeRollForward": "Disable",
+  "packages": {
+    "Cratis.Chronicle": "19.29.4",
+    "Cratis.Fundamentals": "7.19.6"
+  },
+  "chroniclePackageSource": "ae5e00a8abaa688138b2c2f689e2b4659cccb4fd",
+  "fundamentalsPackageSource": "14037b1ff8346b7944ad48065b8f66feca80dab5",
+  "dependencyResolution": "capture/packages.lock.json; restore --locked-mode",
+  "countsPerNamingPolicy": {
+    "schemaObservations": 8,
+    "deserializeObservations": 51,
+    "independentSerializeObservations": 11,
+    "expandoDirectionPairs": 22
+  },
+  "caseIdentity": [
+    "namingPolicy",
+    "declaredType",
+    "operation",
+    "schemaAPI (when present)",
+    "id"
+  ],
+  "owningSources": [
+    "Cratis/Chronicle:Source/Clients/DotNET/ChronicleClient.cs",
+    "Cratis/Chronicle:Source/Clients/DotNET/Events/EventSerializer.cs",
+    "Cratis/Chronicle:Source/Clients/DotNET/Schemas/JsonSchemaGenerator.cs",
+    "Cratis/Chronicle:Source/Infrastructure/Schemas/TypeFormats.cs",
+    "Cratis/Chronicle:Source/Clients/DotNET/ReadModels/ReadModelJsonSerialization.cs",
+    "Cratis/Chronicle:Source/Infrastructure/Json/ExpandoObjectConverter.cs",
+    "Cratis/Fundamentals:Source/DotNET/Fundamentals/Json/JsonValueExtensions.cs"
+  ],
+  "limits": "Actual packaged options initializer and EventSerializer; empty catalogs, forbidden registry; no client connection, Mongo/BSON, kernel or protection in this capture.",
+  "sha256": {
+    "profile.json": "1b2550e75f5ef4316e54ab3e4b0853089f5169c3bedecc08d8772dac01af4605",
+    "capture/.gitignore": "6c5082c7e6de3e350189c67a1aacf757485ecc26e0a3cf96683528565f3e5f12",
+    "capture/BinaryCapture.csproj": "f3f04bc91678e5b49726beb67486253f1fc621f95ac2500c4800c892ce46cf6a",
+    "capture/Declarations.cs": "8411d4c25385c052f4807b6f2c3fad694ab8b7c91eb092855c0d39c9bd107827",
+    "capture/Isolation.cs": "786a1aad0b67779bac9b6875389f39c8831f55b05bb1c7e851fa889b0feddc60",
+    "capture/Program.cs": "24261bb378862d2b00b75e39f8cb16c7f2bb3cc2c1f620000b90fd0ee78f4816",
+    "capture/global.json": "4e7d5022b2a5a8d02bb951bb264a4c8613eabc332572a0af5f9743d23f23d84e",
+    "capture/packages.lock.json": "09d8d1d987c9c131d6f8ec21d40f66faef02cb1dde182247b117eb0bff6db920"
+  }
+}
