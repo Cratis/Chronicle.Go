@@ -158,7 +158,7 @@ explicit `AutoMap()` or `NoAutoMap()` overrides inheritance. Exclusions remain l
   the containing instance. Root `RemovedWith` and fluent child `Configure` accept
   the same key options. Removal parent keys default to source, not inference.
 - `remove-join` and `RemovedWithJoin` preserve the C# contract. From Chronicle
-  19.32.3 the MongoDB sink removes children identified by `id` or `Id` as well as
+  19.32.1 the MongoDB sink removes children identified by `id` or `Id` as well as
   other identifier names such as `GroupId`. On 19.29.4 it stores `id`/`Id` as `_id`
   but does not translate the join-removal filter, so those children are not removed
   ([Chronicle#4538](https://github.com/Cratis/Chronicle/issues/4538)). Do not rewrite

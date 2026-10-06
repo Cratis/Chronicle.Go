@@ -19,7 +19,7 @@ import (
 // without registering it. Omitting sequence selects event-log; at most one
 // nonblank sequence is accepted. A declaration may omit its read-model target
 // for schema inference. Kernel 19.29.4 drops inferred properties
-// (Chronicle#4539, fixed in 19.32.3); use an explicitly registered target schema
+// (Chronicle#4539, fixed in 19.32.1); use an explicitly registered target schema
 // on that kernel.
 // The caller controls cancellation/deadlines; no retries or
 // Go callbacks run. Invalid PDL returns *projections.QueryError.
