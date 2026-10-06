@@ -171,12 +171,16 @@ model, err := readmodels.Define[Shipment](readmodels.WithCodecs(codecs))
 ```
 
 The child node uses `Box`'s fields: its `key` field is the child identity and its
-mapping tags apply to the child, in the derivative's camelCase names. The
-creating event's mapping gains `_derivedTypeId: $value(box)`. Joins, removals
-and other keyed updates edit the existing child and leave its discriminator in
-place. The fluent `projections.Children` accepts the same family with
-`Builder[Box]`; it writes the discriminator on every child `From`, because C#
-fluent children cannot name a concrete type.
+mapping tags apply to the child, in the derivative's camelCase names. Every
+child `From` gains `_derivedTypeId: $value(box)`, not only the creating event.
+The kernel adds a child for any non-join `From` whose identity is absent, so a
+keyed update that arrives after the child was removed, or before it was created,
+writes a new child; the discriminator keeps that child readable. On an existing
+child the update rewrites the same constant. Joins never add a child, so they
+carry no discriminator, and removals delete the child. The C# client stamps only
+the `[ChildrenFrom]` creator, so a recreated C# child has no discriminator. The
+fluent `projections.Children` accepts the same family with `Builder[Box]` and
+stamps every child `From` the same way.
 
 Compilation fails rather than writing undecodable children when:
 
@@ -186,6 +190,11 @@ Compilation fails rather than writing undecodable children when:
 - a global (`every`/`all`) mapping targets any casing of `_derivedTypeId`,
 - a derivative declares mappings but its family is not a `children` collection,
   including `nested` interface fields, which C# does not resolve either.
+
+A derivative's `key`, `no-auto` and `not-projected` tags are type metadata, not
+mappings. A fluent derivative needs its `key` tag, and another read model may
+hold the same family as a whole property: that model is not discovered as a
+projection by those tags alone, and compiling it does not refuse them.
 
 Whole-family properties or collections can still be copied when source and
 target compiled representations agree. Projections with children are
