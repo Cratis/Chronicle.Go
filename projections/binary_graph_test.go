@@ -15,13 +15,13 @@ import (
 
 type graphBinaryModel struct{ Payload []byte }
 type graphBinaryUnicodeModel struct {
-	Payload []byte `json:"É"`
+	Payload []byte
 }
 type graphStringUnicodeModel struct {
 	Payload string `json:"É"`
 }
 type graphBinaryUnicodeEvent struct {
-	Payload []byte `json:"é"`
+	Payload []byte
 }
 type graphStringUnicodeEvent struct {
 	Payload string `json:"é"`
@@ -59,7 +59,8 @@ func checkBinaryUnicodeRebind[M, E any](t *testing.T) {
 			} else {
 				n.from = []fromDefinition{from}
 			}
-			// Seed a lowered graph to exercise Rebind independently of admission.
+			// Only the binary-free peer may still declare Unicode names. Seed
+			// a lowered graph to exercise Rebind independently of admission.
 			d := &definition{id: "binary-rebind-unicode", model: model.Descriptor(), initialState: "{}", nodeDefinition: n}
 			bound, err := model.Descriptor().WithNamingPolicy(serialization.CamelCase)
 			if err != nil {

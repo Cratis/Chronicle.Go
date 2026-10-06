@@ -10,6 +10,7 @@ import (
 	chronicle "github.com/cratis/chronicle.go"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/cratis/chronicle.go/serialization"
@@ -83,26 +84,16 @@ type binaryUnicodeStringModel struct {
 }
 
 func TestBinaryUnicodeAutoMapRefusesBothDirectionsAndJoins(t *testing.T) {
-	for _, join := range []bool{false, true} {
-		t.Run(map[bool]string{false: "From", true: "Join"}[join], func(t *testing.T) {
-			toString := projections.NewBuilder("binary-unicode-string", mustModel[binaryUnicodeStringModel](t))
-			if join {
-				projections.Join(toString, mustEvent[binaryUnicodeEvent](t), projections.Path[binaryUnicodeStringModel, string]("Key"), nil)
-			} else {
-				projections.From(toString, mustEvent[binaryUnicodeEvent](t), nil)
-			}
-			_, err := toString.Build()
-			binaryMappingFailure(t, err)
-			toBinary := projections.NewBuilder("binary-unicode-bytes", mustModel[binaryUnicodeModel](t))
-			if join {
-				projections.Join(toBinary, mustEvent[binaryUnicodeStringEvent](t), projections.Path[binaryUnicodeModel, string]("Key"), nil)
-			} else {
-				projections.From(toBinary, mustEvent[binaryUnicodeStringEvent](t), nil)
-			}
-			_, err = toBinary.Build()
-			binaryMappingFailure(t, err)
-		})
+	// The shared plan now refuses Unicode binary properties before either
+	// From or Join can acquire a descriptor. Binary-free peers still compile.
+	if _, err := events.Define[binaryUnicodeEvent](); !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatalf("Unicode binary event admitted: %v", err)
 	}
+	if _, err := readmodels.Define[binaryUnicodeModel](); !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatalf("Unicode binary model admitted: %v", err)
+	}
+	mustEvent[binaryUnicodeStringEvent](t)
+	mustModel[binaryUnicodeStringModel](t)
 }
 
 type binaryTaggedKeyModel struct {

@@ -12,19 +12,18 @@ import (
 	"github.com/cratis/chronicle.go/serialization"
 )
 
-func TestBinaryNamesUseOrdinalUppercaseNotFullCaseFolding(t *testing.T) {
+func TestBinaryNamesRefuseNonASCIIRegardlessOfCaseFolding(t *testing.T) {
 	for _, tc := range []struct {
 		left, right string
-		collision   bool
 	}{
-		{"é", "É", true},
-		{"σ", "ς", true},
-		{"𐐀", "𐐨", true},
-		{"k", "K", false},
-		{"i", "ı", false},
-		{"s", "ſ", false},
-		{"ß", "ẞ", false},
-		{"é", "é", false}, // No normalization; the combining mark also fails the identifier grammar.
+		{"é", "É"},
+		{"σ", "ς"},
+		{"𐐀", "𐐨"},
+		{"k", "K"},
+		{"i", "ı"},
+		{"s", "ſ"},
+		{"ß", "ẞ"},
+		{"é", "é"},
 	} {
 		t.Run(tc.left+"/"+tc.right, func(t *testing.T) {
 			typ := reflect.StructOf([]reflect.StructField{
@@ -33,18 +32,14 @@ func TestBinaryNamesUseOrdinalUppercaseNotFullCaseFolding(t *testing.T) {
 				{Name: "Payload", Type: reflect.TypeFor[[]byte]()},
 			})
 			plan, err := serialization.Compile(typ)
-			if tc.collision || tc.right == "é" {
-				if plan != nil || !errors.Is(err, faults.ErrUnsupported) {
-					t.Fatalf("case/grammar collision admitted: %v", err)
-				}
-			} else if err != nil {
-				t.Fatalf("distinct ordinal names refused: %v", err)
+			if plan != nil || !errors.Is(err, faults.ErrUnsupported) {
+				t.Fatalf("non-ASCII property admitted: %v", err)
 			}
 		})
 	}
 }
 
-func TestBinaryNamesRefuseNewOrdinalCollisionAfterNaming(t *testing.T) {
+func TestBinaryNamesRefuseNonASCIIUnderEveryNamingPolicy(t *testing.T) {
 	for name, typ := range map[string]reflect.Type{
 		"alias first": reflect.TypeFor[struct {
 			Note string `json:"K"`
@@ -56,15 +51,11 @@ func TestBinaryNamesRefuseNewOrdinalCollisionAfterNaming(t *testing.T) {
 		}](),
 	} {
 		t.Run(name, func(t *testing.T) {
-			plan, err := serialization.Compile(typ)
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, policy := range []serialization.NamingPolicy{serialization.CamelCase, serialization.LegacyGoCamelCase} {
-				// CLR ordinal casing does not equate Kelvin sign with K, but
-				// naming converts the untagged Kelvin sign into ASCII k.
-				if next, err := plan.WithNamingPolicy(policy); next != nil || !errors.Is(err, faults.ErrUnsupported) {
-					t.Fatalf("new ordinal collision admitted after naming: %v, %v", next, err)
+			for _, policy := range []serialization.NamingPolicy{serialization.PreservePropertyNames, serialization.CamelCase, serialization.LegacyGoCamelCase} {
+				// Preserve refuses the Kelvin sign itself; both camel policies
+				// turn it into k, which collides with the tagged ASCII sibling.
+				if next, err := serialization.Compile(typ, policy); next != nil || !errors.Is(err, faults.ErrUnsupported) {
+					t.Fatalf("non-ASCII name or recased collision admitted: %v, %v", next, err)
 				}
 			}
 		})

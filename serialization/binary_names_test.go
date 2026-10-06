@@ -198,13 +198,11 @@ func TestBinaryFreeNamesKeepAdmissionAndRecompilation(t *testing.T) {
 	}
 }
 
-func TestBinaryNamesKeepSimpleUnicodeAndRecompilation(t *testing.T) {
+func TestBinaryNamesKeepSimpleASCIIAndRecompilation(t *testing.T) {
 	type document struct {
 		Payload []byte
-		Éclair  string
-		Σ       string
-		Member  string `json:"member2"`
-		Kelvin  string `json:"K"`
+		URL     string
+		Member  string `json:"member2_name"`
 		ASCII   string `json:"k"`
 	}
 	plan, err := serialization.Compile(reflect.TypeFor[document]())

@@ -4,10 +4,12 @@
 package projections
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -115,6 +117,9 @@ func validateBinaryNode(d *definition, n *nodeDefinition, fields []serialization
 			target := matches[0]
 			if slices.Contains(n.exclusions, target.Path) || autoMapWritten(from.writes, source.Name, join) {
 				continue
+			}
+			if join || d.variant != nil {
+				return fmt.Errorf("%w: binary copies through joins or variants are not qualified", faults.ErrUnsupported)
 			}
 			if source.Scalar != serialization.Binary || target.Scalar != serialization.Binary {
 				return enumMappingFailure(d, target, from.event, "AutoMap", "binary auto-map only supports leaf-to-leaf copies, not objects containing binary")

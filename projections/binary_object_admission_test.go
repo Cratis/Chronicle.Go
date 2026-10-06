@@ -49,7 +49,11 @@ func TestBinaryObjectAutoMapRefusesEvenIdenticalRepresentations(t *testing.T) {
 			d := &definition{id: "binary-object-copy", model: model.Descriptor(), nodeDefinition: n}
 			// Seed detached object fields: read-model admission is independently
 			// narrowed to root leaves, but the final graph must also reject objects.
-			if err := validateBinaryNode(d, &n, e.Fields(), bound, false, false); !errors.Is(err, faults.ErrInvalidConfiguration) {
+			want := faults.ErrInvalidConfiguration
+			if join {
+				want = faults.ErrUnsupported
+			}
+			if err := validateBinaryNode(d, &n, e.Fields(), bound, false, false); !errors.Is(err, want) {
 				t.Fatalf("whole-object binary AutoMap admitted (join=%v, policy=%v): %v", join, policy, err)
 			}
 		}

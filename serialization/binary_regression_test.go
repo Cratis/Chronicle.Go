@@ -4,11 +4,13 @@
 package serialization_test
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/serialization"
 	"github.com/google/uuid"
 )
@@ -89,26 +91,10 @@ func TestBinaryCapabilityMetadataIncludesRecursiveOwners(t *testing.T) {
 		Count   int
 		Next    *tree
 	}
-	p, err := serialization.Compile(reflect.TypeFor[tree]())
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, path := range []string{"Payload", "Next", "Next.Next", "Next.Payload"} {
-		f, ok := serialization.FieldAt(p.Fields(), path)
-		if !ok || !f.ContainsBinary() {
-			t.Fatal("binary capability lost through owner/reference", path)
+	for _, compile := range []func(reflect.Type, ...serialization.NamingPolicy) (*serialization.Plan, error){serialization.Compile, serialization.CompileReadModel} {
+		if plan, err := compile(reflect.TypeFor[tree]()); plan != nil || !errors.Is(err, faults.ErrUnsupported) {
+			t.Fatalf("unwitnessed recursive binary owner admitted: %v", err)
 		}
-	}
-	f, ok := serialization.FieldAt(p.Fields(), "Count")
-	if !ok || f.ContainsBinary() {
-		t.Fatal("ordinary field acquired binary capability")
-	}
-	var value tree
-	if err := p.Unmarshal([]byte(`{"Next":{"Count":1}}`), &value); err != nil {
-		t.Fatal(err)
-	}
-	if value.Next == nil || value.Payload == nil || value.Next.Payload == nil || value.Next.Next != nil {
-		t.Fatal("binary normalization changed recursive container presence")
 	}
 }
 

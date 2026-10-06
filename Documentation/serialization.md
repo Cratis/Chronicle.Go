@@ -125,18 +125,35 @@ have no custom JSON/text marshaler. Fixed `[N]byte` arrays remain integer arrays
 | `*[]byte` | String/null schema with `byte-array?` format; nil pointer omitted |
 | `[][]byte` and other collections containing binary | Refused before registration: the pinned kernel's projection conversion loses binary elements |
 
-The admitted shapes are deliberately bounded:
+### Admitted binary shapes
 
-- Event payloads: direct binary leaves, one pointer to a leaf, and these leaves
-  inside nested objects (including pointers to objects).
-- Read-model payloads: binary leaves or one pointer to a leaf emitted directly
-  at the root. Promoted embedded leaves count as root properties. Binary below
-  a nested read-model object is refused, rather than qualifying arbitrary shapes
-  from the witness's former single `Nested.Inner` control.
-- Projection AutoMap: only leaf-to-leaf copies with identical compiled binary
-  representations and qualified ASCII property names. Neither endpoint may be
-  an object containing binary at any depth. Explicit binary copies remain refused;
-  they have no separate kernel witness.
+Admission is limited to these shapes, with ASCII property names throughout an
+acyclic type graph. A named slice over built-in `byte`, or a promoted embedded
+leaf, has the same emitted binary schema and payload as its plain/root spelling;
+neither introduces a new kernel shape.
+
+| Shape | Witness or captured golden |
+| --- | --- |
+| Event binary leaf (`[]byte`, including named slices without custom codecs) and one nullable pointer to a leaf | Packaged `BinaryEvent.Payload` / `Optional` writes, reads and both schema APIs in `serialization/testdata/binary/profile.json`; kernel `BinaryChanged.Payload` / `Optional` in `TestKernelBinaryEventsProjectionAndReadModel` |
+| Binary event leaves inside acyclic objects, including pointers to objects | Packaged `BinaryEvent.Nested.Inner`; kernel event-history readback of `BinaryChanged.Nested.Inner` in the same witness |
+| Read-model binary leaf or one nullable pointer emitted at the root, including promoted embedded leaves | Packaged `BinaryModel.Payload` / `Optional` schemas and Expando conversion pairs; kernel `BinaryWitnessModel.Payload` / `Optional` Get readbacks |
+| Ordinary projection **From** AutoMap leaf-to-leaf copy with identical compiled binary representations and ASCII names | `TestKernelBinaryEventsProjectionAndReadModel` uses only `projections.From` for root `Payload` / `Optional`, under Preserve and CamelCase |
+
+### Refused binary shapes
+
+- Binary copies through **Join** or **VariantOf**, including entering handlers
+  and generated self-joins: neither the witness nor the capture qualifies them.
+- Any recursive type graph containing binary, including a binary-free recursive
+  sibling: no recursive/`$ref` binary schema is captured or witnessed.
+- Any non-ASCII serialized property name anywhere in a binary-containing graph,
+  including ordinary siblings. Kelvin sign `K` and long s `ſ` are refused rather
+  than letting Go's `EqualFold` select a different field from CLR ordinal casing.
+- Binary below a nested read-model object; whole-object binary AutoMap; explicit
+  binary copies. These are not generalized from the former `Nested.Inner` model
+  control. Neither AutoMap endpoint may be an object containing binary.
+
+The remaining capability refusals are listed below; captured collection/map
+controls do not expand admission.
 
 Missing or null non-pointer binary properties decode as owned, non-nil empty slices, including
 on event reads. Nullable pointers remain nil; present strings decode to fresh
@@ -170,24 +187,26 @@ bytes into a list instead of preserving the object. That conversion recurses int
 nested objects. See `EventValueProviderExpressionResolvers.cs:113–119,139–158`
 at Chronicle `ae5e00a8` (19.29.4). CLR Unicode AutoMap case matching is not
 qualified. Explicit mappings, binary-to-string
-conversion, initial values, literals, arithmetic, identities, keys, joins and
-runtime ordinary-scalar profiles are unsupported. Read-model identity and subject
+conversion, initial values, literals, arithmetic, identities, keys, joins,
+projection variants and runtime ordinary-scalar profiles are unsupported. Read-model identity and subject
 fallback properties cannot be binary, even without a projection. This includes
 all case variants of serialized `id` and the MongoDB `_id` property.
 
 If a type graph contains binary anywhere, **every serialized property name** in
-that graph must be a simple, case-insensitively unique, non-reserved segment.
+that graph must be an ASCII, case-insensitively unique, non-reserved segment.
 This includes ordinary siblings unrelated to the binary leaf, nested objects,
 collection members, embedded/promoted fields and registered derived variants,
 including unused variants in the plan's codec set. Names are checked under the
 active naming policy at compilation and every naming recompilation, before
 registration. Binary-only name violations return `chronicle.ErrUnsupported`
 without payload data. Exact duplicate names retain `chronicle.ErrInvalidConfiguration`,
-just as in binary-free types; actual compile errors take precedence over deferred
-name errors.
+just as in binary-free types. In binary-containing types, actual compile errors
+take precedence over deferred duplicates. Binary-free types still refuse a direct
+duplicate immediately, before compiling later fields, preserving the original
+error ordering even if a later field has an unsupported type.
 
-A simple segment is nonempty: its first character is a Unicode letter,
-and subsequent characters are Unicode letters, decimal digits or `_`. Names
+A simple segment is nonempty: its first character is an ASCII letter,
+and subsequent characters are ASCII letters, digits or `_`. Names
 beginning with `_` are refused at every level, including `_id` and all sink-owned
 properties from `Source/Kernel/Storage/WellKnownProperties.cs` at `ae5e00a8`:
 `__lastHandledEventSequenceNumber`, `__initialized`, `__subject` and `__subjects`.
@@ -212,13 +231,11 @@ as `Week()`); the path accessor is `$this` and the unset sentinel is `*NotSet*`.
 The additional words `true` and `false` are reserved because the kernel's literal
 resolver intercepts them. All reserved names are compared case-insensitively.
 
-Sibling uniqueness is local to each object, not global to the graph. Comparison
-uses Unicode simple uppercase, with dotless `ı` and long `ſ` kept distinct from
-ASCII `I` and `S`, matching CLR ordinal casing. It performs no full case folding,
-multicharacter expansion or Unicode normalization: `é`/`É` and `σ`/`ς` collide,
-but `k`/`K` and `ß`/`ẞ` do not. The kernel's schema lookup and JSON conversion
-use `OrdinalIgnoreCase`; without this boundary they can select a different
-property from the one Go's capability guards checked. Rename unsafe properties
+Sibling uniqueness is local to each object, not global to the graph. ASCII
+case-insensitive comparison agrees with both CLR `OrdinalIgnoreCase` and Go's
+`EqualFold` for admitted property names. Non-ASCII serialized names under the
+active naming policy are refused, not normalized by the admission check. Without this boundary decoding
+could populate multiple fields for one differently cased input property. Rename unsafe properties
 rather than relying on field order or an exact-case match. Types with **no binary**
 retain their existing naming, dotted-path lookup and exact-duplicate behavior;
 this rule does not fix their pre-existing kernel ambiguities. See the

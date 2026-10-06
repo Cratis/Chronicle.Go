@@ -6,9 +6,7 @@ package serialization
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
-	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/internal/faults"
 )
 
@@ -31,7 +29,7 @@ func validateBinaryPropertyNames(root *node) error {
 		names := make(map[string]bool, len(n.fields))
 		for _, f := range n.fields {
 			key := binaryPropertyNameKey(f.name)
-			if strings.Contains(f.name, ".") || strings.HasPrefix(f.name, "_") || !declarations.Path(f.name) || binaryReservedPropertyName(key) || names[key] || !rootObject && key == "ID" || n.containsBinary && key == "VALUE" {
+			if !binaryASCIIPropertyName(f.name) || binaryReservedPropertyName(key) || names[key] || !rootObject && key == "ID" || n.containsBinary && key == "VALUE" {
 				return binaryPropertyNamesError()
 			}
 			names[key] = true
@@ -55,7 +53,7 @@ func validateBinaryPropertyNames(root *node) error {
 }
 
 func binaryPropertyNamesError() error {
-	return fmt.Errorf("%w: binary-containing types require simple, case-insensitively unique, non-reserved property names", faults.ErrUnsupported)
+	return fmt.Errorf("%w: binary-containing types require ASCII, case-insensitively unique, non-reserved property names", faults.ErrUnsupported)
 }
 
 // v19.29.4 PropertyPath.ResolvePropertyPathSegment recognizes Week (the entire
@@ -76,14 +74,20 @@ func binaryReservedPropertyName(key string) bool {
 	}
 }
 
-// OrdinalIgnoreCase uses simple uppercase, not Unicode full case folding:
-// no expansions or normalization; Kelvin sign stays distinct from ASCII K.
-// CLR ordinal casing leaves dotless i and long s distinct from ASCII I and S.
-func binaryPropertyNameKey(name string) string {
-	return strings.Map(func(r rune) rune {
-		if r == '\u0131' || r == '\u017f' {
-			return r
+// ASCII names give CLR ordinal casing and Go EqualFold identical sibling
+// classes. In particular, Kelvin sign and long s cannot alias ASCII fields.
+func binaryPropertyNameKey(name string) string { return strings.ToUpper(name) }
+
+func binaryASCIIPropertyName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i := range len(name) {
+		c := name[i]
+		if c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || i > 0 && (c >= '0' && c <= '9' || c == '_') {
+			continue
 		}
-		return unicode.ToUpper(r)
-	}, name)
+		return false
+	}
+	return true
 }

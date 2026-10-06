@@ -59,8 +59,9 @@ type field struct {
 	isZero              func(reflect.Value) bool
 }
 
-// Compile validates a struct shape before registration. Recursive types use schema
-// references. Embedded fields follow encoding/json promotion and declaration order.
+// Compile validates a struct shape before registration. Binary-free recursive
+// types use schema references; recursive graphs containing binary are refused.
+// Embedded fields follow encoding/json promotion and declaration order.
 // Custom marshalers, interface values, unsupported chronicle directives and
 // non-simple, reserved or case-insensitively duplicate property names in binary-
 // containing graphs are rejected rather than generating a schema that disagrees
@@ -130,7 +131,10 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	if typ == nil || typ.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("%w: event must be a named struct", faults.ErrInvalidConfiguration)
 	}
-	state := &compileState{active: map[compileKey]*node{}, definitions: map[string]any{}, codecs: config.Codecs}
+	state := &compileState{
+		active: map[compileKey]*node{}, definitions: map[string]any{}, codecs: config.Codecs,
+		deferDuplicates: binaryTypeCandidate(typ, policy, readModel, config.Codecs),
+	}
 	root, err := compile(typ, state, policy, readModel)
 	if err != nil {
 		return nil, err
@@ -184,6 +188,9 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	}
 	if binary {
 		for _, candidate := range candidates {
+			if err := validateBinaryRecursion(candidate); err != nil {
+				return nil, err
+			}
 			if err := validateBinaryPropertyNames(candidate); err != nil {
 				return nil, err
 			}
@@ -217,10 +224,11 @@ type compileKey struct {
 	derived, root bool
 }
 type compileState struct {
-	active         map[compileKey]*node
-	definitions    map[string]any
-	codecs         *Codecs
-	duplicateNames error
+	active          map[compileKey]*node
+	definitions     map[string]any
+	codecs          *Codecs
+	duplicateNames  error
+	deferDuplicates bool
 }
 
 func compile(typ reflect.Type, state *compileState, policy NamingPolicy, readModelRoot bool) (*node, error) {
@@ -384,11 +392,15 @@ func (n *node) compileFields(state *compileState, policy NamingPolicy, readModel
 	if derived {
 		fieldPolicy = CamelCase
 	}
-	fields, err := serializedFieldsWithDuplicateHandler(n.typ, fieldPolicy, readModelRoot, func(err error) {
-		if state.duplicateNames == nil {
-			state.duplicateNames = err
+	var duplicate func(error)
+	if state.deferDuplicates {
+		duplicate = func(err error) {
+			if state.duplicateNames == nil {
+				state.duplicateNames = err
+			}
 		}
-	})
+	}
+	fields, err := serializedFieldsWithDuplicateHandler(n.typ, fieldPolicy, readModelRoot, duplicate)
 	if err != nil {
 		return err
 	}

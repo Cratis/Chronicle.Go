@@ -10,13 +10,16 @@ import (
 	"github.com/cratis/chronicle.go/serialization"
 )
 
-type binaryRecursivePath struct {
+type binaryNestedPath struct {
 	Data struct{ Payload []byte }
-	Next *binaryRecursivePath
+	Next *struct {
+		Data struct{ Payload []byte }
+		Next *struct{ Data struct{ Payload []byte } }
+	}
 }
 
-func TestBinaryPathCapabilityIncludesAmbiguousRecursiveCandidates(t *testing.T) {
-	plan, err := serialization.Compile(reflect.TypeFor[binaryRecursivePath]())
+func TestBinaryPathCapabilityIncludesAmbiguousNestedCandidates(t *testing.T) {
+	plan, err := serialization.Compile(reflect.TypeFor[binaryNestedPath]())
 	if err != nil {
 		t.Fatal(err)
 	}
