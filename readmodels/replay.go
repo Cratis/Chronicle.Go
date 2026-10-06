@@ -11,6 +11,7 @@ import (
 
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 )
 
 // KeyProperty returns the serialized root ID property, or empty when undeclared.
@@ -26,6 +27,9 @@ func (d Descriptor) KeyProperty() string { return idProperty(d) }
 // unless the connection reports such a kernel. Returned JSON is owned and ID aliases
 // are normalized by the same path as Get. No local projection engine is used.
 func (s *Service) ReplayProjection(ctx context.Context, model Identifier, eventCount uint64) ([]json.RawMessage, error) {
+	// Needs added by admission travel with every RPC of this read and are
+	// re-checked against the generation that dispatches it.
+	ctx = kernelcapability.Track(ctx)
 	d, ok := s.catalog.LookupIdentifier(model)
 	if !ok {
 		return nil, notRegistered()

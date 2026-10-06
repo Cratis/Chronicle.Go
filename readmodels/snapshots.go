@@ -14,6 +14,7 @@ import (
 	contracts "github.com/cratis/chronicle.go/contracts/readmodelexplorer"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 )
@@ -52,6 +53,9 @@ func (s *Service) GetSnapshots(ctx context.Context, model Identifier, key Key) (
 }
 
 func (s *Service) getSnapshots(ctx context.Context, d Descriptor, key Key) (result []Snapshot[json.RawMessage], err error) {
+	// Needs added by admission travel with every RPC of this read and are
+	// re-checked against the generation that dispatches it.
+	ctx = kernelcapability.Track(ctx)
 	defer func() {
 		if err == nil {
 			err = ctx.Err()

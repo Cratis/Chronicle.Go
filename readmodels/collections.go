@@ -13,6 +13,7 @@ import (
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/wire"
 )
 
@@ -43,6 +44,9 @@ func (s *Service) GetAll(ctx context.Context, model Identifier, count *events.Co
 }
 
 func (s *Service) getAll(ctx context.Context, d Descriptor, count *events.Count) (result Collection[json.RawMessage], err error) {
+	// Needs added by admission travel with every RPC of this read and are
+	// re-checked against the generation that dispatches it.
+	ctx = kernelcapability.Track(ctx)
 	defer func() {
 		if err == nil {
 			err = ctx.Err()

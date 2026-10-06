@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/cratis/chronicle.go/internal/faults"
 )
@@ -77,8 +78,11 @@ func parse(version string) ([3]int, bool) {
 	return result, true
 }
 
-// Provider reports the capabilities of the connection an operation will use.
-// Connections that do not implement it are treated as having no capabilities.
+// Provider reports the capabilities of the connection an operation will most
+// likely use. The report is only a fast pre-check: a reconnect can change the
+// kernel before dispatch. Transports that report capabilities must enforce the
+// requirements tracked in the call context against the generation that actually
+// dispatches (see Check).
 type Provider interface {
 	KernelCapabilities(context.Context) (Capabilities, error)
 }
@@ -92,11 +96,98 @@ func Of(ctx context.Context, conn any) (Capabilities, error) {
 	return provider.KernelCapabilities(ctx)
 }
 
-// Require returns ErrUnsupported naming the minimum kernel release when
-// supported is false.
-func Require(supported bool, feature, minimum string) error {
-	if supported {
+// Need names one capability an operation depends on.
+type Need struct {
+	feature, minimum string
+	has              func(Capabilities) bool
+}
+
+// The capabilities gated operations depend on, with payload-free feature names.
+var (
+	NeedMixedAllReplay             = Need{"mixed all-event projection replay", MixedAllReplayVersion, func(c Capabilities) bool { return c.MixedAllReplay }}
+	NeedProtectedRevision          = Need{"protected revision", ProtectedReleaseVersion, func(c Capabilities) bool { return c.ProtectedRelease }}
+	NeedProtectedProjectionRead    = Need{"protected projection replay release", ProtectedReleaseVersion, func(c Capabilities) bool { return c.ProtectedRelease }}
+	NeedNestedCollectionProtection = Need{"protection beneath maps or on collection-valued array elements", ProtectedReleaseVersion, func(c Capabilities) bool { return c.ProtectedRelease }}
+)
+
+// Refusal returns the payload-free ErrUnsupported naming the minimum release.
+func (n Need) Refusal() error {
+	return fmt.Errorf("%w: %s requires Chronicle %s or later", faults.ErrUnsupported, n.feature, n.minimum)
+}
+
+// Satisfied reports whether have contains the capability.
+func (n Need) Satisfied(have Capabilities) bool { return n.has != nil && n.has(have) }
+
+// Precheck refuses early when conn does not report the capability. It is not
+// authoritative; Track the operation and Add the need for the dispatch check.
+func Precheck(ctx context.Context, conn any, n Need) error {
+	have, err := Of(ctx, conn)
+	if err != nil {
+		return err
+	}
+	if !n.Satisfied(have) {
+		return n.Refusal()
+	}
+	return nil
+}
+
+type requirementsKey struct{}
+
+// requirements accumulate the needs of one operation. Adds and checks may run
+// on different goroutines; the mutex guards only the slice, never callbacks.
+type requirements struct {
+	mu    sync.Mutex
+	needs []Need
+}
+
+func (r *requirements) snapshot() []Need {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]Need(nil), r.needs...)
+}
+
+// Track returns a context with a fresh requirement set that inherits the needs
+// already tracked by ctx. Adding to it never changes the parent's set.
+func Track(ctx context.Context) context.Context {
+	tracked := &requirements{}
+	if parent, ok := ctx.Value(requirementsKey{}).(*requirements); ok {
+		tracked.needs = parent.snapshot()
+	}
+	return context.WithValue(ctx, requirementsKey{}, tracked)
+}
+
+// Add records n for every later dispatch under ctx. It reports false when ctx
+// is not tracked; callers must then refuse rather than dispatch unchecked.
+func Add(ctx context.Context, n Need) bool {
+	tracked, ok := ctx.Value(requirementsKey{}).(*requirements)
+	if !ok {
+		return false
+	}
+	tracked.mu.Lock()
+	tracked.needs = append(tracked.needs, n)
+	tracked.mu.Unlock()
+	return true
+}
+
+// With tracks ctx and records n.
+func With(ctx context.Context, n Need) context.Context {
+	ctx = Track(ctx)
+	Add(ctx, n)
+	return ctx
+}
+
+// Check is the authoritative dispatch-time check. Transports call it with the
+// capabilities of the generation that will send the RPC, after pinning it and
+// before dispatching; a failure must be reported as not dispatched.
+func Check(ctx context.Context, have Capabilities) error {
+	tracked, ok := ctx.Value(requirementsKey{}).(*requirements)
+	if !ok {
 		return nil
 	}
-	return fmt.Errorf("%w: %s requires Chronicle %s or later", faults.ErrUnsupported, feature, minimum)
+	for _, n := range tracked.snapshot() {
+		if !n.Satisfied(have) {
+			return n.Refusal()
+		}
+	}
+	return nil
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/jsonstructure"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
@@ -93,6 +94,9 @@ func (s *Service) Get(ctx context.Context, model Identifier, key Key) (Instance[
 	return s.get(ctx, d, key, "")
 }
 func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string) (result Instance[json.RawMessage], err error) {
+	// Needs added by admission travel with every RPC of this read and are
+	// re-checked against the generation that dispatches it.
+	ctx = kernelcapability.Track(ctx)
 	defer func() {
 		if err == nil {
 			err = ctx.Err()

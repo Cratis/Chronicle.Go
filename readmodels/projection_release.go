@@ -15,14 +15,19 @@ import (
 // for the subject, so a protected string could carry ciphertext and still pass
 // shape validation. Refuse every classified model on these routes unless the
 // connection reports such a kernel; skipped compatibility verification and
-// low-level transports without a report are refused.
+// low-level transports without a report are refused. The report is a fast
+// pre-check: the transport re-checks the generation that dispatches each RPC.
 func (s *Service) projectionReleaseAdmission(ctx context.Context, d Descriptor) error {
 	if len(d.definition.protected) == 0 {
 		return nil
 	}
-	capabilities, err := kernelcapability.Of(ctx, s.conn)
-	if err != nil {
+	if err := kernelcapability.Precheck(ctx, s.conn, kernelcapability.NeedProtectedProjectionRead); err != nil {
 		return err
 	}
-	return kernelcapability.Require(capabilities.ProtectedRelease, "protected projection replay release", kernelcapability.ProtectedReleaseVersion)
+	// Authoritative check: the transport refuses dispatch on a generation
+	// without the capability. An untracked context cannot carry it.
+	if !kernelcapability.Add(ctx, kernelcapability.NeedProtectedProjectionRead) {
+		return kernelcapability.NeedProtectedProjectionRead.Refusal()
+	}
+	return nil
 }

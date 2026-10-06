@@ -118,7 +118,8 @@ func (s *Sequence) Revise(ctx context.Context, position events.SequenceNumber, r
 	if !ok {
 		return faults.ErrNotRegistered
 	}
-	if err := s.admitRevision(ctx, descriptor); err != nil {
+	protected, err := s.admitRevision(ctx, descriptor)
+	if err != nil {
 		return err
 	}
 	audit, err := s.outgoing.Resolve(ctx, metadata.CorrelationID{}, false, metadata.CorrelationID{})
@@ -142,6 +143,11 @@ func (s *Sequence) Revise(ctx context.Context, position events.SequenceNumber, r
 		return err
 	}
 	ref := descriptor.Ref()
+	if protected {
+		// Authoritative: the transport re-checks the generation that actually
+		// dispatches, so a reconnect during providers or encoding fails closed.
+		ctx = kernelcapability.With(ctx, kernelcapability.NeedProtectedRevision)
+	}
 	response, err := s.service.Revise(ctx, &sequences.ReviseRequest{
 		EventStore: string(s.store), Namespace: string(s.namespace), EventSequenceId: string(s.id),
 		SequenceNumber: uint64(position), EventType: &sequences.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Content: string(content),
@@ -154,10 +160,13 @@ func (s *Sequence) Revise(ctx context.Context, position events.SequenceNumber, r
 // nothing has been dispatched.
 var errProtectedRevisionUnsupported = fmt.Errorf("%w: protected revision is unsupported", faults.ErrUnsupported)
 
-func (s *Sequence) admitRevision(ctx context.Context, replacement events.Descriptor) error {
+// admitRevision reports whether the replacement is protected. A protected
+// replacement is pre-checked against the connection's reported kernel; the
+// dispatch-time check in the transport remains authoritative.
+func (s *Sequence) admitRevision(ctx context.Context, replacement events.Descriptor) (bool, error) {
 	protected, err := revisionSchemaProtected(replacement.Schema())
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !protected {
 		for _, generation := range s.catalog.Descriptors() {
@@ -165,16 +174,12 @@ func (s *Sequence) admitRevision(ctx context.Context, replacement events.Descrip
 				continue
 			}
 			if other, err := revisionSchemaProtected(generation.Schema()); err != nil || other {
-				return errProtectedRevisionUnsupported
+				return false, errProtectedRevisionUnsupported
 			}
 		}
-		return nil
+		return false, nil
 	}
-	capabilities, err := kernelcapability.Of(ctx, s.conn)
-	if err != nil {
-		return err
-	}
-	return kernelcapability.Require(capabilities.ProtectedRelease, "protected revision", kernelcapability.ProtectedReleaseVersion)
+	return true, kernelcapability.Precheck(ctx, s.conn, kernelcapability.NeedProtectedRevision)
 }
 
 func revisionSchemaProtected(schema string) (bool, error) {

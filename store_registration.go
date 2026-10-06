@@ -93,7 +93,8 @@ func (s *EventStore) registerEventTypes(ctx context.Context, g *generation) erro
 	registrations := make(map[events.TypeID]*eventtypes.EventTypeRegistration)
 	descriptors := s.catalog.Descriptors()
 	for _, descriptor := range descriptors {
-		if err := nestedProtectionAdmission(g, descriptor.Schema()); err != nil {
+		var err error
+		if ctx, err = nestedProtectionAdmission(ctx, g, descriptor.Schema()); err != nil {
 			return err
 		}
 	}
@@ -133,12 +134,18 @@ func (s *EventStore) registerEventTypes(ctx context.Context, g *generation) erro
 
 // Kernels before 19.32.2 skip protection beneath unprotected maps and on
 // collection-valued array elements (Chronicle#4551, #4552) and would store those
-// values unprotected. Refuse registration, before any RPC, unless the
-// generation's kernel is known to apply that metadata. The refusal is
+// values unprotected. Refuse registration, before any RPC, unless the kernel of
+// the generation being registered on is known to apply that metadata; the
+// returned context makes its transport re-check that generation at dispatch.
+// Each reconnect registers again on its own generation. The refusal is
 // deterministic and is not retried.
-func nestedProtectionAdmission(g *generation, schema string) error {
-	if g.capabilities.ProtectedRelease || !serialization.NestedCollectionProtection(schema) {
-		return nil
+func nestedProtectionAdmission(ctx context.Context, g *generation, schema string) (context.Context, error) {
+	if !serialization.NestedCollectionProtection(schema) {
+		return ctx, nil
 	}
-	return kernelcapability.Require(false, "protection beneath maps or on collection-valued array elements", kernelcapability.ProtectedReleaseVersion)
+	need := kernelcapability.NeedNestedCollectionProtection
+	if !need.Satisfied(g.capabilities) {
+		return ctx, need.Refusal()
+	}
+	return kernelcapability.With(ctx, need), nil
 }

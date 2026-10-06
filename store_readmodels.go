@@ -63,7 +63,8 @@ func (s *EventStore) registerReadModels(ctx context.Context, g *generation, root
 			models = []readmodels.Descriptor{root.delta.Model()}
 		}
 		for _, d := range models {
-			if err := nestedProtectionAdmission(g, d.Schema()); err != nil {
+			var err error
+			if ctx, err = nestedProtectionAdmission(ctx, g, d.Schema()); err != nil {
 				return err
 			}
 		}

@@ -53,11 +53,41 @@ func TestUnreportedCapabilitiesAreAbsent(t *testing.T) {
 	if got, err := Of(t.Context(), provider{ProtectedRelease: true}); err != nil || !got.ProtectedRelease {
 		t.Fatalf("provider: %+v %v", got, err)
 	}
-	err := Require(false, "feature", ProtectedReleaseVersion)
-	if !errors.Is(err, faults.ErrUnsupported) || err.Error() != "chronicle: unsupported capability: feature requires Chronicle 19.32.2 or later" {
+	err := Precheck(t.Context(), struct{}{}, NeedProtectedRevision)
+	if !errors.Is(err, faults.ErrUnsupported) || err.Error() != "chronicle: unsupported capability: protected revision requires Chronicle 19.32.2 or later" {
 		t.Fatalf("refusal = %v", err)
 	}
-	if Require(true, "feature", ProtectedReleaseVersion) != nil {
-		t.Fatal("supported feature refused")
+	if err := Precheck(t.Context(), provider{ProtectedRelease: true}, NeedProtectedRevision); err != nil {
+		t.Fatal(err)
+	}
+	if err := Precheck(t.Context(), provider{ProtectedRelease: true}, NeedMixedAllReplay); err == nil || err.Error() != "chronicle: unsupported capability: mixed all-event projection replay requires Chronicle 19.32.1 or later" {
+		t.Fatalf("mixed refusal = %v", err)
+	}
+}
+
+func TestTrackedNeedsAreCheckedAgainstTheDispatchingKernel(t *testing.T) {
+	if Add(t.Context(), NeedMixedAllReplay) {
+		t.Fatal("untracked context accepted a need")
+	}
+	if Check(t.Context(), Capabilities{}) != nil {
+		t.Fatal("untracked context refused")
+	}
+	parent := With(t.Context(), NeedMixedAllReplay)
+	child := Track(parent)
+	if !Add(child, NeedProtectedProjectionRead) {
+		t.Fatal("tracked context refused a need")
+	}
+	mixedOnly := Capabilities{MixedAllReplay: true}
+	if err := Check(parent, mixedOnly); err != nil {
+		t.Fatal("child need leaked into parent", err)
+	}
+	if err := Check(child, mixedOnly); !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatal("child need not checked", err)
+	}
+	if err := Check(child, Capabilities{}); err == nil || err.Error() != NeedMixedAllReplay.Refusal().Error() {
+		t.Fatal("inherited need not checked first", err)
+	}
+	if err := Check(child, Capabilities{MixedAllReplay: true, ProtectedRelease: true}); err != nil {
+		t.Fatal(err)
 	}
 }

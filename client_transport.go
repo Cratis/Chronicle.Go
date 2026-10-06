@@ -63,8 +63,10 @@ func (t *clientTransport) AppendOriginResolver() eventsequences.AppendOriginReso
 }
 
 // KernelCapabilities reports the fixes known to be present in the kernel of the
-// generation the next operation will use. A reconnect between this check and a
-// later dispatch is not fenced, as for wire compatibility.
+// current generation. It serves only fast pre-checks: a reconnect can change the
+// kernel before dispatch, so gated operations also track their needs in the call
+// context and generationTransport refuses, before sending, any RPC whose pinned
+// generation lacks one.
 func (t *clientTransport) KernelCapabilities(ctx context.Context) (kernelcapability.Capabilities, error) {
 	g, _, done, err := t.acquire(ctx)
 	if err != nil {

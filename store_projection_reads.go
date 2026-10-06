@@ -52,12 +52,13 @@ func projectionReplayValidatorFor(snapshot registrySnapshot, capabilities kernel
 		// the explicit IDs and lose other event types handled live. Never report
 		// the resulting incomplete history.
 		if definition.SubscribesToAllEvents && (len(definition.From) != 0 || len(definition.FromEvery) != 0 || len(definition.RemovedWith) != 0 || definition.FromEventProperty != nil) {
-			supported, err := kernelcapability.Of(ctx, capabilities)
-			if err != nil {
+			if err := kernelcapability.Precheck(ctx, capabilities, kernelcapability.NeedMixedAllReplay); err != nil {
 				return true, err
 			}
-			if err := kernelcapability.Require(supported.MixedAllReplay, "mixed all-event projection replay", kernelcapability.MixedAllReplayVersion); err != nil {
-				return true, err
+			// Authoritative: the read's RPC is refused on a dispatch generation
+			// without the fix. An untracked context could not carry the need.
+			if !kernelcapability.Add(ctx, kernelcapability.NeedMixedAllReplay) {
+				return true, kernelcapability.NeedMixedAllReplay.Refusal()
 			}
 		}
 		for _, from := range definition.From {

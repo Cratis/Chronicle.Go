@@ -56,6 +56,9 @@ func TestMixedAllHistoryRequiresMixedAllReplayKernel(t *testing.T) {
 		t.Fatal("fixture is not a mixed ALL projection")
 	}
 	d, _ := snapshot.models.LookupIdentifier(m.Identifier())
+	if known, err := mustValidator(t, snapshot, fixedKernel{MixedAllReplay: true})(t.Context(), d); !known || !errors.Is(err, ErrUnsupported) {
+		t.Fatal("untracked read admitted without a dispatch check", err)
+	}
 	for _, tc := range []struct {
 		name     string
 		kernel   kernelcapability.Provider
@@ -69,11 +72,25 @@ func TestMixedAllHistoryRequiresMixedAllReplayKernel(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		known, err := validator(t.Context(), d)
+		ctx := kernelcapability.Track(t.Context())
+		known, err := validator(ctx, d)
 		if !known || (err == nil) != tc.admitted || (err != nil && !errors.Is(err, ErrUnsupported)) {
 			t.Fatalf("%s: known=%v err=%v", tc.name, known, err)
 		}
+		// An admitted read carries the need to the transport's dispatch check.
+		if tc.admitted && !errors.Is(kernelcapability.Check(ctx, kernelcapability.Capabilities{}), ErrUnsupported) {
+			t.Fatalf("%s: admitted read does not require the fix at dispatch", tc.name)
+		}
 	}
+}
+
+func mustValidator(t *testing.T, snapshot registrySnapshot, kernel kernelcapability.Provider) readmodels.ProjectionReplayValidator {
+	t.Helper()
+	validator, err := projectionReplayValidatorFor(snapshot, kernel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return validator
 }
 
 func TestProjectionReplayPolicyOwnsBoundReplacementAndInboxDefinitions(t *testing.T) {
