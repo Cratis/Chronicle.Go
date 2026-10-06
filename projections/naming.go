@@ -111,7 +111,9 @@ func (r *rebinder) from(from fromDefinition, old, next []serialization.Field) fr
 	from.key, from.parent = r.expression(from.key, eventOld, eventNext), r.expression(from.parent, eventOld, eventNext)
 	from.writes = slices.Clone(from.writes)
 	for j, w := range from.writes {
-		w.path = r.path(w.path, old, next)
+		if !w.synthetic {
+			w.path = r.path(w.path, old, next)
+		}
 		w.provenance.Path = w.path
 		w.expression = r.expression(w.expression, eventOld, eventNext)
 		from.writes[j] = w
@@ -180,6 +182,13 @@ func (r *rebinder) children(children map[string]*nodeDefinition, old, next []ser
 	result := make(map[string]*nodeDefinition, len(children))
 	for path, child := range children {
 		newPath := r.path(path, old, next)
+		if child.derivative != nil {
+			replacement, ok := binaryMappingField(next, newPath)
+			shape, err := childShape(replacement, false)
+			if r.err == nil && (!ok || err != nil || shape.derivative == nil || shape.derivative.Type != child.derivative.Type || shape.derivative.ID != child.derivative.ID) {
+				r.err = invalid("derived child selection changed during rebinding")
+			}
+		}
 		copy := r.node(*child, scopedFields(old, path), scopedFields(next, newPath))
 		result[newPath] = &copy
 	}

@@ -1,0 +1,38 @@
+{
+  "fixtures": [
+    "DefaultNamingPolicy.definition.json",
+    "DefaultNamingPolicy.child.json",
+    "CamelCaseNamingPolicy.definition.json",
+    "CamelCaseNamingPolicy.child.json"
+  ],
+  "generator": "capture/Program.cs",
+  "project": "capture/DerivedChildrenCapture.csproj",
+  "sdk": "10.0.401",
+  "sdkRollForward": "disable",
+  "runtime": "10.0.12",
+  "runtimeRollForward": "Disable",
+  "packages": {
+    "Cratis.Chronicle": "19.32.3",
+    "Cratis.Fundamentals": "7.22.0"
+  },
+  "chroniclePackageSource": "e72af7ead164425141f29db61a9fe7b4915767e6",
+  "fundamentalsPackageSource": "9dbec5584351fc75dca31fe83443670746bb6e43",
+  "dependencyResolution": "capture/packages.lock.json; restore --locked-mode",
+  "owningSources": [
+    "Cratis/Chronicle:Source/Clients/DotNET/Projections/ModelBound/ModelBoundProjectionBuilder.cs",
+    "Cratis/Chronicle:Source/Clients/DotNET/Projections/ModelBound/ChildrenDefinitionExtensions.cs",
+    "Cratis/Fundamentals:Source/DotNET/Fundamentals/Serialization/DerivedTypeJsonConverter.cs"
+  ],
+  "limits": "Packaged internal ModelBoundProjectionBuilder invoked by reflection with a proxy IEventTypes; contract objects are normalized to protobuf JSON carriers (event-keyed dictionaries become key/value arrays, string-keyed dictionaries are sorted). No client connection, kernel registration or naming of events beyond the CLR type name.",
+  "sha256": {
+    "DefaultNamingPolicy.definition.json": "58ed82ff9914968c86143d2a4d20fb29573f23e34708be817be69d79f6f64077",
+    "DefaultNamingPolicy.child.json": "7d11257d7ef453292eafcaae04659a057f4f6d11098565c566410a5ee711e2f3",
+    "CamelCaseNamingPolicy.definition.json": "babe93164f1bf8d8a152df23d77debbac2bff17f9f79460ee4101f88d15ac767",
+    "CamelCaseNamingPolicy.child.json": "1de11b143b045effdc48d92242774f84cb4d7394c40403394f523525a80d3f9d",
+    "capture/.gitignore": "6c5082c7e6de3e350189c67a1aacf757485ecc26e0a3cf96683528565f3e5f12",
+    "capture/DerivedChildrenCapture.csproj": "b645a92096162d3f5943652c152da49609a379b368cdb702345ca069b2d1d924",
+    "capture/Program.cs": "d8990034fe635b347109e29ae9dc6c7a38fea8ccdaeeeb9422d5a7868f4999ce",
+    "capture/global.json": "4e7d5022b2a5a8d02bb951bb264a4c8613eabc332572a0af5f9743d23f23d84e",
+    "capture/packages.lock.json": "eb28469a383c7482ff462eb6868c6cddfd2ebc28697579dcad5812ac24d1dbff"
+  }
+}

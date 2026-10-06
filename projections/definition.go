@@ -13,6 +13,7 @@ import (
 	contracts "github.com/cratis/chronicle.go/contracts/projections"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // Provenance locates a normalized subscription, mapping or convention. Offset is
@@ -66,6 +67,9 @@ type nodeDefinition struct {
 	includeChildren  bool
 	children, nested map[string]*nodeDefinition
 	identifiedBy     string
+	// derivative is the sole registered concrete type selected for a children
+	// collection whose element is a derived-type family; nil otherwise.
+	derivative *serialization.Derivative
 }
 type joinDefinition struct {
 	fromDefinition

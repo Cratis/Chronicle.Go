@@ -22,6 +22,9 @@ import (
 // tags. A key, exclusion or Every alone never creates an empty projection.
 func HasMappings(model readmodels.Descriptor) bool {
 	for _, f := range model.Fields() {
+		if derivativeHasProjectionDirective(f) {
+			return true
+		}
 		directives, _ := declarations.Parse(declarations.V1, f.Tag)
 		for _, d := range directives {
 			switch d.Name {
@@ -78,7 +81,7 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 			return locate(err)
 		}
 	}
-	c := compiler{result: compiled, catalog: catalog, declaration: d, usedNodes: map[reflect.Type]bool{}, active: map[reflect.Type]bool{d.model.GoType(): true}, ancestorCreators: map[events.TypeRef]int{}}
+	c := compiler{result: compiled, catalog: catalog, declaration: d, usedNodes: map[reflect.Type]bool{}, active: map[nodeIdentity]bool{{typ: d.model.GoType()}: true}, ancestorCreators: map[events.TypeRef]int{}}
 	node, err := c.compileNode(d, d.model.Fields(), nil, false, false, "", nil, false, false)
 	if err != nil {
 		return locate(err)
@@ -121,6 +124,9 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 		if err = c.addGlobal(&compiled.nodeDefinition, g.globalDeclaration, g.fields, true); err != nil {
 			return locate(err)
 		}
+	}
+	if err = validateDerivedChildGlobals(&compiled.nodeDefinition, nil); err != nil {
+		return locate(err)
 	}
 	if d.globalFor != nil {
 		// C# merges only explicit root From properties. AutoMap is kernel-owned,

@@ -1,0 +1,91 @@
+{
+  "eventSequenceId": "event-log",
+  "identifier": "Catalog",
+  "readModel": "Catalog",
+  "isActive": true,
+  "isRewindable": true,
+  "initialModelState": "{}",
+  "from": [],
+  "join": [],
+  "children": {
+    "items": {
+      "identifiedBy": "itemId",
+      "from": [
+        {
+          "key": {
+            "id": "ItemAdded",
+            "generation": 1,
+            "tombstone": false
+          },
+          "value": {
+            "properties": {
+              "_derivedTypeId": "$value(line)",
+              "itemId": "itemId",
+              "name": "name"
+            },
+            "key": "itemId",
+            "parentKey": "orderId"
+          }
+        }
+      ],
+      "join": [
+        {
+          "key": {
+            "id": "ItemRenamed",
+            "generation": 1,
+            "tombstone": false
+          },
+          "value": {
+            "on": "itemId",
+            "properties": {
+              "name": "name"
+            },
+            "key": "$eventSourceId",
+            "autoMap": 0
+          }
+        }
+      ],
+      "children": {},
+      "all": {
+        "properties": {},
+        "includeChildren": false,
+        "autoMap": 0,
+        "key": ""
+      },
+      "fromEventProperty": null,
+      "removedWith": [
+        {
+          "key": {
+            "id": "ItemRemoved",
+            "generation": 1,
+            "tombstone": false
+          },
+          "value": {
+            "key": "itemId",
+            "parentKey": "orderId"
+          }
+        }
+      ],
+      "removedWithJoin": [],
+      "autoMap": 2,
+      "nested": {},
+      "noAutoMapProperties": []
+    }
+  },
+  "fromEvery": [],
+  "all": {
+    "properties": {},
+    "includeChildren": false,
+    "autoMap": 0,
+    "key": ""
+  },
+  "fromEventProperty": null,
+  "removedWith": [],
+  "removedWithJoin": [],
+  "lastUpdated": null,
+  "tags": [],
+  "autoMap": 2,
+  "nested": {},
+  "subscribesToAllEvents": false,
+  "noAutoMapProperties": []
+}
