@@ -138,5 +138,22 @@ change the persisted read context. For strict callers, inspect
 and `appended.Decode` reject unknown generations rather than silently guessing the
 latest codec; `LookupID` explicitly selects the current generation.
 
+### Protected events across generations
+
+From Chronicle 19.32.2 ([Chronicle#4456](https://github.com/Cratis/Chronicle/issues/4456))
+migrations transform PII and encrypted values as plaintext and protect every
+generation for the original subject. The event's current representation, and
+projections built from it, release correctly before and after erasure. The
+kernel still releases **only** that current representation: other generations
+in `GenerationalContent` reach the client as ciphertext. Decoding a protected
+event as another generation, or observing it with a historical-generation
+reactor or reducer, therefore returns ciphertext in classified fields. Do not
+read or observe classified events at a generation other than the one the
+kernel returns as current. `TestKernelProtectedEventGenerationMigrationProfile`
+records this kernel behavior, tracked upstream as
+[Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623). A fail-closed
+SDK guard for such decodes is tracked in
+[Chronicle.Go#90](https://github.com/Cratis/Chronicle.Go/issues/90).
+
 Continue with [reading events](reading-events.md) and the
 [behavior-level parity map](../parity.md#event-evolution).

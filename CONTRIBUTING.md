@@ -70,10 +70,11 @@ Run the real-kernel tests against the development image matching the contract re
 docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.32.3-development
 # In another terminal, after https://localhost:35000/health reports Healthy:
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
+CHRONICLE_INTEGRATION_CONTAINER=chronicle-go \
   go test -tags=integration -count=1 -timeout=4m ./internal/integration
 ```
 
-The tests create isolated random stores, validate registration and schema preservation, exercise numeric/nullable/dictionary round trips and concurrency bounds, and read persisted events through public contracts. Stop your test container afterwards. A missing endpoint fails rather than silently skipping integration tests.
+The tests create isolated random stores, validate registration and schema preservation, exercise numeric/nullable/dictionary round trips and concurrency bounds, and read persisted events through public contracts. Compliance tests also need the disposable encryption certificate from `scripts/configure-compliance-integration.sh chronicle-go`, and they inspect what the kernel stored by running `mongosh` inside the container named by `CHRONICLE_INTEGRATION_CONTAINER`. Stop your test container afterwards. A missing endpoint or container fails rather than silently skipping integration tests.
 
 ### Pinned capture parser checks
 

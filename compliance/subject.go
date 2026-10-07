@@ -30,7 +30,9 @@ func (e *InvalidSubjectError) Unwrap() error { return faults.ErrInvalidConfigura
 // ValidateSubject rejects empty subjects and identifiers in the kernel's reserved
 // confidentiality key space. Call before admitting writes or operating on PII keys.
 // Event subjects are checked even for currently unclassified events, since their
-// subject can propagate to protected read models.
+// subject can propagate to protected read models. Kernel 19.32.2 and later refuse
+// PII for a reserved identifier (Chronicle#4553) but still accept it as the
+// subject of an unclassified event, so this check remains defense in depth.
 func ValidateSubject(subject string) error {
 	if subject == "" {
 		return &InvalidSubjectError{}

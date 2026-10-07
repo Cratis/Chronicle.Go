@@ -4,11 +4,13 @@
 package chronicle
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -19,7 +21,16 @@ type historyMixedAllModel struct {
 	Updated time.Time `chronicle:"all(context=occurred)"`
 }
 
-func TestMixedAllHistoryIsRefusedBeforeTransport(t *testing.T) {
+type fixedKernel kernelcapability.Capabilities
+
+func (k fixedKernel) KernelCapabilities(context.Context) (kernelcapability.Capabilities, error) {
+	return kernelcapability.Capabilities(k), nil
+}
+
+// Chronicle#4562 is fixed in 19.32.1: replay and history fold every event the
+// projection handles live, so mixed ALL plus explicit mappings is admitted on
+// such a kernel and refused before transport on older or unverified kernels.
+func TestMixedAllHistoryRequiresMixedAllReplayKernel(t *testing.T) {
 	r := NewRegistry()
 	if _, err := RegisterEvent[historyAdmissionEvent](r); err != nil {
 		t.Fatal(err)
@@ -37,20 +48,49 @@ func TestMixedAllHistoryIsRefusedBeforeTransport(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	store := &EventStore{storeOwner: &storeOwner{client: client, name: "store", namespace: DefaultNamespace, catalog: client.catalog}}
-	if err := store.initializeReadModels(); err != nil {
+	snapshot, err := client.selectedStoreSnapshot("store")
+	if err != nil {
 		t.Fatal(err)
 	}
-	reader := readmodels.For(store.ReadModels(), m)
-	if v, err := reader.GetAll(t.Context(), new(events.Count(3))); v.Instances != nil || !errors.Is(err, ErrUnsupported) {
-		t.Fatal("mixed ALL collection admitted", err)
+	if len(snapshot.projections) != 1 || !snapshot.projections[0].KernelDefinition().SubscribesToAllEvents || len(snapshot.projections[0].KernelDefinition().From) == 0 {
+		t.Fatal("fixture is not a mixed ALL projection")
 	}
-	if v, err := reader.GetSnapshots(t.Context(), "source"); v != nil || !errors.Is(err, ErrUnsupported) {
-		t.Fatal("mixed ALL history admitted", err)
+	d, _ := snapshot.models.LookupIdentifier(m.Identifier())
+	if known, err := mustValidator(t, snapshot, fixedKernel{MixedAllReplay: true})(t.Context(), d); !known || !errors.Is(err, ErrUnsupported) {
+		t.Fatal("untracked read admitted without a dispatch check", err)
 	}
-	if v, err := store.ReadModels().ReplayProjection(t.Context(), m.Identifier(), 3); v != nil || !errors.Is(err, ErrUnsupported) {
-		t.Fatal("legacy mixed ALL replay admitted", err)
+	for _, tc := range []struct {
+		name     string
+		kernel   kernelcapability.Provider
+		admitted bool
+	}{
+		{"unreported", nil, false},
+		{"19.32.0", fixedKernel{}, false},
+		{"19.32.1", fixedKernel{MixedAllReplay: true}, true},
+	} {
+		validator, err := projectionReplayValidatorFor(snapshot, tc.kernel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := kernelcapability.Track(t.Context())
+		known, err := validator(ctx, d)
+		if !known || (err == nil) != tc.admitted || (err != nil && !errors.Is(err, ErrUnsupported)) {
+			t.Fatalf("%s: known=%v err=%v", tc.name, known, err)
+		}
+		// An admitted read carries the need to the transport's dispatch check.
+		if tc.admitted && !errors.Is(kernelcapability.Check(ctx, kernelcapability.Capabilities{}), ErrUnsupported) {
+			t.Fatalf("%s: admitted read does not require the fix at dispatch", tc.name)
+		}
 	}
+}
+
+func mustValidator(t *testing.T, snapshot registrySnapshot, kernel kernelcapability.Provider) readmodels.ProjectionReplayValidator {
+	t.Helper()
+	validator, err := projectionReplayValidatorFor(snapshot, kernel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return validator
 }
 
 func TestProjectionReplayPolicyOwnsBoundReplacementAndInboxDefinitions(t *testing.T) {
@@ -92,7 +132,7 @@ func TestProjectionReplayPolicyOwnsBoundReplacementAndInboxDefinitions(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	validator, err := projectionReplayValidatorFor(snapshot)
+	validator, err := projectionReplayValidatorFor(snapshot, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +152,7 @@ func TestProjectionReplayPolicyOwnsBoundReplacementAndInboxDefinitions(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	fallbackValidator, err := projectionReplayValidatorFor(other)
+	fallbackValidator, err := projectionReplayValidatorFor(other, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

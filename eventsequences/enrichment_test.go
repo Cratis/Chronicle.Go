@@ -12,6 +12,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/identities"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/outgoing"
 	"github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
@@ -22,6 +23,11 @@ type enrichmentConnection struct {
 	config   outgoing.Config
 	calls    int
 	revision *sequences.ReviseRequest
+	kernel   kernelcapability.Capabilities
+}
+
+func (c *enrichmentConnection) KernelCapabilities(context.Context) (kernelcapability.Capabilities, error) {
+	return c.kernel, nil
 }
 
 func (c *enrichmentConnection) OutgoingConfiguration() outgoing.Config { return c.config }
@@ -35,7 +41,7 @@ func (c *enrichmentConnection) Invoke(_ context.Context, _ string, input, output
 	return errors.New("unexpected RPC")
 }
 
-func TestProtectedRevisionAllGenerationsPrecedeEveryProvider(t *testing.T) {
+func TestProtectedRevisionRunsEveryProviderOnce(t *testing.T) {
 	current, err := events.Define[revisionPII](events.WithID("protected"), events.WithGeneration(2))
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +55,7 @@ func TestProtectedRevisionAllGenerationsPrecedeEveryProvider(t *testing.T) {
 		t.Fatal(err)
 	}
 	called := 0
-	connection := &enrichmentConnection{config: outgoing.Config{
+	connection := &enrichmentConnection{kernel: *protectedReleaseKernel, config: outgoing.Config{
 		Identity: func(context.Context) (identities.Identity, bool, error) {
 			called++
 			return identities.Identity{}, false, nil
@@ -65,9 +71,13 @@ func TestProtectedRevisionAllGenerationsPrecedeEveryProvider(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertProtectedRevisionRejected(t, sequence.Revise(t.Context(), 0, revisionPlain{"before"}))
-	if called != 0 || connection.calls != 0 {
-		t.Fatal("protected revision ran callbacks or I/O", called, connection.calls)
+	if err := sequence.Revise(t.Context(), 0, revisionPII{Name: "before"}); err != nil {
+		t.Fatal(err)
+	}
+	// Protected revisions resolve identity, correlation, causation and enrichers
+	// exactly as unprotected ones; the kernel protects the content (Chronicle#4525).
+	if called != 4 || connection.calls != 1 || connection.revision.EventType.GetGeneration() != 2 {
+		t.Fatal("protected revision did not run the outgoing pipeline once", called, connection.calls)
 	}
 }
 

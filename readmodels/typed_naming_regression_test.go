@@ -65,6 +65,7 @@ func TestTypedReadsUseFrozenNamingPlan(t *testing.T) {
 			}
 			var releaseFailure atomic.Bool
 			kernel := &modelKernel{
+				kernel: protectedReleaseKernel,
 				get: func(context.Context, *contracts.GetInstanceByKeyRequest) (*contracts.GetInstanceByKeyResponse, error) {
 					return &contracts.GetInstanceByKeyResponse{ReadModel: string(data), LastHandledEventSequenceNumber: 7}, nil
 				},
@@ -91,8 +92,15 @@ func TestTypedReadsUseFrozenNamingPlan(t *testing.T) {
 			})
 			t.Run("session", func(t *testing.T) {
 				session, err := reader.NewSession("person")
-				if session != nil || !errors.Is(err, chronicle.ErrUnsupported) {
-					t.Fatal("protected session admitted", err)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := session.Get(ctx)
+				if closeErr := session.Close(ctx); closeErr != nil {
+					t.Fatal(closeErr)
+				}
+				if err != nil || !got.Exists || !reflect.DeepEqual(got.Value, want) {
+					t.Fatalf("session Get = %+v, %v; want %+v", got, err, want)
 				}
 			})
 			for _, typ := range []reflect.Type{reflect.TypeFor[plannedTypedModel](), reflect.TypeFor[*plannedTypedModel]()} {

@@ -13,6 +13,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/preparation"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
@@ -91,13 +92,17 @@ func (s *Sequence) RedactForEventSource(ctx context.Context, source events.Sourc
 // original content and history. The registered replacement supplies the type ID,
 // generation and shared serialization plan. The kernel requires the same type ID
 // as the original; it may reject this asynchronously AFTER accepting the request.
-// Revision is not schema migration or PII erasure. The pinned kernel does NOT
-// apply append's PII/encryption processing to revisions or their system requests.
-// Any protected schema in the selected catalog sharing the replacement's type ID,
-// or failure to inspect that metadata, returns ErrUnsupported before serialization
-// or dispatch (Chronicle#4525). This cannot detect undeclared sensitive data,
-// audit metadata or unknown server-only classifications, nor repair old leaks.
-// Zero is valid; the three highest positions are reserved and invalid targets.
+// Revision is not schema migration or PII erasure. Like append, the client sends
+// plaintext content: the kernel (19.32.2 or later, Chronicle#4525) applies the
+// replacement generation's PII and encryption metadata with the ORIGINAL event's
+// subject (falling back to its event source) to both the revision and its system
+// request, so a replacement cannot move protected data to another subject.
+// A protected replacement returns ErrUnsupported before serialization or dispatch
+// unless the connection reports such a kernel. Because the kernel protects only
+// with the replacement generation's schema, an unclassified replacement for a
+// type ID that another registered generation classifies is always refused with
+// ErrUnsupported: its plaintext could not be erased. Schema inspection failures
+// are refused the same way. Zero is valid; the three highest positions are reserved and invalid targets.
 // It has no reason field on the wire: record the non-sensitive reason in
 // metadata.WithCausation. Nil error means
 // accepted, not applied or replayed. Inputs must not be mutated during the call.
@@ -113,15 +118,9 @@ func (s *Sequence) Revise(ctx context.Context, position events.SequenceNumber, r
 	if !ok {
 		return faults.ErrNotRegistered
 	}
-	// A historical unclassified generation must not bypass protection declared
-	// on another generation of the same persisted identity. No target pre-read
-	// can make the system request safe: the kernel persists its content first.
-	for _, generation := range s.catalog.Descriptors() {
-		if generation.Ref().ID == descriptor.Ref().ID {
-			if err := validateRevisionSchema(generation.Schema()); err != nil {
-				return err
-			}
-		}
+	protected, err := s.admitRevision(ctx, descriptor)
+	if err != nil {
+		return err
 	}
 	audit, err := s.outgoing.Resolve(ctx, metadata.CorrelationID{}, false, metadata.CorrelationID{})
 	if err != nil {
@@ -144,6 +143,11 @@ func (s *Sequence) Revise(ctx context.Context, position events.SequenceNumber, r
 		return err
 	}
 	ref := descriptor.Ref()
+	if protected {
+		// Authoritative: the transport re-checks the generation that actually
+		// dispatches, so a reconnect during providers or encoding fails closed.
+		ctx = kernelcapability.With(ctx, kernelcapability.NeedProtectedRevision)
+	}
 	response, err := s.service.Revise(ctx, &sequences.ReviseRequest{
 		EventStore: string(s.store), Namespace: string(s.namespace), EventSequenceId: string(s.id),
 		SequenceNumber: uint64(position), EventType: &sequences.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Content: string(content),
@@ -152,16 +156,38 @@ func (s *Sequence) Revise(ctx context.Context, position events.SequenceNumber, r
 	return mutationOutcome(response, err)
 }
 
-// Keep both protection and metadata-inspection failures stable and payload-free.
-// Neither is an ambiguous mutation outcome: nothing has been dispatched.
+// Keep refusals stable and payload-free. None is an ambiguous mutation outcome:
+// nothing has been dispatched.
 var errProtectedRevisionUnsupported = fmt.Errorf("%w: protected revision is unsupported", faults.ErrUnsupported)
 
-func validateRevisionSchema(schema string) error {
-	roots, err := serialization.ProtectionRoots(schema)
-	if err != nil || len(roots) != 0 {
-		return errProtectedRevisionUnsupported
+// admitRevision reports whether the replacement is protected. A protected
+// replacement is pre-checked against the connection's reported kernel; the
+// dispatch-time check in the transport remains authoritative.
+func (s *Sequence) admitRevision(ctx context.Context, replacement events.Descriptor) (bool, error) {
+	protected, err := revisionSchemaProtected(replacement.Schema())
+	if err != nil {
+		return false, err
 	}
-	return nil
+	if !protected {
+		for _, generation := range s.catalog.Descriptors() {
+			if generation.Ref().ID != replacement.Ref().ID {
+				continue
+			}
+			if other, err := revisionSchemaProtected(generation.Schema()); err != nil || other {
+				return false, errProtectedRevisionUnsupported
+			}
+		}
+		return false, nil
+	}
+	return true, kernelcapability.Precheck(ctx, s.conn, kernelcapability.NeedProtectedRevision)
+}
+
+func revisionSchemaProtected(schema string) (bool, error) {
+	roots, err := serialization.ProtectionRoots(schema)
+	if err != nil {
+		return false, errProtectedRevisionUnsupported
+	}
+	return len(roots) != 0, nil
 }
 
 func validateMutation(ctx context.Context, position events.SequenceNumber, reason events.RedactionReason) error {

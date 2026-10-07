@@ -89,7 +89,7 @@ func WithProjectionReplayValidator(validator ProjectionReplayValidator) ServiceO
 }
 
 func (s *Service) validateProjectionReplay(ctx context.Context, d Descriptor) error {
-	if err := projectionReleaseAdmission(d); err != nil {
+	if err := s.projectionReleaseAdmission(ctx, d); err != nil {
 		return err
 	}
 	if s.replayValidator == nil {

@@ -15,6 +15,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/clients"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/internal/decision"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/registration"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -27,6 +28,7 @@ type generation struct {
 	client        *Client
 	number        uint64
 	decisions     bool
+	capabilities  kernelcapability.Capabilities
 	ctx           context.Context
 	cancel        context.CancelFunc
 	raw           grpc.ClientConnInterface
@@ -103,6 +105,8 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 }
 
 func (c *Client) establish(ctx context.Context, g *generation) error {
+	// A lazily connecting gated operation must not gate the connection itself.
+	ctx = kernelcapability.Without(ctx)
 	service := clients.NewConnectionServiceClient(g.transport)
 	if !c.config.skipCompatibility {
 		response, err := service.CheckCompatibility(ctx, &clients.CompatibilityRequest{ClientType: "Go", ClientVersion: "0.1.0-dev", ProtocolVersion: contracts.ProtocolVersion, DescriptorSet: contracts.DescriptorSet()})
@@ -116,6 +120,8 @@ func (c *Client) establish(ctx context.Context, g *generation) error {
 			return &CompatibilityError{ServerVersion: response.ServerVersion, Details: append([]string(nil), response.Incompatibilities...)}
 		}
 		g.decisions = decision.Supported(response.ServerVersion, response.ServerProtocolVersion)
+		// Skipped verification leaves the zero value: no fix is assumed present.
+		g.capabilities = kernelcapability.FromVersion(response.ServerVersion)
 	}
 	if c.config.skipKeepAlive {
 		// Compatibility is anonymous on the kernel. A protected, read-only RPC

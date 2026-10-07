@@ -5,26 +5,27 @@ package events_test
 
 import (
 	"encoding/json"
-	"errors"
 	"strings"
 	"testing"
 
 	"github.com/cratis/chronicle.go/compliance"
-	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/events"
-	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/readmodels"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 type personalNames []string
 type personalMap map[string]string
-type unsupportedProtection struct {
+type nestedProtection struct {
 	Maps    map[string]classifiedAddress
 	Arrays  []*personalNames
 	MapRows []personalMap
 }
 
-func TestUnsupportedProtectionPlacementsFailBeforeRegistration(t *testing.T) {
+// Chronicle#4551 and #4552 are fixed in 19.32.2: the kernel applies metadata
+// beneath unprotected maps and protects classified collection-valued array
+// elements as a whole, so these placements register and keep their metadata.
+func TestProtectionBeneathMapsAndCollectionElementsIsAdmitted(t *testing.T) {
 	for _, metadata := range []compliance.Classification{{PII: true}, {Encrypted: true}} {
 		for _, declaration := range []compliance.Declaration{
 			compliance.For[classifiedAddress](metadata),
@@ -38,19 +39,22 @@ func TestUnsupportedProtectionPlacementsFailBeforeRegistration(t *testing.T) {
 				return compliance.Classification{}, nil
 			}),
 		} {
-			for _, define := range []func() error{
-				func() error {
-					_, err := events.Define[unsupportedProtection](events.WithProtection(declaration))
-					return err
+			for _, define := range []func() (string, error){
+				func() (string, error) {
+					d, err := events.Define[nestedProtection](events.WithProtection(declaration))
+					return d.Descriptor().Schema(), err
 				},
-				func() error {
-					_, err := readmodels.Define[unsupportedProtection](readmodels.WithProtection(declaration))
-					return err
+				func() (string, error) {
+					d, err := readmodels.Define[nestedProtection](readmodels.WithProtection(declaration))
+					return d.Descriptor().Schema(), err
 				},
 			} {
-				var typed *declarations.DeclarationError
-				if err := define(); !errors.Is(err, faults.ErrInvalidConfiguration) || !errors.As(err, &typed) {
-					t.Fatalf("unsupported placement did not fail closed: %v", err)
+				schema, err := define()
+				if err != nil {
+					t.Fatalf("nested placement refused: %v", err)
+				}
+				if !strings.Contains(schema, `"compliance"`) && !strings.Contains(schema, `"security"`) {
+					t.Fatalf("nested placement lost its metadata: %s", schema)
 				}
 			}
 		}
@@ -60,8 +64,22 @@ func TestUnsupportedProtectionPlacementsFailBeforeRegistration(t *testing.T) {
 			Email string `chronicle:"pii"`
 		}
 	}
-	if _, err := events.Define[TaggedMap](); !errors.Is(err, faults.ErrInvalidConfiguration) {
-		t.Fatal("map value protection tag was ignored")
+	event, err := events.Define[TaggedMap]()
+	if err != nil {
+		t.Fatal("map value protection tag refused", err)
+	}
+	var schema struct {
+		Properties map[string]struct {
+			AdditionalProperties struct {
+				Properties map[string]map[string]any `json:"properties"`
+			} `json:"additionalProperties"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal([]byte(event.Descriptor().Schema()), &schema); err != nil {
+		t.Fatal(err)
+	}
+	if schema.Properties["Values"].AdditionalProperties.Properties["Email"]["compliance"] == nil {
+		t.Fatalf("map value tag metadata missing: %s", event.Descriptor().Schema())
 	}
 }
 
@@ -77,8 +95,8 @@ func TestCoarsePropertyProtectionCoversMapAndArrayDescendants(t *testing.T) {
 		Name     string `chronicle:"pii"`
 		Children map[string]*RecursiveMap
 	}
-	if _, err := events.Define[RecursiveMap](); !errors.Is(err, faults.ErrInvalidConfiguration) {
-		t.Fatal("recursive map reference bypassed placement validation")
+	if _, err := events.Define[RecursiveMap](); err != nil {
+		t.Fatal("recursive map placement refused", err)
 	}
 }
 
@@ -153,5 +171,56 @@ func TestRecursiveOverrideSchemaReferencesAllResolve(t *testing.T) {
 	inspect(schema)
 	if count == 0 {
 		t.Fatal("recursive schema lost its references")
+	}
+}
+
+// Registration on kernels before 19.32.2 refuses exactly these placements.
+func TestNestedCollectionProtectionDetectsOnlyKernelSensitivePlacements(t *testing.T) {
+	pii := compliance.Classification{PII: true}
+	type Coarse struct {
+		Map  map[string]classifiedAddress `chronicle:"pii"`
+		Rows []personalNames              `chronicle:"pii"`
+	}
+	type ScalarItems struct {
+		Names []string `chronicle:"pii"`
+		Rows  [][]string
+		Nodes []classifiedAddress
+	}
+	for _, tc := range []struct {
+		name   string
+		schema func() (string, error)
+		nested bool
+	}{
+		{"map value member", func() (string, error) {
+			d, err := events.Define[nestedProtection](events.WithProtection(compliance.Property("Maps.street", pii)))
+			return d.Descriptor().Schema(), err
+		}, true},
+		{"collection-valued array element", func() (string, error) {
+			d, err := events.Define[nestedProtection](events.WithProtection(compliance.For[personalNames](pii)))
+			return d.Descriptor().Schema(), err
+		}, true},
+		{"map-valued array element", func() (string, error) {
+			d, err := events.Define[nestedProtection](events.WithProtection(compliance.For[personalMap](pii)))
+			return d.Descriptor().Schema(), err
+		}, true},
+		{"coarse containers", func() (string, error) {
+			d, err := events.Define[Coarse](events.WithProtection(compliance.For[personalNames](pii)))
+			return d.Descriptor().Schema(), err
+		}, false},
+		{"scalar items and declared members", func() (string, error) {
+			d, err := events.Define[ScalarItems](events.WithProtection(compliance.For[classifiedAddress](pii)))
+			return d.Descriptor().Schema(), err
+		}, false},
+	} {
+		schema, err := tc.schema()
+		if err != nil {
+			t.Fatal(tc.name, err)
+		}
+		if got := serialization.NestedCollectionProtection(schema); got != tc.nested {
+			t.Errorf("%s: nested = %v", tc.name, got)
+		}
+	}
+	if !serialization.NestedCollectionProtection(`{"properties":`) {
+		t.Fatal("malformed schema must fail closed")
 	}
 }

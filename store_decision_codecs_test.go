@@ -120,7 +120,7 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 		{"decode-epoch", false, 1, "epoch"},
 		{"decode-generation-loss", false, 1, "generation"},
 		{"valid-read", false, 1, "none"},
-		{"protected-read-refused", true, 1, "none"},
+		{"protected-valid-read", true, 1, "none"}, // Chronicle#4561: kernel-released, never released again.
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			registry := NewRegistry()
@@ -195,18 +195,11 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 				read, err = readmodels.DecisionsFor(store.ReadModels(), model).GetDetached(caller, "source")
 			}()
 			awaitSignal(t, ctx, done)
-			if tc.protected {
-				var refused *readmodels.DecisionReadRefused
-				if !errors.As(err, &refused) || refused.Reason != readmodels.DecisionProtectedModel || !read.Token.IsZero() || read.Instance.Exists || calls.Load() != 0 || raw.cleaned.Load() != 0 || raw.agreements.Load() != 0 || raw.released.Load() != 0 {
-					t.Fatal("classified decision did work or issued evidence", err)
-				}
-				return
-			}
 			if int(calls.Load()) < tc.actionAt {
 				t.Fatal("codec action was not exercised")
 			}
 			if tc.action == "none" {
-				if err != nil || read.Token.IsZero() || !read.Instance.Exists {
+				if err != nil || read.Token.IsZero() || !read.Instance.Exists || raw.released.Load() != 0 {
 					t.Fatalf("valid read: %+v %v", read, err)
 				}
 				return

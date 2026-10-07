@@ -259,11 +259,12 @@ func validateProjectionAddition(snapshot registrySnapshot, id string, model read
 }
 
 func (s *EventStore) readersFor(root *definitionRoot) (*readmodels.Service, error) {
-	validator, err := projectionReplayValidatorFor(root.snapshot)
+	transport := &clientTransport{client: s.client, store: s, decisionSnapshot: root.decisions}
+	validator, err := projectionReplayValidatorFor(root.snapshot, transport)
 	if err != nil {
 		return nil, err
 	}
 	// Reducer plans cannot change in this workflow. Closures retain the original
 	// handle's compiled plans, never a new producer selected by model identity.
-	return readmodels.New(s.name, s.namespace, root.snapshot.models, &clientTransport{client: s.client, store: s, decisionSnapshot: root.decisions}, readmodels.WithReleasedPassiveReader(s.readPassiveReducer), readmodels.WithReducerCollectionReader(s.readReducerCollection), readmodels.WithProjectionReplayValidator(validator), readmodels.WithSnapshotEventCatalog(root.snapshot.events), readmodels.WithReductionChanges(&s.readModelChanges))
+	return readmodels.New(s.name, s.namespace, root.snapshot.models, transport, readmodels.WithReleasedPassiveReader(s.readPassiveReducer), readmodels.WithReducerCollectionReader(s.readReducerCollection), readmodels.WithProjectionReplayValidator(validator), readmodels.WithSnapshotEventCatalog(root.snapshot.events), readmodels.WithReductionChanges(&s.readModelChanges))
 }

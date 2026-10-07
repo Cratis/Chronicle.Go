@@ -78,14 +78,9 @@ func TestDecisionErrorCallbacksRemainInsideRecovery(t *testing.T) {
 					t.Cleanup(func() { decisionCodecActions.Delete(t.Name()) })
 					reader := readmodels.DecisionsFor(store.ReadModels(), model)
 					read, err := reader.GetDetached(ctx, "source")
-					if protected {
-						var refused *readmodels.DecisionReadRefused
-						if !errors.As(err, &refused) || refused.Reason != readmodels.DecisionProtectedModel || reader.Admit().IsAdmitted || !read.Token.IsZero() || read.Instance.Exists || raw.cleaned.Load() != 0 || raw.agreements.Load() != 0 || raw.released.Load() != 0 {
-							t.Fatal("classified decision did work or issued evidence", err)
-						}
-						return
-					}
-					if err == nil || !read.Token.IsZero() || read.Instance.Exists || read.Instance.Value != (DecisionCodecModel{}) || raw.cleaned.Load() != 1 {
+					// Classified models are admitted (Chronicle#4561) and keep the
+					// same codec failure boundary, without a second Release.
+					if err == nil || !read.Token.IsZero() || read.Instance.Exists || read.Instance.Value != (DecisionCodecModel{}) || raw.cleaned.Load() != 1 || raw.released.Load() != 0 {
 						t.Fatal("failed codec returned model/token or skipped cleanup")
 					}
 					if strings.Contains(err.Error(), "secret") || !errors.Is(err, ErrProtocol) {

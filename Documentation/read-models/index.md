@@ -171,7 +171,7 @@ Leaving a window is not proof of document deletion.
 
 ## Hydration sessions
 
-`reader.NewSession(key)` returns a lazy `*readmodels.Session[T]`. It requires a declared projection identifier. `session.Get(ctx)` hydrates and subsequently reads using one opaque session ID. A session is permanently bound to its model, key, store, namespace and event sequence. Reducer sessions and classified projection models fail with `ErrUnsupported` before RPC rather than assuming the kernel can safely replay them.
+`reader.NewSession(key)` returns a lazy `*readmodels.Session[T]`. It requires a declared projection identifier. `session.Get(ctx)` hydrates and subsequently reads using one opaque session ID. A session is permanently bound to its model, key, store, namespace and event sequence. Reducer sessions fail with `ErrUnsupported` before RPC. Classified projection models are supported from kernel 19.32.2, where the session releases each value with the subject it was written under ([Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561)); against an older or unverified kernel, `session.Get` refuses them with `ErrUnsupported` before RPC.
 
 Call `session.Close(cleanupCtx)` **before closing the client**, including after a failed or canceled read. The kernel may have hydrated state even when the response was lost. Cleanup uses the actual sequence, not an unconditional event-log request. Close is idempotent after success; failed cleanup returns its error and can be retried with a fresh, bounded context. Once cleanup starts, further reads return `ErrClosed`.
 
@@ -181,7 +181,7 @@ Sessions own no background goroutine. Reads and cleanup serialize with cancellat
 
 `reader.Release(ctx, value)`, `reader.ReleaseMany(ctx, values)` and `store.ReadModels().Release(ctx, model.Identifier(), rawDocument)` accept **unreleased documents fetched directly from a sink**. They are not idempotent: legitimate plaintext can resemble ciphertext. Never call them again on server-released read results.
 
-Materialized keyed/collection reads validate the server's final representation without another release RPC. Classified projection replay, history, immediate/session reads and decision reads refuse before transport work because the pinned kernel cannot establish reliable replay subject lineage. See the [release-route limits](collections-and-history.md#protection-failure-and-lifetime); validation alone cannot prove that a string was decrypted.
+Materialized keyed/collection reads, projection replay, history, immediate/session reads and decision reads all return server-released values; the SDK validates their final representation without another release RPC. Classified projection Watch still refuses before streaming. See the [release-route limits](collections-and-history.md#protection-failure-and-lifetime); validation alone cannot prove that a string was decrypted.
 
 Release uses the model schema and namespace. Raw documents preserve `__subject` and `__subjects` lineage; a stored `__subject` takes precedence, followed by the configured subject property and then the Go `ID` field's serialized name. Without protection metadata, typed values pass through and raw documents are copied without an RPC.
 

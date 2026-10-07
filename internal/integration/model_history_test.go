@@ -267,11 +267,7 @@ func TestKernelModelHistoryReleaseOwnershipAndErasure(t *testing.T) {
 		}
 		for _, count := range []*events.Count{nil, new(events.Count(1)), new(events.UnlimitedCount)} {
 			collection, err := reader.GetAll(f.ctx, count)
-			if count != nil && *count != events.UnlimitedCount {
-				if collection.Instances != nil || !errors.Is(err, chronicle.ErrUnsupported) {
-					t.Fatal("protected replay not refused", err)
-				}
-			} else if err != nil || len(collection.Instances) != 1 || collection.Instances[0].Value.Name != want {
+			if err != nil || len(collection.Instances) != 1 || collection.Instances[0].Value.Name != want {
 				t.Fatal("model collection release boundary", err)
 			}
 			activeCollection, err := activeReader.GetAll(f.ctx, count)
@@ -284,8 +280,8 @@ func TestKernelModelHistoryReleaseOwnershipAndErasure(t *testing.T) {
 			}
 		}
 		snapshots, err := reader.GetSnapshots(f.ctx, "subject")
-		if snapshots != nil || !errors.Is(err, chronicle.ErrUnsupported) {
-			t.Fatal("protected history not refused", err)
+		if err != nil || len(snapshots) != 1 || snapshots[0].Instance.Name != want {
+			t.Fatal("protected history release boundary", err)
 		}
 		keyed, err := passiveReader.Get(f.ctx, "subject")
 		if err != nil || !keyed.Exists || keyed.Value.Name != want {

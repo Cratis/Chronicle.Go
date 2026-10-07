@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"math"
-	"sync/atomic"
+	"strings"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
@@ -15,6 +15,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -47,22 +48,6 @@ type revisionProtectedContainer struct {
 	Names []string `chronicle:"encrypted(scope=namespace)"`
 }
 type revisionPlain struct{ Name string }
-type revisionSerializationProbe struct {
-	Value string
-	calls *atomic.Int32
-}
-
-func (p revisionSerializationProbe) IsZero() bool {
-	if p.calls != nil {
-		p.calls.Add(1)
-	}
-	return p.Value == ""
-}
-
-type revisionProtectedWithSerializationProbe struct {
-	Secret string                     `chronicle:"pii"`
-	Probe  revisionSerializationProbe `json:",omitzero"`
-}
 
 func revisionDescriptor[T any](t *testing.T, options ...events.TypeOption) events.Descriptor {
 	t.Helper()
@@ -73,7 +58,27 @@ func revisionDescriptor[T any](t *testing.T, options ...events.TypeOption) event
 	return definition.Descriptor()
 }
 
-func TestProtectedRevisionRejectsBeforeSerializationAndDispatch(t *testing.T) {
+// reviseCapture dispatches one revision and returns the request the kernel received.
+func reviseCapture(t *testing.T, catalog *events.Catalog, replacement any) *sequences.ReviseRequest {
+	t.Helper()
+	var captured *sequences.ReviseRequest
+	sequence, calls := kernelFixture(t, protectedReleaseKernel, map[string]rpcHandler{"Revise": func(_ context.Context, request any) (any, error) {
+		captured = request.(*sequences.ReviseRequest)
+		return &sequences.CommandResult{IsAuthorized: true}, nil
+	}}, catalog, eventsequences.ConcurrencyPolicy{})
+	defer sequence.OnAppend(func(eventsequences.AppendNotification) { t.Error("revision notified append") })()
+	if err := sequence.Revise(testContext(t), 0, replacement); err != nil {
+		t.Fatal(err)
+	}
+	if calls.Load() != 1 || captured == nil {
+		t.Fatalf("revision dispatched %d RPCs", calls.Load())
+	}
+	return captured
+}
+
+// Chronicle#4525 is fixed in 19.32.2: like append, revision sends plaintext and
+// the kernel protects it with the original event's subject.
+func TestProtectedRevisionDispatchesPlaintextForKernelProtection(t *testing.T) {
 	provided := revisionDescriptor[revisionClassified](t, events.WithProtection(compliance.Using(func(target compliance.Target) (compliance.Classification, error) {
 		if target.Field == "FullName" {
 			return compliance.Classification{Encrypted: true, Scope: compliance.Global}, nil
@@ -90,7 +95,7 @@ func TestProtectedRevisionRejectsBeforeSerializationAndDispatch(t *testing.T) {
 		descriptor  events.Descriptor
 		replacement any
 	}{
-		{"field PII before invalid marshal", revisionDescriptor[revisionPII](t), revisionPII{Name: "synthetic-private", Amount: math.NaN()}},
+		{"field PII", revisionDescriptor[revisionPII](t), revisionPII{Name: "synthetic-private", Amount: 1}},
 		{"field subject encryption", revisionDescriptor[revisionEncryptedSubject](t), revisionEncryptedSubject{"synthetic-private"}},
 		{"field namespace encryption", revisionDescriptor[revisionEncryptedNamespace](t), revisionEncryptedNamespace{"synthetic-private"}},
 		{"field global encryption", revisionDescriptor[revisionEncryptedGlobal](t), revisionEncryptedGlobal{"synthetic-private"}},
@@ -108,67 +113,60 @@ func TestProtectedRevisionRejectsBeforeSerializationAndDispatch(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			sequence, calls := parityFixture(t, nil, catalog, eventsequences.ConcurrencyPolicy{})
-			defer sequence.OnAppend(func(eventsequences.AppendNotification) { t.Error("rejection notified append") })()
-			assertProtectedRevisionRejected(t, sequence.Revise(testContext(t), 0, tc.replacement))
-			if calls.Load() != 0 {
-				t.Fatalf("protected revision dispatched %d RPCs", calls.Load())
+			request := reviseCapture(t, catalog, tc.replacement)
+			ref := tc.descriptor.Ref()
+			if !strings.Contains(request.Content, "synthetic-private") || request.EventType.GetId() != string(ref.ID) || request.EventType.GetGeneration() != uint32(ref.Generation) {
+				t.Fatalf("revision request = %+v", request)
 			}
 		})
 	}
 }
 
-func TestProtectedRevisionNeverExecutesSerializerCallbacks(t *testing.T) {
-	var serializerCalls atomic.Int32
-	replacement := revisionProtectedWithSerializationProbe{
-		Secret: "synthetic-private",
-		Probe:  revisionSerializationProbe{Value: "ordinary", calls: &serializerCalls},
-	}
-	descriptor := revisionDescriptor[revisionProtectedWithSerializationProbe](t)
-	catalog, err := events.NewCatalog(descriptor)
+func TestProtectedRevisionStillRejectsInvalidContentBeforeDispatch(t *testing.T) {
+	catalog, err := events.NewCatalog(revisionDescriptor[revisionPII](t))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := serializerCalls.Load(); got != 0 {
-		t.Fatalf("catalog registration executed serializer %d times", got)
+	sequence, calls := kernelFixture(t, protectedReleaseKernel, nil, catalog, eventsequences.ConcurrencyPolicy{})
+	err = sequence.Revise(testContext(t), 0, revisionPII{Name: "synthetic-private", Amount: math.NaN()})
+	var unknown *eventsequences.MutationOutcomeUnknownError
+	if err == nil || errors.As(err, &unknown) || calls.Load() != 0 {
+		t.Fatalf("invalid revision error=%v calls=%d", err, calls.Load())
 	}
-	serializerCalls.Store(0)
-	sequence, calls := parityFixture(t, nil, catalog, eventsequences.ConcurrencyPolicy{})
-	var notifications atomic.Int32
-	defer sequence.OnAppend(func(eventsequences.AppendNotification) { notifications.Add(1) })()
+}
 
-	assertProtectedRevisionRejected(t, sequence.Revise(testContext(t), 0, replacement))
-	if got := serializerCalls.Load(); got != 0 {
-		t.Errorf("protected revision executed serializer %d times", got)
-	}
-	if got := calls.Load(); got != 0 {
-		t.Errorf("protected revision dispatched %d RPCs", got)
-	}
-	if got := notifications.Load(); got != 0 {
-		t.Errorf("protected revision emitted %d append notifications", got)
-	}
-
-	// Positive control: this valid shape executes the callback when serialized.
-	if _, err := descriptor.Marshal(replacement); err != nil {
+// Kernels before 19.32.2, and connections whose kernel version was not
+// verified, persist revised content without protection (Chronicle#4525).
+func TestProtectedRevisionRefusesWithoutProtectedReleaseKernel(t *testing.T) {
+	catalog, err := events.NewCatalog(revisionDescriptor[revisionEncryptedGlobal](t))
+	if err != nil {
 		t.Fatal(err)
 	}
-	if got := serializerCalls.Load(); got != 1 {
-		t.Fatalf("serialization control executed callback %d times, want 1", got)
+	for name, kernel := range map[string]*kernelcapability.Capabilities{"unreported": nil, "19.32.1": {MixedAllReplay: true}} {
+		sequence, calls := kernelFixture(t, kernel, nil, catalog, eventsequences.ConcurrencyPolicy{})
+		err := sequence.Revise(testContext(t), 0, revisionEncryptedGlobal{"synthetic-private"})
+		var unknown *eventsequences.MutationOutcomeUnknownError
+		if !errors.Is(err, chronicle.ErrUnsupported) || errors.As(err, &unknown) || strings.Contains(err.Error(), "synthetic-private") || calls.Load() != 0 {
+			t.Fatalf("%s: protected revision error=%v calls=%d", name, err, calls.Load())
+		}
+	}
+	plain, err := events.NewCatalog(revisionDescriptor[revisionPlain](t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sequence, calls := kernelFixture(t, nil, map[string]rpcHandler{"Revise": func(context.Context, any) (any, error) {
+		return &sequences.CommandResult{IsAuthorized: true}, nil
+	}}, plain, eventsequences.ConcurrencyPolicy{})
+	if err := sequence.Revise(testContext(t), 0, revisionPlain{"ordinary"}); err != nil || calls.Load() != 1 {
+		t.Fatalf("unprotected revision needs no kernel capability: %v %d", err, calls.Load())
 	}
 }
 
-func assertProtectedRevisionRejected(t *testing.T, err error) {
-	t.Helper()
-	var unknown *eventsequences.MutationOutcomeUnknownError
-	if !errors.Is(err, chronicle.ErrUnsupported) || errors.As(err, &unknown) {
-		t.Fatalf("protected revision error = %v", err)
-	}
-	if err.Error() != "chronicle: unsupported capability: protected revision is unsupported" {
-		t.Fatalf("unstable or payload-bearing error = %q", err)
-	}
-}
-
-func TestRevisionChecksAllGenerationsOfPersistedIdentity(t *testing.T) {
+// The kernel protects a revision with the replacement generation's schema only.
+// An unclassified generation of an identity another generation classifies would
+// store plaintext that erasure cannot remove, so it is refused on every kernel.
+// C# dispatches it; this is a deliberate Go-specific safety difference.
+func TestRevisionRefusesUnclassifiedGenerationOfProtectedIdentity(t *testing.T) {
 	protectedCurrent, err := events.Define[revisionPII](events.WithID("shared-revision-id"), events.WithGeneration(2))
 	if err != nil {
 		t.Fatal(err)
@@ -181,52 +179,33 @@ func TestRevisionChecksAllGenerationsOfPersistedIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	protectedPrevious, err := events.DefineGeneration[revisionPII](plainCurrent, 1)
+	protectedPrevious, err := events.DefineGeneration[revisionClassified](plainCurrent, 1, events.WithProtection(compliance.For[revisionClassified](compliance.Classification{PII: true})))
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
-		name        string
-		descriptors []events.Descriptor
+		name              string
+		descriptors       []events.Descriptor
+		plain, classified any
 	}{
-		{"unclassified historical replacement", []events.Descriptor{plainPrevious.Descriptor(), protectedCurrent.Descriptor()}},
-		{"unclassified current replacement", []events.Descriptor{plainCurrent.Descriptor(), protectedPrevious.Descriptor()}},
+		{"unclassified historical generation", []events.Descriptor{plainPrevious.Descriptor(), protectedCurrent.Descriptor()}, revisionPlain{"synthetic-private"}, revisionPII{Name: "current"}},
+		{"unclassified current generation", []events.Descriptor{plainCurrent.Descriptor(), protectedPrevious.Descriptor()}, revisionPlain{"synthetic-private"}, revisionClassified{"historical"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			catalog, err := events.NewCatalog(tc.descriptors...)
 			if err != nil {
 				t.Fatal(err)
 			}
-			sequence, calls := parityFixture(t, nil, catalog, eventsequences.ConcurrencyPolicy{})
-			assertProtectedRevisionRejected(t, sequence.Revise(testContext(t), 0, revisionPlain{"synthetic-private"}))
-			if calls.Load() != 0 {
-				t.Fatalf("generation bypass dispatched %d RPCs", calls.Load())
+			sequence, calls := kernelFixture(t, protectedReleaseKernel, map[string]rpcHandler{"Revise": func(context.Context, any) (any, error) {
+				return &sequences.CommandResult{IsAuthorized: true}, nil
+			}}, catalog, eventsequences.ConcurrencyPolicy{})
+			err = sequence.Revise(testContext(t), 0, tc.plain)
+			if !errors.Is(err, chronicle.ErrUnsupported) || strings.Contains(err.Error(), "synthetic-private") || calls.Load() != 0 {
+				t.Fatalf("unclassified generation of a protected identity: %v calls=%d", err, calls.Load())
+			}
+			if err := sequence.Revise(testContext(t), 0, tc.classified); err != nil || calls.Load() != 1 {
+				t.Fatalf("classified generation: %v calls=%d", err, calls.Load())
 			}
 		})
-	}
-}
-
-func TestRevisionProtectionUsesOnlySelectedCatalogAndMatchingID(t *testing.T) {
-	plain := revisionDescriptor[revisionClassified](t)
-	protected := revisionDescriptor[revisionClassified](t, events.WithProtection(compliance.For[revisionClassified](compliance.Classification{PII: true})))
-	unrelated := revisionDescriptor[revisionPII](t)
-	plainCatalog, err := events.NewCatalog(plain, unrelated)
-	if err != nil {
-		t.Fatal(err)
-	}
-	protectedCatalog, err := events.NewCatalog(protected)
-	if err != nil {
-		t.Fatal(err)
-	}
-	blocked, blockedCalls := parityFixture(t, nil, protectedCatalog, eventsequences.ConcurrencyPolicy{})
-	assertProtectedRevisionRejected(t, blocked.Revise(testContext(t), 0, revisionClassified{"synthetic-private"}))
-	allowed, allowedCalls := parityFixture(t, map[string]rpcHandler{"Revise": func(context.Context, any) (any, error) {
-		return &sequences.CommandResult{IsAuthorized: true}, nil
-	}}, plainCatalog, eventsequences.ConcurrencyPolicy{})
-	if err := allowed.Revise(testContext(t), 0, revisionClassified{"ordinary"}); err != nil {
-		t.Fatal(err)
-	}
-	if blockedCalls.Load() != 0 || allowedCalls.Load() != 1 {
-		t.Fatalf("blocked calls=%d allowed calls=%d", blockedCalls.Load(), allowedCalls.Load())
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	contextmetadata "github.com/cratis/chronicle.go/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -81,6 +82,12 @@ func (t *generationTransport) Invoke(ctx context.Context, method string, args, r
 	if err = decision.ValidateDispatch(ctx); err != nil {
 		return &faults.BeforeDispatch{Cause: err}
 	}
+	// Authoritative kernel-fix check: this transport is pinned to one generation,
+	// whose capabilities never change, so the RPC below is sent only to a kernel
+	// that has every fix the operation tracked. Pre-checks may have seen another.
+	if err = kernelcapability.Check(ctx, t.generation.capabilities); err != nil {
+		return &faults.BeforeDispatch{Cause: err}
+	}
 	if c := t.generation.client; c != nil {
 		c.mu.Lock()
 		if c.closed {
@@ -118,6 +125,9 @@ func (t *generationTransport) Invoke(ctx context.Context, method string, args, r
 }
 
 func (t *generationTransport) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, options ...grpc.CallOption) (grpc.ClientStream, error) {
+	if err := kernelcapability.Check(ctx, t.generation.capabilities); err != nil {
+		return nil, &faults.BeforeDispatch{Cause: err}
+	}
 	ctx, err := authorize(ctx, t.generation.tokens)
 	if err != nil {
 		return nil, err

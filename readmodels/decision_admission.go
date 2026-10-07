@@ -14,7 +14,6 @@ import (
 	contracts "github.com/cratis/chronicle.go/contracts/projections"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/decision"
-	"github.com/cratis/chronicle.go/serialization"
 	"github.com/google/uuid"
 )
 
@@ -26,8 +25,6 @@ type DecisionReadRefusalReason string
 
 const (
 	DecisionUnavailable          DecisionReadRefusalReason = "unavailable"            // DecisionUnavailable means no SDK decision provider.
-	DecisionProtectedModel       DecisionReadRefusalReason = "protected-model"        // DecisionProtectedModel excludes every classified model from session-based decisions.
-	DecisionProtectionMetadata   DecisionReadRefusalReason = "protection-metadata"    // DecisionProtectionMetadata means model protection could not be determined.
 	DecisionReducer              DecisionReadRefusalReason = "reducer"                // DecisionReducer excludes reducer-backed models.
 	DecisionAmbiguousProjection  DecisionReadRefusalReason = "ambiguous-projection"   // DecisionAmbiguousProjection requires exactly one projection.
 	DecisionNotEventLog          DecisionReadRefusalReason = "not-event-log"          // DecisionNotEventLog excludes other sequences.
@@ -45,6 +42,20 @@ const (
 	DecisionFoldIncomplete       DecisionReadRefusalReason = "fold-incomplete"        // DecisionFoldIncomplete exhausts three fresh fold attempts.
 	DecisionFoldAhead            DecisionReadRefusalReason = "fold-ahead"             // DecisionFoldAhead exhausts three fresh pre-fold boundaries.
 )
+
+// DecisionProtectedModel formerly excluded every classified model from
+// session-based decisions.
+//
+// Deprecated: no longer produced. Kernel 19.32.2 and later release decision
+// session folds with each value's original subject (Chronicle#4561), so
+// classified models are admitted like C#.
+const DecisionProtectedModel DecisionReadRefusalReason = "protected-model"
+
+// DecisionProtectionMetadata formerly meant model protection could not be
+// determined.
+//
+// Deprecated: no longer produced; admission does not inspect protection metadata.
+const DecisionProtectionMetadata DecisionReadRefusalReason = "protection-metadata"
 
 // DecisionReadAdmission reports local shape admission without network I/O. It
 // does not establish server agreement, capabilities or a protected read.
@@ -111,16 +122,6 @@ func (r *DecisionReader[T]) assess() (admittedDecision, error) {
 	}
 	refuse := func(reason DecisionReadRefusalReason) (admittedDecision, error) {
 		return admittedDecision{}, &DecisionReadRefused{Model: d.Identifier(), Reason: reason}
-	}
-	// Session replay releases using the requested source key, not authoritative
-	// per-event subjects. Never acquire a lease or inspect a document to decide
-	// whether a classified model happens to be safe (even an empty fold is not).
-	roots, err := serialization.ProtectionRoots(d.Schema())
-	if err != nil {
-		return refuse(DecisionProtectionMetadata)
-	}
-	if len(roots) != 0 {
-		return refuse(DecisionProtectedModel)
 	}
 	if kind, _ := d.Observer(); kind == Reducer {
 		return refuse(DecisionReducer)

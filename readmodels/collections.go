@@ -13,6 +13,7 @@ import (
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/wire"
 )
 
@@ -43,6 +44,9 @@ func (s *Service) GetAll(ctx context.Context, model Identifier, count *events.Co
 }
 
 func (s *Service) getAll(ctx context.Context, d Descriptor, count *events.Count) (result Collection[json.RawMessage], err error) {
+	// Needs added by admission travel with every RPC of this read and are
+	// re-checked against the generation that dispatches it.
+	ctx = kernelcapability.Track(ctx)
 	defer func() {
 		if err == nil {
 			err = ctx.Err()
@@ -181,8 +185,9 @@ func (r *Reader[T]) GetAll(ctx context.Context, count *events.Count) (Collection
 }
 
 // Only admitted routes reach this boundary: materialized stores release using
-// persisted lineage; local reducers fold released events. Protected projection
-// replay/history is refused before I/O because replay does not preserve lineage.
+// persisted lineage; local reducers fold released events; projection replay,
+// history, sessions and immediate projections release with each value's original
+// subject (kernel 19.32.2 or later, Chronicle#4561).
 // Shape validation is not proof of decryption: strings accept ciphertext too.
 // A second Compliance.Release can corrupt legitimate plaintext. Validate the
 // final representation without another RPC, then normalize the root identity.

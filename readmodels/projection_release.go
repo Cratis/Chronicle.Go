@@ -4,20 +4,30 @@
 package readmodels
 
 import (
-	"fmt"
+	"context"
 
-	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 )
 
-// Kernel 19.29.4 projection replay does not preserve per-property subjects.
-// Collections cannot even infer a subject from the default PascalCase Id; keyed
-// immediate/session reads substitute the source key for the event subject.
-// History releases events first, but lacks a general model-release guarantee.
-// Refuse every classified model on these routes, including namespace/global
-// encryption and referenced/provider classifications in the frozen schema.
-func projectionReleaseAdmission(d Descriptor) error {
-	if len(d.definition.protected) != 0 {
-		return fmt.Errorf("%w: protected projection replay release is not supported", faults.ErrUnsupported)
+// Projection replay, history, immediate and session reads of a classified model
+// are released by the kernel with each value's original subject only from
+// Chronicle 19.32.2 (Chronicle#4561). Earlier kernels substituted the source key
+// for the subject, so a protected string could carry ciphertext and still pass
+// shape validation. Refuse every classified model on these routes unless the
+// connection reports such a kernel; skipped compatibility verification and
+// low-level transports without a report are refused. The report is a fast
+// pre-check: the transport re-checks the generation that dispatches each RPC.
+func (s *Service) projectionReleaseAdmission(ctx context.Context, d Descriptor) error {
+	if len(d.definition.protected) == 0 {
+		return nil
+	}
+	if err := kernelcapability.Precheck(ctx, s.conn, kernelcapability.NeedProtectedProjectionRead); err != nil {
+		return err
+	}
+	// Authoritative check: the transport refuses dispatch on a generation
+	// without the capability. An untracked context cannot carry it.
+	if !kernelcapability.Add(ctx, kernelcapability.NeedProtectedProjectionRead) {
+		return kernelcapability.NeedProtectedProjectionRead.Refusal()
 	}
 	return nil
 }

@@ -34,6 +34,7 @@ type Sequence struct {
 	appends              appendSubscriptions
 	appendOriginResolver AppendOriginResolver
 	outgoing             outgoing.Config
+	conn                 grpc.ClientConnInterface
 }
 
 // New creates a low-level sequence over a caller-owned connection and registered
@@ -47,7 +48,7 @@ func New(store metadata.StoreName, namespace metadata.Namespace, id events.Seque
 	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || strings.TrimSpace(string(id)) == "" || catalog == nil || conn == nil {
 		return nil, fmt.Errorf("%w: sequence coordinates, catalog and connection are required", faults.ErrInvalidConfiguration)
 	}
-	sequence := &Sequence{store: store, namespace: namespace, id: id, catalog: catalog, service: sequences.NewEventSequencesClient(conn)}
+	sequence := &Sequence{store: store, namespace: namespace, id: id, catalog: catalog, service: sequences.NewEventSequencesClient(conn), conn: conn}
 	sequence.decisions, _ = conn.(decision.Provider)
 	if provider, ok := conn.(outgoing.Provider); ok {
 		sequence.outgoing = provider.OutgoingConfiguration()

@@ -37,7 +37,7 @@ func TestDecisionDependencyAgreementAcrossProtobufTransport(t *testing.T) {
 		name, schema string
 		refused      bool
 	}{
-		{"conditional namespace protection", `{"properties":{"id":{"type":"string"},"name":{"type":"string"}},"dependencies":{"id":{"properties":{"name":{"security":[{"metadataType":"EncryptedNamespace"}]}}}}}`, true},
+		{"conditional namespace protection", `{"properties":{"id":{"type":"string"},"name":{"type":"string"}},"dependencies":{"id":{"properties":{"name":{"security":[{"metadataType":"EncryptedNamespace"}]}}}}}`, false},
 		{"plain property and schema dependencies", `{"properties":{"id":{"type":"string"},"name":{"type":"string"}},"dependencies":{"id":["name"],"name":{"properties":{"extra":{"type":"number","default":{"security":null}}}}}}`, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

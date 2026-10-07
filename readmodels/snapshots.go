@@ -14,6 +14,7 @@ import (
 	contracts "github.com/cratis/chronicle.go/contracts/readmodelexplorer"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
 )
@@ -39,8 +40,9 @@ type Snapshot[T any] struct {
 // GetSnapshots reads correlation-grouped projection history for a nonblank key.
 // Reducers fail with ErrUnsupported before any RPC: kernel 19.29.4 returns an
 // uninformative empty history for every non-projection. Replay fidelity admission
-// also refuses classified models and unknown/defaulted/relationship/mixed-ALL
-// producers. Success returns a non-nil
+// also refuses unknown/defaulted/relationship producers. Classified states are
+// released by the kernel with their original subjects from 19.32.2; older or
+// unverified kernels are refused with ErrUnsupported. Success returns a non-nil
 // slice. Any error or cancellation discards all results. No sessions are created.
 func (s *Service) GetSnapshots(ctx context.Context, model Identifier, key Key) ([]Snapshot[json.RawMessage], error) {
 	d, ok := s.catalog.LookupIdentifier(model)
@@ -51,6 +53,9 @@ func (s *Service) GetSnapshots(ctx context.Context, model Identifier, key Key) (
 }
 
 func (s *Service) getSnapshots(ctx context.Context, d Descriptor, key Key) (result []Snapshot[json.RawMessage], err error) {
+	// Needs added by admission travel with every RPC of this read and are
+	// re-checked against the generation that dispatches it.
+	ctx = kernelcapability.Track(ctx)
 	defer func() {
 		if err == nil {
 			err = ctx.Err()

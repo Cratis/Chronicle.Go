@@ -13,7 +13,9 @@ import (
 	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	"github.com/cratis/chronicle.go/contracts/namespaces"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/wire"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 func (s *EventStore) registerStages(ctx context.Context, g *generation, root *definitionRoot) ([]ArtifactRegistration, error) {
@@ -91,6 +93,12 @@ func (s *EventStore) registerEventTypes(ctx context.Context, g *generation) erro
 	registrations := make(map[events.TypeID]*eventtypes.EventTypeRegistration)
 	descriptors := s.catalog.Descriptors()
 	for _, descriptor := range descriptors {
+		var err error
+		if ctx, err = nestedProtectionAdmission(ctx, g, descriptor.Schema()); err != nil {
+			return err
+		}
+	}
+	for _, descriptor := range descriptors {
 		if descriptor.IsHistorical() {
 			continue
 		}
@@ -122,4 +130,22 @@ func (s *EventStore) registerEventTypes(ctx context.Context, g *generation) erro
 		return err
 	}
 	return wire.CheckEnvelope(result)
+}
+
+// Kernels before 19.32.2 skip protection beneath unprotected maps and on
+// collection-valued array elements (Chronicle#4551, #4552) and would store those
+// values unprotected. Refuse registration, before any RPC, unless the kernel of
+// the generation being registered on is known to apply that metadata; the
+// returned context makes its transport re-check that generation at dispatch.
+// Each reconnect registers again on its own generation. The refusal is
+// deterministic and is not retried.
+func nestedProtectionAdmission(ctx context.Context, g *generation, schema string) (context.Context, error) {
+	if !serialization.NestedCollectionProtection(schema) {
+		return ctx, nil
+	}
+	need := kernelcapability.NeedNestedCollectionProtection
+	if !need.Satisfied(g.capabilities) {
+		return ctx, need.Refusal()
+	}
+	return kernelcapability.With(ctx, need), nil
 }

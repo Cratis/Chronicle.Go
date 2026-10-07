@@ -12,6 +12,7 @@ import (
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/internal/kernelcapability"
 	"github.com/cratis/chronicle.go/internal/outgoing"
 	"google.golang.org/grpc"
 )
@@ -59,6 +60,20 @@ func (t *clientTransport) OutgoingConfiguration() outgoing.Config { return t.cli
 
 func (t *clientTransport) AppendOriginResolver() eventsequences.AppendOriginResolver {
 	return t.client.config.appendOriginResolver
+}
+
+// KernelCapabilities reports the fixes known to be present in the kernel of the
+// current generation. It serves only fast pre-checks: a reconnect can change the
+// kernel before dispatch, so gated operations also track their needs in the call
+// context and generationTransport refuses, before sending, any RPC whose pinned
+// generation lacks one.
+func (t *clientTransport) KernelCapabilities(ctx context.Context) (kernelcapability.Capabilities, error) {
+	g, _, done, err := t.acquire(ctx)
+	if err != nil {
+		return kernelcapability.Capabilities{}, err
+	}
+	defer done()
+	return g.capabilities, nil
 }
 
 func (t *clientTransport) acquire(ctx context.Context) (*generation, context.Context, func(), error) {
