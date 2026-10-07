@@ -21,7 +21,7 @@ type compiler struct {
 	declaration      *declaration
 	globals          []boundGlobal
 	usedNodes        map[reflect.Type]bool
-	active           map[reflect.Type]bool
+	active           map[nodeIdentity]bool
 	childDepth       int
 	ancestorCreators map[events.TypeRef]int
 }
@@ -233,6 +233,13 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			for _, f := range fields {
 				if strings.HasPrefix(f.Path, field.Path+".") && hasProjectionDirective(f.Tag) {
 					return nil, declarationFailure(c.result.id, Provenance{GoField: f.GoField, Path: f.Path, Offset: 0}, invalid("nested declarations require children or nested"))
+				}
+			}
+		}
+		if !structural && n.children[field.Path] == nil {
+			for _, f := range fields {
+				if (f.Path == field.Path || strings.HasPrefix(f.Path, field.Path+".")) && derivativeHasDirective(f, derivedDeclarationDirective) {
+					return nil, declarationFailure(c.result.id, Provenance{GoField: f.GoField, Path: f.Path, Offset: -1}, invalid("declarations on a derived type require a children collection of its family"))
 				}
 			}
 		}
@@ -450,10 +457,11 @@ func (c *compiler) boundChild(n *nodeDefinition, field serialization.Field, fiel
 	if nested && hasDirective(directives, "children") {
 		return invalid("field cannot be both children and nested")
 	}
-	typ, err := nodeType(field, nested)
+	shape, err := childShape(field, nested)
 	if err != nil {
 		return err
 	}
+	typ := shape.typ
 	d := newDeclaration(readmodels.Descriptor{}, nil)
 	d.modelBound = true
 	if registered := c.declaration.nodes[typ]; registered != nil {
@@ -499,17 +507,22 @@ func (c *compiler) boundChild(n *nodeDefinition, field serialization.Field, fiel
 }
 
 func (c *compiler) compileChild(n *nodeDefinition, child childDeclaration, field serialization.Field, fields []serialization.Field, creators []subscription) error {
-	typ, err := nodeType(field, child.nested)
+	shape, err := childShape(field, child.nested)
 	if err != nil {
-		return err
+		directive := "children"
+		if child.nested {
+			directive = "nested"
+		}
+		return declarationFailure(c.result.id, Provenance{GoField: field.GoField, Path: field.Path, Directive: directive, Offset: -1}, err)
 	}
+	typ := shape.typ
 	if typ != child.typ || n.children[field.Path] != nil || n.nested[field.Path] != nil {
 		return invalid("duplicate or incompatible child node")
 	}
 	if err := validateNodeOptions(child.data); err != nil {
 		return err
 	}
-	local := scopedFields(fields, field.Path)
+	local := shape.fields
 	if child.identifiedBy != "" && child.identityType != nil {
 		identity, ok := binaryMappingField(local, child.identifiedBy)
 		if !ok || identity.Type != child.identityType {
@@ -532,20 +545,32 @@ func (c *compiler) compileChild(n *nodeDefinition, child childDeclaration, field
 			d.removals = append(slices.Clone(registered.removals), d.removals...)
 		}
 	}
-	stopExpanding := c.active[typ] && d.modelBound
+	// A derived child is identified by its family and selected concrete type, so
+	// an ordinary node of the same concrete type is not mistaken for recursion.
+	identity := nodeIdentity{typ: typ}
+	if shape.derivative != nil {
+		identity.family = field.Type.Elem()
+	}
+	stopExpanding := c.active[identity] && d.modelBound
 	// C# seeds traversal with the root type, but the first child level always
 	// uses the normal filter (includeSelfReferencingEvents: false). A root
 	// collection of its own type stops here without using the recursive filter.
 	recursive := stopExpanding && c.childDepth > 0
-	if !c.active[typ] {
-		c.active[typ] = true
-		defer delete(c.active, typ)
+	if !c.active[identity] {
+		c.active[identity] = true
+		defer delete(c.active, identity)
 	}
 	c.childDepth++
 	defer func() { c.childDepth-- }()
 	compiled, err := c.compileNode(d, local, fields, n.ownNoAuto, child.nested, child.identifiedBy, creators, stopExpanding, recursive)
 	if err != nil {
 		return err
+	}
+	if shape.derivative != nil {
+		compiled.derivative = shape.derivative
+		if err := c.stampDerivedChild(compiled); err != nil {
+			return err
+		}
 	}
 	if child.nested {
 		n.nested[field.Path] = compiled
@@ -565,29 +590,66 @@ func validateNodeOptions(d *declaration) error {
 	return nil
 }
 
-func nodeType(field serialization.Field, nested bool) (reflect.Type, error) {
+type nodeIdentity struct{ typ, family reflect.Type }
+
+// nodeShape is the node type and local fields of a child or nested field. For
+// a derived-type family element, derivative is the selected concrete type.
+type nodeShape struct {
+	typ        reflect.Type
+	fields     []serialization.Field
+	derivative *serialization.Derivative
+}
+
+// childShape selects only from the frozen serialization graph. A children
+// collection of a derived-type family resolves to its single registered
+// concrete derivative, as C# ResolveConcreteChildType does. C# keeps the
+// unresolved family when zero or several derivatives exist and then emits no
+// discriminator; Go refuses that ambiguous shape instead of degrading silently.
+func childShape(field serialization.Field, nested bool) (nodeShape, error) {
 	typ := field.Type
 	if nested {
 		if typ.Kind() != reflect.Pointer || typ.Elem().Kind() != reflect.Struct || field.Scalar != serialization.NotScalar {
-			return nil, invalid("nested requires a pointer to an object")
+			return nodeShape{}, invalid("nested requires a pointer to an object")
 		}
-		return typ.Elem(), nil
+		return nodeShape{typ: typ.Elem(), fields: field.Fields()}, nil
 	}
 	if typ.Kind() != reflect.Slice && typ.Kind() != reflect.Array {
-		return nil, invalid("children requires a slice or array of objects")
+		return nodeShape{}, invalid("children requires a slice or array of objects")
+	}
+	if typ.Elem().Kind() == reflect.Interface {
+		derivatives := field.Derivatives()
+		if len(derivatives) != 1 {
+			return nodeShape{}, invalid("derived children require exactly one registered concrete derivative")
+		}
+		selected := derivatives[0]
+		concrete := indirectType(selected.Type)
+		if concrete.Kind() != reflect.Struct {
+			return nodeShape{}, invalid("derived children require an object derivative")
+		}
+		return nodeShape{typ: concrete, fields: selected.Fields(), derivative: &selected}, nil
 	}
 	typ = indirectType(typ.Elem())
 	if typ.Kind() != reflect.Struct {
-		return nil, invalid("children requires object elements")
+		return nodeShape{}, invalid("children requires object elements")
 	}
-	return typ, nil
+	return nodeShape{typ: typ, fields: field.Fields()}, nil
 }
 
+// scopedFields returns the local fields of a child or nested node. A children
+// collection of a derived-type family with one registered derivative uses that
+// derivative's fields; any other family has no addressable local fields.
 func scopedFields(fields []serialization.Field, path string) []serialization.Field {
-	if field, ok := binaryMappingField(fields, path); ok {
-		return field.Fields()
+	field, ok := binaryMappingField(fields, path)
+	if !ok {
+		return nil
 	}
-	return nil
+	if (field.Type.Kind() == reflect.Slice || field.Type.Kind() == reflect.Array) && field.Type.Elem().Kind() == reflect.Interface {
+		if derivatives := field.Derivatives(); len(derivatives) == 1 {
+			return derivatives[0].Fields()
+		}
+		return nil
+	}
+	return field.Fields()
 }
 
 func (c *compiler) inferParent(parent, event []serialization.Field, key expression, p Provenance) expression {

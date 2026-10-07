@@ -168,7 +168,13 @@ func (p *Plan) ValidateRole(role declarations.Role) error {
 						return err
 					}
 					for _, directive := range directives {
-						if directive.Name != "pii" && directive.Name != "encrypted" && directive.Name != "compliance-details" {
+						if directive.Name == "pii" || directive.Name == "encrypted" || directive.Name == "compliance-details" {
+							continue // Protection audits and rejects classified variants separately.
+						}
+						// Derived children consume projection directives on their
+						// derivative. Subjects, indexes and event roles have no
+						// variant-qualified consumer and remain refused.
+						if role != declarations.Model || directive.Name == "subject" || directive.Name == "index" {
 							return codecError(derivative.registration, f.goName, "artifact role declarations within derivatives are not supported")
 						}
 					}
