@@ -431,10 +431,15 @@ early check against the current connection still refuses quickly, before
 providers or codecs run; it is not authoritative. Registration checks the
 connection it registers on, and every reconnect registers again, so a store that
 reconnects to an older kernel refuses its nested protection again
-(`TestProtectedReviseRefusesWhenReconnectedToIncapableKernelBeforeDispatch`,
+(`TestDefinitionTransportRefusesTrackedNeedBeforeDispatch`,
+`TestProtectedReviseRefusesWhenReconnectedToIncapableKernelBeforeDispatch`,
 `TestClassifiedReplayRefusesWhenReconnectedToIncapableKernelBeforeDispatch`,
 `TestMixedAllReplayRefusesWhenReconnectedToIncapableKernelBeforeDispatch`,
-`TestNestedProtectionReRegistrationRefusesAfterReconnectToIncapableKernel`). An
+`TestNestedProtectionReRegistrationRefusesAfterReconnectToIncapableKernel`). A
+gated operation that has to wait for the client to connect or a store to
+register does not pass its needs on to that shared work, so it cannot fail the
+connection or registration other callers depend on
+(`TestRegistrationIgnoresCallerTrackedNeeds`). An
 operation refused by the early check is not retried after a reconnect to a newer
 kernel; call it again (`TestProtectedReviseOnIncapableKernelRefusesBeforeProviders`,
 `TestNestedProtectionRegistersAfterReconnectToCapableKernel`).
