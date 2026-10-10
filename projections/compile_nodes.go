@@ -4,7 +4,6 @@
 package projections
 
 import (
-	"cmp"
 	"reflect"
 	"slices"
 	"strings"
@@ -56,282 +55,30 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 			c.ancestorCreators[ref]--
 		}
 	}()
-	froms := map[events.TypeRef]*fromDefinition{}
-	ensure := func(event events.Descriptor) *fromDefinition {
-		ref := event.Ref()
-		if froms[ref] == nil {
-			froms[ref] = &fromDefinition{event: ref, key: expression{kind: sourceExpression}}
-		}
-		return froms[ref]
-	}
-	for _, s := range creators {
-		if err := c.validateSubscription(s); err != nil {
-			return nil, err
-		}
-		from := ensure(s.event)
-		from.key, from.parent = s.key, s.parent
-	}
-	seen := map[events.TypeRef]bool{}
-	for _, sub := range d.subscriptions {
-		p := Provenance{FrontEnd: "typed", Directive: "FromEvent", Offset: -1, Event: sub.event.Ref()}
-		if err := c.validateSubscription(sub); err != nil {
-			return nil, declarationFailure(c.result.id, p, err)
-		}
-		if d.modelBound && parentFields != nil && !nested {
-			isCreator := slices.ContainsFunc(creators, func(s subscription) bool { return s.event.Ref() == sub.event.Ref() })
-			if recursive {
-				if !isCreator && (c.ancestorCreators[sub.event.Ref()] > 0 || sub.keySet && !sub.parentSet) {
-					continue
-				}
-			} else if !sub.keySet && childEvents[sub.event.Ref()] {
-				continue
-			}
-		}
-		if seen[sub.event.Ref()] {
-			return nil, declarationFailure(c.result.id, p, invalid("duplicate event subscription"))
-		}
-		seen[sub.event.Ref()] = true
-		from := ensure(sub.event)
-		if sub.keySet {
-			from.key = sub.key
-		}
-		if sub.parentSet || sub.parent.kind != emptyExpression {
-			from.parent = sub.parent
-		}
-		c.result.provenance = append(c.result.provenance, p)
-		for _, w := range sub.writes {
-			w.provenance.Event = sub.event.Ref()
-			if err := addWrite(c.result, from, w, fields, sub.event.Fields(), false); err != nil {
-				return nil, err
-			}
-		}
-	}
-	for _, j := range d.joins {
-		if err := c.addJoin(n, j, fields, false); err != nil {
-			return nil, err
-		}
-	}
-	for _, r := range d.removals {
-		if r.clear && !nested {
-			return nil, invalid("ClearWith requires a nested object node")
-		}
-		if err := c.addRemoval(n, r, d.modelBound); err != nil {
-			return nil, err
-		}
-	}
-	for _, child := range d.children {
-		field, ok := binaryMappingField(fields, child.path)
-		if !ok || field.Type != child.fieldType || strings.Contains(field.Path, ".") {
-			return nil, invalid("unknown or incompatible child field")
-		}
-		if err := c.compileChild(n, child, field, fields, nil); err != nil {
-			return nil, err
-		}
-	}
-	for _, field := range serialization.RootFields(fields) {
-		directives, err := declarations.Parse(declarations.V1, field.Tag)
-		if err != nil {
-			return nil, err
-		}
-		if err = declarations.Validate(declarations.Model, directives); err != nil {
-			return nil, err
-		}
-		slices.SortStableFunc(directives, func(a, b declarations.Directive) int { return cmp.Compare(priority(a.Name), priority(b.Name)) })
-		structural := hasDirective(directives, "children") || hasDirective(directives, "nested")
-		if structural {
-			if !d.modelBound {
-				return nil, invalid("model mapping tags and fluent mappings cannot be mixed")
-			}
-			if !stopExpanding {
-				if err = c.boundChild(n, field, fields, directives); err != nil {
-					return nil, err
-				}
-			}
-		}
-		for _, directive := range directives {
-			p := Provenance{FrontEnd: "model-bound", GoField: field.GoField, Path: field.Path, Directive: directive.Name, Offset: directive.Offset}
-			fail := func(err error) (*nodeDefinition, error) { return nil, declarationFailure(c.result.id, p, err) }
-			switch directive.Name {
-			case "children", "nested", "index", "subject", "pii", "compliance-details", "encrypted":
-				continue
-			case "key":
-				if n.keyField != "" || field.IsEnum() || !field.Scalar.IsPrimitive() || field.Nullable {
-					return fail(invalid("one non-nullable scalar key field is required"))
-				}
-				n.keyField = field.Path
-				c.result.provenance = append(c.result.provenance, p)
-			case "no-auto", "not-projected":
-				if !slices.Contains(n.exclusions, field.Path) {
-					n.exclusions = append(n.exclusions, field.Path)
-				}
-				c.result.provenance = append(c.result.provenance, p)
-			default:
-				if !d.modelBound {
-					return fail(invalid("model mapping tags and fluent mappings cannot be mixed"))
-				}
-				if structural && (directive.Name == "remove" || directive.Name == "remove-join" || directive.Name == "clear") {
-					continue
-				}
-				if directive.Name == "every" || directive.Name == "all" {
-					e := expression{kind: pathExpression, text: field.Name}
-					for _, a := range directive.Args {
-						e.text = a.Value.Text
-						if a.Name == "context" {
-							e.kind = contextExpression
-						}
-					}
-					c.globals = append(c.globals, boundGlobal{globalDeclaration: globalDeclaration{write: write{path: field.Name, expression: e, provenance: p}, all: directive.Name == "all" && parentFields == nil, includeChildren: true}, fields: fields})
-					continue
-				}
-				event, err := c.resolve(directive, p)
-				if err != nil {
-					return nil, err
-				}
-				p.Event = event.Ref()
-				if parentFields != nil && !nested && !recursive && childEvents[event.Ref()] && (priority(directive.Name) >= 1 && priority(directive.Name) <= 6 || directive.Name == "clear") {
-					continue
-				}
-				if directive.Name == "remove" || directive.Name == "remove-join" {
-					if err = c.addRemoval(n, removalFromTag(directive, event), true); err != nil {
-						return fail(err)
-					}
-					continue
-				}
-				e := mappingExpression(directive, field.Name)
-				w := write{path: field.Path, expression: e, provenance: p}
-				if directive.Name == "join" {
-					on := field.Path
-					if a, ok := argument(directive, "on"); ok {
-						on = a.Text
-					}
-					s := newSubscription(event, nil)
-					s.writes = []write{w}
-					if err = c.addJoin(n, joinDeclaration{subscription: s, on: on}, fields, true); err != nil {
-						return fail(err)
-					}
-					continue
-				}
-				from := ensure(event)
-				if a, ok := argument(directive, "key"); ok {
-					key := parsedKey(a)
-					if err = validateKey(key, nil, event.Fields(), false); err != nil {
-						return fail(err)
-					}
-					if from.key.encode() != key.encode() && from.key.kind != sourceExpression {
-						c.result.diagnostics = append(c.result.diagnostics, Diagnostic{Message: "mapping correlation key overrides an earlier event key", Replacement: p})
-					}
-					from.key = key
-				}
-				if err = addWrite(c.result, from, w, fields, event.Fields(), true); err != nil {
-					return nil, err
-				}
-			}
-		}
-		// A plain embedded object can be mapped as a whole, but declarations on
-		// its descendants require an explicit node boundary, never flattened tags.
-		if !structural && n.children[field.Path] == nil && n.nested[field.Path] == nil {
-			for _, f := range fields {
-				if strings.HasPrefix(f.Path, field.Path+".") && hasProjectionDirective(f.Tag) {
-					return nil, declarationFailure(c.result.id, Provenance{GoField: f.GoField, Path: f.Path, Offset: 0}, invalid("nested declarations require children or nested"))
-				}
-			}
-		}
-		if !structural && n.children[field.Path] == nil {
-			for _, f := range fields {
-				if (f.Path == field.Path || strings.HasPrefix(f.Path, field.Path+".")) && derivativeHasDirective(f, derivedDeclarationDirective) {
-					return nil, declarationFailure(c.result.id, Provenance{GoField: f.GoField, Path: f.Path, Offset: -1}, invalid("declarations on a derived type require a children collection of its family"))
-				}
-			}
-		}
-	}
-	if parentFields != nil && !nested {
-		if n.identifiedBy == "" {
-			key := expression{kind: sourceExpression}
-			if len(creators) > 0 {
-				key = creators[0].key
-			} else if len(d.subscriptions) > 0 {
-				key = d.subscriptions[0].key
-			}
-			n.identifiedBy = discoverIdentity(fields, n.keyField, key)
-		}
-		if n.identifiedBy != "$eventSourceId" {
-			identity, ok := binaryMappingField(fields, n.identifiedBy)
-			if !ok || identity.Collection || identity.Nullable || !identity.Scalar.IsPrimitive() {
-				return nil, invalid("child identity requires a non-nullable scalar field")
-			}
-			explicitIdentity := false
-			for _, from := range froms {
-				for _, w := range from.writes {
-					if w.path == n.identifiedBy && (w.provenance.Directive == "set" || w.provenance.Directive == "context" || w.provenance.Directive == "value" || w.provenance.Directive == "add" || w.provenance.Directive == "subtract") {
-						explicitIdentity = true
-					}
-				}
-			}
-			for _, creator := range creators {
-				from := ensure(creator.event)
-				if !d.modelBound || from.key.kind == compositeExpression || n.noAuto || explicitIdentity || hasWrite(from.writes, n.identifiedBy) || strings.EqualFold(n.identifiedBy, from.key.text) && n.keyField != n.identifiedBy {
-					continue
-				}
-				e := from.key
-				if e.kind == sourceExpression {
-					e = expression{kind: contextExpression, text: "EventSourceId"}
-				}
-				w := write{path: n.identifiedBy, expression: e, provenance: Provenance{FrontEnd: "convention", Path: n.identifiedBy, Directive: "child-identity", Offset: -1, Event: creator.event.Ref()}}
-				if err := addWrite(c.result, from, w, fields, creator.event.Fields(), false); err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-	for _, from := range froms {
-		if c.result.passive && from.key.kind != sourceExpression {
-			return nil, invalid("passive key redirection is not supported by immediate instance reads")
-		}
-		slices.SortFunc(from.writes, func(a, b write) int { return strings.Compare(a.path, b.path) })
-		n.from = append(n.from, *from)
-	}
-	slices.SortFunc(n.from, func(a, b fromDefinition) int { return compareEvent(a.event, b.event) })
-	slices.SortFunc(n.joins, func(a, b joinDefinition) int { return compareEvent(a.event, b.event) })
-	slices.SortFunc(n.removals, func(a, b removalDefinition) int {
-		if v := compareEvent(a.event, b.event); v != 0 {
-			return v
-		}
-		if a.join == b.join {
-			return 0
-		}
-		if a.join {
-			return 1
-		}
-		return -1
-	})
-	slices.Sort(n.exclusions)
-	for _, g := range d.globals {
-		if parentFields != nil {
-			g.all = false
-		}
-		if err := c.addGlobal(n, g, fields, false); err != nil {
-			return nil, err
-		}
-	}
-	if parentFields == nil {
-		for _, removal := range n.removals {
-			if removal.join {
-				c.result.diagnostics = append(c.result.diagnostics, Diagnostic{Message: "kernel ignores root RemovedWithJoin: root removal via join is not supported (Chronicle#4263)", Replacement: Provenance{Directive: "RemovedWithJoin", Event: removal.event, Offset: -1}})
-			}
-		}
-	}
-	for _, join := range n.joins {
-		for _, w := range join.writes {
-			for _, from := range n.from {
-				for _, local := range from.writes {
-					if w.path == local.path {
-						c.result.diagnostics = append(c.result.diagnostics, Diagnostic{Message: "join is applied after local mappings and overrides this write", Previous: local.provenance, Replacement: w.provenance})
-					}
-				}
-			}
-		}
+	b := &nodeBuilder{c: c, d: d, n: n, fields: fields, parentFields: parentFields, creators: creators, childEvents: childEvents,
+		froms: map[events.TypeRef]*fromDefinition{}, nested: nested, stopExpanding: stopExpanding, recursive: recursive}
+	if err := b.build(); err != nil {
+		return nil, err
 	}
 	return n, nil
+}
+
+func (b *nodeBuilder) build() error {
+	for _, stage := range []func() error{
+		b.addCreators, b.addSubscriptions, b.addDeclaredJoinsAndRemovals, b.addDeclaredChildren,
+		b.addModelFields, b.addChildIdentity, b.collectFroms,
+	} {
+		if err := stage(); err != nil {
+			return err
+		}
+	}
+	b.sortNode()
+	if err := b.addGlobals(); err != nil {
+		return err
+	}
+	b.diagnoseRootJoinRemovals()
+	b.diagnoseJoinOverrides()
+	return nil
 }
 
 func (c *compiler) validateSubscription(s subscription) error {

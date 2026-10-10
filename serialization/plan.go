@@ -142,58 +142,26 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	if err := validateEnumPlacement(root); err != nil {
 		return nil, err
 	}
-	var families []*node
-	seen := map[reflect.Type]bool{}
-	if config.Codecs != nil {
-		for _, registration := range config.Codecs.ordered {
-			if registration.kind != derivedCodec {
-				continue
-			}
-			if seen[registration.family] {
-				continue
-			}
-			seen[registration.family] = true
-			family, err := compile(registration.family, state, policy, false)
-			if err != nil {
-				return nil, err
-			}
-			families = append(families, family)
-		}
+	families, err := compileFamilies(config, state, policy)
+	if err != nil {
+		return nil, err
 	}
 	candidates := append([]*node{root}, families...)
-	binary := false
-	for _, candidate := range candidates {
-		// Compute capability metadata once, including recursive/reference edges.
-		if err := visitNodes(candidate, map[*node]bool{}, func(n *node) error {
-			n.containsBinary = hasBinary(n)
-			return nil
-		}); err != nil {
-			return nil, err
-		}
-		if err := validateBinaryPlacement(candidate); err != nil {
-			return nil, err
-		}
-		binary = binary || candidate.containsBinary
+	binary, err := analyzeBinary(candidates)
+	if err != nil {
+		return nil, err
 	}
 	if state.duplicateNames != nil {
 		return nil, state.duplicateNames
 	}
 	if readModel {
-		for _, f := range root.fields {
-			scalar, _ := classify(f.value)
-			if f.value.containsBinary && scalar != Binary {
-				return nil, unsupported(typ, "read-model binary is only qualified at emitted root leaves")
-			}
+		if err := validateReadModelBinary(root, typ); err != nil {
+			return nil, err
 		}
 	}
 	if binary {
-		for _, candidate := range candidates {
-			if err := validateBinaryRecursion(candidate); err != nil {
-				return nil, err
-			}
-			if err := validateBinaryPropertyNames(candidate); err != nil {
-				return nil, err
-			}
+		if err := validateBinaryGraphs(candidates); err != nil {
+			return nil, err
 		}
 	}
 	state.definitions = reachableDefinitions(root.schema, state.definitions)
@@ -214,6 +182,68 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 		return nil, err
 	}
 	return plan, nil
+}
+
+// compileFamilies compiles each distinct derived-type family once, in registration order.
+func compileFamilies(config Config, state *compileState, policy NamingPolicy) ([]*node, error) {
+	var families []*node
+	if config.Codecs == nil {
+		return families, nil
+	}
+	seen := map[reflect.Type]bool{}
+	for _, registration := range config.Codecs.ordered {
+		if registration.kind != derivedCodec || seen[registration.family] {
+			continue
+		}
+		seen[registration.family] = true
+		family, err := compile(registration.family, state, policy, false)
+		if err != nil {
+			return nil, err
+		}
+		families = append(families, family)
+	}
+	return families, nil
+}
+
+// analyzeBinary computes capability metadata and validates binary placement for every candidate.
+func analyzeBinary(candidates []*node) (bool, error) {
+	binary := false
+	for _, candidate := range candidates {
+		// Compute capability metadata once, including recursive/reference edges.
+		if err := visitNodes(candidate, map[*node]bool{}, func(n *node) error {
+			n.containsBinary = hasBinary(n)
+			return nil
+		}); err != nil {
+			return false, err
+		}
+		if err := validateBinaryPlacement(candidate); err != nil {
+			return false, err
+		}
+		binary = binary || candidate.containsBinary
+	}
+	return binary, nil
+}
+
+func validateReadModelBinary(root *node, typ reflect.Type) error {
+	for _, f := range root.fields {
+		scalar, _ := classify(f.value)
+		if f.value.containsBinary && scalar != Binary {
+			return unsupported(typ, "read-model binary is only qualified at emitted root leaves")
+		}
+	}
+	return nil
+}
+
+func validateBinaryGraphs(candidates []*node) error {
+	for _, candidate := range candidates {
+		if err := validateBinaryRecursion(candidate); err != nil {
+			return err
+		}
+		if err := validateBinaryPropertyNames(candidate); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Schema returns the immutable JSON Schema string with the same property names as Marshal.
@@ -238,32 +268,8 @@ func compile(typ reflect.Type, state *compileState, policy NamingPolicy, readMod
 func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, readModelRoot, derived bool) (*node, error) {
 	key := compileKey{typ, derived, readModelRoot}
 	if previous := state.active[key]; previous != nil {
-		if typ.Kind() == reflect.Interface {
-			return &node{typ: typ, reference: previous, schema: map[string]any{"type": "object"}}, nil
-		}
-		if typ.Kind() == reflect.Struct {
-			// Instantiated generic names can contain package paths and brackets.
-			// Keep definition names safe for both JSON Pointers and URI fragments;
-			// the hash still distinguishes types with the same sanitized name.
-			identity := typ.PkgPath() + "." + typ.String()
-			if derived {
-				identity += ":derived"
-			}
-			if readModelRoot {
-				identity += ":root"
-			}
-			name := fmt.Sprintf("%s_%x", schemaTypeName(typ.Name()), sha256.Sum256([]byte(identity)))
-			state.definitions[name] = previous.schema
-			return &node{typ: typ, reference: previous, schema: map[string]any{"$ref": "#/definitions/" + name}}, nil
-		}
-		// A repeated collection/pointer wrapping an active struct must reach
-		// that struct so the reference targets the object, not its container.
-		element := typ.Elem()
-		if element.Kind() == reflect.Pointer {
-			element = element.Elem()
-		}
-		if (element.Kind() != reflect.Struct && element.Kind() != reflect.Interface) || state.active[compileKey{element, derived, false}] == nil {
-			return nil, unsupported(typ, "recursive non-object shape")
+		if reference, err := compileActiveReference(previous, typ, state, derived, readModelRoot); reference != nil || err != nil {
+			return reference, err
 		}
 	}
 	n := &node{typ: typ, schema: make(map[string]any), readModelRoot: readModelRoot}
@@ -276,31 +282,14 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 			state.active[key] = previous
 		}
 	}()
-	if typ == reflect.TypeFor[time.Time]() {
-		n.scalar = true
-		n.schema["type"], n.schema["format"] = "string", "date-time"
-		return n, nil
-	}
-	if typ == reflect.TypeFor[uuid.UUID]() {
-		n.scalar = true
-		n.schema["type"], n.schema["format"] = "string", "uuid"
+	if compileKnownScalar(n, typ) {
 		return n, nil
 	}
 	// Traverse pointers before testing marshaler interfaces: pointers to the
 	// supported built-ins inherit their marshaling methods too.
 	if typ.Kind() == reflect.Pointer {
-		item, err := compileContext(typ.Elem(), state, policy, false, derived)
-		if err != nil {
+		if err := n.compilePointer(state, policy, derived); err != nil {
 			return nil, err
-		}
-		n.item, n.schema = item, maps.Clone(item.schema)
-		if format, ok := n.schema["format"].(string); ok {
-			n.schema["format"] = strings.TrimSuffix(format, "?") + "?"
-			if item.binary {
-				n.schema["type"] = []string{"string", "null"}
-			}
-		} else if kind, ok := n.schema["type"].(string); ok {
-			n.schema["type"] = []string{kind, "null"}
 		}
 		return n, nil
 	}
@@ -318,43 +307,124 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 			return nil, unsupported(typ, "custom marshalers need an explicit schema codec (not yet supported)")
 		}
 	}
-	switch typ.Kind() {
+	if err := n.compileByKind(state, policy, readModelRoot, derived); err != nil {
+		return nil, err
+	}
+	return n, nil
+}
+
+// compileActiveReference handles a type that is already being compiled. It
+// returns a reference node, an error, or neither when compilation must continue.
+func compileActiveReference(previous *node, typ reflect.Type, state *compileState, derived, readModelRoot bool) (*node, error) {
+	if typ.Kind() == reflect.Interface {
+		return &node{typ: typ, reference: previous, schema: map[string]any{"type": "object"}}, nil
+	}
+	if typ.Kind() == reflect.Struct {
+		// Instantiated generic names can contain package paths and brackets.
+		// Keep definition names safe for both JSON Pointers and URI fragments;
+		// the hash still distinguishes types with the same sanitized name.
+		identity := typ.PkgPath() + "." + typ.String()
+		if derived {
+			identity += ":derived"
+		}
+		if readModelRoot {
+			identity += ":root"
+		}
+		name := fmt.Sprintf("%s_%x", schemaTypeName(typ.Name()), sha256.Sum256([]byte(identity)))
+		state.definitions[name] = previous.schema
+		return &node{typ: typ, reference: previous, schema: map[string]any{"$ref": "#/definitions/" + name}}, nil
+	}
+	// A repeated collection/pointer wrapping an active struct must reach
+	// that struct so the reference targets the object, not its container.
+	element := typ.Elem()
+	if element.Kind() == reflect.Pointer {
+		element = element.Elem()
+	}
+	if (element.Kind() != reflect.Struct && element.Kind() != reflect.Interface) || state.active[compileKey{element, derived, false}] == nil {
+		return nil, unsupported(typ, "recursive non-object shape")
+	}
+	return nil, nil
+}
+
+// compileKnownScalar fills the schema of the built-in time and UUID types.
+func compileKnownScalar(n *node, typ reflect.Type) bool {
+	switch typ {
+	case reflect.TypeFor[time.Time]():
+		n.scalar = true
+		n.schema["type"], n.schema["format"] = "string", "date-time"
+	case reflect.TypeFor[uuid.UUID]():
+		n.scalar = true
+		n.schema["type"], n.schema["format"] = "string", "uuid"
+	default:
+		return false
+	}
+	return true
+}
+
+func (n *node) compilePointer(state *compileState, policy NamingPolicy, derived bool) error {
+	item, err := compileContext(n.typ.Elem(), state, policy, false, derived)
+	if err != nil {
+		return err
+	}
+	n.item, n.schema = item, maps.Clone(item.schema)
+	if format, ok := n.schema["format"].(string); ok {
+		n.schema["format"] = strings.TrimSuffix(format, "?") + "?"
+		if item.binary {
+			n.schema["type"] = []string{"string", "null"}
+		}
+	} else if kind, ok := n.schema["type"].(string); ok {
+		n.schema["type"] = []string{kind, "null"}
+	}
+	return nil
+}
+
+func (n *node) compileByKind(state *compileState, policy NamingPolicy, readModelRoot, derived bool) error {
+	switch n.typ.Kind() {
 	case reflect.Interface:
-		if err := n.compileFamily(state, policy); err != nil {
-			return nil, err
-		}
+		return n.compileFamily(state, policy)
 	case reflect.Slice, reflect.Array, reflect.Map:
-		if typ.Kind() == reflect.Map {
-			if _, _, err := concepts.Underlying(typ.Key()); err != nil {
-				return nil, fmt.Errorf("%w: %w", faults.ErrInvalidConfiguration, err)
-			}
-			if typ.Key().Kind() != reflect.String || typ.Key().Implements(reflect.TypeFor[encoding.TextMarshaler]()) {
-				return nil, unsupported(typ, "map key must be a string without a custom codec")
-			}
-		}
-		if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
-			if typ.Elem() != reflect.TypeFor[byte]() {
-				return nil, unsupported(typ, "binary requires the built-in byte element type")
-			}
-			n.binary, n.scalar = true, true
-			n.schema["type"], n.schema["format"] = "string", "byte-array"
-			return n, nil
-		}
-		item, err := compile(typ.Elem(), state, policy, false)
-		if err != nil {
-			return nil, err
-		}
-		n.item = item
-		switch typ.Kind() {
-		case reflect.Map:
-			n.schema["type"], n.schema["additionalProperties"] = "object", item.schema
-		default:
-			n.schema["type"], n.schema["items"] = "array", item.schema
-		}
+		return n.compileCollection(state, policy)
 	case reflect.Struct:
-		if err := n.compileFields(state, policy, readModelRoot, derived); err != nil {
-			return nil, err
+		return n.compileFields(state, policy, readModelRoot, derived)
+	default:
+		return n.compilePrimitive()
+	}
+}
+
+func (n *node) compileCollection(state *compileState, policy NamingPolicy) error {
+	typ := n.typ
+	if typ.Kind() == reflect.Map {
+		if _, _, err := concepts.Underlying(typ.Key()); err != nil {
+			return fmt.Errorf("%w: %w", faults.ErrInvalidConfiguration, err)
 		}
+		if typ.Key().Kind() != reflect.String || typ.Key().Implements(reflect.TypeFor[encoding.TextMarshaler]()) {
+			return unsupported(typ, "map key must be a string without a custom codec")
+		}
+	}
+	if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
+		if typ.Elem() != reflect.TypeFor[byte]() {
+			return unsupported(typ, "binary requires the built-in byte element type")
+		}
+		n.binary, n.scalar = true, true
+		n.schema["type"], n.schema["format"] = "string", "byte-array"
+		return nil
+	}
+	item, err := compile(typ.Elem(), state, policy, false)
+	if err != nil {
+		return err
+	}
+	n.item = item
+	if typ.Kind() == reflect.Map {
+		n.schema["type"], n.schema["additionalProperties"] = "object", item.schema
+	} else {
+		n.schema["type"], n.schema["items"] = "array", item.schema
+	}
+	return nil
+}
+
+func (n *node) compilePrimitive() error {
+	typ := n.typ
+	switch typ.Kind() {
 	case reflect.Bool:
 		n.schema["type"] = "boolean"
 	case reflect.String:
@@ -371,9 +441,9 @@ func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, 
 	case reflect.Float64:
 		n.schema["type"], n.schema["format"] = "number", "double"
 	default:
-		return nil, unsupported(typ, "unsupported JSON shape")
+		return unsupported(typ, "unsupported JSON shape")
 	}
-	return n, nil
+	return nil
 }
 
 func schemaTypeName(name string) string {
