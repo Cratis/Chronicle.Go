@@ -3,6 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/cratis/chronicle.go.svg)](https://pkg.go.dev/github.com/cratis/chronicle.go)
 [![Build](https://github.com/Cratis/Chronicle.Go/actions/workflows/build.yml/badge.svg)](https://github.com/Cratis/Chronicle.Go/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Cratis/Chronicle.Go/blob/main/LICENSE)
+[![Discord](https://img.shields.io/discord/1182595891576717413?label=Discord&logo=discord&color=7289da)](https://discord.gg/kt4AMpV8WV)
 
 The idiomatic Go client for [Cratis Chronicle](https://github.com/Cratis/Chronicle). Register typed events, connect securely, select a store and namespace, and append with explicit concurrency protection and complete outcomes.
 
@@ -108,4 +109,4 @@ python3 scripts/generate-contracts.py --check
 
 ## Community, security and license
 
-[Cratis](https://www.cratis.io/) · [Cratis repositories](https://github.com/Cratis) · [Private vulnerability reporting](https://github.com/Cratis/Chronicle.Go/blob/main/SECURITY.md) · [MIT license](https://github.com/Cratis/Chronicle.Go/blob/main/LICENSE)
+[Discord](https://discord.gg/kt4AMpV8WV) (questions and help) · [Cratis](https://www.cratis.io/) · [Cratis repositories](https://github.com/Cratis) · [Private vulnerability reporting](https://github.com/Cratis/Chronicle.Go/blob/main/SECURITY.md) · [MIT license](https://github.com/Cratis/Chronicle.Go/blob/main/LICENSE)
