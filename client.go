@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"math"
 	"reflect"
 	"sync"
 
@@ -116,76 +115,6 @@ func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) 
 	}
 	tlsConfig, err := buildTLSConfig(config, uri)
 	return uri, tlsConfig, err
-}
-
-// validateConfigOptions checks the options that do not depend on the parsed connection string.
-func validateConfigOptions(config clientConfig) error {
-	for _, hooks := range [][]ConnectionHook{config.connectedHooks, config.disconnectedHooks} {
-		for _, hook := range hooks {
-			if hook == nil {
-				return fmt.Errorf("%w: nil connection hook", ErrInvalidConfiguration)
-			}
-		}
-	}
-	if config.loggerSet && config.logger == nil {
-		return fmt.Errorf("%w: nil logger", ErrInvalidConfiguration)
-	}
-	if err := config.naming.Validate(); err != nil {
-		return err
-	}
-	if config.reactorServicesSet && nilValue(config.reactorServices) {
-		return fmt.Errorf("%w: nil scope factory", ErrInvalidConfiguration)
-	}
-	if (config.tlsSet && config.tls == nil) || (config.borrowedSet && nilValue(config.borrowed)) ||
-		(config.tokenSet && nilValue(config.tokenSource)) || (config.resolverSet && nilValue(config.resolver)) {
-		return fmt.Errorf("%w: nil TLS, transport, resolver or token source", ErrInvalidConfiguration)
-	}
-	if config.grpcStatsHandlerSet && nilValue(config.grpcStatsHandler) {
-		return fmt.Errorf("%w: nil gRPC stats handler", ErrInvalidConfiguration)
-	}
-	if config.grpcStatsHandlerSet && config.borrowedSet {
-		return fmt.Errorf("%w: gRPC stats handler conflicts with borrowed connection", ErrInvalidConfiguration)
-	}
-	if config.borrowed != nil && !config.uriSet && !config.tokenSet && !config.noAuth {
-		return fmt.Errorf("%w: borrowed connection requires explicit authentication", ErrInvalidConfiguration)
-	}
-	return nil
-}
-
-// validateConfigForURI checks the options that interact with the parsed connection string.
-func validateConfigForURI(config clientConfig, uri ConnectionString) error {
-	if err := validateLoadBalancer(config, uri); err != nil {
-		return err
-	}
-	if uri.apiKey != "" || len(uri.unsupported) > 0 {
-		return fmt.Errorf("%w: API keys and certificate/plaintext URI options; use WithTLS for PEM material", ErrUnsupported)
-	}
-	if config.borrowed != nil && (uri.srv || len(uri.addresses) > 1 || uri.loadBalancer != "") {
-		return fmt.Errorf("%w: borrowed channels own endpoint selection", ErrInvalidConfiguration)
-	}
-	if messageSizesInvalid(config) {
-		return fmt.Errorf("%w: message sizes must be between 1 and 2147483647 bytes", ErrInvalidConfiguration)
-	}
-	if config.skipKeepAlive && config.keepAliveTimeoutSet {
-		return fmt.Errorf("%w: SkipKeepAlive conflicts with an explicit keepalive timeout", ErrInvalidConfiguration)
-	}
-	if lifecycleInvalid(config) {
-		return fmt.Errorf("%w: invalid lifecycle timeout or retry policy", ErrInvalidConfiguration)
-	}
-	if (config.noAuth && (uri.explicitCredentials || config.tokenSource != nil)) || (config.tokenSource != nil && (uri.noAuth || uri.explicitCredentials)) {
-		return fmt.Errorf("%w: conflicting authentication options", ErrInvalidConfiguration)
-	}
-	return nil
-}
-
-func messageSizesInvalid(config clientConfig) bool {
-	return (config.maxSendMessageSizeSet && (config.maxSendMessageSize < 1 || config.maxSendMessageSize > math.MaxInt32)) ||
-		(config.maxReceiveMessageSizeSet && (config.maxReceiveMessageSize < 1 || config.maxReceiveMessageSize > math.MaxInt32))
-}
-
-func lifecycleInvalid(config clientConfig) bool {
-	policy := config.registrationRetry
-	return config.connectTimeout <= 0 || config.keepAliveTimeout <= 0 || policy.MaxAttempts < 1 || policy.MaxAttempts > 100 || policy.InitialDelay <= 0 || policy.MaximumDelay < policy.InitialDelay || policy.AttemptTimeout <= 0
 }
 
 func buildTLSConfig(config clientConfig, uri ConnectionString) (*tls.Config, error) {

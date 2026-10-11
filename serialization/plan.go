@@ -10,19 +10,14 @@
 package serialization
 
 import (
-	"crypto/sha256"
-	"encoding"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 	"reflect"
-	"strings"
-	"time"
 
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/fundamentals.go/concepts"
-	"github.com/google/uuid"
 )
 
 // Plan is an immutable, concurrency-safe serializer/schema pair. Use Compile.
@@ -135,35 +130,64 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 		active: map[compileKey]*node{}, definitions: map[string]any{}, codecs: config.Codecs,
 		deferDuplicates: binaryTypeCandidate(typ, policy, readModel, config.Codecs),
 	}
-	root, err := compile(typ, state, policy, readModel)
+	root, families, err := compileGraph(typ, readModel, config, state)
 	if err != nil {
 		return nil, err
 	}
-	if err := validateEnumPlacement(root); err != nil {
+	data, err := finishSchema(typ, root, state)
+	if err != nil {
 		return nil, err
+	}
+	plan := &Plan{root: root, schema: data, typ: typ, config: config, families: families, binary: root.containsBinary}
+	plan.schema, err = plan.ProtectedSchema()
+	if err != nil {
+		return nil, err
+	}
+	return plan, nil
+}
+
+// compileGraph compiles the root and its derived-type families and validates the resulting graphs.
+func compileGraph(typ reflect.Type, readModel bool, config Config, state *compileState) (*node, []*node, error) {
+	policy := config.NamingPolicy
+	root, err := compile(typ, state, policy, readModel)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = validateEnumPlacement(root); err != nil {
+		return nil, nil, err
 	}
 	families, err := compileFamilies(config, state, policy)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	candidates := append([]*node{root}, families...)
+	if err = validateCandidates(typ, readModel, state, append([]*node{root}, families...)); err != nil {
+		return nil, nil, err
+	}
+	return root, families, nil
+}
+
+// validateCandidates validates binary placement and graphs for the root and family nodes.
+func validateCandidates(typ reflect.Type, readModel bool, state *compileState, candidates []*node) error {
 	binary, err := analyzeBinary(candidates)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if state.duplicateNames != nil {
-		return nil, state.duplicateNames
+		return state.duplicateNames
 	}
 	if readModel {
-		if err := validateReadModelBinary(root, typ); err != nil {
-			return nil, err
+		if err = validateReadModelBinary(candidates[0], typ); err != nil {
+			return err
 		}
 	}
 	if binary {
-		if err := validateBinaryGraphs(candidates); err != nil {
-			return nil, err
-		}
+		return validateBinaryGraphs(candidates)
 	}
+	return nil
+}
+
+// finishSchema adds definitions and metadata to the root schema and returns it as JSON.
+func finishSchema(typ reflect.Type, root *node, state *compileState) (string, error) {
 	state.definitions = reachableDefinitions(root.schema, state.definitions)
 	if len(state.definitions) > 0 {
 		// Clone before adding definitions: a recursive root may itself be a target.
@@ -173,15 +197,7 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	root.schema["$schema"] = "http://json-schema.org/draft-07/schema#"
 	root.schema["title"] = typ.Name()
 	data, err := json.Marshal(root.schema)
-	if err != nil {
-		return nil, err
-	}
-	plan := &Plan{root: root, schema: string(data), typ: typ, config: config, families: families, binary: root.containsBinary}
-	plan.schema, err = plan.ProtectedSchema()
-	if err != nil {
-		return nil, err
-	}
-	return plan, nil
+	return string(data), err
 }
 
 // compileFamilies compiles each distinct derived-type family once, in registration order.
@@ -248,277 +264,6 @@ func validateBinaryGraphs(candidates []*node) error {
 
 // Schema returns the immutable JSON Schema string with the same property names as Marshal.
 func (p *Plan) Schema() string { return p.schema }
-
-type compileKey struct {
-	typ           reflect.Type
-	derived, root bool
-}
-type compileState struct {
-	active          map[compileKey]*node
-	definitions     map[string]any
-	codecs          *Codecs
-	duplicateNames  error
-	deferDuplicates bool
-}
-
-func compile(typ reflect.Type, state *compileState, policy NamingPolicy, readModelRoot bool) (*node, error) {
-	return compileContext(typ, state, policy, readModelRoot, false)
-}
-
-func compileContext(typ reflect.Type, state *compileState, policy NamingPolicy, readModelRoot, derived bool) (*node, error) {
-	key := compileKey{typ, derived, readModelRoot}
-	if previous := state.active[key]; previous != nil {
-		if reference, err := compileActiveReference(previous, typ, state, derived, readModelRoot); reference != nil || err != nil {
-			return reference, err
-		}
-	}
-	n := &node{typ: typ, schema: make(map[string]any), readModelRoot: readModelRoot}
-	previous := state.active[key]
-	state.active[key] = n
-	defer func() {
-		if previous == nil {
-			delete(state.active, key)
-		} else {
-			state.active[key] = previous
-		}
-	}()
-	if compileKnownScalar(n, typ) {
-		return n, nil
-	}
-	// Traverse pointers before testing marshaler interfaces: pointers to the
-	// supported built-ins inherit their marshaling methods too.
-	if typ.Kind() == reflect.Pointer {
-		if err := n.compilePointer(state, policy, derived); err != nil {
-			return nil, err
-		}
-		return n, nil
-	}
-	if definition := state.codecs.enumeration(typ); definition != nil {
-		n.enum, n.schema = definition, definition.schema()
-		return n, nil
-	}
-	if representation, ok, err := concepts.Underlying(typ); err != nil {
-		return nil, fmt.Errorf("%w: %w", faults.ErrInvalidConfiguration, err)
-	} else if ok {
-		return compileConcept(n, representation, state, policy)
-	}
-	for _, contract := range []reflect.Type{reflect.TypeFor[json.Marshaler](), reflect.TypeFor[encoding.TextMarshaler]()} {
-		if typ.Implements(contract) || reflect.PointerTo(typ).Implements(contract) {
-			return nil, unsupported(typ, "custom marshalers need an explicit schema codec (not yet supported)")
-		}
-	}
-	if err := n.compileByKind(state, policy, readModelRoot, derived); err != nil {
-		return nil, err
-	}
-	return n, nil
-}
-
-// compileActiveReference handles a type that is already being compiled. It
-// returns a reference node, an error, or neither when compilation must continue.
-func compileActiveReference(previous *node, typ reflect.Type, state *compileState, derived, readModelRoot bool) (*node, error) {
-	if typ.Kind() == reflect.Interface {
-		return &node{typ: typ, reference: previous, schema: map[string]any{"type": "object"}}, nil
-	}
-	if typ.Kind() == reflect.Struct {
-		// Instantiated generic names can contain package paths and brackets.
-		// Keep definition names safe for both JSON Pointers and URI fragments;
-		// the hash still distinguishes types with the same sanitized name.
-		identity := typ.PkgPath() + "." + typ.String()
-		if derived {
-			identity += ":derived"
-		}
-		if readModelRoot {
-			identity += ":root"
-		}
-		name := fmt.Sprintf("%s_%x", schemaTypeName(typ.Name()), sha256.Sum256([]byte(identity)))
-		state.definitions[name] = previous.schema
-		return &node{typ: typ, reference: previous, schema: map[string]any{"$ref": "#/definitions/" + name}}, nil
-	}
-	// A repeated collection/pointer wrapping an active struct must reach
-	// that struct so the reference targets the object, not its container.
-	element := typ.Elem()
-	if element.Kind() == reflect.Pointer {
-		element = element.Elem()
-	}
-	if (element.Kind() != reflect.Struct && element.Kind() != reflect.Interface) || state.active[compileKey{element, derived, false}] == nil {
-		return nil, unsupported(typ, "recursive non-object shape")
-	}
-	return nil, nil
-}
-
-// compileKnownScalar fills the schema of the built-in time and UUID types.
-func compileKnownScalar(n *node, typ reflect.Type) bool {
-	switch typ {
-	case reflect.TypeFor[time.Time]():
-		n.scalar = true
-		n.schema["type"], n.schema["format"] = "string", "date-time"
-	case reflect.TypeFor[uuid.UUID]():
-		n.scalar = true
-		n.schema["type"], n.schema["format"] = "string", "uuid"
-	default:
-		return false
-	}
-	return true
-}
-
-func (n *node) compilePointer(state *compileState, policy NamingPolicy, derived bool) error {
-	item, err := compileContext(n.typ.Elem(), state, policy, false, derived)
-	if err != nil {
-		return err
-	}
-	n.item, n.schema = item, maps.Clone(item.schema)
-	if format, ok := n.schema["format"].(string); ok {
-		n.schema["format"] = strings.TrimSuffix(format, "?") + "?"
-		if item.binary {
-			n.schema["type"] = []string{"string", "null"}
-		}
-	} else if kind, ok := n.schema["type"].(string); ok {
-		n.schema["type"] = []string{kind, "null"}
-	}
-	return nil
-}
-
-func (n *node) compileByKind(state *compileState, policy NamingPolicy, readModelRoot, derived bool) error {
-	switch n.typ.Kind() {
-	case reflect.Interface:
-		return n.compileFamily(state, policy)
-	case reflect.Slice, reflect.Array, reflect.Map:
-		return n.compileCollection(state, policy)
-	case reflect.Struct:
-		return n.compileFields(state, policy, readModelRoot, derived)
-	default:
-		return n.compilePrimitive()
-	}
-}
-
-func (n *node) compileCollection(state *compileState, policy NamingPolicy) error {
-	typ := n.typ
-	if typ.Kind() == reflect.Map {
-		if _, _, err := concepts.Underlying(typ.Key()); err != nil {
-			return fmt.Errorf("%w: %w", faults.ErrInvalidConfiguration, err)
-		}
-		if typ.Key().Kind() != reflect.String || typ.Key().Implements(reflect.TypeFor[encoding.TextMarshaler]()) {
-			return unsupported(typ, "map key must be a string without a custom codec")
-		}
-	}
-	if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
-		if typ.Elem() != reflect.TypeFor[byte]() {
-			return unsupported(typ, "binary requires the built-in byte element type")
-		}
-		n.binary, n.scalar = true, true
-		n.schema["type"], n.schema["format"] = "string", "byte-array"
-		return nil
-	}
-	item, err := compile(typ.Elem(), state, policy, false)
-	if err != nil {
-		return err
-	}
-	n.item = item
-	if typ.Kind() == reflect.Map {
-		n.schema["type"], n.schema["additionalProperties"] = "object", item.schema
-	} else {
-		n.schema["type"], n.schema["items"] = "array", item.schema
-	}
-	return nil
-}
-
-func (n *node) compilePrimitive() error {
-	typ := n.typ
-	switch typ.Kind() {
-	case reflect.Bool:
-		n.schema["type"] = "boolean"
-	case reflect.String:
-		n.schema["type"] = "string"
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		n.schema["type"], n.schema["format"] = "integer", integerFormat(typ)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		n.schema["type"], n.schema["format"], n.schema["minimum"] = "integer", integerFormat(typ), 0
-		if typ.Kind() == reflect.Uint || typ.Kind() == reflect.Uint64 {
-			n.schema["maximum"] = uint64(1<<63 - 1)
-		}
-	case reflect.Float32:
-		n.schema["type"], n.schema["format"] = "number", "float"
-	case reflect.Float64:
-		n.schema["type"], n.schema["format"] = "number", "double"
-	default:
-		return unsupported(typ, "unsupported JSON shape")
-	}
-	return nil
-}
-
-func schemaTypeName(name string) string {
-	return strings.Map(func(r rune) rune {
-		if r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '_' {
-			return r
-		}
-		return '_'
-	}, name)
-}
-
-func (n *node) compileFields(state *compileState, policy NamingPolicy, readModelRoot, derived bool) error {
-	properties := make(map[string]any)
-	required := []string{}
-	fieldPolicy := policy
-	if derived {
-		fieldPolicy = CamelCase
-	}
-	var duplicate func(error)
-	if state.deferDuplicates {
-		duplicate = func(err error) {
-			if state.duplicateNames == nil {
-				state.duplicateNames = err
-			}
-		}
-	}
-	fields, err := serializedFieldsWithDuplicateHandler(n.typ, fieldPolicy, readModelRoot, duplicate)
-	if err != nil {
-		return err
-	}
-	for _, candidate := range fields {
-		f, name := candidate.field, candidate.name
-		value, err := compile(f.Type, state, policy, false)
-		if err != nil {
-			return err
-		}
-		entry := field{index: candidate.index, name: name, goName: candidate.goName, tag: f.Tag.Get("chronicle"), value: value, optionalAncestor: candidate.optional}
-		for _, option := range strings.Split(f.Tag.Get("json"), ",")[1:] {
-			switch option {
-			case "omitempty":
-				entry.omitEmpty = true
-			case "omitzero":
-				entry.omitZero, entry.isZero = true, zeroFunc(f.Type)
-			default:
-				return unsupported(n.typ, "unsupported JSON tag option")
-			}
-		}
-		properties[name] = value.schema
-		if hasEnum(value) || !candidate.optional && !entry.omitEmpty && !entry.omitZero && f.Type.Kind() != reflect.Pointer && f.Type.Kind() != reflect.Map && f.Type.Kind() != reflect.Slice && f.Type.Kind() != reflect.Interface {
-			required = append(required, name)
-		}
-		n.fields = append(n.fields, entry)
-	}
-	n.schema["type"], n.schema["properties"], n.schema["required"] = "object", properties, required
-	return nil
-}
-
-// Chronicle has no int8 or uint16 format. Widen those to the nearest supported
-// CLR format. int/uint use stable 64-bit schemas on every Go architecture.
-func integerFormat(typ reflect.Type) string {
-	switch typ.Kind() {
-	case reflect.Int8, reflect.Int16:
-		return "int16"
-	case reflect.Int32:
-		return "int32"
-	case reflect.Uint8:
-		return "byte"
-	case reflect.Uint16, reflect.Uint32:
-		return "uint32"
-	case reflect.Uint, reflect.Uint64:
-		return "uint64"
-	default:
-		return "int64"
-	}
-}
 
 func unsupported(typ reflect.Type, reason string) error {
 	return fmt.Errorf("%w: %s: %s", faults.ErrUnsupported, typ, reason)
