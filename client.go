@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"math"
 	"reflect"
 	"sync"
 
@@ -104,62 +103,21 @@ func NewClientContext(ctx context.Context, options ...ClientOption) (*Client, er
 }
 
 func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) {
-	for _, hooks := range [][]ConnectionHook{config.connectedHooks, config.disconnectedHooks} {
-		for _, hook := range hooks {
-			if hook == nil {
-				return ConnectionString{}, nil, fmt.Errorf("%w: nil connection hook", ErrInvalidConfiguration)
-			}
-		}
-	}
-	if config.loggerSet && config.logger == nil {
-		return ConnectionString{}, nil, fmt.Errorf("%w: nil logger", ErrInvalidConfiguration)
-	}
-	if err := config.naming.Validate(); err != nil {
+	if err := validateConfigOptions(config); err != nil {
 		return ConnectionString{}, nil, err
-	}
-	if config.reactorServicesSet && nilValue(config.reactorServices) {
-		return ConnectionString{}, nil, fmt.Errorf("%w: nil scope factory", ErrInvalidConfiguration)
-	}
-	if (config.tlsSet && config.tls == nil) || (config.borrowedSet && nilValue(config.borrowed)) ||
-		(config.tokenSet && nilValue(config.tokenSource)) || (config.resolverSet && nilValue(config.resolver)) {
-		return ConnectionString{}, nil, fmt.Errorf("%w: nil TLS, transport, resolver or token source", ErrInvalidConfiguration)
-	}
-	if config.grpcStatsHandlerSet && nilValue(config.grpcStatsHandler) {
-		return ConnectionString{}, nil, fmt.Errorf("%w: nil gRPC stats handler", ErrInvalidConfiguration)
-	}
-	if config.grpcStatsHandlerSet && config.borrowedSet {
-		return ConnectionString{}, nil, fmt.Errorf("%w: gRPC stats handler conflicts with borrowed connection", ErrInvalidConfiguration)
-	}
-	if config.borrowed != nil && !config.uriSet && !config.tokenSet && !config.noAuth {
-		return ConnectionString{}, nil, fmt.Errorf("%w: borrowed connection requires explicit authentication", ErrInvalidConfiguration)
 	}
 	uri, err := ParseConnectionString(config.uri)
 	if err != nil {
 		return uri, nil, err
 	}
-	if err := validateLoadBalancer(config, uri); err != nil {
+	if err := validateConfigForURI(config, uri); err != nil {
 		return uri, nil, err
 	}
-	if uri.apiKey != "" || len(uri.unsupported) > 0 {
-		return uri, nil, fmt.Errorf("%w: API keys and certificate/plaintext URI options; use WithTLS for PEM material", ErrUnsupported)
-	}
-	if config.borrowed != nil && (uri.srv || len(uri.addresses) > 1 || uri.loadBalancer != "") {
-		return uri, nil, fmt.Errorf("%w: borrowed channels own endpoint selection", ErrInvalidConfiguration)
-	}
-	if (config.maxSendMessageSizeSet && (config.maxSendMessageSize < 1 || config.maxSendMessageSize > math.MaxInt32)) ||
-		(config.maxReceiveMessageSizeSet && (config.maxReceiveMessageSize < 1 || config.maxReceiveMessageSize > math.MaxInt32)) {
-		return uri, nil, fmt.Errorf("%w: message sizes must be between 1 and 2147483647 bytes", ErrInvalidConfiguration)
-	}
-	if config.skipKeepAlive && config.keepAliveTimeoutSet {
-		return uri, nil, fmt.Errorf("%w: SkipKeepAlive conflicts with an explicit keepalive timeout", ErrInvalidConfiguration)
-	}
-	policy := config.registrationRetry
-	if config.connectTimeout <= 0 || config.keepAliveTimeout <= 0 || policy.MaxAttempts < 1 || policy.MaxAttempts > 100 || policy.InitialDelay <= 0 || policy.MaximumDelay < policy.InitialDelay || policy.AttemptTimeout <= 0 {
-		return uri, nil, fmt.Errorf("%w: invalid lifecycle timeout or retry policy", ErrInvalidConfiguration)
-	}
-	if (config.noAuth && (uri.explicitCredentials || config.tokenSource != nil)) || (config.tokenSource != nil && (uri.noAuth || uri.explicitCredentials)) {
-		return uri, nil, fmt.Errorf("%w: conflicting authentication options", ErrInvalidConfiguration)
-	}
+	tlsConfig, err := buildTLSConfig(config, uri)
+	return uri, tlsConfig, err
+}
+
+func buildTLSConfig(config clientConfig, uri ConnectionString) (*tls.Config, error) {
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 	if config.tls != nil {
 		tlsConfig = config.tls.Clone()
@@ -167,12 +125,12 @@ func validateConfig(config clientConfig) (ConnectionString, *tls.Config, error) 
 			tlsConfig.MinVersion = tls.VersionTLS12
 		}
 		if tlsConfig.MinVersion < tls.VersionTLS12 {
-			return uri, nil, fmt.Errorf("%w: TLS 1.2 or newer required", ErrInvalidConfiguration)
+			return nil, fmt.Errorf("%w: TLS 1.2 or newer required", ErrInvalidConfiguration)
 		}
 	} else {
 		tlsConfig.InsecureSkipVerify = uri.skipTLS || (config.development && !uri.tlsSpecified)
 	}
-	return uri, tlsConfig, nil
+	return tlsConfig, nil
 }
 
 func nilValue(value any) bool {
