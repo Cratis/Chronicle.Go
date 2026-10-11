@@ -71,10 +71,10 @@ func (b *nodeBuilder) usesConventionIdentity(from *fromDefinition, explicitIdent
 	if !b.d.modelBound || n.noAuto || explicitIdentity {
 		return false
 	}
-	if from.key.kind == compositeExpression || hasWrite(from.writes, n.identifiedBy) {
+	if from.key.kind == compositeExpression {
 		return false
 	}
-	return !keyIsIdentityAlias(from.key, n.identifiedBy, n.keyField)
+	return !hasWrite(from.writes, n.identifiedBy) && !keyIsIdentityAlias(from.key, n.identifiedBy, n.keyField)
 }
 
 func keyIsIdentityAlias(key expression, identifiedBy, keyField string) bool {

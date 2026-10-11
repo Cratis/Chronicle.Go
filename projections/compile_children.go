@@ -159,13 +159,17 @@ func (c *compiler) checkedChildShape(n *nodeDefinition, spec childSpec) (nodeSha
 	if err != nil {
 		return shape, c.childShapeFailure(field, child.nested, err)
 	}
-	if shape.typ != child.typ || n.children[field.Path] != nil || n.nested[field.Path] != nil {
+	if shape.typ != child.typ || n.hasChildAt(field.Path) {
 		return shape, invalid("duplicate or incompatible child node")
 	}
 	if err = validateNodeOptions(child.data); err != nil {
 		return shape, err
 	}
 	return shape, checkChildIdentityType(child, shape.fields)
+}
+
+func (n *nodeDefinition) hasChildAt(path string) bool {
+	return n.children[path] != nil || n.nested[path] != nil
 }
 
 func (c *compiler) childShapeFailure(field serialization.Field, nested bool, err error) error {
