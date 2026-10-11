@@ -365,5 +365,5 @@ func (c *compiler) inferParent(parent, event []serialization.Field, key expressi
 
 // isParentCandidate reports whether an event field has the parent ID type and is not the explicit key.
 func isParentCandidate(f serialization.Field, id reflect.Type, key expression) bool {
-	return f.Type == id && !(key.kind == pathExpression && strings.EqualFold(key.text, f.Path))
+	return f.Type == id && (key.kind != pathExpression || !strings.EqualFold(key.text, f.Path))
 }

@@ -341,7 +341,8 @@ func (n *node) compileField(candidate fieldCandidate, state *compileState, polic
 		return field{}, err
 	}
 	entry := field{index: candidate.index, name: candidate.name, goName: candidate.goName, tag: f.Tag.Get("chronicle"), value: value, optionalAncestor: candidate.optional}
-	return entry, applyJSONOptions(&entry, f, n.typ)
+	err = applyJSONOptions(&entry, f, n.typ)
+	return entry, err
 }
 
 // applyJSONOptions applies the omitempty and omitzero options of the json tag.

@@ -156,14 +156,14 @@ func validateNodeOptions(d *declaration) error {
 }
 
 func hasRootOnlyOption(d *declaration) bool {
-	return hasRootIdentityOption(d) || hasRootBehaviourOption(d) || hasRootRegistration(d)
+	return hasRootIdentityOption(d) || hasRootBehaviorOption(d) || hasRootRegistration(d)
 }
 
 func hasRootIdentityOption(d *declaration) bool {
 	return d.id != "" || d.variant != nil || d.variantKey != ""
 }
 
-func hasRootBehaviourOption(d *declaration) bool {
+func hasRootBehaviorOption(d *declaration) bool {
 	return d.passive || d.notRewindable || d.sequence != events.EventLog || d.sequenceExplicit || d.globalFor != nil
 }
 
