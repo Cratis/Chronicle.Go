@@ -167,6 +167,7 @@ const (
 	Observers_ClearFailedPartitions_FullMethodName               = "/Cratis.Chronicle.Contracts.Observation.Observers/ClearFailedPartitions"
 	Observers_ClearObserverQuarantine_FullMethodName             = "/Cratis.Chronicle.Contracts.Observation.Observers/ClearObserverQuarantine"
 	Observers_ClearPartitionQuarantine_FullMethodName            = "/Cratis.Chronicle.Contracts.Observation.Observers/ClearPartitionQuarantine"
+	Observers_FastForward_FullMethodName                         = "/Cratis.Chronicle.Contracts.Observation.Observers/FastForward"
 	Observers_GetConnectedClientsForObserver_FullMethodName      = "/Cratis.Chronicle.Contracts.Observation.Observers/GetConnectedClientsForObserver"
 	Observers_GetObserverInformation_FullMethodName              = "/Cratis.Chronicle.Contracts.Observation.Observers/GetObserverInformation"
 	Observers_GetObservers_FullMethodName                        = "/Cratis.Chronicle.Contracts.Observation.Observers/GetObservers"
@@ -186,6 +187,7 @@ type ObserversClient interface {
 	ClearFailedPartitions(ctx context.Context, in *ClearFailedPartitions, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ClearObserverQuarantine(ctx context.Context, in *ClearObserverQuarantine, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ClearPartitionQuarantine(ctx context.Context, in *ClearPartitionQuarantine, opts ...grpc.CallOption) (*ClearPartitionQuarantineResponse, error)
+	FastForward(ctx context.Context, in *FastForward, opts ...grpc.CallOption) (*FastForwardResponse, error)
 	GetConnectedClientsForObserver(ctx context.Context, in *GetConnectedClientsForObserverRequest, opts ...grpc.CallOption) (*IEnumerable_ConnectedClient, error)
 	GetObserverInformation(ctx context.Context, in *GetObserverInformationRequest, opts ...grpc.CallOption) (*ObserverInformation, error)
 	GetObservers(ctx context.Context, in *AllObserversRequest, opts ...grpc.CallOption) (*IEnumerable_ObserverInformation, error)
@@ -230,6 +232,16 @@ func (c *observersClient) ClearPartitionQuarantine(ctx context.Context, in *Clea
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ClearPartitionQuarantineResponse)
 	err := c.cc.Invoke(ctx, Observers_ClearPartitionQuarantine_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *observersClient) FastForward(ctx context.Context, in *FastForward, opts ...grpc.CallOption) (*FastForwardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FastForwardResponse)
+	err := c.cc.Invoke(ctx, Observers_FastForward_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -352,6 +364,7 @@ type ObserversServer interface {
 	ClearFailedPartitions(context.Context, *ClearFailedPartitions) (*emptypb.Empty, error)
 	ClearObserverQuarantine(context.Context, *ClearObserverQuarantine) (*emptypb.Empty, error)
 	ClearPartitionQuarantine(context.Context, *ClearPartitionQuarantine) (*ClearPartitionQuarantineResponse, error)
+	FastForward(context.Context, *FastForward) (*FastForwardResponse, error)
 	GetConnectedClientsForObserver(context.Context, *GetConnectedClientsForObserverRequest) (*IEnumerable_ConnectedClient, error)
 	GetObserverInformation(context.Context, *GetObserverInformationRequest) (*ObserverInformation, error)
 	GetObservers(context.Context, *AllObserversRequest) (*IEnumerable_ObserverInformation, error)
@@ -380,6 +393,9 @@ func (UnimplementedObserversServer) ClearObserverQuarantine(context.Context, *Cl
 }
 func (UnimplementedObserversServer) ClearPartitionQuarantine(context.Context, *ClearPartitionQuarantine) (*ClearPartitionQuarantineResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ClearPartitionQuarantine not implemented")
+}
+func (UnimplementedObserversServer) FastForward(context.Context, *FastForward) (*FastForwardResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FastForward not implemented")
 }
 func (UnimplementedObserversServer) GetConnectedClientsForObserver(context.Context, *GetConnectedClientsForObserverRequest) (*IEnumerable_ConnectedClient, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetConnectedClientsForObserver not implemented")
@@ -482,6 +498,24 @@ func _Observers_ClearPartitionQuarantine_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ObserversServer).ClearPartitionQuarantine(ctx, req.(*ClearPartitionQuarantine))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Observers_FastForward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FastForward)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ObserversServer).FastForward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Observers_FastForward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ObserversServer).FastForward(ctx, req.(*FastForward))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -677,6 +711,10 @@ var Observers_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClearPartitionQuarantine",
 			Handler:    _Observers_ClearPartitionQuarantine_Handler,
+		},
+		{
+			MethodName: "FastForward",
+			Handler:    _Observers_FastForward_Handler,
 		},
 		{
 			MethodName: "GetConnectedClientsForObserver",

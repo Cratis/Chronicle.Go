@@ -898,27 +898,28 @@ func (x *DeleteCaptureRequest) GetCaptureId() *bcl.Guid {
 }
 
 type EventContext struct {
-	state            protoimpl.MessageState      `protogen:"open.v1"`
-	EventType        *EventType                  `protobuf:"bytes,1,opt,name=EventType,proto3" json:"EventType,omitempty"`
-	EventSourceType  string                      `protobuf:"bytes,2,opt,name=EventSourceType,proto3" json:"EventSourceType,omitempty"`
-	EventSourceId    string                      `protobuf:"bytes,3,opt,name=EventSourceId,proto3" json:"EventSourceId,omitempty"`
-	SequenceNumber   uint64                      `protobuf:"varint,4,opt,name=SequenceNumber,proto3" json:"SequenceNumber,omitempty"`
-	EventStreamType  string                      `protobuf:"bytes,5,opt,name=EventStreamType,proto3" json:"EventStreamType,omitempty"`
-	EventStreamId    string                      `protobuf:"bytes,6,opt,name=EventStreamId,proto3" json:"EventStreamId,omitempty"`
-	Occurred         *SerializableDateTimeOffset `protobuf:"bytes,7,opt,name=Occurred,proto3" json:"Occurred,omitempty"`
-	EventStore       string                      `protobuf:"bytes,8,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
-	Namespace        string                      `protobuf:"bytes,9,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
-	CorrelationId    *bcl.Guid                   `protobuf:"bytes,10,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
-	Causation        []*Causation                `protobuf:"bytes,11,rep,name=Causation,proto3" json:"Causation,omitempty"`
-	CausedBy         *Identity                   `protobuf:"bytes,12,opt,name=CausedBy,proto3" json:"CausedBy,omitempty"`
-	ObservationState EventObservationState       `protobuf:"varint,13,opt,name=ObservationState,proto3,enum=Cratis.Chronicle.Contracts.Captures.EventObservationState" json:"ObservationState,omitempty"`
-	Tags             []string                    `protobuf:"bytes,14,rep,name=Tags,proto3" json:"Tags,omitempty"`
-	Hash             string                      `protobuf:"bytes,15,opt,name=Hash,proto3" json:"Hash,omitempty"`
-	Subject          string                      `protobuf:"bytes,16,opt,name=Subject,proto3" json:"Subject,omitempty"`
-	NamedTags        []*NamedTag                 `protobuf:"bytes,17,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
-	EventSource      string                      `protobuf:"bytes,18,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state              protoimpl.MessageState      `protogen:"open.v1"`
+	EventType          *EventType                  `protobuf:"bytes,1,opt,name=EventType,proto3" json:"EventType,omitempty"`
+	EventSourceType    string                      `protobuf:"bytes,2,opt,name=EventSourceType,proto3" json:"EventSourceType,omitempty"`
+	EventSourceId      string                      `protobuf:"bytes,3,opt,name=EventSourceId,proto3" json:"EventSourceId,omitempty"`
+	SequenceNumber     uint64                      `protobuf:"varint,4,opt,name=SequenceNumber,proto3" json:"SequenceNumber,omitempty"`
+	EventStreamType    string                      `protobuf:"bytes,5,opt,name=EventStreamType,proto3" json:"EventStreamType,omitempty"`
+	EventStreamId      string                      `protobuf:"bytes,6,opt,name=EventStreamId,proto3" json:"EventStreamId,omitempty"`
+	Occurred           *SerializableDateTimeOffset `protobuf:"bytes,7,opt,name=Occurred,proto3" json:"Occurred,omitempty"`
+	EventStore         string                      `protobuf:"bytes,8,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace          string                      `protobuf:"bytes,9,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	CorrelationId      *bcl.Guid                   `protobuf:"bytes,10,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	Causation          []*Causation                `protobuf:"bytes,11,rep,name=Causation,proto3" json:"Causation,omitempty"`
+	CausedBy           *Identity                   `protobuf:"bytes,12,opt,name=CausedBy,proto3" json:"CausedBy,omitempty"`
+	ObservationState   EventObservationState       `protobuf:"varint,13,opt,name=ObservationState,proto3,enum=Cratis.Chronicle.Contracts.Captures.EventObservationState" json:"ObservationState,omitempty"`
+	Tags               []string                    `protobuf:"bytes,14,rep,name=Tags,proto3" json:"Tags,omitempty"`
+	Hash               string                      `protobuf:"bytes,15,opt,name=Hash,proto3" json:"Hash,omitempty"`
+	Subject            string                      `protobuf:"bytes,16,opt,name=Subject,proto3" json:"Subject,omitempty"`
+	NamedTags          []*NamedTag                 `protobuf:"bytes,17,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
+	EventSource        string                      `protobuf:"bytes,18,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
+	AppendedGeneration uint32                      `protobuf:"varint,19,opt,name=AppendedGeneration,proto3" json:"AppendedGeneration,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *EventContext) Reset() {
@@ -1075,6 +1076,13 @@ func (x *EventContext) GetEventSource() string {
 		return x.EventSource
 	}
 	return ""
+}
+
+func (x *EventContext) GetAppendedGeneration() uint32 {
+	if x != nil {
+		return x.AppendedGeneration
+	}
+	return 0
 }
 
 type EventType struct {
@@ -2043,7 +2051,7 @@ const file_captures_proto_rawDesc = "" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12'\n" +
-	"\tCaptureId\x18\x02 \x01(\v2\t.bcl.GuidR\tCaptureId\"\xa2\a\n" +
+	"\tCaptureId\x18\x02 \x01(\v2\t.bcl.GuidR\tCaptureId\"\xd2\a\n" +
 	"\fEventContext\x12L\n" +
 	"\tEventType\x18\x01 \x01(\v2..Cratis.Chronicle.Contracts.Captures.EventTypeR\tEventType\x12(\n" +
 	"\x0fEventSourceType\x18\x02 \x01(\tR\x0fEventSourceType\x12$\n" +
@@ -2065,7 +2073,8 @@ const file_captures_proto_rawDesc = "" +
 	"\x04Hash\x18\x0f \x01(\tR\x04Hash\x12\x18\n" +
 	"\aSubject\x18\x10 \x01(\tR\aSubject\x12K\n" +
 	"\tNamedTags\x18\x11 \x03(\v2-.Cratis.Chronicle.Contracts.Captures.NamedTagR\tNamedTags\x12 \n" +
-	"\vEventSource\x18\x12 \x01(\tR\vEventSource\"Y\n" +
+	"\vEventSource\x18\x12 \x01(\tR\vEventSource\x12.\n" +
+	"\x12AppendedGeneration\x18\x13 \x01(\rR\x12AppendedGeneration\"Y\n" +
 	"\tEventType\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\tR\x02Id\x12\x1e\n" +
 	"\n" +

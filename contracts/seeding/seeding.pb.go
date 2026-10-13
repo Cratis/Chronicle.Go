@@ -10,6 +10,7 @@ import (
 	bcl "github.com/cratis/chronicle.go/contracts/bcl"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -75,15 +76,18 @@ func (ValidationResultSeverity) EnumDescriptor() ([]byte, []int) {
 }
 
 type AddSeedEntryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
-	Namespace     string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
-	EventSourceId string                 `protobuf:"bytes,3,opt,name=EventSourceId,proto3" json:"EventSourceId,omitempty"`
-	EventTypeId   string                 `protobuf:"bytes,4,opt,name=EventTypeId,proto3" json:"EventTypeId,omitempty"`
-	Content       string                 `protobuf:"bytes,5,opt,name=Content,proto3" json:"Content,omitempty"`
-	IsGlobal      bool                   `protobuf:"varint,6,opt,name=IsGlobal,proto3" json:"IsGlobal,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EventStore      string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace       string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	EventSourceId   string                 `protobuf:"bytes,3,opt,name=EventSourceId,proto3" json:"EventSourceId,omitempty"`
+	EventTypeId     string                 `protobuf:"bytes,4,opt,name=EventTypeId,proto3" json:"EventTypeId,omitempty"`
+	Content         string                 `protobuf:"bytes,5,opt,name=Content,proto3" json:"Content,omitempty"`
+	IsGlobal        bool                   `protobuf:"varint,6,opt,name=IsGlobal,proto3" json:"IsGlobal,omitempty"`
+	EventSourceType string                 `protobuf:"bytes,7,opt,name=EventSourceType,proto3" json:"EventSourceType,omitempty"`
+	EventStreamType string                 `protobuf:"bytes,8,opt,name=EventStreamType,proto3" json:"EventStreamType,omitempty"`
+	EventStreamId   string                 `protobuf:"bytes,9,opt,name=EventStreamId,proto3" json:"EventStreamId,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AddSeedEntryRequest) Reset() {
@@ -156,6 +160,27 @@ func (x *AddSeedEntryRequest) GetIsGlobal() bool {
 		return x.IsGlobal
 	}
 	return false
+}
+
+func (x *AddSeedEntryRequest) GetEventSourceType() string {
+	if x != nil {
+		return x.EventSourceType
+	}
+	return ""
+}
+
+func (x *AddSeedEntryRequest) GetEventStreamType() string {
+	if x != nil {
+		return x.EventStreamType
+	}
+	return ""
+}
+
+func (x *AddSeedEntryRequest) GetEventStreamId() string {
+	if x != nil {
+		return x.EventStreamId
+	}
+	return ""
 }
 
 type CommandResult struct {
@@ -242,6 +267,50 @@ func (x *CommandResult) GetAuthorizationFailureReason() string {
 	return ""
 }
 
+type EventSeedingSupportResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RoutingSupported bool                   `protobuf:"varint,1,opt,name=RoutingSupported,proto3" json:"RoutingSupported,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *EventSeedingSupportResponse) Reset() {
+	*x = EventSeedingSupportResponse{}
+	mi := &file_seeding_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventSeedingSupportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventSeedingSupportResponse) ProtoMessage() {}
+
+func (x *EventSeedingSupportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_seeding_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventSeedingSupportResponse.ProtoReflect.Descriptor instead.
+func (*EventSeedingSupportResponse) Descriptor() ([]byte, []int) {
+	return file_seeding_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *EventSeedingSupportResponse) GetRoutingSupported() bool {
+	if x != nil {
+		return x.RoutingSupported
+	}
+	return false
+}
+
 type EventSourceSeedEntries struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventSourceId string                 `protobuf:"bytes,1,opt,name=EventSourceId,proto3" json:"EventSourceId,omitempty"`
@@ -252,7 +321,7 @@ type EventSourceSeedEntries struct {
 
 func (x *EventSourceSeedEntries) Reset() {
 	*x = EventSourceSeedEntries{}
-	mi := &file_seeding_proto_msgTypes[2]
+	mi := &file_seeding_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -264,7 +333,7 @@ func (x *EventSourceSeedEntries) String() string {
 func (*EventSourceSeedEntries) ProtoMessage() {}
 
 func (x *EventSourceSeedEntries) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[2]
+	mi := &file_seeding_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -277,7 +346,7 @@ func (x *EventSourceSeedEntries) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventSourceSeedEntries.ProtoReflect.Descriptor instead.
 func (*EventSourceSeedEntries) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{2}
+	return file_seeding_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *EventSourceSeedEntries) GetEventSourceId() string {
@@ -304,7 +373,7 @@ type EventTypeSeedEntries struct {
 
 func (x *EventTypeSeedEntries) Reset() {
 	*x = EventTypeSeedEntries{}
-	mi := &file_seeding_proto_msgTypes[3]
+	mi := &file_seeding_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -316,7 +385,7 @@ func (x *EventTypeSeedEntries) String() string {
 func (*EventTypeSeedEntries) ProtoMessage() {}
 
 func (x *EventTypeSeedEntries) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[3]
+	mi := &file_seeding_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -329,7 +398,7 @@ func (x *EventTypeSeedEntries) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypeSeedEntries.ProtoReflect.Descriptor instead.
 func (*EventTypeSeedEntries) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{3}
+	return file_seeding_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *EventTypeSeedEntries) GetEventTypeId() string {
@@ -355,7 +424,7 @@ type GetGlobalSeedDataRequest struct {
 
 func (x *GetGlobalSeedDataRequest) Reset() {
 	*x = GetGlobalSeedDataRequest{}
-	mi := &file_seeding_proto_msgTypes[4]
+	mi := &file_seeding_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -367,7 +436,7 @@ func (x *GetGlobalSeedDataRequest) String() string {
 func (*GetGlobalSeedDataRequest) ProtoMessage() {}
 
 func (x *GetGlobalSeedDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[4]
+	mi := &file_seeding_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -380,7 +449,7 @@ func (x *GetGlobalSeedDataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGlobalSeedDataRequest.ProtoReflect.Descriptor instead.
 func (*GetGlobalSeedDataRequest) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{4}
+	return file_seeding_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetGlobalSeedDataRequest) GetEventStore() string {
@@ -400,7 +469,7 @@ type GetNamespaceSeedDataRequest struct {
 
 func (x *GetNamespaceSeedDataRequest) Reset() {
 	*x = GetNamespaceSeedDataRequest{}
-	mi := &file_seeding_proto_msgTypes[5]
+	mi := &file_seeding_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -412,7 +481,7 @@ func (x *GetNamespaceSeedDataRequest) String() string {
 func (*GetNamespaceSeedDataRequest) ProtoMessage() {}
 
 func (x *GetNamespaceSeedDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[5]
+	mi := &file_seeding_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -425,7 +494,7 @@ func (x *GetNamespaceSeedDataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamespaceSeedDataRequest.ProtoReflect.Descriptor instead.
 func (*GetNamespaceSeedDataRequest) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{5}
+	return file_seeding_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetNamespaceSeedDataRequest) GetEventStore() string {
@@ -453,7 +522,7 @@ type NamespacedSeedEntries struct {
 
 func (x *NamespacedSeedEntries) Reset() {
 	*x = NamespacedSeedEntries{}
-	mi := &file_seeding_proto_msgTypes[6]
+	mi := &file_seeding_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -465,7 +534,7 @@ func (x *NamespacedSeedEntries) String() string {
 func (*NamespacedSeedEntries) ProtoMessage() {}
 
 func (x *NamespacedSeedEntries) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[6]
+	mi := &file_seeding_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -478,7 +547,7 @@ func (x *NamespacedSeedEntries) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamespacedSeedEntries.ProtoReflect.Descriptor instead.
 func (*NamespacedSeedEntries) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{6}
+	return file_seeding_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *NamespacedSeedEntries) GetNamespace() string {
@@ -502,6 +571,90 @@ func (x *NamespacedSeedEntries) GetByEventSource() []*EventSourceSeedEntries {
 	return nil
 }
 
+type QueryResult_EventSeedingSupportResponse struct {
+	state               protoimpl.MessageState       `protogen:"open.v1"`
+	CorrelationId       *bcl.Guid                    `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized        bool                         `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults   []*ValidationResult          `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages   []string                     `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace string                       `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	Data                *EventSeedingSupportResponse `protobuf:"bytes,6,opt,name=Data,proto3" json:"Data,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *QueryResult_EventSeedingSupportResponse) Reset() {
+	*x = QueryResult_EventSeedingSupportResponse{}
+	mi := &file_seeding_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryResult_EventSeedingSupportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryResult_EventSeedingSupportResponse) ProtoMessage() {}
+
+func (x *QueryResult_EventSeedingSupportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_seeding_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryResult_EventSeedingSupportResponse.ProtoReflect.Descriptor instead.
+func (*QueryResult_EventSeedingSupportResponse) Descriptor() ([]byte, []int) {
+	return file_seeding_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *QueryResult_EventSeedingSupportResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *QueryResult_EventSeedingSupportResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *QueryResult_EventSeedingSupportResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *QueryResult_EventSeedingSupportResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *QueryResult_EventSeedingSupportResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *QueryResult_EventSeedingSupportResponse) GetData() *EventSeedingSupportResponse {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type QueryResult_SeedDataResponse struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	CorrelationId       *bcl.Guid              `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -516,7 +669,7 @@ type QueryResult_SeedDataResponse struct {
 
 func (x *QueryResult_SeedDataResponse) Reset() {
 	*x = QueryResult_SeedDataResponse{}
-	mi := &file_seeding_proto_msgTypes[7]
+	mi := &file_seeding_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -528,7 +681,7 @@ func (x *QueryResult_SeedDataResponse) String() string {
 func (*QueryResult_SeedDataResponse) ProtoMessage() {}
 
 func (x *QueryResult_SeedDataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[7]
+	mi := &file_seeding_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -541,7 +694,7 @@ func (x *QueryResult_SeedDataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryResult_SeedDataResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_SeedDataResponse) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{7}
+	return file_seeding_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *QueryResult_SeedDataResponse) GetCorrelationId() *bcl.Guid {
@@ -596,7 +749,7 @@ type SeedDataResponse struct {
 
 func (x *SeedDataResponse) Reset() {
 	*x = SeedDataResponse{}
-	mi := &file_seeding_proto_msgTypes[8]
+	mi := &file_seeding_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -608,7 +761,7 @@ func (x *SeedDataResponse) String() string {
 func (*SeedDataResponse) ProtoMessage() {}
 
 func (x *SeedDataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[8]
+	mi := &file_seeding_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -621,7 +774,7 @@ func (x *SeedDataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SeedDataResponse.ProtoReflect.Descriptor instead.
 func (*SeedDataResponse) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{8}
+	return file_seeding_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SeedDataResponse) GetByEventType() []*EventTypeSeedEntries {
@@ -650,7 +803,7 @@ type SeedEventsRequest struct {
 
 func (x *SeedEventsRequest) Reset() {
 	*x = SeedEventsRequest{}
-	mi := &file_seeding_proto_msgTypes[9]
+	mi := &file_seeding_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -662,7 +815,7 @@ func (x *SeedEventsRequest) String() string {
 func (*SeedEventsRequest) ProtoMessage() {}
 
 func (x *SeedEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[9]
+	mi := &file_seeding_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -675,7 +828,7 @@ func (x *SeedEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SeedEventsRequest.ProtoReflect.Descriptor instead.
 func (*SeedEventsRequest) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{9}
+	return file_seeding_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SeedEventsRequest) GetEventStore() string {
@@ -707,18 +860,21 @@ func (x *SeedEventsRequest) GetNamespacedEntries() []*NamespacedSeedEntries {
 }
 
 type SeedingEntry struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventSourceId string                 `protobuf:"bytes,1,opt,name=EventSourceId,proto3" json:"EventSourceId,omitempty"`
-	EventTypeId   string                 `protobuf:"bytes,2,opt,name=EventTypeId,proto3" json:"EventTypeId,omitempty"`
-	Content       string                 `protobuf:"bytes,3,opt,name=Content,proto3" json:"Content,omitempty"`
-	Tags          []string               `protobuf:"bytes,4,rep,name=Tags,proto3" json:"Tags,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EventSourceId   string                 `protobuf:"bytes,1,opt,name=EventSourceId,proto3" json:"EventSourceId,omitempty"`
+	EventTypeId     string                 `protobuf:"bytes,2,opt,name=EventTypeId,proto3" json:"EventTypeId,omitempty"`
+	Content         string                 `protobuf:"bytes,3,opt,name=Content,proto3" json:"Content,omitempty"`
+	Tags            []string               `protobuf:"bytes,4,rep,name=Tags,proto3" json:"Tags,omitempty"`
+	EventSourceType string                 `protobuf:"bytes,5,opt,name=EventSourceType,proto3" json:"EventSourceType,omitempty"`
+	EventStreamType string                 `protobuf:"bytes,6,opt,name=EventStreamType,proto3" json:"EventStreamType,omitempty"`
+	EventStreamId   string                 `protobuf:"bytes,7,opt,name=EventStreamId,proto3" json:"EventStreamId,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SeedingEntry) Reset() {
 	*x = SeedingEntry{}
-	mi := &file_seeding_proto_msgTypes[10]
+	mi := &file_seeding_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -730,7 +886,7 @@ func (x *SeedingEntry) String() string {
 func (*SeedingEntry) ProtoMessage() {}
 
 func (x *SeedingEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[10]
+	mi := &file_seeding_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -743,7 +899,7 @@ func (x *SeedingEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SeedingEntry.ProtoReflect.Descriptor instead.
 func (*SeedingEntry) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{10}
+	return file_seeding_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SeedingEntry) GetEventSourceId() string {
@@ -774,6 +930,27 @@ func (x *SeedingEntry) GetTags() []string {
 	return nil
 }
 
+func (x *SeedingEntry) GetEventSourceType() string {
+	if x != nil {
+		return x.EventSourceType
+	}
+	return ""
+}
+
+func (x *SeedingEntry) GetEventStreamType() string {
+	if x != nil {
+		return x.EventStreamType
+	}
+	return ""
+}
+
+func (x *SeedingEntry) GetEventStreamId() string {
+	if x != nil {
+		return x.EventStreamId
+	}
+	return ""
+}
+
 type ValidationResult struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Severity      ValidationResultSeverity `protobuf:"varint,1,opt,name=Severity,proto3,enum=Cratis.Chronicle.Contracts.Seeding.ValidationResultSeverity" json:"Severity,omitempty"` // default value could not be applied: Error
@@ -785,7 +962,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_seeding_proto_msgTypes[11]
+	mi := &file_seeding_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -797,7 +974,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_seeding_proto_msgTypes[11]
+	mi := &file_seeding_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -810,7 +987,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_seeding_proto_rawDescGZIP(), []int{11}
+	return file_seeding_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -838,7 +1015,7 @@ var File_seeding_proto protoreflect.FileDescriptor
 
 const file_seeding_proto_rawDesc = "" +
 	"\n" +
-	"\rseeding.proto\x12\"Cratis.Chronicle.Contracts.Seeding\x1a\x16protobuf-net/bcl.proto\"\xd1\x01\n" +
+	"\rseeding.proto\x12\"Cratis.Chronicle.Contracts.Seeding\x1a\x1bgoogle/protobuf/empty.proto\x1a\x16protobuf-net/bcl.proto\"\xcb\x02\n" +
 	"\x13AddSeedEntryRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -847,14 +1024,19 @@ const file_seeding_proto_rawDesc = "" +
 	"\rEventSourceId\x18\x03 \x01(\tR\rEventSourceId\x12 \n" +
 	"\vEventTypeId\x18\x04 \x01(\tR\vEventTypeId\x12\x18\n" +
 	"\aContent\x18\x05 \x01(\tR\aContent\x12\x1a\n" +
-	"\bIsGlobal\x18\x06 \x01(\bR\bIsGlobal\"\xe8\x02\n" +
+	"\bIsGlobal\x18\x06 \x01(\bR\bIsGlobal\x12(\n" +
+	"\x0fEventSourceType\x18\a \x01(\tR\x0fEventSourceType\x12(\n" +
+	"\x0fEventStreamType\x18\b \x01(\tR\x0fEventStreamType\x12$\n" +
+	"\rEventStreamId\x18\t \x01(\tR\rEventStreamId\"\xe8\x02\n" +
 	"\rCommandResult\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
 	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12b\n" +
 	"\x11ValidationResults\x18\x03 \x03(\v24.Cratis.Chronicle.Contracts.Seeding.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
-	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"\x8a\x01\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"I\n" +
+	"\x1bEventSeedingSupportResponse\x12*\n" +
+	"\x10RoutingSupported\x18\x01 \x01(\bR\x10RoutingSupported\"\x8a\x01\n" +
 	"\x16EventSourceSeedEntries\x12$\n" +
 	"\rEventSourceId\x18\x01 \x01(\tR\rEventSourceId\x12J\n" +
 	"\aEntries\x18\x02 \x03(\v20.Cratis.Chronicle.Contracts.Seeding.SeedingEntryR\aEntries\"\x84\x01\n" +
@@ -873,7 +1055,14 @@ const file_seeding_proto_rawDesc = "" +
 	"\x15NamespacedSeedEntries\x12\x1c\n" +
 	"\tNamespace\x18\x01 \x01(\tR\tNamespace\x12Z\n" +
 	"\vByEventType\x18\x02 \x03(\v28.Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntriesR\vByEventType\x12`\n" +
-	"\rByEventSource\x18\x03 \x03(\v2:.Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntriesR\rByEventSource\"\x81\x03\n" +
+	"\rByEventSource\x18\x03 \x03(\v2:.Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntriesR\rByEventSource\"\x97\x03\n" +
+	"'QueryResult_EventSeedingSupportResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12b\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v24.Cratis.Chronicle.Contracts.Seeding.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12S\n" +
+	"\x04Data\x18\x06 \x01(\v2?.Cratis.Chronicle.Contracts.Seeding.EventSeedingSupportResponseR\x04Data\"\x81\x03\n" +
 	"\x1cQueryResult_SeedDataResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
 	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12b\n" +
@@ -890,12 +1079,15 @@ const file_seeding_proto_rawDesc = "" +
 	"EventStore\x12f\n" +
 	"\x11GlobalByEventType\x18\x02 \x03(\v28.Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntriesR\x11GlobalByEventType\x12l\n" +
 	"\x13GlobalByEventSource\x18\x03 \x03(\v2:.Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntriesR\x13GlobalByEventSource\x12g\n" +
-	"\x11NamespacedEntries\x18\x04 \x03(\v29.Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntriesR\x11NamespacedEntries\"\x84\x01\n" +
+	"\x11NamespacedEntries\x18\x04 \x03(\v29.Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntriesR\x11NamespacedEntries\"\xfe\x01\n" +
 	"\fSeedingEntry\x12$\n" +
 	"\rEventSourceId\x18\x01 \x01(\tR\rEventSourceId\x12 \n" +
 	"\vEventTypeId\x18\x02 \x01(\tR\vEventTypeId\x12\x18\n" +
 	"\aContent\x18\x03 \x01(\tR\aContent\x12\x12\n" +
-	"\x04Tags\x18\x04 \x03(\tR\x04Tags\"\xa0\x01\n" +
+	"\x04Tags\x18\x04 \x03(\tR\x04Tags\x12(\n" +
+	"\x0fEventSourceType\x18\x05 \x01(\tR\x0fEventSourceType\x12(\n" +
+	"\x0fEventStreamType\x18\x06 \x01(\tR\x0fEventStreamType\x12$\n" +
+	"\rEventStreamId\x18\a \x01(\tR\rEventStreamId\"\xa0\x01\n" +
 	"\x10ValidationResult\x12X\n" +
 	"\bSeverity\x18\x01 \x01(\x0e2<.Cratis.Chronicle.Contracts.Seeding.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
@@ -904,11 +1096,12 @@ const file_seeding_proto_rawDesc = "" +
 	"\aUnknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\xb4\x04\n" +
+	"\x05Error\x10\x032\xae\x05\n" +
 	"\fEventSeeding\x12z\n" +
 	"\fAddSeedEntry\x127.Cratis.Chronicle.Contracts.Seeding.AddSeedEntryRequest\x1a1.Cratis.Chronicle.Contracts.Seeding.CommandResult\x12\x93\x01\n" +
 	"\x11GetGlobalSeedData\x12<.Cratis.Chronicle.Contracts.Seeding.GetGlobalSeedDataRequest\x1a@.Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse\x12\x99\x01\n" +
-	"\x14GetNamespaceSeedData\x12?.Cratis.Chronicle.Contracts.Seeding.GetNamespaceSeedDataRequest\x1a@.Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse\x12v\n" +
+	"\x14GetNamespaceSeedData\x12?.Cratis.Chronicle.Contracts.Seeding.GetNamespaceSeedDataRequest\x1a@.Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse\x12x\n" +
+	"\x11GetSeedingSupport\x12\x16.google.protobuf.Empty\x1aK.Cratis.Chronicle.Contracts.Seeding.QueryResult_EventSeedingSupportResponse\x12v\n" +
 	"\n" +
 	"SeedEvents\x125.Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest\x1a1.Cratis.Chronicle.Contracts.Seeding.CommandResultB\x94\x02\n" +
 	"&com.Cratis.Chronicle.Contracts.SeedingB\fSeedingProtoP\x01Z0github.com/cratis/chronicle.go/contracts/seeding\xa2\x02\x04CCCS\xaa\x02\"Cratis.Chronicle.Contracts.Seeding\xca\x02\"Cratis\\Chronicle\\Contracts\\Seeding\xe2\x02.Cratis\\Chronicle\\Contracts\\Seeding\\GPBMetadata\xea\x02%Cratis::Chronicle::Contracts::Seedingb\x06proto3"
@@ -926,52 +1119,60 @@ func file_seeding_proto_rawDescGZIP() []byte {
 }
 
 var file_seeding_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_seeding_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_seeding_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_seeding_proto_goTypes = []any{
-	(ValidationResultSeverity)(0),        // 0: Cratis.Chronicle.Contracts.Seeding.ValidationResultSeverity
-	(*AddSeedEntryRequest)(nil),          // 1: Cratis.Chronicle.Contracts.Seeding.AddSeedEntryRequest
-	(*CommandResult)(nil),                // 2: Cratis.Chronicle.Contracts.Seeding.CommandResult
-	(*EventSourceSeedEntries)(nil),       // 3: Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries
-	(*EventTypeSeedEntries)(nil),         // 4: Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries
-	(*GetGlobalSeedDataRequest)(nil),     // 5: Cratis.Chronicle.Contracts.Seeding.GetGlobalSeedDataRequest
-	(*GetNamespaceSeedDataRequest)(nil),  // 6: Cratis.Chronicle.Contracts.Seeding.GetNamespaceSeedDataRequest
-	(*NamespacedSeedEntries)(nil),        // 7: Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries
-	(*QueryResult_SeedDataResponse)(nil), // 8: Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse
-	(*SeedDataResponse)(nil),             // 9: Cratis.Chronicle.Contracts.Seeding.SeedDataResponse
-	(*SeedEventsRequest)(nil),            // 10: Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest
-	(*SeedingEntry)(nil),                 // 11: Cratis.Chronicle.Contracts.Seeding.SeedingEntry
-	(*ValidationResult)(nil),             // 12: Cratis.Chronicle.Contracts.Seeding.ValidationResult
-	(*bcl.Guid)(nil),                     // 13: bcl.Guid
+	(ValidationResultSeverity)(0),                   // 0: Cratis.Chronicle.Contracts.Seeding.ValidationResultSeverity
+	(*AddSeedEntryRequest)(nil),                     // 1: Cratis.Chronicle.Contracts.Seeding.AddSeedEntryRequest
+	(*CommandResult)(nil),                           // 2: Cratis.Chronicle.Contracts.Seeding.CommandResult
+	(*EventSeedingSupportResponse)(nil),             // 3: Cratis.Chronicle.Contracts.Seeding.EventSeedingSupportResponse
+	(*EventSourceSeedEntries)(nil),                  // 4: Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries
+	(*EventTypeSeedEntries)(nil),                    // 5: Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries
+	(*GetGlobalSeedDataRequest)(nil),                // 6: Cratis.Chronicle.Contracts.Seeding.GetGlobalSeedDataRequest
+	(*GetNamespaceSeedDataRequest)(nil),             // 7: Cratis.Chronicle.Contracts.Seeding.GetNamespaceSeedDataRequest
+	(*NamespacedSeedEntries)(nil),                   // 8: Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries
+	(*QueryResult_EventSeedingSupportResponse)(nil), // 9: Cratis.Chronicle.Contracts.Seeding.QueryResult_EventSeedingSupportResponse
+	(*QueryResult_SeedDataResponse)(nil),            // 10: Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse
+	(*SeedDataResponse)(nil),                        // 11: Cratis.Chronicle.Contracts.Seeding.SeedDataResponse
+	(*SeedEventsRequest)(nil),                       // 12: Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest
+	(*SeedingEntry)(nil),                            // 13: Cratis.Chronicle.Contracts.Seeding.SeedingEntry
+	(*ValidationResult)(nil),                        // 14: Cratis.Chronicle.Contracts.Seeding.ValidationResult
+	(*bcl.Guid)(nil),                                // 15: bcl.Guid
+	(*emptypb.Empty)(nil),                           // 16: google.protobuf.Empty
 }
 var file_seeding_proto_depIdxs = []int32{
-	13, // 0: Cratis.Chronicle.Contracts.Seeding.CommandResult.CorrelationId:type_name -> bcl.Guid
-	12, // 1: Cratis.Chronicle.Contracts.Seeding.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Seeding.ValidationResult
-	11, // 2: Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries.Entries:type_name -> Cratis.Chronicle.Contracts.Seeding.SeedingEntry
-	11, // 3: Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries.Entries:type_name -> Cratis.Chronicle.Contracts.Seeding.SeedingEntry
-	4,  // 4: Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries.ByEventType:type_name -> Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries
-	3,  // 5: Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries.ByEventSource:type_name -> Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries
-	13, // 6: Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse.CorrelationId:type_name -> bcl.Guid
-	12, // 7: Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Seeding.ValidationResult
-	9,  // 8: Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse.Data:type_name -> Cratis.Chronicle.Contracts.Seeding.SeedDataResponse
-	4,  // 9: Cratis.Chronicle.Contracts.Seeding.SeedDataResponse.ByEventType:type_name -> Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries
-	3,  // 10: Cratis.Chronicle.Contracts.Seeding.SeedDataResponse.ByEventSource:type_name -> Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries
-	4,  // 11: Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest.GlobalByEventType:type_name -> Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries
-	3,  // 12: Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest.GlobalByEventSource:type_name -> Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries
-	7,  // 13: Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest.NamespacedEntries:type_name -> Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries
-	0,  // 14: Cratis.Chronicle.Contracts.Seeding.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Seeding.ValidationResultSeverity
-	1,  // 15: Cratis.Chronicle.Contracts.Seeding.EventSeeding.AddSeedEntry:input_type -> Cratis.Chronicle.Contracts.Seeding.AddSeedEntryRequest
-	5,  // 16: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetGlobalSeedData:input_type -> Cratis.Chronicle.Contracts.Seeding.GetGlobalSeedDataRequest
-	6,  // 17: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetNamespaceSeedData:input_type -> Cratis.Chronicle.Contracts.Seeding.GetNamespaceSeedDataRequest
-	10, // 18: Cratis.Chronicle.Contracts.Seeding.EventSeeding.SeedEvents:input_type -> Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest
-	2,  // 19: Cratis.Chronicle.Contracts.Seeding.EventSeeding.AddSeedEntry:output_type -> Cratis.Chronicle.Contracts.Seeding.CommandResult
-	8,  // 20: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetGlobalSeedData:output_type -> Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse
-	8,  // 21: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetNamespaceSeedData:output_type -> Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse
-	2,  // 22: Cratis.Chronicle.Contracts.Seeding.EventSeeding.SeedEvents:output_type -> Cratis.Chronicle.Contracts.Seeding.CommandResult
-	19, // [19:23] is the sub-list for method output_type
-	15, // [15:19] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	15, // 0: Cratis.Chronicle.Contracts.Seeding.CommandResult.CorrelationId:type_name -> bcl.Guid
+	14, // 1: Cratis.Chronicle.Contracts.Seeding.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Seeding.ValidationResult
+	13, // 2: Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries.Entries:type_name -> Cratis.Chronicle.Contracts.Seeding.SeedingEntry
+	13, // 3: Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries.Entries:type_name -> Cratis.Chronicle.Contracts.Seeding.SeedingEntry
+	5,  // 4: Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries.ByEventType:type_name -> Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries
+	4,  // 5: Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries.ByEventSource:type_name -> Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries
+	15, // 6: Cratis.Chronicle.Contracts.Seeding.QueryResult_EventSeedingSupportResponse.CorrelationId:type_name -> bcl.Guid
+	14, // 7: Cratis.Chronicle.Contracts.Seeding.QueryResult_EventSeedingSupportResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Seeding.ValidationResult
+	3,  // 8: Cratis.Chronicle.Contracts.Seeding.QueryResult_EventSeedingSupportResponse.Data:type_name -> Cratis.Chronicle.Contracts.Seeding.EventSeedingSupportResponse
+	15, // 9: Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse.CorrelationId:type_name -> bcl.Guid
+	14, // 10: Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Seeding.ValidationResult
+	11, // 11: Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse.Data:type_name -> Cratis.Chronicle.Contracts.Seeding.SeedDataResponse
+	5,  // 12: Cratis.Chronicle.Contracts.Seeding.SeedDataResponse.ByEventType:type_name -> Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries
+	4,  // 13: Cratis.Chronicle.Contracts.Seeding.SeedDataResponse.ByEventSource:type_name -> Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries
+	5,  // 14: Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest.GlobalByEventType:type_name -> Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries
+	4,  // 15: Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest.GlobalByEventSource:type_name -> Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries
+	8,  // 16: Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest.NamespacedEntries:type_name -> Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries
+	0,  // 17: Cratis.Chronicle.Contracts.Seeding.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Seeding.ValidationResultSeverity
+	1,  // 18: Cratis.Chronicle.Contracts.Seeding.EventSeeding.AddSeedEntry:input_type -> Cratis.Chronicle.Contracts.Seeding.AddSeedEntryRequest
+	6,  // 19: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetGlobalSeedData:input_type -> Cratis.Chronicle.Contracts.Seeding.GetGlobalSeedDataRequest
+	7,  // 20: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetNamespaceSeedData:input_type -> Cratis.Chronicle.Contracts.Seeding.GetNamespaceSeedDataRequest
+	16, // 21: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetSeedingSupport:input_type -> google.protobuf.Empty
+	12, // 22: Cratis.Chronicle.Contracts.Seeding.EventSeeding.SeedEvents:input_type -> Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest
+	2,  // 23: Cratis.Chronicle.Contracts.Seeding.EventSeeding.AddSeedEntry:output_type -> Cratis.Chronicle.Contracts.Seeding.CommandResult
+	10, // 24: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetGlobalSeedData:output_type -> Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse
+	10, // 25: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetNamespaceSeedData:output_type -> Cratis.Chronicle.Contracts.Seeding.QueryResult_SeedDataResponse
+	9,  // 26: Cratis.Chronicle.Contracts.Seeding.EventSeeding.GetSeedingSupport:output_type -> Cratis.Chronicle.Contracts.Seeding.QueryResult_EventSeedingSupportResponse
+	2,  // 27: Cratis.Chronicle.Contracts.Seeding.EventSeeding.SeedEvents:output_type -> Cratis.Chronicle.Contracts.Seeding.CommandResult
+	23, // [23:28] is the sub-list for method output_type
+	18, // [18:23] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_seeding_proto_init() }
@@ -985,7 +1186,7 @@ func file_seeding_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_seeding_proto_rawDesc), len(file_seeding_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   12,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

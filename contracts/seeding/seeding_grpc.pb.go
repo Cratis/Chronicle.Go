@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -22,6 +23,7 @@ const (
 	EventSeeding_AddSeedEntry_FullMethodName         = "/Cratis.Chronicle.Contracts.Seeding.EventSeeding/AddSeedEntry"
 	EventSeeding_GetGlobalSeedData_FullMethodName    = "/Cratis.Chronicle.Contracts.Seeding.EventSeeding/GetGlobalSeedData"
 	EventSeeding_GetNamespaceSeedData_FullMethodName = "/Cratis.Chronicle.Contracts.Seeding.EventSeeding/GetNamespaceSeedData"
+	EventSeeding_GetSeedingSupport_FullMethodName    = "/Cratis.Chronicle.Contracts.Seeding.EventSeeding/GetSeedingSupport"
 	EventSeeding_SeedEvents_FullMethodName           = "/Cratis.Chronicle.Contracts.Seeding.EventSeeding/SeedEvents"
 )
 
@@ -32,6 +34,7 @@ type EventSeedingClient interface {
 	AddSeedEntry(ctx context.Context, in *AddSeedEntryRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	GetGlobalSeedData(ctx context.Context, in *GetGlobalSeedDataRequest, opts ...grpc.CallOption) (*QueryResult_SeedDataResponse, error)
 	GetNamespaceSeedData(ctx context.Context, in *GetNamespaceSeedDataRequest, opts ...grpc.CallOption) (*QueryResult_SeedDataResponse, error)
+	GetSeedingSupport(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_EventSeedingSupportResponse, error)
 	SeedEvents(ctx context.Context, in *SeedEventsRequest, opts ...grpc.CallOption) (*CommandResult, error)
 }
 
@@ -73,6 +76,16 @@ func (c *eventSeedingClient) GetNamespaceSeedData(ctx context.Context, in *GetNa
 	return out, nil
 }
 
+func (c *eventSeedingClient) GetSeedingSupport(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_EventSeedingSupportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_EventSeedingSupportResponse)
+	err := c.cc.Invoke(ctx, EventSeeding_GetSeedingSupport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventSeedingClient) SeedEvents(ctx context.Context, in *SeedEventsRequest, opts ...grpc.CallOption) (*CommandResult, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CommandResult)
@@ -90,6 +103,7 @@ type EventSeedingServer interface {
 	AddSeedEntry(context.Context, *AddSeedEntryRequest) (*CommandResult, error)
 	GetGlobalSeedData(context.Context, *GetGlobalSeedDataRequest) (*QueryResult_SeedDataResponse, error)
 	GetNamespaceSeedData(context.Context, *GetNamespaceSeedDataRequest) (*QueryResult_SeedDataResponse, error)
+	GetSeedingSupport(context.Context, *emptypb.Empty) (*QueryResult_EventSeedingSupportResponse, error)
 	SeedEvents(context.Context, *SeedEventsRequest) (*CommandResult, error)
 	mustEmbedUnimplementedEventSeedingServer()
 }
@@ -109,6 +123,9 @@ func (UnimplementedEventSeedingServer) GetGlobalSeedData(context.Context, *GetGl
 }
 func (UnimplementedEventSeedingServer) GetNamespaceSeedData(context.Context, *GetNamespaceSeedDataRequest) (*QueryResult_SeedDataResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetNamespaceSeedData not implemented")
+}
+func (UnimplementedEventSeedingServer) GetSeedingSupport(context.Context, *emptypb.Empty) (*QueryResult_EventSeedingSupportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSeedingSupport not implemented")
 }
 func (UnimplementedEventSeedingServer) SeedEvents(context.Context, *SeedEventsRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method SeedEvents not implemented")
@@ -188,6 +205,24 @@ func _EventSeeding_GetNamespaceSeedData_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventSeeding_GetSeedingSupport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSeedingServer).GetSeedingSupport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSeeding_GetSeedingSupport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSeedingServer).GetSeedingSupport(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventSeeding_SeedEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SeedEventsRequest)
 	if err := dec(in); err != nil {
@@ -224,6 +259,10 @@ var EventSeeding_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNamespaceSeedData",
 			Handler:    _EventSeeding_GetNamespaceSeedData_Handler,
+		},
+		{
+			MethodName: "GetSeedingSupport",
+			Handler:    _EventSeeding_GetSeedingSupport_Handler,
 		},
 		{
 			MethodName: "SeedEvents",

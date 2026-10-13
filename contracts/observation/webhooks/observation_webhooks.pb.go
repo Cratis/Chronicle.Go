@@ -1038,6 +1038,8 @@ type WebhookDefinition struct {
 	Target          *WebhookTarget         `protobuf:"bytes,4,opt,name=Target,proto3" json:"Target,omitempty"`
 	IsReplayable    bool                   `protobuf:"varint,5,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"` // default value could not be applied: True
 	IsActive        bool                   `protobuf:"varint,6,opt,name=IsActive,proto3" json:"IsActive,omitempty"`         // default value could not be applied: True
+	IsNotReplayable bool                   `protobuf:"varint,7,opt,name=IsNotReplayable,proto3" json:"IsNotReplayable,omitempty"`
+	IsInactive      bool                   `protobuf:"varint,8,opt,name=IsInactive,proto3" json:"IsInactive,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1110,6 +1112,20 @@ func (x *WebhookDefinition) GetIsReplayable() bool {
 func (x *WebhookDefinition) GetIsActive() bool {
 	if x != nil {
 		return x.IsActive
+	}
+	return false
+}
+
+func (x *WebhookDefinition) GetIsNotReplayable() bool {
+	if x != nil {
+		return x.IsNotReplayable
+	}
+	return false
+}
+
+func (x *WebhookDefinition) GetIsInactive() bool {
+	if x != nil {
+		return x.IsInactive
 	}
 	return false
 }
@@ -1370,7 +1386,7 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\x10ValidationResult\x12e\n" +
 	"\bSeverity\x18\x01 \x01(\x0e2I.Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
-	"\aMembers\x18\x03 \x03(\tR\aMembers\"\xd1\x02\n" +
+	"\aMembers\x18\x03 \x03(\tR\aMembers\"\x9b\x03\n" +
 	"\x11WebhookDefinition\x12(\n" +
 	"\x0fEventSequenceId\x18\x01 \x01(\tR\x0fEventSequenceId\x12\x1e\n" +
 	"\n" +
@@ -1381,7 +1397,11 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"EventTypes\x12V\n" +
 	"\x06Target\x18\x04 \x01(\v2>.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTargetR\x06Target\x12\"\n" +
 	"\fIsReplayable\x18\x05 \x01(\bR\fIsReplayable\x12\x1a\n" +
-	"\bIsActive\x18\x06 \x01(\bR\bIsActive\"\xbe\x04\n" +
+	"\bIsActive\x18\x06 \x01(\bR\bIsActive\x12(\n" +
+	"\x0fIsNotReplayable\x18\a \x01(\bR\x0fIsNotReplayable\x12\x1e\n" +
+	"\n" +
+	"IsInactive\x18\b \x01(\bR\n" +
+	"IsInactive\"\xbe\x04\n" +
 	"\x16WebhookDetailsResponse\x12\x1e\n" +
 	"\n" +
 	"Identifier\x18\x01 \x01(\tR\n" +
