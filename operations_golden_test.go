@@ -76,6 +76,13 @@ func TestOperationsMatchHandDerivedCSharpGolden(t *testing.T) {
 			}
 			return err
 		}},
+		{"FastForward", &oc.FastForward{EventStore: "store", Namespace: "tenant", ObserverId: "orders", EventSequenceId: "source-sequence"}, &oc.FastForwardResponse{Outcome: oc.FastForwardOutcome_FastForwarded, PreviousNextEventSequenceNumber: 5, NextEventSequenceNumber: 101}, func(o *observation.Service, _ *jobs.Service) error {
+			v, err := o.FastForward(ctx, "orders", "source-sequence")
+			if v.Outcome != observation.FastForwarded || v.PreviousNext != 5 || v.Next != 101 {
+				t.Fatal(v)
+			}
+			return err
+		}},
 		{"Replay", &oc.Replay{EventStore: "store", Namespace: "tenant", ObserverId: "orders", EventSequenceId: "source-sequence"}, &oc.ReplayResponse{JobId: operationJobID.String()}, func(o *observation.Service, _ *jobs.Service) error {
 			v, err := o.Replay(ctx, "orders", "source-sequence")
 			if v.ID() != operationJobID {

@@ -30,6 +30,7 @@ const (
 	ConstraintType_UniqueEventType ConstraintType = 2
 	ConstraintType_Schema          ConstraintType = 3
 	ConstraintType_StreamClosed    ConstraintType = 4
+	ConstraintType_ClosesStream    ConstraintType = 5
 )
 
 // Enum value maps for ConstraintType.
@@ -40,6 +41,7 @@ var (
 		2: "UniqueEventType",
 		3: "Schema",
 		4: "StreamClosed",
+		5: "ClosesStream",
 	}
 	ConstraintType_value = map[string]int32{
 		"Unknown":         0,
@@ -47,6 +49,7 @@ var (
 		"UniqueEventType": 2,
 		"Schema":          3,
 		"StreamClosed":    4,
+		"ClosesStream":    5,
 	}
 )
 
@@ -77,6 +80,120 @@ func (ConstraintType) EnumDescriptor() ([]byte, []int) {
 	return file_events_constraints_proto_rawDescGZIP(), []int{0}
 }
 
+type UniqueConstraintMode int32
+
+const (
+	UniqueConstraintMode_PerEventSource UniqueConstraintMode = 0
+	UniqueConstraintMode_PerValue       UniqueConstraintMode = 1
+)
+
+// Enum value maps for UniqueConstraintMode.
+var (
+	UniqueConstraintMode_name = map[int32]string{
+		0: "PerEventSource",
+		1: "PerValue",
+	}
+	UniqueConstraintMode_value = map[string]int32{
+		"PerEventSource": 0,
+		"PerValue":       1,
+	}
+)
+
+func (x UniqueConstraintMode) Enum() *UniqueConstraintMode {
+	p := new(UniqueConstraintMode)
+	*p = x
+	return p
+}
+
+func (x UniqueConstraintMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (UniqueConstraintMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_events_constraints_proto_enumTypes[1].Descriptor()
+}
+
+func (UniqueConstraintMode) Type() protoreflect.EnumType {
+	return &file_events_constraints_proto_enumTypes[1]
+}
+
+func (x UniqueConstraintMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use UniqueConstraintMode.Descriptor instead.
+func (UniqueConstraintMode) EnumDescriptor() ([]byte, []int) {
+	return file_events_constraints_proto_rawDescGZIP(), []int{1}
+}
+
+type ClosesStreamConstraintDefinition struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	EventTypeIds      []string               `protobuf:"bytes,1,rep,name=EventTypeIds,proto3" json:"EventTypeIds,omitempty"`
+	Dimensions        uint32                 `protobuf:"varint,2,opt,name=Dimensions,proto3" json:"Dimensions,omitempty"`
+	ReopenedBy        []string               `protobuf:"bytes,3,rep,name=ReopenedBy,proto3" json:"ReopenedBy,omitempty"`
+	EventStreamIdFrom string                 `protobuf:"bytes,4,opt,name=EventStreamIdFrom,proto3" json:"EventStreamIdFrom,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ClosesStreamConstraintDefinition) Reset() {
+	*x = ClosesStreamConstraintDefinition{}
+	mi := &file_events_constraints_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClosesStreamConstraintDefinition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClosesStreamConstraintDefinition) ProtoMessage() {}
+
+func (x *ClosesStreamConstraintDefinition) ProtoReflect() protoreflect.Message {
+	mi := &file_events_constraints_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClosesStreamConstraintDefinition.ProtoReflect.Descriptor instead.
+func (*ClosesStreamConstraintDefinition) Descriptor() ([]byte, []int) {
+	return file_events_constraints_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ClosesStreamConstraintDefinition) GetEventTypeIds() []string {
+	if x != nil {
+		return x.EventTypeIds
+	}
+	return nil
+}
+
+func (x *ClosesStreamConstraintDefinition) GetDimensions() uint32 {
+	if x != nil {
+		return x.Dimensions
+	}
+	return 0
+}
+
+func (x *ClosesStreamConstraintDefinition) GetReopenedBy() []string {
+	if x != nil {
+		return x.ReopenedBy
+	}
+	return nil
+}
+
+func (x *ClosesStreamConstraintDefinition) GetEventStreamIdFrom() string {
+	if x != nil {
+		return x.EventStreamIdFrom
+	}
+	return ""
+}
+
 type Constraint struct {
 	state          protoimpl.MessageState                                                `protogen:"open.v1"`
 	Name           string                                                                `protobuf:"bytes,1,opt,name=Name,proto3" json:"Name,omitempty"`
@@ -85,13 +202,14 @@ type Constraint struct {
 	Definition     *OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition `protobuf:"bytes,4,opt,name=Definition,proto3" json:"Definition,omitempty"`
 	Scope          *ConstraintScope                                                      `protobuf:"bytes,5,opt,name=Scope,proto3" json:"Scope,omitempty"`
 	EventSequences []string                                                              `protobuf:"bytes,6,rep,name=EventSequences,proto3" json:"EventSequences,omitempty"`
+	ClosesStream   *ClosesStreamConstraintDefinition                                     `protobuf:"bytes,7,opt,name=ClosesStream,proto3" json:"ClosesStream,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Constraint) Reset() {
 	*x = Constraint{}
-	mi := &file_events_constraints_proto_msgTypes[0]
+	mi := &file_events_constraints_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -103,7 +221,7 @@ func (x *Constraint) String() string {
 func (*Constraint) ProtoMessage() {}
 
 func (x *Constraint) ProtoReflect() protoreflect.Message {
-	mi := &file_events_constraints_proto_msgTypes[0]
+	mi := &file_events_constraints_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -116,7 +234,7 @@ func (x *Constraint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Constraint.ProtoReflect.Descriptor instead.
 func (*Constraint) Descriptor() ([]byte, []int) {
-	return file_events_constraints_proto_rawDescGZIP(), []int{0}
+	return file_events_constraints_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Constraint) GetName() string {
@@ -161,6 +279,13 @@ func (x *Constraint) GetEventSequences() []string {
 	return nil
 }
 
+func (x *Constraint) GetClosesStream() *ClosesStreamConstraintDefinition {
+	if x != nil {
+		return x.ClosesStream
+	}
+	return nil
+}
+
 type ConstraintScope struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	EventSourceType string                 `protobuf:"bytes,1,opt,name=EventSourceType,proto3" json:"EventSourceType,omitempty"`
@@ -172,7 +297,7 @@ type ConstraintScope struct {
 
 func (x *ConstraintScope) Reset() {
 	*x = ConstraintScope{}
-	mi := &file_events_constraints_proto_msgTypes[1]
+	mi := &file_events_constraints_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -184,7 +309,7 @@ func (x *ConstraintScope) String() string {
 func (*ConstraintScope) ProtoMessage() {}
 
 func (x *ConstraintScope) ProtoReflect() protoreflect.Message {
-	mi := &file_events_constraints_proto_msgTypes[1]
+	mi := &file_events_constraints_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -197,7 +322,7 @@ func (x *ConstraintScope) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConstraintScope.ProtoReflect.Descriptor instead.
 func (*ConstraintScope) Descriptor() ([]byte, []int) {
-	return file_events_constraints_proto_rawDescGZIP(), []int{1}
+	return file_events_constraints_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ConstraintScope) GetEventSourceType() string {
@@ -231,7 +356,7 @@ type OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition struct
 
 func (x *OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition) Reset() {
 	*x = OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition{}
-	mi := &file_events_constraints_proto_msgTypes[2]
+	mi := &file_events_constraints_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -243,7 +368,7 @@ func (x *OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition) S
 func (*OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition) ProtoMessage() {}
 
 func (x *OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_events_constraints_proto_msgTypes[2]
+	mi := &file_events_constraints_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -256,7 +381,7 @@ func (x *OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition) P
 
 // Deprecated: Use OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition.ProtoReflect.Descriptor instead.
 func (*OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition) Descriptor() ([]byte, []int) {
-	return file_events_constraints_proto_rawDescGZIP(), []int{2}
+	return file_events_constraints_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition) GetValue0() *UniqueConstraintDefinition {
@@ -283,7 +408,7 @@ type RegisterConstraintsRequest struct {
 
 func (x *RegisterConstraintsRequest) Reset() {
 	*x = RegisterConstraintsRequest{}
-	mi := &file_events_constraints_proto_msgTypes[3]
+	mi := &file_events_constraints_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -295,7 +420,7 @@ func (x *RegisterConstraintsRequest) String() string {
 func (*RegisterConstraintsRequest) ProtoMessage() {}
 
 func (x *RegisterConstraintsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_events_constraints_proto_msgTypes[3]
+	mi := &file_events_constraints_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -308,7 +433,7 @@ func (x *RegisterConstraintsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterConstraintsRequest.ProtoReflect.Descriptor instead.
 func (*RegisterConstraintsRequest) Descriptor() ([]byte, []int) {
-	return file_events_constraints_proto_rawDescGZIP(), []int{3}
+	return file_events_constraints_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RegisterConstraintsRequest) GetEventStore() string {
@@ -326,16 +451,18 @@ func (x *RegisterConstraintsRequest) GetConstraints() []*Constraint {
 }
 
 type UniqueConstraintDefinition struct {
-	state            protoimpl.MessageState             `protogen:"open.v1"`
-	EventDefinitions []*UniqueConstraintEventDefinition `protobuf:"bytes,1,rep,name=EventDefinitions,proto3" json:"EventDefinitions,omitempty"`
-	IgnoreCasing     bool                               `protobuf:"varint,2,opt,name=IgnoreCasing,proto3" json:"IgnoreCasing,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                   protoimpl.MessageState             `protogen:"open.v1"`
+	EventDefinitions        []*UniqueConstraintEventDefinition `protobuf:"bytes,1,rep,name=EventDefinitions,proto3" json:"EventDefinitions,omitempty"`
+	IgnoreCasing            bool                               `protobuf:"varint,2,opt,name=IgnoreCasing,proto3" json:"IgnoreCasing,omitempty"`
+	Mode                    UniqueConstraintMode               `protobuf:"varint,3,opt,name=Mode,proto3,enum=Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintMode" json:"Mode,omitempty"`
+	RemovalEventDefinitions []*UniqueConstraintEventDefinition `protobuf:"bytes,4,rep,name=RemovalEventDefinitions,proto3" json:"RemovalEventDefinitions,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *UniqueConstraintDefinition) Reset() {
 	*x = UniqueConstraintDefinition{}
-	mi := &file_events_constraints_proto_msgTypes[4]
+	mi := &file_events_constraints_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -347,7 +474,7 @@ func (x *UniqueConstraintDefinition) String() string {
 func (*UniqueConstraintDefinition) ProtoMessage() {}
 
 func (x *UniqueConstraintDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_events_constraints_proto_msgTypes[4]
+	mi := &file_events_constraints_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -360,7 +487,7 @@ func (x *UniqueConstraintDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UniqueConstraintDefinition.ProtoReflect.Descriptor instead.
 func (*UniqueConstraintDefinition) Descriptor() ([]byte, []int) {
-	return file_events_constraints_proto_rawDescGZIP(), []int{4}
+	return file_events_constraints_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *UniqueConstraintDefinition) GetEventDefinitions() []*UniqueConstraintEventDefinition {
@@ -377,6 +504,20 @@ func (x *UniqueConstraintDefinition) GetIgnoreCasing() bool {
 	return false
 }
 
+func (x *UniqueConstraintDefinition) GetMode() UniqueConstraintMode {
+	if x != nil {
+		return x.Mode
+	}
+	return UniqueConstraintMode_PerEventSource
+}
+
+func (x *UniqueConstraintDefinition) GetRemovalEventDefinitions() []*UniqueConstraintEventDefinition {
+	if x != nil {
+		return x.RemovalEventDefinitions
+	}
+	return nil
+}
+
 type UniqueConstraintEventDefinition struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventTypeId   string                 `protobuf:"bytes,1,opt,name=EventTypeId,proto3" json:"EventTypeId,omitempty"`
@@ -387,7 +528,7 @@ type UniqueConstraintEventDefinition struct {
 
 func (x *UniqueConstraintEventDefinition) Reset() {
 	*x = UniqueConstraintEventDefinition{}
-	mi := &file_events_constraints_proto_msgTypes[5]
+	mi := &file_events_constraints_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -399,7 +540,7 @@ func (x *UniqueConstraintEventDefinition) String() string {
 func (*UniqueConstraintEventDefinition) ProtoMessage() {}
 
 func (x *UniqueConstraintEventDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_events_constraints_proto_msgTypes[5]
+	mi := &file_events_constraints_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -412,7 +553,7 @@ func (x *UniqueConstraintEventDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UniqueConstraintEventDefinition.ProtoReflect.Descriptor instead.
 func (*UniqueConstraintEventDefinition) Descriptor() ([]byte, []int) {
-	return file_events_constraints_proto_rawDescGZIP(), []int{5}
+	return file_events_constraints_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UniqueConstraintEventDefinition) GetEventTypeId() string {
@@ -438,7 +579,7 @@ type UniqueEventTypeConstraintDefinition struct {
 
 func (x *UniqueEventTypeConstraintDefinition) Reset() {
 	*x = UniqueEventTypeConstraintDefinition{}
-	mi := &file_events_constraints_proto_msgTypes[6]
+	mi := &file_events_constraints_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -450,7 +591,7 @@ func (x *UniqueEventTypeConstraintDefinition) String() string {
 func (*UniqueEventTypeConstraintDefinition) ProtoMessage() {}
 
 func (x *UniqueEventTypeConstraintDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_events_constraints_proto_msgTypes[6]
+	mi := &file_events_constraints_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +604,7 @@ func (x *UniqueEventTypeConstraintDefinition) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use UniqueEventTypeConstraintDefinition.ProtoReflect.Descriptor instead.
 func (*UniqueEventTypeConstraintDefinition) Descriptor() ([]byte, []int) {
-	return file_events_constraints_proto_rawDescGZIP(), []int{6}
+	return file_events_constraints_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UniqueEventTypeConstraintDefinition) GetEventTypeIds() []string {
@@ -477,7 +618,16 @@ var File_events_constraints_proto protoreflect.FileDescriptor
 
 const file_events_constraints_proto_rawDesc = "" +
 	"\n" +
-	"\x18events_constraints.proto\x12-Cratis.Chronicle.Contracts.Events.Constraints\x1a\x1bgoogle/protobuf/empty.proto\"\xa9\x03\n" +
+	"\x18events_constraints.proto\x12-Cratis.Chronicle.Contracts.Events.Constraints\x1a\x1bgoogle/protobuf/empty.proto\"\xb4\x01\n" +
+	" ClosesStreamConstraintDefinition\x12\"\n" +
+	"\fEventTypeIds\x18\x01 \x03(\tR\fEventTypeIds\x12\x1e\n" +
+	"\n" +
+	"Dimensions\x18\x02 \x01(\rR\n" +
+	"Dimensions\x12\x1e\n" +
+	"\n" +
+	"ReopenedBy\x18\x03 \x03(\tR\n" +
+	"ReopenedBy\x12,\n" +
+	"\x11EventStreamIdFrom\x18\x04 \x01(\tR\x11EventStreamIdFrom\"\x9e\x04\n" +
 	"\n" +
 	"Constraint\x12\x12\n" +
 	"\x04Name\x18\x01 \x01(\tR\x04Name\x12Q\n" +
@@ -487,7 +637,8 @@ const file_events_constraints_proto_rawDesc = "" +
 	"Definition\x18\x04 \x01(\v2s.Cratis.Chronicle.Contracts.Events.Constraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinitionR\n" +
 	"Definition\x12T\n" +
 	"\x05Scope\x18\x05 \x01(\v2>.Cratis.Chronicle.Contracts.Events.Constraints.ConstraintScopeR\x05Scope\x12&\n" +
-	"\x0eEventSequences\x18\x06 \x03(\tR\x0eEventSequences\"\x8b\x01\n" +
+	"\x0eEventSequences\x18\x06 \x03(\tR\x0eEventSequences\x12s\n" +
+	"\fClosesStream\x18\a \x01(\v2O.Cratis.Chronicle.Contracts.Events.Constraints.ClosesStreamConstraintDefinitionR\fClosesStream\"\x8b\x01\n" +
 	"\x0fConstraintScope\x12(\n" +
 	"\x0fEventSourceType\x18\x01 \x01(\tR\x0fEventSourceType\x12(\n" +
 	"\x0fEventStreamType\x18\x02 \x01(\tR\x0fEventStreamType\x12$\n" +
@@ -499,17 +650,19 @@ const file_events_constraints_proto_rawDesc = "" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12[\n" +
-	"\vConstraints\x18\x02 \x03(\v29.Cratis.Chronicle.Contracts.Events.Constraints.ConstraintR\vConstraints\"\xbc\x01\n" +
+	"\vConstraints\x18\x02 \x03(\v29.Cratis.Chronicle.Contracts.Events.Constraints.ConstraintR\vConstraints\"\xa0\x03\n" +
 	"\x1aUniqueConstraintDefinition\x12z\n" +
 	"\x10EventDefinitions\x18\x01 \x03(\v2N.Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintEventDefinitionR\x10EventDefinitions\x12\"\n" +
-	"\fIgnoreCasing\x18\x02 \x01(\bR\fIgnoreCasing\"c\n" +
+	"\fIgnoreCasing\x18\x02 \x01(\bR\fIgnoreCasing\x12W\n" +
+	"\x04Mode\x18\x03 \x01(\x0e2C.Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintModeR\x04Mode\x12\x88\x01\n" +
+	"\x17RemovalEventDefinitions\x18\x04 \x03(\v2N.Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintEventDefinitionR\x17RemovalEventDefinitions\"c\n" +
 	"\x1fUniqueConstraintEventDefinition\x12 \n" +
 	"\vEventTypeId\x18\x01 \x01(\tR\vEventTypeId\x12\x1e\n" +
 	"\n" +
 	"Properties\x18\x02 \x03(\tR\n" +
 	"Properties\"O\n" +
 	"#UniqueEventTypeConstraintDefinition\x12\"\n" +
-	"\fEventTypeIds\x18\x02 \x03(\tR\fEventTypeIdsJ\x04\b\x01\x10\x02*\\\n" +
+	"\fEventTypeIds\x18\x02 \x03(\tR\fEventTypeIdsJ\x04\b\x01\x10\x02*n\n" +
 	"\x0eConstraintType\x12\v\n" +
 	"\aUnknown\x10\x00\x12\n" +
 	"\n" +
@@ -517,7 +670,11 @@ const file_events_constraints_proto_rawDesc = "" +
 	"\x0fUniqueEventType\x10\x02\x12\n" +
 	"\n" +
 	"\x06Schema\x10\x03\x12\x10\n" +
-	"\fStreamClosed\x10\x042|\n" +
+	"\fStreamClosed\x10\x04\x12\x10\n" +
+	"\fClosesStream\x10\x05*8\n" +
+	"\x14UniqueConstraintMode\x12\x12\n" +
+	"\x0ePerEventSource\x10\x00\x12\f\n" +
+	"\bPerValue\x10\x012|\n" +
 	"\vConstraints\x12m\n" +
 	"\bRegister\x12I.Cratis.Chronicle.Contracts.Events.Constraints.RegisterConstraintsRequest\x1a\x16.google.protobuf.EmptyB\xe2\x02\n" +
 	"1com.Cratis.Chronicle.Contracts.Events.ConstraintsB\x16EventsConstraintsProtoP\x01Z;github.com/cratis/chronicle.go/contracts/events/constraints\xa2\x02\x05CCCEC\xaa\x02-Cratis.Chronicle.Contracts.Events.Constraints\xca\x02-Cratis\\Chronicle\\Contracts\\Events\\Constraints\xe2\x029Cratis\\Chronicle\\Contracts\\Events\\Constraints\\GPBMetadata\xea\x021Cratis::Chronicle::Contracts::Events::Constraintsb\x06proto3"
@@ -534,34 +691,39 @@ func file_events_constraints_proto_rawDescGZIP() []byte {
 	return file_events_constraints_proto_rawDescData
 }
 
-var file_events_constraints_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_events_constraints_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_events_constraints_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_events_constraints_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_events_constraints_proto_goTypes = []any{
-	(ConstraintType)(0),     // 0: Cratis.Chronicle.Contracts.Events.Constraints.ConstraintType
-	(*Constraint)(nil),      // 1: Cratis.Chronicle.Contracts.Events.Constraints.Constraint
-	(*ConstraintScope)(nil), // 2: Cratis.Chronicle.Contracts.Events.Constraints.ConstraintScope
-	(*OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition)(nil), // 3: Cratis.Chronicle.Contracts.Events.Constraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition
-	(*RegisterConstraintsRequest)(nil),                                           // 4: Cratis.Chronicle.Contracts.Events.Constraints.RegisterConstraintsRequest
-	(*UniqueConstraintDefinition)(nil),                                           // 5: Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintDefinition
-	(*UniqueConstraintEventDefinition)(nil),                                      // 6: Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintEventDefinition
-	(*UniqueEventTypeConstraintDefinition)(nil),                                  // 7: Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition
-	(*emptypb.Empty)(nil),                                                        // 8: google.protobuf.Empty
+	(ConstraintType)(0),                      // 0: Cratis.Chronicle.Contracts.Events.Constraints.ConstraintType
+	(UniqueConstraintMode)(0),                // 1: Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintMode
+	(*ClosesStreamConstraintDefinition)(nil), // 2: Cratis.Chronicle.Contracts.Events.Constraints.ClosesStreamConstraintDefinition
+	(*Constraint)(nil),                       // 3: Cratis.Chronicle.Contracts.Events.Constraints.Constraint
+	(*ConstraintScope)(nil),                  // 4: Cratis.Chronicle.Contracts.Events.Constraints.ConstraintScope
+	(*OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition)(nil), // 5: Cratis.Chronicle.Contracts.Events.Constraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition
+	(*RegisterConstraintsRequest)(nil),                                           // 6: Cratis.Chronicle.Contracts.Events.Constraints.RegisterConstraintsRequest
+	(*UniqueConstraintDefinition)(nil),                                           // 7: Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintDefinition
+	(*UniqueConstraintEventDefinition)(nil),                                      // 8: Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintEventDefinition
+	(*UniqueEventTypeConstraintDefinition)(nil),                                  // 9: Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition
+	(*emptypb.Empty)(nil),                                                        // 10: google.protobuf.Empty
 }
 var file_events_constraints_proto_depIdxs = []int32{
-	0, // 0: Cratis.Chronicle.Contracts.Events.Constraints.Constraint.Type:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.ConstraintType
-	3, // 1: Cratis.Chronicle.Contracts.Events.Constraints.Constraint.Definition:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition
-	2, // 2: Cratis.Chronicle.Contracts.Events.Constraints.Constraint.Scope:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.ConstraintScope
-	5, // 3: Cratis.Chronicle.Contracts.Events.Constraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition.Value0:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintDefinition
-	7, // 4: Cratis.Chronicle.Contracts.Events.Constraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition.Value1:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition
-	1, // 5: Cratis.Chronicle.Contracts.Events.Constraints.RegisterConstraintsRequest.Constraints:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.Constraint
-	6, // 6: Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintDefinition.EventDefinitions:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintEventDefinition
-	4, // 7: Cratis.Chronicle.Contracts.Events.Constraints.Constraints.Register:input_type -> Cratis.Chronicle.Contracts.Events.Constraints.RegisterConstraintsRequest
-	8, // 8: Cratis.Chronicle.Contracts.Events.Constraints.Constraints.Register:output_type -> google.protobuf.Empty
-	8, // [8:9] is the sub-list for method output_type
-	7, // [7:8] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	0,  // 0: Cratis.Chronicle.Contracts.Events.Constraints.Constraint.Type:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.ConstraintType
+	5,  // 1: Cratis.Chronicle.Contracts.Events.Constraints.Constraint.Definition:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition
+	4,  // 2: Cratis.Chronicle.Contracts.Events.Constraints.Constraint.Scope:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.ConstraintScope
+	2,  // 3: Cratis.Chronicle.Contracts.Events.Constraints.Constraint.ClosesStream:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.ClosesStreamConstraintDefinition
+	7,  // 4: Cratis.Chronicle.Contracts.Events.Constraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition.Value0:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintDefinition
+	9,  // 5: Cratis.Chronicle.Contracts.Events.Constraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition.Value1:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition
+	3,  // 6: Cratis.Chronicle.Contracts.Events.Constraints.RegisterConstraintsRequest.Constraints:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.Constraint
+	8,  // 7: Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintDefinition.EventDefinitions:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintEventDefinition
+	1,  // 8: Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintDefinition.Mode:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintMode
+	8,  // 9: Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintDefinition.RemovalEventDefinitions:type_name -> Cratis.Chronicle.Contracts.Events.Constraints.UniqueConstraintEventDefinition
+	6,  // 10: Cratis.Chronicle.Contracts.Events.Constraints.Constraints.Register:input_type -> Cratis.Chronicle.Contracts.Events.Constraints.RegisterConstraintsRequest
+	10, // 11: Cratis.Chronicle.Contracts.Events.Constraints.Constraints.Register:output_type -> google.protobuf.Empty
+	11, // [11:12] is the sub-list for method output_type
+	10, // [10:11] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_events_constraints_proto_init() }
@@ -574,8 +736,8 @@ func file_events_constraints_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_events_constraints_proto_rawDesc), len(file_events_constraints_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   7,
+			NumEnums:      2,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

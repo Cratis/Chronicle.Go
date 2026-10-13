@@ -120,6 +120,55 @@ func (EventTypeSource) EnumDescriptor() ([]byte, []int) {
 	return file_eventtypes_proto_rawDescGZIP(), []int{1}
 }
 
+type EventTypeVisibility int32
+
+const (
+	EventTypeVisibility_Unspecified EventTypeVisibility = 0
+	EventTypeVisibility_Private     EventTypeVisibility = 1
+	EventTypeVisibility_Public      EventTypeVisibility = 2
+)
+
+// Enum value maps for EventTypeVisibility.
+var (
+	EventTypeVisibility_name = map[int32]string{
+		0: "Unspecified",
+		1: "Private",
+		2: "Public",
+	}
+	EventTypeVisibility_value = map[string]int32{
+		"Unspecified": 0,
+		"Private":     1,
+		"Public":      2,
+	}
+)
+
+func (x EventTypeVisibility) Enum() *EventTypeVisibility {
+	p := new(EventTypeVisibility)
+	*p = x
+	return p
+}
+
+func (x EventTypeVisibility) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventTypeVisibility) Descriptor() protoreflect.EnumDescriptor {
+	return file_eventtypes_proto_enumTypes[2].Descriptor()
+}
+
+func (EventTypeVisibility) Type() protoreflect.EnumType {
+	return &file_eventtypes_proto_enumTypes[2]
+}
+
+func (x EventTypeVisibility) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventTypeVisibility.Descriptor instead.
+func (EventTypeVisibility) EnumDescriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{2}
+}
+
 type ValidationResultSeverity int32
 
 const (
@@ -156,11 +205,11 @@ func (x ValidationResultSeverity) String() string {
 }
 
 func (ValidationResultSeverity) Descriptor() protoreflect.EnumDescriptor {
-	return file_eventtypes_proto_enumTypes[2].Descriptor()
+	return file_eventtypes_proto_enumTypes[3].Descriptor()
 }
 
 func (ValidationResultSeverity) Type() protoreflect.EnumType {
-	return &file_eventtypes_proto_enumTypes[2]
+	return &file_eventtypes_proto_enumTypes[3]
 }
 
 func (x ValidationResultSeverity) Number() protoreflect.EnumNumber {
@@ -169,7 +218,7 @@ func (x ValidationResultSeverity) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ValidationResultSeverity.Descriptor instead.
 func (ValidationResultSeverity) EnumDescriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{2}
+	return file_eventtypes_proto_rawDescGZIP(), []int{3}
 }
 
 type AllEventTypeGenerationsRequest struct {
@@ -727,6 +776,7 @@ type EventTypeRegistration struct {
 	Generations   []*EventTypeGenerationDefinition `protobuf:"bytes,3,rep,name=Generations,proto3" json:"Generations,omitempty"`
 	Migrations    []*EventTypeMigrationDefinition  `protobuf:"bytes,4,rep,name=Migrations,proto3" json:"Migrations,omitempty"`
 	EventStore    string                           `protobuf:"bytes,5,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Visibility    EventTypeVisibility              `protobuf:"varint,6,opt,name=Visibility,proto3,enum=Cratis.Chronicle.Contracts.EventTypes.EventTypeVisibility" json:"Visibility,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -794,6 +844,13 @@ func (x *EventTypeRegistration) GetEventStore() string {
 		return x.EventStore
 	}
 	return ""
+}
+
+func (x *EventTypeRegistration) GetVisibility() EventTypeVisibility {
+	if x != nil {
+		return x.Visibility
+	}
+	return EventTypeVisibility_Unspecified
 }
 
 type ObserveEventTypesRequest struct {
@@ -1149,7 +1206,7 @@ const file_eventtypes_proto_rawDesc = "" +
 	"\x10DowncastJmesPath\x18\x05 \x01(\tR\x10DowncastJmesPath\"U\n" +
 	"\x1bEventTypeMigrationOperation\x12\x1c\n" +
 	"\tOperation\x18\x01 \x01(\tR\tOperation\x12\x18\n" +
-	"\aDetails\x18\x02 \x01(\tR\aDetails\"\xe2\x02\n" +
+	"\aDetails\x18\x02 \x01(\tR\aDetails\"\xbe\x03\n" +
 	"\x15EventTypeRegistration\x12D\n" +
 	"\x04Type\x18\x01 \x01(\v20.Cratis.Chronicle.Contracts.EventTypes.EventTypeR\x04Type\x12\x16\n" +
 	"\x06Schema\x18\x02 \x01(\tR\x06Schema\x12f\n" +
@@ -1159,7 +1216,10 @@ const file_eventtypes_proto_rawDesc = "" +
 	"Migrations\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x05 \x01(\tR\n" +
-	"EventStore\":\n" +
+	"EventStore\x12Z\n" +
+	"\n" +
+	"Visibility\x18\x06 \x01(\x0e2:.Cratis.Chronicle.Contracts.EventTypes.EventTypeVisibilityR\n" +
+	"Visibility\":\n" +
 	"\x18ObserveEventTypesRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1195,7 +1255,12 @@ const file_eventtypes_proto_rawDesc = "" +
 	"\x0fEventTypeSource\x12\x1d\n" +
 	"\x19EVENT_TYPE_SOURCE_Unknown\x10\x00\x12\b\n" +
 	"\x04Code\x10\x01\x12\b\n" +
-	"\x04User\x10\x02*k\n" +
+	"\x04User\x10\x02*?\n" +
+	"\x13EventTypeVisibility\x12\x0f\n" +
+	"\vUnspecified\x10\x00\x12\v\n" +
+	"\aPrivate\x10\x01\x12\n" +
+	"\n" +
+	"\x06Public\x10\x02*k\n" +
 	"\x18ValidationResultSeverity\x12&\n" +
 	"\"VALIDATION_RESULT_SEVERITY_Unknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
@@ -1223,62 +1288,64 @@ func file_eventtypes_proto_rawDescGZIP() []byte {
 	return file_eventtypes_proto_rawDescData
 }
 
-var file_eventtypes_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_eventtypes_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_eventtypes_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_eventtypes_proto_goTypes = []any{
 	(EventTypeOwner)(0),                                      // 0: Cratis.Chronicle.Contracts.EventTypes.EventTypeOwner
 	(EventTypeSource)(0),                                     // 1: Cratis.Chronicle.Contracts.EventTypes.EventTypeSource
-	(ValidationResultSeverity)(0),                            // 2: Cratis.Chronicle.Contracts.EventTypes.ValidationResultSeverity
-	(*AllEventTypeGenerationsRequest)(nil),                   // 3: Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest
-	(*AllEventTypesRequest)(nil),                             // 4: Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest
-	(*CommandResult)(nil),                                    // 5: Cratis.Chronicle.Contracts.EventTypes.CommandResult
-	(*CreateEventTypeRequest)(nil),                           // 6: Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest
-	(*EventType)(nil),                                        // 7: Cratis.Chronicle.Contracts.EventTypes.EventType
-	(*EventTypeDetailsResponse)(nil),                         // 8: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse
-	(*EventTypeGenerationDefinition)(nil),                    // 9: Cratis.Chronicle.Contracts.EventTypes.EventTypeGenerationDefinition
-	(*EventTypeMigrationDefinition)(nil),                     // 10: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition
-	(*EventTypeMigrationOperation)(nil),                      // 11: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationOperation
-	(*EventTypeRegistration)(nil),                            // 12: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
-	(*ObserveEventTypesRequest)(nil),                         // 13: Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest
-	(*QueryResult_IEnumerable_EventTypeDetailsResponse)(nil), // 14: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
-	(*RegisterEventTypesRequest)(nil),                        // 15: Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest
-	(*RegisterSingleEventTypeRequest)(nil),                   // 16: Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest
-	(*ValidationResult)(nil),                                 // 17: Cratis.Chronicle.Contracts.EventTypes.ValidationResult
-	(*bcl.Guid)(nil),                                         // 18: bcl.Guid
+	(EventTypeVisibility)(0),                                 // 2: Cratis.Chronicle.Contracts.EventTypes.EventTypeVisibility
+	(ValidationResultSeverity)(0),                            // 3: Cratis.Chronicle.Contracts.EventTypes.ValidationResultSeverity
+	(*AllEventTypeGenerationsRequest)(nil),                   // 4: Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest
+	(*AllEventTypesRequest)(nil),                             // 5: Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest
+	(*CommandResult)(nil),                                    // 6: Cratis.Chronicle.Contracts.EventTypes.CommandResult
+	(*CreateEventTypeRequest)(nil),                           // 7: Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest
+	(*EventType)(nil),                                        // 8: Cratis.Chronicle.Contracts.EventTypes.EventType
+	(*EventTypeDetailsResponse)(nil),                         // 9: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse
+	(*EventTypeGenerationDefinition)(nil),                    // 10: Cratis.Chronicle.Contracts.EventTypes.EventTypeGenerationDefinition
+	(*EventTypeMigrationDefinition)(nil),                     // 11: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition
+	(*EventTypeMigrationOperation)(nil),                      // 12: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationOperation
+	(*EventTypeRegistration)(nil),                            // 13: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
+	(*ObserveEventTypesRequest)(nil),                         // 14: Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest
+	(*QueryResult_IEnumerable_EventTypeDetailsResponse)(nil), // 15: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
+	(*RegisterEventTypesRequest)(nil),                        // 16: Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest
+	(*RegisterSingleEventTypeRequest)(nil),                   // 17: Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest
+	(*ValidationResult)(nil),                                 // 18: Cratis.Chronicle.Contracts.EventTypes.ValidationResult
+	(*bcl.Guid)(nil),                                         // 19: bcl.Guid
 }
 var file_eventtypes_proto_depIdxs = []int32{
-	18, // 0: Cratis.Chronicle.Contracts.EventTypes.CommandResult.CorrelationId:type_name -> bcl.Guid
-	17, // 1: Cratis.Chronicle.Contracts.EventTypes.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
-	7,  // 2: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventType
+	19, // 0: Cratis.Chronicle.Contracts.EventTypes.CommandResult.CorrelationId:type_name -> bcl.Guid
+	18, // 1: Cratis.Chronicle.Contracts.EventTypes.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
+	8,  // 2: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventType
 	0,  // 3: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Owner:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeOwner
 	1,  // 4: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Source:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeSource
-	11, // 5: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition.Operations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationOperation
-	7,  // 6: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventType
-	9,  // 7: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Generations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeGenerationDefinition
-	10, // 8: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Migrations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition
-	18, // 9: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.CorrelationId:type_name -> bcl.Guid
-	17, // 10: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
-	8,  // 11: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse
-	12, // 12: Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest.Types:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
-	12, // 13: Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
-	2,  // 14: Cratis.Chronicle.Contracts.EventTypes.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResultSeverity
-	3,  // 15: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypeGenerations:input_type -> Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest
-	4,  // 16: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest
-	6,  // 17: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CreateEventType:input_type -> Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest
-	13, // 18: Cratis.Chronicle.Contracts.EventTypes.EventTypes.ObserveEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest
-	15, // 19: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest
-	16, // 20: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterSingleEventType:input_type -> Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest
-	14, // 21: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypeGenerations:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
-	14, // 22: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
-	5,  // 23: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CreateEventType:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
-	14, // 24: Cratis.Chronicle.Contracts.EventTypes.EventTypes.ObserveEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
-	5,  // 25: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
-	5,  // 26: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterSingleEventType:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
-	21, // [21:27] is the sub-list for method output_type
-	15, // [15:21] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	12, // 5: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition.Operations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationOperation
+	8,  // 6: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventType
+	10, // 7: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Generations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeGenerationDefinition
+	11, // 8: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Migrations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition
+	2,  // 9: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Visibility:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeVisibility
+	19, // 10: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.CorrelationId:type_name -> bcl.Guid
+	18, // 11: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
+	9,  // 12: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse
+	13, // 13: Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest.Types:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
+	13, // 14: Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
+	3,  // 15: Cratis.Chronicle.Contracts.EventTypes.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResultSeverity
+	4,  // 16: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypeGenerations:input_type -> Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest
+	5,  // 17: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest
+	7,  // 18: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CreateEventType:input_type -> Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest
+	14, // 19: Cratis.Chronicle.Contracts.EventTypes.EventTypes.ObserveEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest
+	16, // 20: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest
+	17, // 21: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterSingleEventType:input_type -> Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest
+	15, // 22: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypeGenerations:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
+	15, // 23: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
+	6,  // 24: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CreateEventType:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
+	15, // 25: Cratis.Chronicle.Contracts.EventTypes.EventTypes.ObserveEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
+	6,  // 26: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
+	6,  // 27: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterSingleEventType:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
+	22, // [22:28] is the sub-list for method output_type
+	16, // [16:22] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_eventtypes_proto_init() }
@@ -1291,7 +1358,7 @@ func file_eventtypes_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_eventtypes_proto_rawDesc), len(file_eventtypes_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      4,
 			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,

@@ -124,6 +124,58 @@ func (FailureKind) EnumDescriptor() ([]byte, []int) {
 	return file_observation_proto_rawDescGZIP(), []int{1}
 }
 
+type FastForwardOutcome int32
+
+const (
+	FastForwardOutcome_FastForwarded     FastForwardOutcome = 0
+	FastForwardOutcome_AlreadyAtTail     FastForwardOutcome = 1
+	FastForwardOutcome_ObserverReplaying FastForwardOutcome = 2
+	FastForwardOutcome_NotAvailable      FastForwardOutcome = 3
+)
+
+// Enum value maps for FastForwardOutcome.
+var (
+	FastForwardOutcome_name = map[int32]string{
+		0: "FastForwarded",
+		1: "AlreadyAtTail",
+		2: "ObserverReplaying",
+		3: "NotAvailable",
+	}
+	FastForwardOutcome_value = map[string]int32{
+		"FastForwarded":     0,
+		"AlreadyAtTail":     1,
+		"ObserverReplaying": 2,
+		"NotAvailable":      3,
+	}
+)
+
+func (x FastForwardOutcome) Enum() *FastForwardOutcome {
+	p := new(FastForwardOutcome)
+	*p = x
+	return p
+}
+
+func (x FastForwardOutcome) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FastForwardOutcome) Descriptor() protoreflect.EnumDescriptor {
+	return file_observation_proto_enumTypes[2].Descriptor()
+}
+
+func (FastForwardOutcome) Type() protoreflect.EnumType {
+	return &file_observation_proto_enumTypes[2]
+}
+
+func (x FastForwardOutcome) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FastForwardOutcome.Descriptor instead.
+func (FastForwardOutcome) EnumDescriptor() ([]byte, []int) {
+	return file_observation_proto_rawDescGZIP(), []int{2}
+}
+
 type ObserverOwner int32
 
 const (
@@ -157,11 +209,11 @@ func (x ObserverOwner) String() string {
 }
 
 func (ObserverOwner) Descriptor() protoreflect.EnumDescriptor {
-	return file_observation_proto_enumTypes[2].Descriptor()
+	return file_observation_proto_enumTypes[3].Descriptor()
 }
 
 func (ObserverOwner) Type() protoreflect.EnumType {
-	return &file_observation_proto_enumTypes[2]
+	return &file_observation_proto_enumTypes[3]
 }
 
 func (x ObserverOwner) Number() protoreflect.EnumNumber {
@@ -170,7 +222,7 @@ func (x ObserverOwner) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ObserverOwner.Descriptor instead.
 func (ObserverOwner) EnumDescriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{2}
+	return file_observation_proto_rawDescGZIP(), []int{3}
 }
 
 type ObserverRemovalOutcome int32
@@ -209,11 +261,11 @@ func (x ObserverRemovalOutcome) String() string {
 }
 
 func (ObserverRemovalOutcome) Descriptor() protoreflect.EnumDescriptor {
-	return file_observation_proto_enumTypes[3].Descriptor()
+	return file_observation_proto_enumTypes[4].Descriptor()
 }
 
 func (ObserverRemovalOutcome) Type() protoreflect.EnumType {
-	return &file_observation_proto_enumTypes[3]
+	return &file_observation_proto_enumTypes[4]
 }
 
 func (x ObserverRemovalOutcome) Number() protoreflect.EnumNumber {
@@ -222,7 +274,7 @@ func (x ObserverRemovalOutcome) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ObserverRemovalOutcome.Descriptor instead.
 func (ObserverRemovalOutcome) EnumDescriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{3}
+	return file_observation_proto_rawDescGZIP(), []int{4}
 }
 
 type ObserverRunningState int32
@@ -267,11 +319,11 @@ func (x ObserverRunningState) String() string {
 }
 
 func (ObserverRunningState) Descriptor() protoreflect.EnumDescriptor {
-	return file_observation_proto_enumTypes[4].Descriptor()
+	return file_observation_proto_enumTypes[5].Descriptor()
 }
 
 func (ObserverRunningState) Type() protoreflect.EnumType {
-	return &file_observation_proto_enumTypes[4]
+	return &file_observation_proto_enumTypes[5]
 }
 
 func (x ObserverRunningState) Number() protoreflect.EnumNumber {
@@ -280,7 +332,7 @@ func (x ObserverRunningState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ObserverRunningState.Descriptor instead.
 func (ObserverRunningState) EnumDescriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{4}
+	return file_observation_proto_rawDescGZIP(), []int{5}
 }
 
 type ObserverType int32
@@ -322,11 +374,11 @@ func (x ObserverType) String() string {
 }
 
 func (ObserverType) Descriptor() protoreflect.EnumDescriptor {
-	return file_observation_proto_enumTypes[5].Descriptor()
+	return file_observation_proto_enumTypes[6].Descriptor()
 }
 
 func (ObserverType) Type() protoreflect.EnumType {
-	return &file_observation_proto_enumTypes[5]
+	return &file_observation_proto_enumTypes[6]
 }
 
 func (x ObserverType) Number() protoreflect.EnumNumber {
@@ -335,7 +387,7 @@ func (x ObserverType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ObserverType.Descriptor instead.
 func (ObserverType) EnumDescriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{5}
+	return file_observation_proto_rawDescGZIP(), []int{6}
 }
 
 type PartitionRecoveryOutcome int32
@@ -374,11 +426,11 @@ func (x PartitionRecoveryOutcome) String() string {
 }
 
 func (PartitionRecoveryOutcome) Descriptor() protoreflect.EnumDescriptor {
-	return file_observation_proto_enumTypes[6].Descriptor()
+	return file_observation_proto_enumTypes[7].Descriptor()
 }
 
 func (PartitionRecoveryOutcome) Type() protoreflect.EnumType {
-	return &file_observation_proto_enumTypes[6]
+	return &file_observation_proto_enumTypes[7]
 }
 
 func (x PartitionRecoveryOutcome) Number() protoreflect.EnumNumber {
@@ -387,7 +439,7 @@ func (x PartitionRecoveryOutcome) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PartitionRecoveryOutcome.Descriptor instead.
 func (PartitionRecoveryOutcome) EnumDescriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{6}
+	return file_observation_proto_rawDescGZIP(), []int{7}
 }
 
 type AllObserversRequest struct {
@@ -1094,6 +1146,134 @@ func (x *FailedPartitionAttempt) GetKind() FailureKind {
 	return FailureKind_FAILURE_KIND_Unknown
 }
 
+type FastForward struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EventStore      string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace       string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	ObserverId      string                 `protobuf:"bytes,3,opt,name=ObserverId,proto3" json:"ObserverId,omitempty"`
+	EventSequenceId string                 `protobuf:"bytes,4,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *FastForward) Reset() {
+	*x = FastForward{}
+	mi := &file_observation_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FastForward) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FastForward) ProtoMessage() {}
+
+func (x *FastForward) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FastForward.ProtoReflect.Descriptor instead.
+func (*FastForward) Descriptor() ([]byte, []int) {
+	return file_observation_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *FastForward) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *FastForward) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *FastForward) GetObserverId() string {
+	if x != nil {
+		return x.ObserverId
+	}
+	return ""
+}
+
+func (x *FastForward) GetEventSequenceId() string {
+	if x != nil {
+		return x.EventSequenceId
+	}
+	return ""
+}
+
+type FastForwardResponse struct {
+	state                           protoimpl.MessageState `protogen:"open.v1"`
+	Outcome                         FastForwardOutcome     `protobuf:"varint,1,opt,name=Outcome,proto3,enum=Cratis.Chronicle.Contracts.Observation.FastForwardOutcome" json:"Outcome,omitempty"`
+	PreviousNextEventSequenceNumber uint64                 `protobuf:"varint,2,opt,name=PreviousNextEventSequenceNumber,proto3" json:"PreviousNextEventSequenceNumber,omitempty"`
+	NextEventSequenceNumber         uint64                 `protobuf:"varint,3,opt,name=NextEventSequenceNumber,proto3" json:"NextEventSequenceNumber,omitempty"`
+	unknownFields                   protoimpl.UnknownFields
+	sizeCache                       protoimpl.SizeCache
+}
+
+func (x *FastForwardResponse) Reset() {
+	*x = FastForwardResponse{}
+	mi := &file_observation_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FastForwardResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FastForwardResponse) ProtoMessage() {}
+
+func (x *FastForwardResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FastForwardResponse.ProtoReflect.Descriptor instead.
+func (*FastForwardResponse) Descriptor() ([]byte, []int) {
+	return file_observation_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *FastForwardResponse) GetOutcome() FastForwardOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return FastForwardOutcome_FastForwarded
+}
+
+func (x *FastForwardResponse) GetPreviousNextEventSequenceNumber() uint64 {
+	if x != nil {
+		return x.PreviousNextEventSequenceNumber
+	}
+	return 0
+}
+
+func (x *FastForwardResponse) GetNextEventSequenceNumber() uint64 {
+	if x != nil {
+		return x.NextEventSequenceNumber
+	}
+	return 0
+}
+
 type GetConnectedClientsForObserverRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	EventStore      string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -1106,7 +1286,7 @@ type GetConnectedClientsForObserverRequest struct {
 
 func (x *GetConnectedClientsForObserverRequest) Reset() {
 	*x = GetConnectedClientsForObserverRequest{}
-	mi := &file_observation_proto_msgTypes[10]
+	mi := &file_observation_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1118,7 +1298,7 @@ func (x *GetConnectedClientsForObserverRequest) String() string {
 func (*GetConnectedClientsForObserverRequest) ProtoMessage() {}
 
 func (x *GetConnectedClientsForObserverRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[10]
+	mi := &file_observation_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1131,7 +1311,7 @@ func (x *GetConnectedClientsForObserverRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use GetConnectedClientsForObserverRequest.ProtoReflect.Descriptor instead.
 func (*GetConnectedClientsForObserverRequest) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{10}
+	return file_observation_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetConnectedClientsForObserverRequest) GetEventStore() string {
@@ -1173,7 +1353,7 @@ type GetFailedPartitionsRequest struct {
 
 func (x *GetFailedPartitionsRequest) Reset() {
 	*x = GetFailedPartitionsRequest{}
-	mi := &file_observation_proto_msgTypes[11]
+	mi := &file_observation_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1185,7 +1365,7 @@ func (x *GetFailedPartitionsRequest) String() string {
 func (*GetFailedPartitionsRequest) ProtoMessage() {}
 
 func (x *GetFailedPartitionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[11]
+	mi := &file_observation_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1198,7 +1378,7 @@ func (x *GetFailedPartitionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFailedPartitionsRequest.ProtoReflect.Descriptor instead.
 func (*GetFailedPartitionsRequest) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{11}
+	return file_observation_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetFailedPartitionsRequest) GetEventStore() string {
@@ -1234,7 +1414,7 @@ type GetObserverInformationRequest struct {
 
 func (x *GetObserverInformationRequest) Reset() {
 	*x = GetObserverInformationRequest{}
-	mi := &file_observation_proto_msgTypes[12]
+	mi := &file_observation_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1246,7 +1426,7 @@ func (x *GetObserverInformationRequest) String() string {
 func (*GetObserverInformationRequest) ProtoMessage() {}
 
 func (x *GetObserverInformationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[12]
+	mi := &file_observation_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1259,7 +1439,7 @@ func (x *GetObserverInformationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetObserverInformationRequest.ProtoReflect.Descriptor instead.
 func (*GetObserverInformationRequest) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{12}
+	return file_observation_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetObserverInformationRequest) GetEventStore() string {
@@ -1301,7 +1481,7 @@ type GetReplayableObserversForEventTypesRequest struct {
 
 func (x *GetReplayableObserversForEventTypesRequest) Reset() {
 	*x = GetReplayableObserversForEventTypesRequest{}
-	mi := &file_observation_proto_msgTypes[13]
+	mi := &file_observation_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1313,7 +1493,7 @@ func (x *GetReplayableObserversForEventTypesRequest) String() string {
 func (*GetReplayableObserversForEventTypesRequest) ProtoMessage() {}
 
 func (x *GetReplayableObserversForEventTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[13]
+	mi := &file_observation_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1326,7 +1506,7 @@ func (x *GetReplayableObserversForEventTypesRequest) ProtoReflect() protoreflect
 
 // Deprecated: Use GetReplayableObserversForEventTypesRequest.ProtoReflect.Descriptor instead.
 func (*GetReplayableObserversForEventTypesRequest) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{13}
+	return file_observation_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetReplayableObserversForEventTypesRequest) GetEventStore() string {
@@ -1359,7 +1539,7 @@ type IEnumerable_ConnectedClient struct {
 
 func (x *IEnumerable_ConnectedClient) Reset() {
 	*x = IEnumerable_ConnectedClient{}
-	mi := &file_observation_proto_msgTypes[14]
+	mi := &file_observation_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1371,7 +1551,7 @@ func (x *IEnumerable_ConnectedClient) String() string {
 func (*IEnumerable_ConnectedClient) ProtoMessage() {}
 
 func (x *IEnumerable_ConnectedClient) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[14]
+	mi := &file_observation_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1384,7 +1564,7 @@ func (x *IEnumerable_ConnectedClient) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IEnumerable_ConnectedClient.ProtoReflect.Descriptor instead.
 func (*IEnumerable_ConnectedClient) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{14}
+	return file_observation_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *IEnumerable_ConnectedClient) GetItems() []*ConnectedClient {
@@ -1403,7 +1583,7 @@ type IEnumerable_FailedPartition struct {
 
 func (x *IEnumerable_FailedPartition) Reset() {
 	*x = IEnumerable_FailedPartition{}
-	mi := &file_observation_proto_msgTypes[15]
+	mi := &file_observation_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1415,7 +1595,7 @@ func (x *IEnumerable_FailedPartition) String() string {
 func (*IEnumerable_FailedPartition) ProtoMessage() {}
 
 func (x *IEnumerable_FailedPartition) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[15]
+	mi := &file_observation_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1428,7 +1608,7 @@ func (x *IEnumerable_FailedPartition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IEnumerable_FailedPartition.ProtoReflect.Descriptor instead.
 func (*IEnumerable_FailedPartition) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{15}
+	return file_observation_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *IEnumerable_FailedPartition) GetItems() []*FailedPartition {
@@ -1447,7 +1627,7 @@ type IEnumerable_ObserverInformation struct {
 
 func (x *IEnumerable_ObserverInformation) Reset() {
 	*x = IEnumerable_ObserverInformation{}
-	mi := &file_observation_proto_msgTypes[16]
+	mi := &file_observation_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1459,7 +1639,7 @@ func (x *IEnumerable_ObserverInformation) String() string {
 func (*IEnumerable_ObserverInformation) ProtoMessage() {}
 
 func (x *IEnumerable_ObserverInformation) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[16]
+	mi := &file_observation_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1472,7 +1652,7 @@ func (x *IEnumerable_ObserverInformation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IEnumerable_ObserverInformation.ProtoReflect.Descriptor instead.
 func (*IEnumerable_ObserverInformation) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{16}
+	return file_observation_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *IEnumerable_ObserverInformation) GetItems() []*ObserverInformation {
@@ -1493,7 +1673,7 @@ type ObserverInformation struct {
 	LastHandledEventSequenceNumber uint64                 `protobuf:"varint,7,opt,name=LastHandledEventSequenceNumber,proto3" json:"LastHandledEventSequenceNumber,omitempty"`
 	RunningState                   ObserverRunningState   `protobuf:"varint,8,opt,name=RunningState,proto3,enum=Cratis.Chronicle.Contracts.Observation.ObserverRunningState" json:"RunningState,omitempty"`
 	IsSubscribed                   bool                   `protobuf:"varint,9,opt,name=IsSubscribed,proto3" json:"IsSubscribed,omitempty"`
-	IsReplayable                   bool                   `protobuf:"varint,10,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"` // default value could not be applied: True
+	IsReplayable                   bool                   `protobuf:"varint,10,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"`
 	TailEventSequenceNumber        uint64                 `protobuf:"varint,11,opt,name=TailEventSequenceNumber,proto3" json:"TailEventSequenceNumber,omitempty"`
 	HandledEventCount              uint64                 `protobuf:"varint,12,opt,name=HandledEventCount,proto3" json:"HandledEventCount,omitempty"`
 	unknownFields                  protoimpl.UnknownFields
@@ -1502,7 +1682,7 @@ type ObserverInformation struct {
 
 func (x *ObserverInformation) Reset() {
 	*x = ObserverInformation{}
-	mi := &file_observation_proto_msgTypes[17]
+	mi := &file_observation_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1514,7 +1694,7 @@ func (x *ObserverInformation) String() string {
 func (*ObserverInformation) ProtoMessage() {}
 
 func (x *ObserverInformation) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[17]
+	mi := &file_observation_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1527,7 +1707,7 @@ func (x *ObserverInformation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObserverInformation.ProtoReflect.Descriptor instead.
 func (*ObserverInformation) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{17}
+	return file_observation_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ObserverInformation) GetId() string {
@@ -1626,7 +1806,7 @@ type RemoveObserver struct {
 
 func (x *RemoveObserver) Reset() {
 	*x = RemoveObserver{}
-	mi := &file_observation_proto_msgTypes[18]
+	mi := &file_observation_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1638,7 +1818,7 @@ func (x *RemoveObserver) String() string {
 func (*RemoveObserver) ProtoMessage() {}
 
 func (x *RemoveObserver) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[18]
+	mi := &file_observation_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1651,7 +1831,7 @@ func (x *RemoveObserver) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveObserver.ProtoReflect.Descriptor instead.
 func (*RemoveObserver) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{18}
+	return file_observation_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *RemoveObserver) GetEventStore() string {
@@ -1692,7 +1872,7 @@ type RemoveObserverResponse struct {
 
 func (x *RemoveObserverResponse) Reset() {
 	*x = RemoveObserverResponse{}
-	mi := &file_observation_proto_msgTypes[19]
+	mi := &file_observation_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1704,7 +1884,7 @@ func (x *RemoveObserverResponse) String() string {
 func (*RemoveObserverResponse) ProtoMessage() {}
 
 func (x *RemoveObserverResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[19]
+	mi := &file_observation_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1717,7 +1897,7 @@ func (x *RemoveObserverResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveObserverResponse.ProtoReflect.Descriptor instead.
 func (*RemoveObserverResponse) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{19}
+	return file_observation_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RemoveObserverResponse) GetOutcome() ObserverRemovalOutcome {
@@ -1746,7 +1926,7 @@ type Replay struct {
 
 func (x *Replay) Reset() {
 	*x = Replay{}
-	mi := &file_observation_proto_msgTypes[20]
+	mi := &file_observation_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1758,7 +1938,7 @@ func (x *Replay) String() string {
 func (*Replay) ProtoMessage() {}
 
 func (x *Replay) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[20]
+	mi := &file_observation_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1771,7 +1951,7 @@ func (x *Replay) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Replay.ProtoReflect.Descriptor instead.
 func (*Replay) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{20}
+	return file_observation_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *Replay) GetEventStore() string {
@@ -1815,7 +1995,7 @@ type ReplayPartition struct {
 
 func (x *ReplayPartition) Reset() {
 	*x = ReplayPartition{}
-	mi := &file_observation_proto_msgTypes[21]
+	mi := &file_observation_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1827,7 +2007,7 @@ func (x *ReplayPartition) String() string {
 func (*ReplayPartition) ProtoMessage() {}
 
 func (x *ReplayPartition) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[21]
+	mi := &file_observation_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1840,7 +2020,7 @@ func (x *ReplayPartition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplayPartition.ProtoReflect.Descriptor instead.
 func (*ReplayPartition) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{21}
+	return file_observation_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ReplayPartition) GetEventStore() string {
@@ -1887,7 +2067,7 @@ type ReplayResponse struct {
 
 func (x *ReplayResponse) Reset() {
 	*x = ReplayResponse{}
-	mi := &file_observation_proto_msgTypes[22]
+	mi := &file_observation_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1899,7 +2079,7 @@ func (x *ReplayResponse) String() string {
 func (*ReplayResponse) ProtoMessage() {}
 
 func (x *ReplayResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[22]
+	mi := &file_observation_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1912,7 +2092,7 @@ func (x *ReplayResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplayResponse.ProtoReflect.Descriptor instead.
 func (*ReplayResponse) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{22}
+	return file_observation_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ReplayResponse) GetJobId() string {
@@ -1935,7 +2115,7 @@ type RetryPartition struct {
 
 func (x *RetryPartition) Reset() {
 	*x = RetryPartition{}
-	mi := &file_observation_proto_msgTypes[23]
+	mi := &file_observation_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1947,7 +2127,7 @@ func (x *RetryPartition) String() string {
 func (*RetryPartition) ProtoMessage() {}
 
 func (x *RetryPartition) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[23]
+	mi := &file_observation_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1960,7 +2140,7 @@ func (x *RetryPartition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryPartition.ProtoReflect.Descriptor instead.
 func (*RetryPartition) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{23}
+	return file_observation_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RetryPartition) GetEventStore() string {
@@ -2007,7 +2187,7 @@ type RetryPartitionResponse struct {
 
 func (x *RetryPartitionResponse) Reset() {
 	*x = RetryPartitionResponse{}
-	mi := &file_observation_proto_msgTypes[24]
+	mi := &file_observation_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2019,7 +2199,7 @@ func (x *RetryPartitionResponse) String() string {
 func (*RetryPartitionResponse) ProtoMessage() {}
 
 func (x *RetryPartitionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[24]
+	mi := &file_observation_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2032,7 +2212,7 @@ func (x *RetryPartitionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryPartitionResponse.ProtoReflect.Descriptor instead.
 func (*RetryPartitionResponse) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{24}
+	return file_observation_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *RetryPartitionResponse) GetOutcome() PartitionRecoveryOutcome {
@@ -2052,7 +2232,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_observation_proto_msgTypes[25]
+	mi := &file_observation_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2064,7 +2244,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[25]
+	mi := &file_observation_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2077,7 +2257,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{25}
+	return file_observation_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -2103,7 +2283,7 @@ type WaitForObserverCompletionRequest struct {
 
 func (x *WaitForObserverCompletionRequest) Reset() {
 	*x = WaitForObserverCompletionRequest{}
-	mi := &file_observation_proto_msgTypes[26]
+	mi := &file_observation_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2115,7 +2295,7 @@ func (x *WaitForObserverCompletionRequest) String() string {
 func (*WaitForObserverCompletionRequest) ProtoMessage() {}
 
 func (x *WaitForObserverCompletionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[26]
+	mi := &file_observation_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2128,7 +2308,7 @@ func (x *WaitForObserverCompletionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WaitForObserverCompletionRequest.ProtoReflect.Descriptor instead.
 func (*WaitForObserverCompletionRequest) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{26}
+	return file_observation_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *WaitForObserverCompletionRequest) GetEventStore() string {
@@ -2199,7 +2379,7 @@ type WaitForObserverCompletionResponse struct {
 
 func (x *WaitForObserverCompletionResponse) Reset() {
 	*x = WaitForObserverCompletionResponse{}
-	mi := &file_observation_proto_msgTypes[27]
+	mi := &file_observation_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2211,7 +2391,7 @@ func (x *WaitForObserverCompletionResponse) String() string {
 func (*WaitForObserverCompletionResponse) ProtoMessage() {}
 
 func (x *WaitForObserverCompletionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[27]
+	mi := &file_observation_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2224,7 +2404,7 @@ func (x *WaitForObserverCompletionResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use WaitForObserverCompletionResponse.ProtoReflect.Descriptor instead.
 func (*WaitForObserverCompletionResponse) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{27}
+	return file_observation_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *WaitForObserverCompletionResponse) GetIsSuccess() bool {
@@ -2336,7 +2516,20 @@ const file_observation_proto_rawDesc = "" +
 	"\n" +
 	"StackTrace\x18\x04 \x01(\tR\n" +
 	"StackTrace\x12G\n" +
-	"\x04Kind\x18\x05 \x01(\x0e23.Cratis.Chronicle.Contracts.Observation.FailureKindR\x04Kind\"\xaf\x01\n" +
+	"\x04Kind\x18\x05 \x01(\x0e23.Cratis.Chronicle.Contracts.Observation.FailureKindR\x04Kind\"\x95\x01\n" +
+	"\vFastForward\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x1e\n" +
+	"\n" +
+	"ObserverId\x18\x03 \x01(\tR\n" +
+	"ObserverId\x12(\n" +
+	"\x0fEventSequenceId\x18\x04 \x01(\tR\x0fEventSequenceId\"\xef\x01\n" +
+	"\x13FastForwardResponse\x12T\n" +
+	"\aOutcome\x18\x01 \x01(\x0e2:.Cratis.Chronicle.Contracts.Observation.FastForwardOutcomeR\aOutcome\x12H\n" +
+	"\x1fPreviousNextEventSequenceNumber\x18\x02 \x01(\x04R\x1fPreviousNextEventSequenceNumber\x128\n" +
+	"\x17NextEventSequenceNumber\x18\x03 \x01(\x04R\x17NextEventSequenceNumber\"\xaf\x01\n" +
 	"%GetConnectedClientsForObserverRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -2464,7 +2657,12 @@ const file_observation_proto_rawDesc = "" +
 	"\x14FAILURE_KIND_Unknown\x10\x00\x12\f\n" +
 	"\bHandling\x10\x01\x12\v\n" +
 	"\aTimeout\x10\x02\x12\x1d\n" +
-	"\x19FAILURE_KIND_Disconnected\x10\x03*1\n" +
+	"\x19FAILURE_KIND_Disconnected\x10\x03*c\n" +
+	"\x12FastForwardOutcome\x12\x11\n" +
+	"\rFastForwarded\x10\x00\x12\x11\n" +
+	"\rAlreadyAtTail\x10\x01\x12\x15\n" +
+	"\x11ObserverReplaying\x10\x02\x12\x10\n" +
+	"\fNotAvailable\x10\x03*1\n" +
 	"\rObserverOwner\x12\b\n" +
 	"\x04None\x10\x00\x12\n" +
 	"\n" +
@@ -2498,11 +2696,12 @@ const file_observation_proto_rawDesc = "" +
 	"\x14PartitionQuarantined\x10\x032\xda\x02\n" +
 	"\x10FailedPartitions\x12\x9e\x01\n" +
 	"\x13GetFailedPartitions\x12B.Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest\x1aC.Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition\x12\xa4\x01\n" +
-	"\x17ObserveFailedPartitions\x12B.Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest\x1aC.Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition0\x012\xfe\x0e\n" +
+	"\x17ObserveFailedPartitions\x12B.Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest\x1aC.Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition0\x012\xff\x0f\n" +
 	"\tObservers\x12n\n" +
 	"\x15ClearFailedPartitions\x12=.Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions\x1a\x16.google.protobuf.Empty\x12r\n" +
 	"\x17ClearObserverQuarantine\x12?.Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine\x1a\x16.google.protobuf.Empty\x12\xa6\x01\n" +
-	"\x18ClearPartitionQuarantine\x12@.Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine\x1aH.Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse\x12\xb4\x01\n" +
+	"\x18ClearPartitionQuarantine\x12@.Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine\x1aH.Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse\x12\x7f\n" +
+	"\vFastForward\x123.Cratis.Chronicle.Contracts.Observation.FastForward\x1a;.Cratis.Chronicle.Contracts.Observation.FastForwardResponse\x12\xb4\x01\n" +
 	"\x1eGetConnectedClientsForObserver\x12M.Cratis.Chronicle.Contracts.Observation.GetConnectedClientsForObserverRequest\x1aC.Cratis.Chronicle.Contracts.Observation.IEnumerable_ConnectedClient\x12\x9c\x01\n" +
 	"\x16GetObserverInformation\x12E.Cratis.Chronicle.Contracts.Observation.GetObserverInformationRequest\x1a;.Cratis.Chronicle.Contracts.Observation.ObserverInformation\x12\x94\x01\n" +
 	"\fGetObservers\x12;.Cratis.Chronicle.Contracts.Observation.AllObserversRequest\x1aG.Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation\x12\xc2\x01\n" +
@@ -2527,103 +2726,109 @@ func file_observation_proto_rawDescGZIP() []byte {
 	return file_observation_proto_rawDescData
 }
 
-var file_observation_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_observation_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_observation_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
+var file_observation_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_observation_proto_goTypes = []any{
 	(ClearPartitionQuarantineOutcome)(0),               // 0: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineOutcome
 	(FailureKind)(0),                                   // 1: Cratis.Chronicle.Contracts.Observation.FailureKind
-	(ObserverOwner)(0),                                 // 2: Cratis.Chronicle.Contracts.Observation.ObserverOwner
-	(ObserverRemovalOutcome)(0),                        // 3: Cratis.Chronicle.Contracts.Observation.ObserverRemovalOutcome
-	(ObserverRunningState)(0),                          // 4: Cratis.Chronicle.Contracts.Observation.ObserverRunningState
-	(ObserverType)(0),                                  // 5: Cratis.Chronicle.Contracts.Observation.ObserverType
-	(PartitionRecoveryOutcome)(0),                      // 6: Cratis.Chronicle.Contracts.Observation.PartitionRecoveryOutcome
-	(*AllObserversRequest)(nil),                        // 7: Cratis.Chronicle.Contracts.Observation.AllObserversRequest
-	(*AppendedEventTypeTail)(nil),                      // 8: Cratis.Chronicle.Contracts.Observation.AppendedEventTypeTail
-	(*ClearFailedPartitions)(nil),                      // 9: Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions
-	(*ClearObserverQuarantine)(nil),                    // 10: Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine
-	(*ClearPartitionQuarantine)(nil),                   // 11: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine
-	(*ClearPartitionQuarantineResponse)(nil),           // 12: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse
-	(*ConnectedClient)(nil),                            // 13: Cratis.Chronicle.Contracts.Observation.ConnectedClient
-	(*EventType)(nil),                                  // 14: Cratis.Chronicle.Contracts.Observation.EventType
-	(*FailedPartition)(nil),                            // 15: Cratis.Chronicle.Contracts.Observation.FailedPartition
-	(*FailedPartitionAttempt)(nil),                     // 16: Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt
-	(*GetConnectedClientsForObserverRequest)(nil),      // 17: Cratis.Chronicle.Contracts.Observation.GetConnectedClientsForObserverRequest
-	(*GetFailedPartitionsRequest)(nil),                 // 18: Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
-	(*GetObserverInformationRequest)(nil),              // 19: Cratis.Chronicle.Contracts.Observation.GetObserverInformationRequest
-	(*GetReplayableObserversForEventTypesRequest)(nil), // 20: Cratis.Chronicle.Contracts.Observation.GetReplayableObserversForEventTypesRequest
-	(*IEnumerable_ConnectedClient)(nil),                // 21: Cratis.Chronicle.Contracts.Observation.IEnumerable_ConnectedClient
-	(*IEnumerable_FailedPartition)(nil),                // 22: Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
-	(*IEnumerable_ObserverInformation)(nil),            // 23: Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
-	(*ObserverInformation)(nil),                        // 24: Cratis.Chronicle.Contracts.Observation.ObserverInformation
-	(*RemoveObserver)(nil),                             // 25: Cratis.Chronicle.Contracts.Observation.RemoveObserver
-	(*RemoveObserverResponse)(nil),                     // 26: Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse
-	(*Replay)(nil),                                     // 27: Cratis.Chronicle.Contracts.Observation.Replay
-	(*ReplayPartition)(nil),                            // 28: Cratis.Chronicle.Contracts.Observation.ReplayPartition
-	(*ReplayResponse)(nil),                             // 29: Cratis.Chronicle.Contracts.Observation.ReplayResponse
-	(*RetryPartition)(nil),                             // 30: Cratis.Chronicle.Contracts.Observation.RetryPartition
-	(*RetryPartitionResponse)(nil),                     // 31: Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse
-	(*SerializableDateTimeOffset)(nil),                 // 32: Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
-	(*WaitForObserverCompletionRequest)(nil),           // 33: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest
-	(*WaitForObserverCompletionResponse)(nil),          // 34: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse
-	(*bcl.Guid)(nil),                                   // 35: bcl.Guid
-	(*emptypb.Empty)(nil),                              // 36: google.protobuf.Empty
+	(FastForwardOutcome)(0),                            // 2: Cratis.Chronicle.Contracts.Observation.FastForwardOutcome
+	(ObserverOwner)(0),                                 // 3: Cratis.Chronicle.Contracts.Observation.ObserverOwner
+	(ObserverRemovalOutcome)(0),                        // 4: Cratis.Chronicle.Contracts.Observation.ObserverRemovalOutcome
+	(ObserverRunningState)(0),                          // 5: Cratis.Chronicle.Contracts.Observation.ObserverRunningState
+	(ObserverType)(0),                                  // 6: Cratis.Chronicle.Contracts.Observation.ObserverType
+	(PartitionRecoveryOutcome)(0),                      // 7: Cratis.Chronicle.Contracts.Observation.PartitionRecoveryOutcome
+	(*AllObserversRequest)(nil),                        // 8: Cratis.Chronicle.Contracts.Observation.AllObserversRequest
+	(*AppendedEventTypeTail)(nil),                      // 9: Cratis.Chronicle.Contracts.Observation.AppendedEventTypeTail
+	(*ClearFailedPartitions)(nil),                      // 10: Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions
+	(*ClearObserverQuarantine)(nil),                    // 11: Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine
+	(*ClearPartitionQuarantine)(nil),                   // 12: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine
+	(*ClearPartitionQuarantineResponse)(nil),           // 13: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse
+	(*ConnectedClient)(nil),                            // 14: Cratis.Chronicle.Contracts.Observation.ConnectedClient
+	(*EventType)(nil),                                  // 15: Cratis.Chronicle.Contracts.Observation.EventType
+	(*FailedPartition)(nil),                            // 16: Cratis.Chronicle.Contracts.Observation.FailedPartition
+	(*FailedPartitionAttempt)(nil),                     // 17: Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt
+	(*FastForward)(nil),                                // 18: Cratis.Chronicle.Contracts.Observation.FastForward
+	(*FastForwardResponse)(nil),                        // 19: Cratis.Chronicle.Contracts.Observation.FastForwardResponse
+	(*GetConnectedClientsForObserverRequest)(nil),      // 20: Cratis.Chronicle.Contracts.Observation.GetConnectedClientsForObserverRequest
+	(*GetFailedPartitionsRequest)(nil),                 // 21: Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
+	(*GetObserverInformationRequest)(nil),              // 22: Cratis.Chronicle.Contracts.Observation.GetObserverInformationRequest
+	(*GetReplayableObserversForEventTypesRequest)(nil), // 23: Cratis.Chronicle.Contracts.Observation.GetReplayableObserversForEventTypesRequest
+	(*IEnumerable_ConnectedClient)(nil),                // 24: Cratis.Chronicle.Contracts.Observation.IEnumerable_ConnectedClient
+	(*IEnumerable_FailedPartition)(nil),                // 25: Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
+	(*IEnumerable_ObserverInformation)(nil),            // 26: Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
+	(*ObserverInformation)(nil),                        // 27: Cratis.Chronicle.Contracts.Observation.ObserverInformation
+	(*RemoveObserver)(nil),                             // 28: Cratis.Chronicle.Contracts.Observation.RemoveObserver
+	(*RemoveObserverResponse)(nil),                     // 29: Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse
+	(*Replay)(nil),                                     // 30: Cratis.Chronicle.Contracts.Observation.Replay
+	(*ReplayPartition)(nil),                            // 31: Cratis.Chronicle.Contracts.Observation.ReplayPartition
+	(*ReplayResponse)(nil),                             // 32: Cratis.Chronicle.Contracts.Observation.ReplayResponse
+	(*RetryPartition)(nil),                             // 33: Cratis.Chronicle.Contracts.Observation.RetryPartition
+	(*RetryPartitionResponse)(nil),                     // 34: Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse
+	(*SerializableDateTimeOffset)(nil),                 // 35: Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
+	(*WaitForObserverCompletionRequest)(nil),           // 36: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest
+	(*WaitForObserverCompletionResponse)(nil),          // 37: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse
+	(*bcl.Guid)(nil),                                   // 38: bcl.Guid
+	(*emptypb.Empty)(nil),                              // 39: google.protobuf.Empty
 }
 var file_observation_proto_depIdxs = []int32{
-	14, // 0: Cratis.Chronicle.Contracts.Observation.AppendedEventTypeTail.EventType:type_name -> Cratis.Chronicle.Contracts.Observation.EventType
+	15, // 0: Cratis.Chronicle.Contracts.Observation.AppendedEventTypeTail.EventType:type_name -> Cratis.Chronicle.Contracts.Observation.EventType
 	0,  // 1: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineOutcome
-	6,  // 2: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse.RetryOutcome:type_name -> Cratis.Chronicle.Contracts.Observation.PartitionRecoveryOutcome
-	32, // 3: Cratis.Chronicle.Contracts.Observation.ConnectedClient.LastSeen:type_name -> Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
-	35, // 4: Cratis.Chronicle.Contracts.Observation.FailedPartition.Id:type_name -> bcl.Guid
-	16, // 5: Cratis.Chronicle.Contracts.Observation.FailedPartition.Attempts:type_name -> Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt
-	32, // 6: Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
+	7,  // 2: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse.RetryOutcome:type_name -> Cratis.Chronicle.Contracts.Observation.PartitionRecoveryOutcome
+	35, // 3: Cratis.Chronicle.Contracts.Observation.ConnectedClient.LastSeen:type_name -> Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
+	38, // 4: Cratis.Chronicle.Contracts.Observation.FailedPartition.Id:type_name -> bcl.Guid
+	17, // 5: Cratis.Chronicle.Contracts.Observation.FailedPartition.Attempts:type_name -> Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt
+	35, // 6: Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
 	1,  // 7: Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt.Kind:type_name -> Cratis.Chronicle.Contracts.Observation.FailureKind
-	14, // 8: Cratis.Chronicle.Contracts.Observation.GetReplayableObserversForEventTypesRequest.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.EventType
-	13, // 9: Cratis.Chronicle.Contracts.Observation.IEnumerable_ConnectedClient.items:type_name -> Cratis.Chronicle.Contracts.Observation.ConnectedClient
-	15, // 10: Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition.items:type_name -> Cratis.Chronicle.Contracts.Observation.FailedPartition
-	24, // 11: Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation.items:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverInformation
-	5,  // 12: Cratis.Chronicle.Contracts.Observation.ObserverInformation.Type:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverType
-	2,  // 13: Cratis.Chronicle.Contracts.Observation.ObserverInformation.Owner:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverOwner
-	14, // 14: Cratis.Chronicle.Contracts.Observation.ObserverInformation.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.EventType
-	4,  // 15: Cratis.Chronicle.Contracts.Observation.ObserverInformation.RunningState:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverRunningState
-	3,  // 16: Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverRemovalOutcome
-	6,  // 17: Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.PartitionRecoveryOutcome
-	8,  // 18: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest.EventTypeTails:type_name -> Cratis.Chronicle.Contracts.Observation.AppendedEventTypeTail
-	15, // 19: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse.FailedPartitions:type_name -> Cratis.Chronicle.Contracts.Observation.FailedPartition
-	18, // 20: Cratis.Chronicle.Contracts.Observation.FailedPartitions.GetFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
-	18, // 21: Cratis.Chronicle.Contracts.Observation.FailedPartitions.ObserveFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
-	9,  // 22: Cratis.Chronicle.Contracts.Observation.Observers.ClearFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions
-	10, // 23: Cratis.Chronicle.Contracts.Observation.Observers.ClearObserverQuarantine:input_type -> Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine
-	11, // 24: Cratis.Chronicle.Contracts.Observation.Observers.ClearPartitionQuarantine:input_type -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine
-	17, // 25: Cratis.Chronicle.Contracts.Observation.Observers.GetConnectedClientsForObserver:input_type -> Cratis.Chronicle.Contracts.Observation.GetConnectedClientsForObserverRequest
-	19, // 26: Cratis.Chronicle.Contracts.Observation.Observers.GetObserverInformation:input_type -> Cratis.Chronicle.Contracts.Observation.GetObserverInformationRequest
-	7,  // 27: Cratis.Chronicle.Contracts.Observation.Observers.GetObservers:input_type -> Cratis.Chronicle.Contracts.Observation.AllObserversRequest
-	20, // 28: Cratis.Chronicle.Contracts.Observation.Observers.GetReplayableObserversForEventTypes:input_type -> Cratis.Chronicle.Contracts.Observation.GetReplayableObserversForEventTypesRequest
-	7,  // 29: Cratis.Chronicle.Contracts.Observation.Observers.ObserveObservers:input_type -> Cratis.Chronicle.Contracts.Observation.AllObserversRequest
-	25, // 30: Cratis.Chronicle.Contracts.Observation.Observers.RemoveObserver:input_type -> Cratis.Chronicle.Contracts.Observation.RemoveObserver
-	27, // 31: Cratis.Chronicle.Contracts.Observation.Observers.Replay:input_type -> Cratis.Chronicle.Contracts.Observation.Replay
-	28, // 32: Cratis.Chronicle.Contracts.Observation.Observers.ReplayPartition:input_type -> Cratis.Chronicle.Contracts.Observation.ReplayPartition
-	30, // 33: Cratis.Chronicle.Contracts.Observation.Observers.RetryPartition:input_type -> Cratis.Chronicle.Contracts.Observation.RetryPartition
-	33, // 34: Cratis.Chronicle.Contracts.Observation.Observers.WaitForCompletion:input_type -> Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest
-	22, // 35: Cratis.Chronicle.Contracts.Observation.FailedPartitions.GetFailedPartitions:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
-	22, // 36: Cratis.Chronicle.Contracts.Observation.FailedPartitions.ObserveFailedPartitions:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
-	36, // 37: Cratis.Chronicle.Contracts.Observation.Observers.ClearFailedPartitions:output_type -> google.protobuf.Empty
-	36, // 38: Cratis.Chronicle.Contracts.Observation.Observers.ClearObserverQuarantine:output_type -> google.protobuf.Empty
-	12, // 39: Cratis.Chronicle.Contracts.Observation.Observers.ClearPartitionQuarantine:output_type -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse
-	21, // 40: Cratis.Chronicle.Contracts.Observation.Observers.GetConnectedClientsForObserver:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ConnectedClient
-	24, // 41: Cratis.Chronicle.Contracts.Observation.Observers.GetObserverInformation:output_type -> Cratis.Chronicle.Contracts.Observation.ObserverInformation
-	23, // 42: Cratis.Chronicle.Contracts.Observation.Observers.GetObservers:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
-	23, // 43: Cratis.Chronicle.Contracts.Observation.Observers.GetReplayableObserversForEventTypes:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
-	23, // 44: Cratis.Chronicle.Contracts.Observation.Observers.ObserveObservers:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
-	26, // 45: Cratis.Chronicle.Contracts.Observation.Observers.RemoveObserver:output_type -> Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse
-	29, // 46: Cratis.Chronicle.Contracts.Observation.Observers.Replay:output_type -> Cratis.Chronicle.Contracts.Observation.ReplayResponse
-	36, // 47: Cratis.Chronicle.Contracts.Observation.Observers.ReplayPartition:output_type -> google.protobuf.Empty
-	31, // 48: Cratis.Chronicle.Contracts.Observation.Observers.RetryPartition:output_type -> Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse
-	34, // 49: Cratis.Chronicle.Contracts.Observation.Observers.WaitForCompletion:output_type -> Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse
-	35, // [35:50] is the sub-list for method output_type
-	20, // [20:35] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	2,  // 8: Cratis.Chronicle.Contracts.Observation.FastForwardResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.FastForwardOutcome
+	15, // 9: Cratis.Chronicle.Contracts.Observation.GetReplayableObserversForEventTypesRequest.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.EventType
+	14, // 10: Cratis.Chronicle.Contracts.Observation.IEnumerable_ConnectedClient.items:type_name -> Cratis.Chronicle.Contracts.Observation.ConnectedClient
+	16, // 11: Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition.items:type_name -> Cratis.Chronicle.Contracts.Observation.FailedPartition
+	27, // 12: Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation.items:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverInformation
+	6,  // 13: Cratis.Chronicle.Contracts.Observation.ObserverInformation.Type:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverType
+	3,  // 14: Cratis.Chronicle.Contracts.Observation.ObserverInformation.Owner:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverOwner
+	15, // 15: Cratis.Chronicle.Contracts.Observation.ObserverInformation.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.EventType
+	5,  // 16: Cratis.Chronicle.Contracts.Observation.ObserverInformation.RunningState:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverRunningState
+	4,  // 17: Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverRemovalOutcome
+	7,  // 18: Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.PartitionRecoveryOutcome
+	9,  // 19: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest.EventTypeTails:type_name -> Cratis.Chronicle.Contracts.Observation.AppendedEventTypeTail
+	16, // 20: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse.FailedPartitions:type_name -> Cratis.Chronicle.Contracts.Observation.FailedPartition
+	21, // 21: Cratis.Chronicle.Contracts.Observation.FailedPartitions.GetFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
+	21, // 22: Cratis.Chronicle.Contracts.Observation.FailedPartitions.ObserveFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
+	10, // 23: Cratis.Chronicle.Contracts.Observation.Observers.ClearFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions
+	11, // 24: Cratis.Chronicle.Contracts.Observation.Observers.ClearObserverQuarantine:input_type -> Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine
+	12, // 25: Cratis.Chronicle.Contracts.Observation.Observers.ClearPartitionQuarantine:input_type -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine
+	18, // 26: Cratis.Chronicle.Contracts.Observation.Observers.FastForward:input_type -> Cratis.Chronicle.Contracts.Observation.FastForward
+	20, // 27: Cratis.Chronicle.Contracts.Observation.Observers.GetConnectedClientsForObserver:input_type -> Cratis.Chronicle.Contracts.Observation.GetConnectedClientsForObserverRequest
+	22, // 28: Cratis.Chronicle.Contracts.Observation.Observers.GetObserverInformation:input_type -> Cratis.Chronicle.Contracts.Observation.GetObserverInformationRequest
+	8,  // 29: Cratis.Chronicle.Contracts.Observation.Observers.GetObservers:input_type -> Cratis.Chronicle.Contracts.Observation.AllObserversRequest
+	23, // 30: Cratis.Chronicle.Contracts.Observation.Observers.GetReplayableObserversForEventTypes:input_type -> Cratis.Chronicle.Contracts.Observation.GetReplayableObserversForEventTypesRequest
+	8,  // 31: Cratis.Chronicle.Contracts.Observation.Observers.ObserveObservers:input_type -> Cratis.Chronicle.Contracts.Observation.AllObserversRequest
+	28, // 32: Cratis.Chronicle.Contracts.Observation.Observers.RemoveObserver:input_type -> Cratis.Chronicle.Contracts.Observation.RemoveObserver
+	30, // 33: Cratis.Chronicle.Contracts.Observation.Observers.Replay:input_type -> Cratis.Chronicle.Contracts.Observation.Replay
+	31, // 34: Cratis.Chronicle.Contracts.Observation.Observers.ReplayPartition:input_type -> Cratis.Chronicle.Contracts.Observation.ReplayPartition
+	33, // 35: Cratis.Chronicle.Contracts.Observation.Observers.RetryPartition:input_type -> Cratis.Chronicle.Contracts.Observation.RetryPartition
+	36, // 36: Cratis.Chronicle.Contracts.Observation.Observers.WaitForCompletion:input_type -> Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest
+	25, // 37: Cratis.Chronicle.Contracts.Observation.FailedPartitions.GetFailedPartitions:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
+	25, // 38: Cratis.Chronicle.Contracts.Observation.FailedPartitions.ObserveFailedPartitions:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
+	39, // 39: Cratis.Chronicle.Contracts.Observation.Observers.ClearFailedPartitions:output_type -> google.protobuf.Empty
+	39, // 40: Cratis.Chronicle.Contracts.Observation.Observers.ClearObserverQuarantine:output_type -> google.protobuf.Empty
+	13, // 41: Cratis.Chronicle.Contracts.Observation.Observers.ClearPartitionQuarantine:output_type -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse
+	19, // 42: Cratis.Chronicle.Contracts.Observation.Observers.FastForward:output_type -> Cratis.Chronicle.Contracts.Observation.FastForwardResponse
+	24, // 43: Cratis.Chronicle.Contracts.Observation.Observers.GetConnectedClientsForObserver:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ConnectedClient
+	27, // 44: Cratis.Chronicle.Contracts.Observation.Observers.GetObserverInformation:output_type -> Cratis.Chronicle.Contracts.Observation.ObserverInformation
+	26, // 45: Cratis.Chronicle.Contracts.Observation.Observers.GetObservers:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
+	26, // 46: Cratis.Chronicle.Contracts.Observation.Observers.GetReplayableObserversForEventTypes:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
+	26, // 47: Cratis.Chronicle.Contracts.Observation.Observers.ObserveObservers:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
+	29, // 48: Cratis.Chronicle.Contracts.Observation.Observers.RemoveObserver:output_type -> Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse
+	32, // 49: Cratis.Chronicle.Contracts.Observation.Observers.Replay:output_type -> Cratis.Chronicle.Contracts.Observation.ReplayResponse
+	39, // 50: Cratis.Chronicle.Contracts.Observation.Observers.ReplayPartition:output_type -> google.protobuf.Empty
+	34, // 51: Cratis.Chronicle.Contracts.Observation.Observers.RetryPartition:output_type -> Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse
+	37, // 52: Cratis.Chronicle.Contracts.Observation.Observers.WaitForCompletion:output_type -> Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse
+	37, // [37:53] is the sub-list for method output_type
+	21, // [21:37] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_observation_proto_init() }
@@ -2636,8 +2841,8 @@ func file_observation_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_observation_proto_rawDesc), len(file_observation_proto_rawDesc)),
-			NumEnums:      7,
-			NumMessages:   28,
+			NumEnums:      8,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

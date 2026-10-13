@@ -27,21 +27,27 @@ const (
 	EventSequences_AppendManyForEventSourcesWithNamedTags_FullMethodName = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendManyForEventSourcesWithNamedTags"
 	EventSequences_AppendManyWithNamedTags_FullMethodName                = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendManyWithNamedTags"
 	EventSequences_AppendWithNamedTags_FullMethodName                    = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendWithNamedTags"
+	EventSequences_ClosedStreams_FullMethodName                          = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ClosedStreams"
 	EventSequences_CompleteStream_FullMethodName                         = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CompleteStream"
+	EventSequences_CompleteStreamScope_FullMethodName                    = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CompleteStreamScope"
 	EventSequences_EndOf_FullMethodName                                  = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/EndOf"
 	EventSequences_ExportEvents_FullMethodName                           = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ExportEvents"
 	EventSequences_ForEventSourceIdAndEventTypes_FullMethodName          = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ForEventSourceIdAndEventTypes"
 	EventSequences_FromSequenceNumber_FullMethodName                     = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/FromSequenceNumber"
 	EventSequences_HasEventsForEventSourceId_FullMethodName              = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/HasEventsForEventSourceId"
+	EventSequences_IsStreamScopeCompleted_FullMethodName                 = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/IsStreamScopeCompleted"
+	EventSequences_MetadataAt_FullMethodName                             = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/MetadataAt"
 	EventSequences_ParseResolution_FullMethodName                        = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ParseResolution"
 	EventSequences_QueryEvents_FullMethodName                            = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/QueryEvents"
 	EventSequences_QueryEventsWithNamedTags_FullMethodName               = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/QueryEventsWithNamedTags"
 	EventSequences_Redact_FullMethodName                                 = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/Redact"
 	EventSequences_RedactForEventSource_FullMethodName                   = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/RedactForEventSource"
+	EventSequences_ReopenStreamScope_FullMethodName                      = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ReopenStreamScope"
 	EventSequences_Revise_FullMethodName                                 = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/Revise"
 	EventSequences_SequenceHistogram_FullMethodName                      = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/SequenceHistogram"
 	EventSequences_SequenceHistogramWithNamedTags_FullMethodName         = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/SequenceHistogramWithNamedTags"
 	EventSequences_TailSequenceNumber_FullMethodName                     = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/TailSequenceNumber"
+	EventSequences_VerifyContent_FullMethodName                          = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/VerifyContent"
 )
 
 // EventSequencesClient is the client API for EventSequences service.
@@ -56,21 +62,27 @@ type EventSequencesClient interface {
 	AppendManyForEventSourcesWithNamedTags(ctx context.Context, in *AppendManyForEventSourcesWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyResponse, error)
 	AppendManyWithNamedTags(ctx context.Context, in *AppendManyWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyResponse, error)
 	AppendWithNamedTags(ctx context.Context, in *AppendWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendResponse, error)
+	ClosedStreams(ctx context.Context, in *ClosedStreamsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_ClosedStreamResponse, error)
 	CompleteStream(ctx context.Context, in *CompleteStreamRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error)
+	CompleteStreamScope(ctx context.Context, in *CompleteStreamScopeRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error)
 	EndOf(ctx context.Context, in *EndOfRequest, opts ...grpc.CallOption) (*QueryResult_SerializableDateTimeOffset, error)
 	ExportEvents(ctx context.Context, in *ExportEventsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_ExportedEventResponse, error)
 	ForEventSourceIdAndEventTypes(ctx context.Context, in *ForEventSourceIdAndEventTypesRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	FromSequenceNumber(ctx context.Context, in *FromSequenceNumberRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	HasEventsForEventSourceId(ctx context.Context, in *HasEventsForEventSourceIdRequest, opts ...grpc.CallOption) (*QueryResult_EventSourceEventsResponse, error)
+	IsStreamScopeCompleted(ctx context.Context, in *IsStreamScopeCompletedRequest, opts ...grpc.CallOption) (*QueryResult_StreamScopeCompletionResponse, error)
+	MetadataAt(ctx context.Context, in *MetadataAtRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventMetadataResponse, error)
 	ParseResolution(ctx context.Context, in *ParseResolutionRequest, opts ...grpc.CallOption) (*QueryResult_HistogramResolution, error)
 	QueryEvents(ctx context.Context, in *QueryEventsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	QueryEventsWithNamedTags(ctx context.Context, in *QueryEventsWithNamedTagsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	Redact(ctx context.Context, in *RedactRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	RedactForEventSource(ctx context.Context, in *RedactForEventSourceRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	ReopenStreamScope(ctx context.Context, in *ReopenStreamScopeRequest, opts ...grpc.CallOption) (*CommandResult_ReopenStreamScopeResponse, error)
 	Revise(ctx context.Context, in *ReviseRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	SequenceHistogram(ctx context.Context, in *SequenceHistogramRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_SequenceHistogramBucketResponse, error)
 	SequenceHistogramWithNamedTags(ctx context.Context, in *SequenceHistogramWithNamedTagsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_SequenceHistogramBucketResponse, error)
 	TailSequenceNumber(ctx context.Context, in *TailSequenceNumberRequest, opts ...grpc.CallOption) (*QueryResult_EventSequenceTailResponse, error)
+	VerifyContent(ctx context.Context, in *VerifyContentRequest, opts ...grpc.CallOption) (*CommandResult_VerifyContentResponse, error)
 }
 
 type eventSequencesClient struct {
@@ -161,10 +173,30 @@ func (c *eventSequencesClient) AppendWithNamedTags(ctx context.Context, in *Appe
 	return out, nil
 }
 
+func (c *eventSequencesClient) ClosedStreams(ctx context.Context, in *ClosedStreamsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_ClosedStreamResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_IEnumerable_ClosedStreamResponse)
+	err := c.cc.Invoke(ctx, EventSequences_ClosedStreams_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventSequencesClient) CompleteStream(ctx context.Context, in *CompleteStreamRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CommandResult_CompleteStreamResponse)
 	err := c.cc.Invoke(ctx, EventSequences_CompleteStream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventSequencesClient) CompleteStreamScope(ctx context.Context, in *CompleteStreamScopeRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_CompleteStreamResponse)
+	err := c.cc.Invoke(ctx, EventSequences_CompleteStreamScope_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -221,6 +253,26 @@ func (c *eventSequencesClient) HasEventsForEventSourceId(ctx context.Context, in
 	return out, nil
 }
 
+func (c *eventSequencesClient) IsStreamScopeCompleted(ctx context.Context, in *IsStreamScopeCompletedRequest, opts ...grpc.CallOption) (*QueryResult_StreamScopeCompletionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_StreamScopeCompletionResponse)
+	err := c.cc.Invoke(ctx, EventSequences_IsStreamScopeCompleted_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventSequencesClient) MetadataAt(ctx context.Context, in *MetadataAtRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventMetadataResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_IEnumerable_EventMetadataResponse)
+	err := c.cc.Invoke(ctx, EventSequences_MetadataAt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventSequencesClient) ParseResolution(ctx context.Context, in *ParseResolutionRequest, opts ...grpc.CallOption) (*QueryResult_HistogramResolution, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryResult_HistogramResolution)
@@ -271,6 +323,16 @@ func (c *eventSequencesClient) RedactForEventSource(ctx context.Context, in *Red
 	return out, nil
 }
 
+func (c *eventSequencesClient) ReopenStreamScope(ctx context.Context, in *ReopenStreamScopeRequest, opts ...grpc.CallOption) (*CommandResult_ReopenStreamScopeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_ReopenStreamScopeResponse)
+	err := c.cc.Invoke(ctx, EventSequences_ReopenStreamScope_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventSequencesClient) Revise(ctx context.Context, in *ReviseRequest, opts ...grpc.CallOption) (*CommandResult, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CommandResult)
@@ -311,6 +373,16 @@ func (c *eventSequencesClient) TailSequenceNumber(ctx context.Context, in *TailS
 	return out, nil
 }
 
+func (c *eventSequencesClient) VerifyContent(ctx context.Context, in *VerifyContentRequest, opts ...grpc.CallOption) (*CommandResult_VerifyContentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_VerifyContentResponse)
+	err := c.cc.Invoke(ctx, EventSequences_VerifyContent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EventSequencesServer is the server API for EventSequences service.
 // All implementations must embed UnimplementedEventSequencesServer
 // for forward compatibility.
@@ -323,21 +395,27 @@ type EventSequencesServer interface {
 	AppendManyForEventSourcesWithNamedTags(context.Context, *AppendManyForEventSourcesWithNamedTagsRequest) (*CommandResult_AppendManyResponse, error)
 	AppendManyWithNamedTags(context.Context, *AppendManyWithNamedTagsRequest) (*CommandResult_AppendManyResponse, error)
 	AppendWithNamedTags(context.Context, *AppendWithNamedTagsRequest) (*CommandResult_AppendResponse, error)
+	ClosedStreams(context.Context, *ClosedStreamsRequest) (*QueryResult_IEnumerable_ClosedStreamResponse, error)
 	CompleteStream(context.Context, *CompleteStreamRequest) (*CommandResult_CompleteStreamResponse, error)
+	CompleteStreamScope(context.Context, *CompleteStreamScopeRequest) (*CommandResult_CompleteStreamResponse, error)
 	EndOf(context.Context, *EndOfRequest) (*QueryResult_SerializableDateTimeOffset, error)
 	ExportEvents(context.Context, *ExportEventsRequest) (*QueryResult_IEnumerable_ExportedEventResponse, error)
 	ForEventSourceIdAndEventTypes(context.Context, *ForEventSourceIdAndEventTypesRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	FromSequenceNumber(context.Context, *FromSequenceNumberRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	HasEventsForEventSourceId(context.Context, *HasEventsForEventSourceIdRequest) (*QueryResult_EventSourceEventsResponse, error)
+	IsStreamScopeCompleted(context.Context, *IsStreamScopeCompletedRequest) (*QueryResult_StreamScopeCompletionResponse, error)
+	MetadataAt(context.Context, *MetadataAtRequest) (*QueryResult_IEnumerable_EventMetadataResponse, error)
 	ParseResolution(context.Context, *ParseResolutionRequest) (*QueryResult_HistogramResolution, error)
 	QueryEvents(context.Context, *QueryEventsRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	QueryEventsWithNamedTags(context.Context, *QueryEventsWithNamedTagsRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	Redact(context.Context, *RedactRequest) (*CommandResult, error)
 	RedactForEventSource(context.Context, *RedactForEventSourceRequest) (*CommandResult, error)
+	ReopenStreamScope(context.Context, *ReopenStreamScopeRequest) (*CommandResult_ReopenStreamScopeResponse, error)
 	Revise(context.Context, *ReviseRequest) (*CommandResult, error)
 	SequenceHistogram(context.Context, *SequenceHistogramRequest) (*QueryResult_IEnumerable_SequenceHistogramBucketResponse, error)
 	SequenceHistogramWithNamedTags(context.Context, *SequenceHistogramWithNamedTagsRequest) (*QueryResult_IEnumerable_SequenceHistogramBucketResponse, error)
 	TailSequenceNumber(context.Context, *TailSequenceNumberRequest) (*QueryResult_EventSequenceTailResponse, error)
+	VerifyContent(context.Context, *VerifyContentRequest) (*CommandResult_VerifyContentResponse, error)
 	mustEmbedUnimplementedEventSequencesServer()
 }
 
@@ -372,8 +450,14 @@ func (UnimplementedEventSequencesServer) AppendManyWithNamedTags(context.Context
 func (UnimplementedEventSequencesServer) AppendWithNamedTags(context.Context, *AppendWithNamedTagsRequest) (*CommandResult_AppendResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AppendWithNamedTags not implemented")
 }
+func (UnimplementedEventSequencesServer) ClosedStreams(context.Context, *ClosedStreamsRequest) (*QueryResult_IEnumerable_ClosedStreamResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ClosedStreams not implemented")
+}
 func (UnimplementedEventSequencesServer) CompleteStream(context.Context, *CompleteStreamRequest) (*CommandResult_CompleteStreamResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompleteStream not implemented")
+}
+func (UnimplementedEventSequencesServer) CompleteStreamScope(context.Context, *CompleteStreamScopeRequest) (*CommandResult_CompleteStreamResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CompleteStreamScope not implemented")
 }
 func (UnimplementedEventSequencesServer) EndOf(context.Context, *EndOfRequest) (*QueryResult_SerializableDateTimeOffset, error) {
 	return nil, status.Error(codes.Unimplemented, "method EndOf not implemented")
@@ -390,6 +474,12 @@ func (UnimplementedEventSequencesServer) FromSequenceNumber(context.Context, *Fr
 func (UnimplementedEventSequencesServer) HasEventsForEventSourceId(context.Context, *HasEventsForEventSourceIdRequest) (*QueryResult_EventSourceEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method HasEventsForEventSourceId not implemented")
 }
+func (UnimplementedEventSequencesServer) IsStreamScopeCompleted(context.Context, *IsStreamScopeCompletedRequest) (*QueryResult_StreamScopeCompletionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IsStreamScopeCompleted not implemented")
+}
+func (UnimplementedEventSequencesServer) MetadataAt(context.Context, *MetadataAtRequest) (*QueryResult_IEnumerable_EventMetadataResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MetadataAt not implemented")
+}
 func (UnimplementedEventSequencesServer) ParseResolution(context.Context, *ParseResolutionRequest) (*QueryResult_HistogramResolution, error) {
 	return nil, status.Error(codes.Unimplemented, "method ParseResolution not implemented")
 }
@@ -405,6 +495,9 @@ func (UnimplementedEventSequencesServer) Redact(context.Context, *RedactRequest)
 func (UnimplementedEventSequencesServer) RedactForEventSource(context.Context, *RedactForEventSourceRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method RedactForEventSource not implemented")
 }
+func (UnimplementedEventSequencesServer) ReopenStreamScope(context.Context, *ReopenStreamScopeRequest) (*CommandResult_ReopenStreamScopeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReopenStreamScope not implemented")
+}
 func (UnimplementedEventSequencesServer) Revise(context.Context, *ReviseRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method Revise not implemented")
 }
@@ -416,6 +509,9 @@ func (UnimplementedEventSequencesServer) SequenceHistogramWithNamedTags(context.
 }
 func (UnimplementedEventSequencesServer) TailSequenceNumber(context.Context, *TailSequenceNumberRequest) (*QueryResult_EventSequenceTailResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TailSequenceNumber not implemented")
+}
+func (UnimplementedEventSequencesServer) VerifyContent(context.Context, *VerifyContentRequest) (*CommandResult_VerifyContentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyContent not implemented")
 }
 func (UnimplementedEventSequencesServer) mustEmbedUnimplementedEventSequencesServer() {}
 func (UnimplementedEventSequencesServer) testEmbeddedByValue()                        {}
@@ -582,6 +678,24 @@ func _EventSequences_AppendWithNamedTags_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventSequences_ClosedStreams_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClosedStreamsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).ClosedStreams(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_ClosedStreams_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).ClosedStreams(ctx, req.(*ClosedStreamsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventSequences_CompleteStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CompleteStreamRequest)
 	if err := dec(in); err != nil {
@@ -596,6 +710,24 @@ func _EventSequences_CompleteStream_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EventSequencesServer).CompleteStream(ctx, req.(*CompleteStreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventSequences_CompleteStreamScope_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompleteStreamScopeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).CompleteStreamScope(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_CompleteStreamScope_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).CompleteStreamScope(ctx, req.(*CompleteStreamScopeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -690,6 +822,42 @@ func _EventSequences_HasEventsForEventSourceId_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventSequences_IsStreamScopeCompleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IsStreamScopeCompletedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).IsStreamScopeCompleted(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_IsStreamScopeCompleted_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).IsStreamScopeCompleted(ctx, req.(*IsStreamScopeCompletedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventSequences_MetadataAt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MetadataAtRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).MetadataAt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_MetadataAt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).MetadataAt(ctx, req.(*MetadataAtRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventSequences_ParseResolution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ParseResolutionRequest)
 	if err := dec(in); err != nil {
@@ -780,6 +948,24 @@ func _EventSequences_RedactForEventSource_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventSequences_ReopenStreamScope_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReopenStreamScopeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).ReopenStreamScope(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_ReopenStreamScope_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).ReopenStreamScope(ctx, req.(*ReopenStreamScopeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventSequences_Revise_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReviseRequest)
 	if err := dec(in); err != nil {
@@ -852,6 +1038,24 @@ func _EventSequences_TailSequenceNumber_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventSequences_VerifyContent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyContentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).VerifyContent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_VerifyContent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).VerifyContent(ctx, req.(*VerifyContentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EventSequences_ServiceDesc is the grpc.ServiceDesc for EventSequences service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -892,8 +1096,16 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EventSequences_AppendWithNamedTags_Handler,
 		},
 		{
+			MethodName: "ClosedStreams",
+			Handler:    _EventSequences_ClosedStreams_Handler,
+		},
+		{
 			MethodName: "CompleteStream",
 			Handler:    _EventSequences_CompleteStream_Handler,
+		},
+		{
+			MethodName: "CompleteStreamScope",
+			Handler:    _EventSequences_CompleteStreamScope_Handler,
 		},
 		{
 			MethodName: "EndOf",
@@ -916,6 +1128,14 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EventSequences_HasEventsForEventSourceId_Handler,
 		},
 		{
+			MethodName: "IsStreamScopeCompleted",
+			Handler:    _EventSequences_IsStreamScopeCompleted_Handler,
+		},
+		{
+			MethodName: "MetadataAt",
+			Handler:    _EventSequences_MetadataAt_Handler,
+		},
+		{
 			MethodName: "ParseResolution",
 			Handler:    _EventSequences_ParseResolution_Handler,
 		},
@@ -936,6 +1156,10 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EventSequences_RedactForEventSource_Handler,
 		},
 		{
+			MethodName: "ReopenStreamScope",
+			Handler:    _EventSequences_ReopenStreamScope_Handler,
+		},
+		{
 			MethodName: "Revise",
 			Handler:    _EventSequences_Revise_Handler,
 		},
@@ -950,6 +1174,10 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TailSequenceNumber",
 			Handler:    _EventSequences_TailSequenceNumber_Handler,
+		},
+		{
+			MethodName: "VerifyContent",
+			Handler:    _EventSequences_VerifyContent_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

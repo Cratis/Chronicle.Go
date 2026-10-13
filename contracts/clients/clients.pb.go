@@ -96,6 +96,7 @@ type CompatibilityResponse struct {
 	Incompatibilities     []string               `protobuf:"bytes,2,rep,name=Incompatibilities,proto3" json:"Incompatibilities,omitempty"`
 	ServerVersion         string                 `protobuf:"bytes,3,opt,name=ServerVersion,proto3" json:"ServerVersion,omitempty"`
 	ServerProtocolVersion string                 `protobuf:"bytes,4,opt,name=ServerProtocolVersion,proto3" json:"ServerProtocolVersion,omitempty"`
+	Capabilities          []string               `protobuf:"bytes,5,rep,name=Capabilities,proto3" json:"Capabilities,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -156,6 +157,13 @@ func (x *CompatibilityResponse) GetServerProtocolVersion() string {
 		return x.ServerProtocolVersion
 	}
 	return ""
+}
+
+func (x *CompatibilityResponse) GetCapabilities() []string {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
 }
 
 type ConnectRequest struct {
@@ -546,12 +554,13 @@ const file_clients_proto_rawDesc = "" +
 	"ClientType\x12$\n" +
 	"\rClientVersion\x18\x02 \x01(\tR\rClientVersion\x12(\n" +
 	"\x0fProtocolVersion\x18\x03 \x01(\tR\x0fProtocolVersion\x12$\n" +
-	"\rDescriptorSet\x18\x04 \x01(\fR\rDescriptorSet\"\xc5\x01\n" +
+	"\rDescriptorSet\x18\x04 \x01(\fR\rDescriptorSet\"\xe9\x01\n" +
 	"\x15CompatibilityResponse\x12\"\n" +
 	"\fIsCompatible\x18\x01 \x01(\bR\fIsCompatible\x12,\n" +
 	"\x11Incompatibilities\x18\x02 \x03(\tR\x11Incompatibilities\x12$\n" +
 	"\rServerVersion\x18\x03 \x01(\tR\rServerVersion\x124\n" +
-	"\x15ServerProtocolVersion\x18\x04 \x01(\tR\x15ServerProtocolVersion\"\x92\x02\n" +
+	"\x15ServerProtocolVersion\x18\x04 \x01(\tR\x15ServerProtocolVersion\x12\"\n" +
+	"\fCapabilities\x18\x05 \x03(\tR\fCapabilities\"\x92\x02\n" +
 	"\x0eConnectRequest\x12\"\n" +
 	"\fConnectionId\x18\x01 \x01(\tR\fConnectionId\x12$\n" +
 	"\rClientVersion\x18\x02 \x01(\tR\rClientVersion\x124\n" +

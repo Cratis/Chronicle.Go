@@ -234,6 +234,50 @@ func (s *Service) Replay(ctx context.Context, id ID, sequence events.SequenceID)
 	return s.jobs.Handle(jobID)
 }
 
+// FastForwardOutcome preserves what happened when an observer was fast forwarded.
+type FastForwardOutcome int32
+
+const (
+	// FastForwarded means the observer was moved to the tail of its event sequence.
+	FastForwarded FastForwardOutcome = iota
+	// AlreadyAtTail means the observer was already at the tail, so nothing changed.
+	AlreadyAtTail
+	// FastForwardReplaying means the observer is replaying and cannot be fast forwarded until that completes.
+	FastForwardReplaying
+	// FastForwardNotAvailable means the observer is retired or removed, so nothing changed.
+	FastForwardNotAvailable
+)
+
+// FastForwardResult is an owned value describing a fast forward.
+type FastForwardResult struct {
+	// Outcome is the exact server result.
+	Outcome FastForwardOutcome
+	// PreviousNext is the next event the observer expected before the fast forward.
+	PreviousNext events.SequenceNumber
+	// Next is the next event the observer expects after the fast forward.
+	Next events.SequenceNumber
+}
+
+// FastForward moves an observer to the tail of its event sequence. Every event it
+// has not yet handled is skipped without invoking it and its failed partitions are
+// discarded; state it already built is kept, so use Replay to rebuild instead.
+// Sequence must be explicit; use the observer's declared source sequence. The call
+// is never retried: an RPC or protocol failure is an OutcomeUnknownError because the
+// observer may already have moved.
+func (s *Service) FastForward(ctx context.Context, id ID, sequence events.SequenceID) (FastForwardResult, error) {
+	if err := validate(ctx, id, sequence); err != nil {
+		return FastForwardResult{}, err
+	}
+	r, err := s.client.FastForward(ctx, &contracts.FastForward{EventStore: string(s.store), Namespace: string(s.namespace), ObserverId: string(id), EventSequenceId: string(sequence)})
+	if err == nil && (r == nil || r.Outcome < 0 || r.Outcome > 3) {
+		err = faults.ErrProtocol
+	}
+	if err != nil {
+		return FastForwardResult{}, administration.MutationError("fast forward observer", err)
+	}
+	return FastForwardResult{FastForwardOutcome(r.Outcome), events.SequenceNumber(r.PreviousNextEventSequenceNumber), events.SequenceNumber(r.NextEventSequenceNumber)}, nil
+}
+
 // RecoveryOutcome preserves retry acceptance versus recovery refusals.
 type RecoveryOutcome int32
 
