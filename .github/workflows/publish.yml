@@ -62,7 +62,7 @@ jobs:
       # only after every remaining step in THIS job succeeds.
       - name: Prepare release from the merged PR's label and body
         id: release
-        uses: Cratis/release-action@63dd1239df24ac5da1a41378a4eee7f92ecc0796 # v1
+        uses: Cratis/release-action@31a6d28d6aa36d46970cb29f0d0260b360e81a69 # v1
         with:
           tag-prefix: v
           # No version override: first minor -> 0.1.0, first major -> 1.0.0.
