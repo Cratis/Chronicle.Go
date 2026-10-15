@@ -162,6 +162,26 @@ falling back to the live handler.
 OnceOnly is replay exclusion, **not deduplication**: recovering a failed partition
 can invoke the same ordinary handler again. Keep external effects idempotent.
 
+### Skipping history on first registration
+
+A new reactor catches up from the very beginning of the event sequence as ordinary
+observation, so a reactor with external effects acts on every historical event the
+moment it is deployed. `reactors.OnceOnly()` does not prevent that, because it only
+excludes replay. Use `reactors.StartAtTail()` and the first time Chronicle sees the
+reactor it begins at the tail of the event sequence and observes only what is
+appended afterwards.
+
+```go
+declaration, err := reactors.DefineHandler("send-welcome-emails", sendWelcomeEmail, reactors.StartAtTail())
+```
+
+It affects only the first registration: a reactor Chronicle already holds a position
+for keeps it, so the option never skips events after a restart. Changing a reactor's
+default id makes it a new reactor that starts at the tail again; give it
+`reactors.WithID` to keep its position. An explicit replay still replays from the
+beginning. Both the Chronicle server and this client must support it: a server that
+predates it ignores the request and the reactor catches up from the beginning.
+
 Implement `reactors.ReplayNotifier` for `BeginReplay`/`EndReplay` and
 `PartitionReplayNotifier` for partition notifications. Each notification gets a
 separate scope and artifact, never an event middleware chain or a reused batch

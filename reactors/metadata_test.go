@@ -54,3 +54,41 @@ func TestPlanRegistrationMetadataAndDetachedTags(t *testing.T) {
 		t.Fatal("plan tags were not deduplicated or detached", plan.Tags(), plan.FilterTags())
 	}
 }
+
+func TestPlanReportsStartAtTail(t *testing.T) {
+	event, err := events.Define[metadataEvent]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := events.NewCatalog(event.Descriptor())
+	if err != nil {
+		t.Fatal(err)
+	}
+	models, err := readmodels.NewCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name    string
+		options []Option
+		want    bool
+	}{
+		{name: "default"},
+		{name: "start at tail", options: []Option{StartAtTail()}, want: true},
+		{name: "composes with once only", options: []Option{StartAtTail(), OnceOnly()}, want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			declaration, err := DefineHandler("start-at-tail", func(context.Context, metadataEvent) error { return nil }, tc.options...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			plan, err := Compile(declaration, catalog, models, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if plan.StartsAtTail() != tc.want {
+				t.Fatalf("StartsAtTail = %v, want %v", plan.StartsAtTail(), tc.want)
+			}
+		})
+	}
+}

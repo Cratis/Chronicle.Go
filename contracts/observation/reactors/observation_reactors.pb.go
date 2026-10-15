@@ -1147,6 +1147,7 @@ type ReactorDefinition struct {
 	Filters            *ObserverFilters              `protobuf:"bytes,6,opt,name=Filters,proto3" json:"Filters,omitempty"`
 	IsNotReplayable    bool                          `protobuf:"varint,7,opt,name=IsNotReplayable,proto3" json:"IsNotReplayable,omitempty"`
 	GenerationDelivery EventGenerationDelivery       `protobuf:"varint,8,opt,name=GenerationDelivery,proto3,enum=Cratis.Chronicle.Contracts.Observation.Reactors.EventGenerationDelivery" json:"GenerationDelivery,omitempty"`
+	StartAtTail        bool                          `protobuf:"varint,9,opt,name=StartAtTail,proto3" json:"StartAtTail,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -1235,6 +1236,13 @@ func (x *ReactorDefinition) GetGenerationDelivery() EventGenerationDelivery {
 		return x.GenerationDelivery
 	}
 	return EventGenerationDelivery_Compatibility
+}
+
+func (x *ReactorDefinition) GetStartAtTail() bool {
+	if x != nil {
+		return x.StartAtTail
+	}
+	return false
 }
 
 type ReactorMessage struct {
@@ -1564,7 +1572,7 @@ const file_observation_reactors_proto_rawDesc = "" +
 	"\x0fEventStreamType\x18\x03 \x01(\tR\x0fEventStreamType\"\xd7\x01\n" +
 	"#OneOf_RegisterReactor_ReactorResult\x12X\n" +
 	"\x06Value0\x18\x01 \x01(\v2@.Cratis.Chronicle.Contracts.Observation.Reactors.RegisterReactorR\x06Value0\x12V\n" +
-	"\x06Value1\x18\x02 \x01(\v2>.Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResultR\x06Value1\"\x80\x04\n" +
+	"\x06Value1\x18\x02 \x01(\v2>.Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResultR\x06Value1\"\xa2\x04\n" +
 	"\x11ReactorDefinition\x12\x1c\n" +
 	"\tReactorId\x18\x01 \x01(\tR\tReactorId\x12(\n" +
 	"\x0fEventSequenceId\x18\x02 \x01(\tR\x0fEventSequenceId\x12k\n" +
@@ -1575,7 +1583,8 @@ const file_observation_reactors_proto_rawDesc = "" +
 	"\x04Tags\x18\x05 \x03(\tR\x04Tags\x12Z\n" +
 	"\aFilters\x18\x06 \x01(\v2@.Cratis.Chronicle.Contracts.Observation.Reactors.ObserverFiltersR\aFilters\x12(\n" +
 	"\x0fIsNotReplayable\x18\a \x01(\bR\x0fIsNotReplayable\x12x\n" +
-	"\x12GenerationDelivery\x18\b \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Reactors.EventGenerationDeliveryR\x12GenerationDelivery\"\x80\x01\n" +
+	"\x12GenerationDelivery\x18\b \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Reactors.EventGenerationDeliveryR\x12GenerationDelivery\x12 \n" +
+	"\vStartAtTail\x18\t \x01(\bR\vStartAtTail\"\x80\x01\n" +
 	"\x0eReactorMessage\x12n\n" +
 	"\aContent\x18\x01 \x01(\v2T.Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResultR\aContent\"\xa4\x02\n" +
 	"\rReactorResult\x12\x1c\n" +

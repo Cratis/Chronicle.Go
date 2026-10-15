@@ -65,6 +65,9 @@ managed:
       path: observation_webhooks.proto
       value: github.com/cratis/chronicle.go/contracts/observation/webhooks
     - file_option: go_package
+      path: occurrences.proto
+      value: github.com/cratis/chronicle.go/contracts/occurrences
+    - file_option: go_package
       path: patterns.proto
       value: github.com/cratis/chronicle.go/contracts/patterns
     - file_option: go_package

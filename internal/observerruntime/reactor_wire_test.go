@@ -171,3 +171,53 @@ func TestReactorRegistrationWirePreservesReplayability(t *testing.T) {
 		})
 	}
 }
+
+func TestReactorRegistrationWireCarriesStartAtTail(t *testing.T) {
+	event, err := events.Define[wireEvent]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := events.NewCatalog(event.Descriptor())
+	if err != nil {
+		t.Fatal(err)
+	}
+	models, err := readmodels.NewCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name    string
+		options []reactors.Option
+		want    bool
+	}{
+		{name: "starts from the beginning by default"},
+		{name: "start at tail", options: []reactors.Option{reactors.StartAtTail()}, want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			declaration, err := reactors.DefineHandlers("wire-start-at-tail", []reactors.Handler{reactors.On(func(context.Context, wireEvent) error { return nil })}, tc.options...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			plan, err := reactors.Compile(declaration, catalog, models, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			stream := &registrationStream{}
+			if _, err := observerruntime.Open(t.Context(), &registrationConn{stream: stream}, "connection", "store", "tenant", plan, nil); err != nil {
+				t.Fatal(err)
+			}
+			var request contracts.ReactorMessage
+			if err := proto.Unmarshal(stream.data, &request); err != nil {
+				t.Fatal(err)
+			}
+			definition := request.Content.Value0.Reactor
+			if definition.StartAtTail != tc.want {
+				t.Fatalf("StartAtTail = %v, want %v", definition.StartAtTail, tc.want)
+			}
+			// It only chooses where the reactor starts; an explicit replay must still be possible.
+			if !definition.IsReplayable {
+				t.Fatal("start at tail must not make the reactor non-replayable")
+			}
+		})
+	}
+}

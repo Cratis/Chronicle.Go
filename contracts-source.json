@@ -1,7 +1,7 @@
 {
   "repository": "Cratis/Chronicle",
-  "version": "19.56.0",
-  "commit": "d3cf8d6efb1af6ae41bd990320b7162ead9b54e7",
+  "version": "19.70.0",
+  "commit": "0741305a8225e6f198d022b3eba02db0c2bd3e59",
   "sourcePath": "Source/Kernel/Protobuf",
   "tools": {
     "buf": "1.73.0",
@@ -20,7 +20,7 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/captures"
     },
     "chronicle.desc": {
-      "sha256": "f0d45926165cae552bea2530f6feb610ddc7e8c900174c06761bc0d0ebff0ec5"
+      "sha256": "26ad8f64aa84f3f267c457947bd85340821327302a588ff6a8d938190bce5d4f"
     },
     "clients.proto": {
       "sha256": "8a6fa07a9b7f7ff38bd5c9cce541f794499b50d59f73bd1b057209db8b5ecb25",
@@ -88,12 +88,12 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/observation"
     },
     "observation_eventstoresubscriptions.proto": {
-      "sha256": "e9babe50f5fce4e49e8758b6b36ea23a3c1e03dd419a868f73817c1afd1237f6",
+      "sha256": "0aca0f9662bc0825fd57be17c21d11da3d32565e4507c2ed86cd7d382743709f",
       "package": "Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions",
       "goPackage": "github.com/cratis/chronicle.go/contracts/observation/eventstoresubscriptions"
     },
     "observation_reactors.proto": {
-      "sha256": "4c3511f34254cc4030236d98f270298c7a103fda4bb53c19babebb4c0630f75f",
+      "sha256": "4f5028d1b5f9705e6e27132e7b60d813046473cda876d1648b9e03d0730982cc",
       "package": "Cratis.Chronicle.Contracts.Observation.Reactors",
       "goPackage": "github.com/cratis/chronicle.go/contracts/observation/reactors"
     },
@@ -103,9 +103,14 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/observation/reducers"
     },
     "observation_webhooks.proto": {
-      "sha256": "c59d84f4aadddf946e72732d6afc8d0af55fd7cee29ed04f9c2e77447b14800f",
+      "sha256": "600cca524dd8321299c0475c47ffb5e66e4d89afd1d4cfa797bfde88de74595a",
       "package": "Cratis.Chronicle.Contracts.Observation.Webhooks",
       "goPackage": "github.com/cratis/chronicle.go/contracts/observation/webhooks"
+    },
+    "occurrences.proto": {
+      "sha256": "560a583424aa5520203420d8da5ec4d9b14896074e3603ce520835fab4f4c484",
+      "package": "Cratis.Chronicle.Contracts.Occurrences",
+      "goPackage": "github.com/cratis/chronicle.go/contracts/occurrences"
     },
     "patterns.proto": {
       "sha256": "48ad6c9a32faaa98aea7c6797a9aa9672a8a8734fa5d4e1ebca13ea216089a6d",
@@ -148,12 +153,12 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/security"
     },
     "seeding.proto": {
-      "sha256": "6b829f99224805c06066973ca82d9289491fde6ec83d0094642b302a2d9a1215",
+      "sha256": "c06996258ab35098689754eb932b8487ab182626cdb1084d626e0e337e478f24",
       "package": "Cratis.Chronicle.Contracts.Seeding",
       "goPackage": "github.com/cratis/chronicle.go/contracts/seeding"
     },
     "sequences.proto": {
-      "sha256": "e4033dd677d49c76fd2b9b5af54353480edf4da12a7f7e11e03362c9f5959623",
+      "sha256": "857582ed1dfaa0403ecf6905d1ebc56fba169399c925aaa36b2743bfa57d31a1",
       "package": "Cratis.Chronicle.Contracts.Sequences",
       "goPackage": "github.com/cratis/chronicle.go/contracts/sequences"
     },

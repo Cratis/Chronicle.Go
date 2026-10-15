@@ -89,6 +89,10 @@ func (p *Plan) PerEvent() bool { return p.declaration.config.perEvent }
 // IsReplayable reports whether the kernel may replay this reactor.
 func (p *Plan) IsReplayable() bool { return p.declaration.config.replayable }
 
+// StartsAtTail reports whether the reactor begins at the tail of the event sequence when
+// first registered.
+func (p *Plan) StartsAtTail() bool { return p.declaration.config.startAtTail }
+
 // Tags returns detached artifact labels.
 func (p *Plan) Tags() []string { return slices.Clone(p.declaration.config.tags) }
 

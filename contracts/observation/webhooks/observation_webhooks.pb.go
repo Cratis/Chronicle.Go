@@ -74,6 +74,52 @@ func (AuthorizationType) EnumDescriptor() ([]byte, []int) {
 	return file_observation_webhooks_proto_rawDescGZIP(), []int{0}
 }
 
+type EventGenerationDelivery int32
+
+const (
+	EventGenerationDelivery_Compatibility EventGenerationDelivery = 0
+	EventGenerationDelivery_Pinned        EventGenerationDelivery = 1
+)
+
+// Enum value maps for EventGenerationDelivery.
+var (
+	EventGenerationDelivery_name = map[int32]string{
+		0: "Compatibility",
+		1: "Pinned",
+	}
+	EventGenerationDelivery_value = map[string]int32{
+		"Compatibility": 0,
+		"Pinned":        1,
+	}
+)
+
+func (x EventGenerationDelivery) Enum() *EventGenerationDelivery {
+	p := new(EventGenerationDelivery)
+	*p = x
+	return p
+}
+
+func (x EventGenerationDelivery) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventGenerationDelivery) Descriptor() protoreflect.EnumDescriptor {
+	return file_observation_webhooks_proto_enumTypes[1].Descriptor()
+}
+
+func (EventGenerationDelivery) Type() protoreflect.EnumType {
+	return &file_observation_webhooks_proto_enumTypes[1]
+}
+
+func (x EventGenerationDelivery) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventGenerationDelivery.Descriptor instead.
+func (EventGenerationDelivery) EnumDescriptor() ([]byte, []int) {
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{1}
+}
+
 type ValidationResultSeverity int32
 
 const (
@@ -110,11 +156,11 @@ func (x ValidationResultSeverity) String() string {
 }
 
 func (ValidationResultSeverity) Descriptor() protoreflect.EnumDescriptor {
-	return file_observation_webhooks_proto_enumTypes[1].Descriptor()
+	return file_observation_webhooks_proto_enumTypes[2].Descriptor()
 }
 
 func (ValidationResultSeverity) Type() protoreflect.EnumType {
-	return &file_observation_webhooks_proto_enumTypes[1]
+	return &file_observation_webhooks_proto_enumTypes[2]
 }
 
 func (x ValidationResultSeverity) Number() protoreflect.EnumNumber {
@@ -123,28 +169,29 @@ func (x ValidationResultSeverity) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ValidationResultSeverity.Descriptor instead.
 func (ValidationResultSeverity) EnumDescriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{1}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{2}
 }
 
 type AddWebhookRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	EventStore        string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
-	Name              string                 `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
-	Url               string                 `protobuf:"bytes,3,opt,name=Url,proto3" json:"Url,omitempty"`
-	EventSequenceId   string                 `protobuf:"bytes,4,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
-	EventTypes        []*EventType           `protobuf:"bytes,5,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
-	AuthorizationType AuthorizationType      `protobuf:"varint,6,opt,name=AuthorizationType,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType" json:"AuthorizationType,omitempty"`
-	BasicUsername     string                 `protobuf:"bytes,7,opt,name=BasicUsername,proto3" json:"BasicUsername,omitempty"`
-	BasicPassword     string                 `protobuf:"bytes,8,opt,name=BasicPassword,proto3" json:"BasicPassword,omitempty"`
-	BearerToken       string                 `protobuf:"bytes,9,opt,name=BearerToken,proto3" json:"BearerToken,omitempty"`
-	OAuthAuthority    string                 `protobuf:"bytes,10,opt,name=OAuthAuthority,proto3" json:"OAuthAuthority,omitempty"`
-	OAuthClientId     string                 `protobuf:"bytes,11,opt,name=OAuthClientId,proto3" json:"OAuthClientId,omitempty"`
-	OAuthClientSecret string                 `protobuf:"bytes,12,opt,name=OAuthClientSecret,proto3" json:"OAuthClientSecret,omitempty"`
-	Headers           map[string]string      `protobuf:"bytes,13,rep,name=Headers,proto3" json:"Headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	IsReplayable      bool                   `protobuf:"varint,14,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"`
-	IsActive          bool                   `protobuf:"varint,15,opt,name=IsActive,proto3" json:"IsActive,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state              protoimpl.MessageState  `protogen:"open.v1"`
+	EventStore         string                  `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Name               string                  `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
+	Url                string                  `protobuf:"bytes,3,opt,name=Url,proto3" json:"Url,omitempty"`
+	EventSequenceId    string                  `protobuf:"bytes,4,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
+	EventTypes         []*EventType            `protobuf:"bytes,5,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
+	AuthorizationType  AuthorizationType       `protobuf:"varint,6,opt,name=AuthorizationType,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType" json:"AuthorizationType,omitempty"`
+	BasicUsername      string                  `protobuf:"bytes,7,opt,name=BasicUsername,proto3" json:"BasicUsername,omitempty"`
+	BasicPassword      string                  `protobuf:"bytes,8,opt,name=BasicPassword,proto3" json:"BasicPassword,omitempty"`
+	BearerToken        string                  `protobuf:"bytes,9,opt,name=BearerToken,proto3" json:"BearerToken,omitempty"`
+	OAuthAuthority     string                  `protobuf:"bytes,10,opt,name=OAuthAuthority,proto3" json:"OAuthAuthority,omitempty"`
+	OAuthClientId      string                  `protobuf:"bytes,11,opt,name=OAuthClientId,proto3" json:"OAuthClientId,omitempty"`
+	OAuthClientSecret  string                  `protobuf:"bytes,12,opt,name=OAuthClientSecret,proto3" json:"OAuthClientSecret,omitempty"`
+	Headers            map[string]string       `protobuf:"bytes,13,rep,name=Headers,proto3" json:"Headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	IsReplayable       bool                    `protobuf:"varint,14,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"`
+	IsActive           bool                    `protobuf:"varint,15,opt,name=IsActive,proto3" json:"IsActive,omitempty"`
+	GenerationDelivery EventGenerationDelivery `protobuf:"varint,16,opt,name=GenerationDelivery,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery" json:"GenerationDelivery,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AddWebhookRequest) Reset() {
@@ -280,6 +327,13 @@ func (x *AddWebhookRequest) GetIsActive() bool {
 		return x.IsActive
 	}
 	return false
+}
+
+func (x *AddWebhookRequest) GetGenerationDelivery() EventGenerationDelivery {
+	if x != nil {
+		return x.GenerationDelivery
+	}
+	return EventGenerationDelivery_Compatibility
 }
 
 type AddWebhooksRequest struct {
@@ -1031,17 +1085,18 @@ func (x *ValidationResult) GetMembers() []string {
 }
 
 type WebhookDefinition struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	EventSequenceId string                 `protobuf:"bytes,1,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
-	Identifier      string                 `protobuf:"bytes,2,opt,name=Identifier,proto3" json:"Identifier,omitempty"`
-	EventTypes      []*EventType           `protobuf:"bytes,3,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
-	Target          *WebhookTarget         `protobuf:"bytes,4,opt,name=Target,proto3" json:"Target,omitempty"`
-	IsReplayable    bool                   `protobuf:"varint,5,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"` // default value could not be applied: True
-	IsActive        bool                   `protobuf:"varint,6,opt,name=IsActive,proto3" json:"IsActive,omitempty"`         // default value could not be applied: True
-	IsNotReplayable bool                   `protobuf:"varint,7,opt,name=IsNotReplayable,proto3" json:"IsNotReplayable,omitempty"`
-	IsInactive      bool                   `protobuf:"varint,8,opt,name=IsInactive,proto3" json:"IsInactive,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state              protoimpl.MessageState  `protogen:"open.v1"`
+	EventSequenceId    string                  `protobuf:"bytes,1,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
+	Identifier         string                  `protobuf:"bytes,2,opt,name=Identifier,proto3" json:"Identifier,omitempty"`
+	EventTypes         []*EventType            `protobuf:"bytes,3,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
+	Target             *WebhookTarget          `protobuf:"bytes,4,opt,name=Target,proto3" json:"Target,omitempty"`
+	IsReplayable       bool                    `protobuf:"varint,5,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"` // default value could not be applied: True
+	IsActive           bool                    `protobuf:"varint,6,opt,name=IsActive,proto3" json:"IsActive,omitempty"`         // default value could not be applied: True
+	IsNotReplayable    bool                    `protobuf:"varint,7,opt,name=IsNotReplayable,proto3" json:"IsNotReplayable,omitempty"`
+	IsInactive         bool                    `protobuf:"varint,8,opt,name=IsInactive,proto3" json:"IsInactive,omitempty"`
+	GenerationDelivery EventGenerationDelivery `protobuf:"varint,9,opt,name=GenerationDelivery,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery" json:"GenerationDelivery,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *WebhookDefinition) Reset() {
@@ -1130,19 +1185,27 @@ func (x *WebhookDefinition) GetIsInactive() bool {
 	return false
 }
 
+func (x *WebhookDefinition) GetGenerationDelivery() EventGenerationDelivery {
+	if x != nil {
+		return x.GenerationDelivery
+	}
+	return EventGenerationDelivery_Compatibility
+}
+
 type WebhookDetailsResponse struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Identifier        string                 `protobuf:"bytes,1,opt,name=Identifier,proto3" json:"Identifier,omitempty"`
-	Url               string                 `protobuf:"bytes,2,opt,name=Url,proto3" json:"Url,omitempty"`
-	EventSequenceId   string                 `protobuf:"bytes,3,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
-	EventTypes        []*EventType           `protobuf:"bytes,4,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
-	AuthorizationType AuthorizationType      `protobuf:"varint,5,opt,name=AuthorizationType,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType" json:"AuthorizationType,omitempty"`
-	Headers           map[string]string      `protobuf:"bytes,6,rep,name=Headers,proto3" json:"Headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	IsReplayable      bool                   `protobuf:"varint,7,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"`
-	IsActive          bool                   `protobuf:"varint,8,opt,name=IsActive,proto3" json:"IsActive,omitempty"`
-	Id                string                 `protobuf:"bytes,9,opt,name=Id,proto3" json:"Id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state              protoimpl.MessageState  `protogen:"open.v1"`
+	Identifier         string                  `protobuf:"bytes,1,opt,name=Identifier,proto3" json:"Identifier,omitempty"`
+	Url                string                  `protobuf:"bytes,2,opt,name=Url,proto3" json:"Url,omitempty"`
+	EventSequenceId    string                  `protobuf:"bytes,3,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
+	EventTypes         []*EventType            `protobuf:"bytes,4,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
+	AuthorizationType  AuthorizationType       `protobuf:"varint,5,opt,name=AuthorizationType,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType" json:"AuthorizationType,omitempty"`
+	Headers            map[string]string       `protobuf:"bytes,6,rep,name=Headers,proto3" json:"Headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	IsReplayable       bool                    `protobuf:"varint,7,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"`
+	IsActive           bool                    `protobuf:"varint,8,opt,name=IsActive,proto3" json:"IsActive,omitempty"`
+	Id                 string                  `protobuf:"bytes,9,opt,name=Id,proto3" json:"Id,omitempty"`
+	GenerationDelivery EventGenerationDelivery `protobuf:"varint,10,opt,name=GenerationDelivery,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery" json:"GenerationDelivery,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *WebhookDetailsResponse) Reset() {
@@ -1238,6 +1301,13 @@ func (x *WebhookDetailsResponse) GetId() string {
 	return ""
 }
 
+func (x *WebhookDetailsResponse) GetGenerationDelivery() EventGenerationDelivery {
+	if x != nil {
+		return x.GenerationDelivery
+	}
+	return EventGenerationDelivery_Compatibility
+}
+
 type WebhookTarget struct {
 	state         protoimpl.MessageState                                                `protogen:"open.v1"`
 	Url           string                                                                `protobuf:"bytes,1,opt,name=Url,proto3" json:"Url,omitempty"`
@@ -1302,7 +1372,7 @@ var File_observation_webhooks_proto protoreflect.FileDescriptor
 
 const file_observation_webhooks_proto_rawDesc = "" +
 	"\n" +
-	"\x1aobservation_webhooks.proto\x12/Cratis.Chronicle.Contracts.Observation.Webhooks\x1a\x16protobuf-net/bcl.proto\"\xa2\x06\n" +
+	"\x1aobservation_webhooks.proto\x12/Cratis.Chronicle.Contracts.Observation.Webhooks\x1a\x16protobuf-net/bcl.proto\"\x9c\a\n" +
 	"\x11AddWebhookRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1323,7 +1393,8 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\x11OAuthClientSecret\x18\f \x01(\tR\x11OAuthClientSecret\x12i\n" +
 	"\aHeaders\x18\r \x03(\v2O.Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntryR\aHeaders\x12\"\n" +
 	"\fIsReplayable\x18\x0e \x01(\bR\fIsReplayable\x12\x1a\n" +
-	"\bIsActive\x18\x0f \x01(\bR\bIsActive\x1a:\n" +
+	"\bIsActive\x18\x0f \x01(\bR\bIsActive\x12x\n" +
+	"\x12GenerationDelivery\x18\x10 \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDeliveryR\x12GenerationDelivery\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x94\x01\n" +
@@ -1386,7 +1457,7 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\x10ValidationResult\x12e\n" +
 	"\bSeverity\x18\x01 \x01(\x0e2I.Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
-	"\aMembers\x18\x03 \x03(\tR\aMembers\"\x9b\x03\n" +
+	"\aMembers\x18\x03 \x03(\tR\aMembers\"\x95\x04\n" +
 	"\x11WebhookDefinition\x12(\n" +
 	"\x0fEventSequenceId\x18\x01 \x01(\tR\x0fEventSequenceId\x12\x1e\n" +
 	"\n" +
@@ -1401,7 +1472,8 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\x0fIsNotReplayable\x18\a \x01(\bR\x0fIsNotReplayable\x12\x1e\n" +
 	"\n" +
 	"IsInactive\x18\b \x01(\bR\n" +
-	"IsInactive\"\xbe\x04\n" +
+	"IsInactive\x12x\n" +
+	"\x12GenerationDelivery\x18\t \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDeliveryR\x12GenerationDelivery\"\xb8\x05\n" +
 	"\x16WebhookDetailsResponse\x12\x1e\n" +
 	"\n" +
 	"Identifier\x18\x01 \x01(\tR\n" +
@@ -1415,7 +1487,9 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\aHeaders\x18\x06 \x03(\v2T.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntryR\aHeaders\x12\"\n" +
 	"\fIsReplayable\x18\a \x01(\bR\fIsReplayable\x12\x1a\n" +
 	"\bIsActive\x18\b \x01(\bR\bIsActive\x12\x0e\n" +
-	"\x02Id\x18\t \x01(\tR\x02Id\x1a:\n" +
+	"\x02Id\x18\t \x01(\tR\x02Id\x12x\n" +
+	"\x12GenerationDelivery\x18\n" +
+	" \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDeliveryR\x12GenerationDelivery\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe2\x02\n" +
@@ -1431,7 +1505,11 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\x05Basic\x10\x01\x12\n" +
 	"\n" +
 	"\x06Bearer\x10\x02\x12\t\n" +
-	"\x05OAuth\x10\x03*P\n" +
+	"\x05OAuth\x10\x03*8\n" +
+	"\x17EventGenerationDelivery\x12\x11\n" +
+	"\rCompatibility\x10\x00\x12\n" +
+	"\n" +
+	"\x06Pinned\x10\x01*P\n" +
 	"\x18ValidationResultSeverity\x12\v\n" +
 	"\aUnknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
@@ -1459,71 +1537,75 @@ func file_observation_webhooks_proto_rawDescGZIP() []byte {
 	return file_observation_webhooks_proto_rawDescData
 }
 
-var file_observation_webhooks_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_observation_webhooks_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_observation_webhooks_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_observation_webhooks_proto_goTypes = []any{
 	(AuthorizationType)(0),           // 0: Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType
-	(ValidationResultSeverity)(0),    // 1: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverity
-	(*AddWebhookRequest)(nil),        // 2: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
-	(*AddWebhooksRequest)(nil),       // 3: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
-	(*BasicAuthorization)(nil),       // 4: Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
-	(*BearerTokenAuthorization)(nil), // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
-	(*CommandResult)(nil),            // 6: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	(*EventType)(nil),                // 7: Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
-	(*GetWebhooksRequest)(nil),       // 8: Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
-	(*OAuthAuthorization)(nil),       // 9: Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
-	(*ObserveWebhooksRequest)(nil),   // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
-	(*OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization)(nil), // 11: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
-	(*QueryResult_IEnumerable_WebhookDetailsResponse)(nil),                       // 12: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
-	(*RemoveWebhookRequest)(nil),                                                 // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
-	(*RemoveWebhooksRequest)(nil),                                                // 14: Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
-	(*ValidationResult)(nil),                                                     // 15: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
-	(*WebhookDefinition)(nil),                                                    // 16: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition
-	(*WebhookDetailsResponse)(nil),                                               // 17: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse
-	(*WebhookTarget)(nil),                                                        // 18: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget
-	nil,                                                                          // 19: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
-	nil,                                                                          // 20: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
-	nil,                                                                          // 21: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
-	(*bcl.Guid)(nil),                                                             // 22: bcl.Guid
+	(EventGenerationDelivery)(0),     // 1: Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
+	(ValidationResultSeverity)(0),    // 2: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverity
+	(*AddWebhookRequest)(nil),        // 3: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
+	(*AddWebhooksRequest)(nil),       // 4: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
+	(*BasicAuthorization)(nil),       // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
+	(*BearerTokenAuthorization)(nil), // 6: Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
+	(*CommandResult)(nil),            // 7: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	(*EventType)(nil),                // 8: Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
+	(*GetWebhooksRequest)(nil),       // 9: Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
+	(*OAuthAuthorization)(nil),       // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
+	(*ObserveWebhooksRequest)(nil),   // 11: Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
+	(*OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization)(nil), // 12: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
+	(*QueryResult_IEnumerable_WebhookDetailsResponse)(nil),                       // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
+	(*RemoveWebhookRequest)(nil),                                                 // 14: Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
+	(*RemoveWebhooksRequest)(nil),                                                // 15: Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
+	(*ValidationResult)(nil),                                                     // 16: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
+	(*WebhookDefinition)(nil),                                                    // 17: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition
+	(*WebhookDetailsResponse)(nil),                                               // 18: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse
+	(*WebhookTarget)(nil),                                                        // 19: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget
+	nil,                                                                          // 20: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
+	nil,                                                                          // 21: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
+	nil,                                                                          // 22: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
+	(*bcl.Guid)(nil),                                                             // 23: bcl.Guid
 }
 var file_observation_webhooks_proto_depIdxs = []int32{
-	7,  // 0: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
+	8,  // 0: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
 	0,  // 1: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.AuthorizationType:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType
-	19, // 2: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
-	16, // 3: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest.Webhooks:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition
-	22, // 4: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.CorrelationId:type_name -> bcl.Guid
-	15, // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
-	4,  // 6: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value0:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
-	5,  // 7: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value1:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
-	9,  // 8: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value2:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
-	22, // 9: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.CorrelationId:type_name -> bcl.Guid
-	15, // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
-	17, // 11: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse
-	1,  // 12: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverity
-	7,  // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
-	18, // 14: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.Target:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget
-	7,  // 15: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
-	0,  // 16: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.AuthorizationType:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType
-	20, // 17: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
-	11, // 18: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Authorization:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
-	21, // 19: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
-	2,  // 20: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
-	3,  // 21: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
-	8,  // 22: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
-	10, // 23: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
-	13, // 24: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
-	14, // 25: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
-	6,  // 26: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	6,  // 27: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	12, // 28: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
-	12, // 29: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
-	6,  // 30: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	6,  // 31: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	26, // [26:32] is the sub-list for method output_type
-	20, // [20:26] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	20, // 2: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
+	1,  // 3: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
+	17, // 4: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest.Webhooks:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition
+	23, // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.CorrelationId:type_name -> bcl.Guid
+	16, // 6: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
+	5,  // 7: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value0:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
+	6,  // 8: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value1:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
+	10, // 9: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value2:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
+	23, // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.CorrelationId:type_name -> bcl.Guid
+	16, // 11: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
+	18, // 12: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse
+	2,  // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverity
+	8,  // 14: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
+	19, // 15: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.Target:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget
+	1,  // 16: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
+	8,  // 17: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
+	0,  // 18: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.AuthorizationType:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType
+	21, // 19: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
+	1,  // 20: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
+	12, // 21: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Authorization:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
+	22, // 22: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
+	3,  // 23: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
+	4,  // 24: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
+	9,  // 25: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
+	11, // 26: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
+	14, // 27: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
+	15, // 28: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
+	7,  // 29: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	7,  // 30: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	13, // 31: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
+	13, // 32: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
+	7,  // 33: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	7,  // 34: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	29, // [29:35] is the sub-list for method output_type
+	23, // [23:29] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_observation_webhooks_proto_init() }
@@ -1536,7 +1618,7 @@ func file_observation_webhooks_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_observation_webhooks_proto_rawDesc), len(file_observation_webhooks_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,

@@ -40,6 +40,19 @@ func OnceOnly(methods ...string) Option {
 	}
 }
 
+// StartAtTail makes a reactor begin at the tail of its event sequence the first time
+// Chronicle sees it, so it observes only what is appended from then on instead of
+// catching up on all history. A new reactor otherwise starts from the beginning, and
+// OnceOnly does not prevent that because it only excludes replay.
+//
+// It affects only the first registration: a reactor Chronicle already holds a position
+// for keeps it, so the option never skips events after a restart. Changing a reactor's
+// default id makes it a new reactor, which starts at the tail again; give it WithID to
+// keep its position. An explicit replay still replays from the beginning. Both the
+// Chronicle server and this client must support it; a server that predates it ignores
+// the request and the reactor catches up from the beginning.
+func StartAtTail() Option { return func(c *configuration) { c.startAtTail = true } }
+
 // DuringReplay returns a callback declaration used only during replay. It replaces
 // a live handler for the same event, or contributes a replay-only subscription.
 func (h Handler) DuringReplay() Handler { h.replay = true; return h }
