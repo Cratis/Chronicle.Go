@@ -792,13 +792,15 @@ func (x *SeedDataResponse) GetByEventSource() []*EventSourceSeedEntries {
 }
 
 type SeedEventsRequest struct {
-	state               protoimpl.MessageState    `protogen:"open.v1"`
-	EventStore          string                    `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
-	GlobalByEventType   []*EventTypeSeedEntries   `protobuf:"bytes,2,rep,name=GlobalByEventType,proto3" json:"GlobalByEventType,omitempty"`
-	GlobalByEventSource []*EventSourceSeedEntries `protobuf:"bytes,3,rep,name=GlobalByEventSource,proto3" json:"GlobalByEventSource,omitempty"`
-	NamespacedEntries   []*NamespacedSeedEntries  `protobuf:"bytes,4,rep,name=NamespacedEntries,proto3" json:"NamespacedEntries,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                    protoimpl.MessageState    `protogen:"open.v1"`
+	EventStore               string                    `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	GlobalByEventType        []*EventTypeSeedEntries   `protobuf:"bytes,2,rep,name=GlobalByEventType,proto3" json:"GlobalByEventType,omitempty"`
+	GlobalByEventSource      []*EventSourceSeedEntries `protobuf:"bytes,3,rep,name=GlobalByEventSource,proto3" json:"GlobalByEventSource,omitempty"`
+	NamespacedEntries        []*NamespacedSeedEntries  `protobuf:"bytes,4,rep,name=NamespacedEntries,proto3" json:"NamespacedEntries,omitempty"`
+	GlobalSetIsAuthoritative bool                      `protobuf:"varint,5,opt,name=GlobalSetIsAuthoritative,proto3" json:"GlobalSetIsAuthoritative,omitempty"`
+	GlobalSetOwner           string                    `protobuf:"bytes,6,opt,name=GlobalSetOwner,proto3" json:"GlobalSetOwner,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *SeedEventsRequest) Reset() {
@@ -857,6 +859,20 @@ func (x *SeedEventsRequest) GetNamespacedEntries() []*NamespacedSeedEntries {
 		return x.NamespacedEntries
 	}
 	return nil
+}
+
+func (x *SeedEventsRequest) GetGlobalSetIsAuthoritative() bool {
+	if x != nil {
+		return x.GlobalSetIsAuthoritative
+	}
+	return false
+}
+
+func (x *SeedEventsRequest) GetGlobalSetOwner() string {
+	if x != nil {
+		return x.GlobalSetOwner
+	}
+	return ""
 }
 
 type SeedingEntry struct {
@@ -1072,14 +1088,16 @@ const file_seeding_proto_rawDesc = "" +
 	"\x04Data\x18\x06 \x01(\v24.Cratis.Chronicle.Contracts.Seeding.SeedDataResponseR\x04Data\"\xd0\x01\n" +
 	"\x10SeedDataResponse\x12Z\n" +
 	"\vByEventType\x18\x01 \x03(\v28.Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntriesR\vByEventType\x12`\n" +
-	"\rByEventSource\x18\x02 \x03(\v2:.Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntriesR\rByEventSource\"\xf2\x02\n" +
+	"\rByEventSource\x18\x02 \x03(\v2:.Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntriesR\rByEventSource\"\xd6\x03\n" +
 	"\x11SeedEventsRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12f\n" +
 	"\x11GlobalByEventType\x18\x02 \x03(\v28.Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntriesR\x11GlobalByEventType\x12l\n" +
 	"\x13GlobalByEventSource\x18\x03 \x03(\v2:.Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntriesR\x13GlobalByEventSource\x12g\n" +
-	"\x11NamespacedEntries\x18\x04 \x03(\v29.Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntriesR\x11NamespacedEntries\"\xfe\x01\n" +
+	"\x11NamespacedEntries\x18\x04 \x03(\v29.Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntriesR\x11NamespacedEntries\x12:\n" +
+	"\x18GlobalSetIsAuthoritative\x18\x05 \x01(\bR\x18GlobalSetIsAuthoritative\x12&\n" +
+	"\x0eGlobalSetOwner\x18\x06 \x01(\tR\x0eGlobalSetOwner\"\xfe\x01\n" +
 	"\fSeedingEntry\x12$\n" +
 	"\rEventSourceId\x18\x01 \x01(\tR\rEventSourceId\x12 \n" +
 	"\vEventTypeId\x18\x02 \x01(\tR\vEventTypeId\x12\x18\n" +

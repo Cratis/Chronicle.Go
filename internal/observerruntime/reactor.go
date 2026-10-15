@@ -44,7 +44,7 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 	}
 	definition := &contracts.ReactorDefinition{
 		ReactorId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()),
-		IsReplayable: plan.IsReplayable(), Tags: plan.Tags(),
+		IsReplayable: plan.IsReplayable(), StartAtTail: plan.StartsAtTail(), Tags: plan.Tags(),
 		Filters: &contracts.ObserverFilters{FilterTags: plan.FilterTags(), EventSourceType: string(plan.EventSourceType()), EventStreamType: string(plan.EventStreamType())},
 	}
 	// C# initializes an absent field 4 to true (DefaultValue(true)). As for

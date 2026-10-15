@@ -35,6 +35,7 @@ type configuration struct {
 	sourceStore      string
 	perEvent         bool
 	replayable       bool
+	startAtTail      bool
 	tags             []string
 	filterTags       []string
 	sourceType       events.SourceType
