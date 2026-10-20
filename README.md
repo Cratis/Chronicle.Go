@@ -109,4 +109,4 @@ python3 scripts/generate-contracts.py --check
 
 ## Community, security and license
 
-[Discord](https://discord.gg/kt4AMpV8WV) (questions and help) · [Cratis](https://www.cratis.io/) · [Cratis repositories](https://github.com/Cratis) · [Private vulnerability reporting](https://github.com/Cratis/Chronicle.Go/blob/main/SECURITY.md) · [MIT license](https://github.com/Cratis/Chronicle.Go/blob/main/LICENSE)
+[Discord](https://discord.gg/kt4AMpV8WV) (questions and help) · [Documentation](https://www.cratis.io/chronicle/) · [Cratis](https://www.cratis.io/) · [Cratis repositories](https://github.com/Cratis) · [Private vulnerability reporting](https://github.com/Cratis/Chronicle.Go/blob/main/SECURITY.md) · [MIT license](https://github.com/Cratis/Chronicle.Go/blob/main/LICENSE)
