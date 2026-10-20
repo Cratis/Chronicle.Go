@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-// Package chronicle is the Go client for Cratis Chronicle. Register event structs
+// Package chronicle is the Go client for Cratis Chronicle, the open-source
+// event-sourcing database and runtime. Register event structs
 // explicitly, construct a Client, obtain a registered EventStore, and append via
 // its EventLog. Client, store and sequence handles are concurrency-safe.
 //
