@@ -51,7 +51,7 @@ govulncheck ./...
 
 Format handwritten Go source with `gofmt`; from the root, use `python3 -B .github/scripts/go_modules.py gofmt --module .` (or the listed nested directory) to check only that module's Git-visible Go files. Never hand-edit generated protobuf bindings. After authorized dependency changes, run `go mod tidy` and inspect `git status --short -- go.mod go.sum` inside the affected module. Commit its own `go.sum` when needed. Unlisted modules and repository workspaces are forbidden. All replacements are forbidden except the documented exact local-root replacement in expressly unpublished recipes; unpublished tool previews have no replacement exception. No nested publisher exists yet.
 
-Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Workflow lint invokes ShellCheck when it is available. Normal tests include parser/schema cases, real TLS/OAuth, bufconn RPCs, lifecycle and append behavior. The build gate also checks pinned contract generation and runs kernel integration tests. CodeQL runs separately in GitHub Actions.
+Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Workflow lint invokes ShellCheck when it is available. Normal tests include parser/schema cases, real TLS/OAuth, bufconn RPCs, lifecycle and append behavior. The build gate also checks pinned contract generation and runs kernel integration tests.
 
 ## Contracts and kernel integration
 
