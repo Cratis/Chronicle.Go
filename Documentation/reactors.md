@@ -286,6 +286,15 @@ need an extension claiming that shape. Pure event collections remain atomic;
 command/event mixtures and external operations **are not one transaction**.
 Already completed effects can repeat on recovery.
 
+## Handle a page in one call
+
+Chronicle delivers events in pages that span many event sources. Per-event
+methods keep working unchanged; the client calls them partition by partition.
+To do the work in bulk, declare a batch method that takes
+`*observation.EventBatch` and name its event types with
+`reactors.WithBatchMethod`. [Handle events in batches](observer-batches.md)
+covers batch methods, ordering, `Fail`, `Defer` and the registration rules.
+
 ## Delivery, failure and shutdown
 
 Event types and read models register before constraints/projections; reactor

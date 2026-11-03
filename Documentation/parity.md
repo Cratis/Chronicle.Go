@@ -1181,6 +1181,29 @@ The kernel may fold the batch more than once during recovery; each attempt reloa
 the persisted state, so the result stays 6. Go does not change the failure wire
 contract independently.
 
+## Page delivery and batch methods
+
+References use C# `74f927603a6da4a2d6f86fe29768f8eac4370ac9` (Chronicle#5610),
+relative to `Source/Clients/DotNET`, and decision
+`decisions/0022-observers-receive-batches-on-every-path.md`. Contracts are
+generated from the same commit. The [batch guide](observer-batches.md) shows the
+Go surface. No real-kernel page delivery witness exists yet: the evidence below
+drives the production observer runtime with protocol messages, not a kernel.
+
+| Behavior / C# source | Go surface and status | Evidence and deliberate difference |
+| --- | --- | --- |
+| Page negotiation / `Reactors/Reactors.cs`, `Reducers/Reducers.cs` (`PageDelivery = new() { Enabled = true }`) | **Implemented**: every reactor and reducer registration sends `PageDelivery{Enabled: true}` with kernel-default bounds | `TestReactorRegistrationOptsIntoPageDelivery`, `TestReducerRegistrationOptsIntoPageDelivery`. Like C#, no per-observer page bounds are declared yet |
+| Page dispatch and legacy fallback / `Observation/PageMessages.cs`, `Reactors/ReactorDispatcher.cs`, `Reducers/ReducerDispatcher.cs` | **Implemented**: one `PartitionResult` per partition with the echoed `DeliveryId` when the kernel sends `Partitions`; the old single-partition result otherwise | `TestPageSettlesEachPartitionOnItsOwn`, `TestLegacySinglePartitionMessageKeepsTheOldResultShape`, `TestReducerFoldsEachPartitionOnceWithBoundedConcurrency`. Without `PerEvent` one scope serves a reactor page; each reducer partition gets its own scope |
+| Partition settlement / `Observation/PartitionSettlement.cs`, `PartitionProblem.cs` | **Implemented**: earliest problem per partition wins; `LastSuccessfulObservation` is the last event before it | `TestBatchFailAndDeferSettleAtTheEarliestProblem`, `TestBatchMethodErrorFailsEachPartitionAtItsFirstBatchedEvent` |
+| `EventBatch`, `BatchContext`, `ObservationOrigin` / `Observation/{EventBatch,BatchContext,ObservationOrigin}.cs` | **Implemented** as `observation.EventBatch`, `BatchContext`, `Origin` | `TestEventBatchReportsPartitionOutcomesFromTheRightEvent`, `TestEventBatchRefusesPartitionsItDoesNotHold`, `TestBatchAndPerEventMethodsEachSeeTheirOwnEventsInOrder`. **Go-specific**: no overloads, so `Fail`/`FailEvent` and `Defer`/`DeferEvent`; they return `ErrPartitionNotInBatch` instead of throwing. Batch events are values `E`, so a type switch matches `case E:`. Cancellation is the method's `context.Context`, not a `CancellationToken` field. `CanDefer` is exported, and `NewEventBatch` lets applications test batch methods. Elements carry no `ReactorDelivery` |
+| `[Observes<TEvent>]` / `Observation/ObservesAttribute{TEvent}.cs`, `BatchMethods.cs` | **Go-specific** translation: `reactors.WithBatchMethod` / `reducers.WithBatchMethod` with one `observation.Observes[E]()` per type, and `reactors.OnBatch` / `reducers.OnBatch` for callbacks | `TestBatchMethodsAreDiscoveredBesidePerEventMethods`, `TestBatchCallbacksCompileWithoutAnArtifact`. Go has no attributes; a method is a batch method by its `*observation.EventBatch` parameter, as in C# |
+| Registration rules / `BatchMethodObservesNothing`, `ObservesOnlyOnBatchMethods`, `EventTypeObservedByMoreThanOneMethod`, `BatchContextOnlyForBatchMethods`, `InvalidBatchMethodReturnType`, `BatchMethodObservesUnknownEventType`, `Reducers/{ReducerHasMoreThanOneBatchMethod,ReducerMixesBatchAndPerEventMethods,InvalidReducerBatchMethod}` | **Implemented** as `observation.Err*` sentinels matching `ErrInvalidConfiguration`, reported at `NewClient` | `TestInvalidBatchRegistrationsFail`, `TestInvalidReducerBatchRegistrationsFail`, `TestBatchRegistrationErrorsAreConfigurationErrors`. There is no analyzer; the pattern-match warning of decision 0022 rule 4 has no Go equivalent |
+| Reactor ordering per method / `Reactors/ReactorBatches.cs` | **Implemented**: batch methods once per page in sequence order, then per-event methods partition by partition | `TestBatchAndPerEventMethodsEachSeeTheirOwnEventsInOrder`. Middleware surrounds per-event handlers only, as in C# |
+| Reducer batch fold / `Reducers/ReducerBatchMethods.cs`, `ReduceResult.cs` | **Implemented**: one call per event source with its initial state; `Fail` or an error writes no state; `Defer` returns `*observation.DeferredError` | `TestBatchReducerFoldsAPartitionInOneCall`, `TestBatchReducerFailAndDeferWriteNoState`, `TestBatchReducerFingerprintDiffersFromPerEventFolds` |
+| Reducer partition concurrency / `ReducerDispatcher.cs` (`Environment.ProcessorCount`) | **Implemented** with `reducers.WithMaxConcurrency`, default `runtime.NumCPU()` | `TestReducerFoldsEachPartitionOnceWithBoundedConcurrency`. C# fixes the bound at the processor count; Go makes it configurable as decision 0022 describes |
+| Deferral on a kernel without pages / `Observation/DeferralNotSupportedByKernel.cs` | **Implemented**: the partition fails with `observation.ErrDeferralNotSupportedByKernel` | `TestDeferralOnAKernelWithoutPagesFailsThePartition`, `TestDeferralOnALegacyMessageFailsThePartition` |
+| Scenario support / `Testing/Reactors/ReactorScenario.cs` | **Partial**: `ReactorScenario.Given` hands one call's events to batch methods as one live page; `ReadModelScenario` folds through a reducer batch method | `TestReactorScenarioDeliversGivenEventsToABatchMethodAsOnePage`. Deferrals surface as `*observation.DeferredError` |
+
 ## Scenario testing
 
 References below are `Source/Clients/Testing/` and `Testing.Specs/` at Chronicle

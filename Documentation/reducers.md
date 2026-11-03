@@ -205,6 +205,13 @@ silently followed by continued processing. Unknown future notification states
 also fail before activation rather than folding or reporting successful completion.
 Bump `WithVersion` when lifecycle implementation changes, as for folds.
 
+## Fold an event source in one call
+
+A reducer can fold each event source's events with one batch method instead of
+one method per event, and the event sources of a delivered page fold in parallel
+up to `reducers.WithMaxConcurrency`. [Handle events in batches](observer-batches.md)
+shows the signature and how `Fail` and `Defer` affect the stored state.
+
 ## Failure and shutdown
 
 A reducer that subscribes after events were appended to a key can trigger a kernel

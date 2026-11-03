@@ -64,6 +64,8 @@
   href: reactors.md
 - name: Reducers
   href: reducers.md
+- name: Batches for reactors and reducers
+  href: observer-batches.md
 - name: Patterns queries
   href: patterns.md
 - name: Observer and job administration
