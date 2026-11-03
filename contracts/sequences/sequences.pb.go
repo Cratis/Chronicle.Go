@@ -2543,6 +2543,98 @@ func (x *CommandResult_CompleteStreamResponse) GetResponse() *CompleteStreamResp
 	return nil
 }
 
+type CommandResult_Guid struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	CorrelationId              *bcl.Guid              `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized               bool                   `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults          []*ValidationResult    `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages          []string               `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace        string                 `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	AuthorizationFailureReason string                 `protobuf:"bytes,6,opt,name=AuthorizationFailureReason,proto3" json:"AuthorizationFailureReason,omitempty"`
+	Response                   *bcl.Guid              `protobuf:"bytes,7,opt,name=Response,proto3" json:"Response,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CommandResult_Guid) Reset() {
+	*x = CommandResult_Guid{}
+	mi := &file_sequences_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandResult_Guid) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandResult_Guid) ProtoMessage() {}
+
+func (x *CommandResult_Guid) ProtoReflect() protoreflect.Message {
+	mi := &file_sequences_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandResult_Guid.ProtoReflect.Descriptor instead.
+func (*CommandResult_Guid) Descriptor() ([]byte, []int) {
+	return file_sequences_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CommandResult_Guid) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *CommandResult_Guid) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *CommandResult_Guid) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *CommandResult_Guid) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *CommandResult_Guid) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *CommandResult_Guid) GetAuthorizationFailureReason() string {
+	if x != nil {
+		return x.AuthorizationFailureReason
+	}
+	return ""
+}
+
+func (x *CommandResult_Guid) GetResponse() *bcl.Guid {
+	if x != nil {
+		return x.Response
+	}
+	return nil
+}
+
 type CommandResult_ReopenStreamScopeResponse struct {
 	state                      protoimpl.MessageState     `protogen:"open.v1"`
 	CorrelationId              *bcl.Guid                  `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -2558,7 +2650,7 @@ type CommandResult_ReopenStreamScopeResponse struct {
 
 func (x *CommandResult_ReopenStreamScopeResponse) Reset() {
 	*x = CommandResult_ReopenStreamScopeResponse{}
-	mi := &file_sequences_proto_msgTypes[18]
+	mi := &file_sequences_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2570,7 +2662,7 @@ func (x *CommandResult_ReopenStreamScopeResponse) String() string {
 func (*CommandResult_ReopenStreamScopeResponse) ProtoMessage() {}
 
 func (x *CommandResult_ReopenStreamScopeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[18]
+	mi := &file_sequences_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2583,7 +2675,7 @@ func (x *CommandResult_ReopenStreamScopeResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use CommandResult_ReopenStreamScopeResponse.ProtoReflect.Descriptor instead.
 func (*CommandResult_ReopenStreamScopeResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{18}
+	return file_sequences_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CommandResult_ReopenStreamScopeResponse) GetCorrelationId() *bcl.Guid {
@@ -2650,7 +2742,7 @@ type CommandResult_VerifyContentResponse struct {
 
 func (x *CommandResult_VerifyContentResponse) Reset() {
 	*x = CommandResult_VerifyContentResponse{}
-	mi := &file_sequences_proto_msgTypes[19]
+	mi := &file_sequences_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2662,7 +2754,7 @@ func (x *CommandResult_VerifyContentResponse) String() string {
 func (*CommandResult_VerifyContentResponse) ProtoMessage() {}
 
 func (x *CommandResult_VerifyContentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[19]
+	mi := &file_sequences_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2675,7 +2767,7 @@ func (x *CommandResult_VerifyContentResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use CommandResult_VerifyContentResponse.ProtoReflect.Descriptor instead.
 func (*CommandResult_VerifyContentResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{19}
+	return file_sequences_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *CommandResult_VerifyContentResponse) GetCorrelationId() *bcl.Guid {
@@ -2740,7 +2832,7 @@ type CompleteStreamRequest struct {
 
 func (x *CompleteStreamRequest) Reset() {
 	*x = CompleteStreamRequest{}
-	mi := &file_sequences_proto_msgTypes[20]
+	mi := &file_sequences_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2752,7 +2844,7 @@ func (x *CompleteStreamRequest) String() string {
 func (*CompleteStreamRequest) ProtoMessage() {}
 
 func (x *CompleteStreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[20]
+	mi := &file_sequences_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2765,7 +2857,7 @@ func (x *CompleteStreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteStreamRequest.ProtoReflect.Descriptor instead.
 func (*CompleteStreamRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{20}
+	return file_sequences_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *CompleteStreamRequest) GetEventStore() string {
@@ -2814,7 +2906,7 @@ type CompleteStreamResponse struct {
 
 func (x *CompleteStreamResponse) Reset() {
 	*x = CompleteStreamResponse{}
-	mi := &file_sequences_proto_msgTypes[21]
+	mi := &file_sequences_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2826,7 +2918,7 @@ func (x *CompleteStreamResponse) String() string {
 func (*CompleteStreamResponse) ProtoMessage() {}
 
 func (x *CompleteStreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[21]
+	mi := &file_sequences_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2839,7 +2931,7 @@ func (x *CompleteStreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteStreamResponse.ProtoReflect.Descriptor instead.
 func (*CompleteStreamResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{21}
+	return file_sequences_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CompleteStreamResponse) GetIsSuccess() bool {
@@ -2879,7 +2971,7 @@ type CompleteStreamScopeRequest struct {
 
 func (x *CompleteStreamScopeRequest) Reset() {
 	*x = CompleteStreamScopeRequest{}
-	mi := &file_sequences_proto_msgTypes[22]
+	mi := &file_sequences_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2891,7 +2983,7 @@ func (x *CompleteStreamScopeRequest) String() string {
 func (*CompleteStreamScopeRequest) ProtoMessage() {}
 
 func (x *CompleteStreamScopeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[22]
+	mi := &file_sequences_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2904,7 +2996,7 @@ func (x *CompleteStreamScopeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteStreamScopeRequest.ProtoReflect.Descriptor instead.
 func (*CompleteStreamScopeRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{22}
+	return file_sequences_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CompleteStreamScopeRequest) GetEventStore() string {
@@ -2978,7 +3070,7 @@ type ConcurrencyScope struct {
 
 func (x *ConcurrencyScope) Reset() {
 	*x = ConcurrencyScope{}
-	mi := &file_sequences_proto_msgTypes[23]
+	mi := &file_sequences_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2990,7 +3082,7 @@ func (x *ConcurrencyScope) String() string {
 func (*ConcurrencyScope) ProtoMessage() {}
 
 func (x *ConcurrencyScope) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[23]
+	mi := &file_sequences_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3003,7 +3095,7 @@ func (x *ConcurrencyScope) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConcurrencyScope.ProtoReflect.Descriptor instead.
 func (*ConcurrencyScope) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{23}
+	return file_sequences_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ConcurrencyScope) GetSequenceNumber() uint64 {
@@ -3066,7 +3158,7 @@ type ConcurrencyViolation struct {
 
 func (x *ConcurrencyViolation) Reset() {
 	*x = ConcurrencyViolation{}
-	mi := &file_sequences_proto_msgTypes[24]
+	mi := &file_sequences_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3078,7 +3170,7 @@ func (x *ConcurrencyViolation) String() string {
 func (*ConcurrencyViolation) ProtoMessage() {}
 
 func (x *ConcurrencyViolation) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[24]
+	mi := &file_sequences_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3091,7 +3183,7 @@ func (x *ConcurrencyViolation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConcurrencyViolation.ProtoReflect.Descriptor instead.
 func (*ConcurrencyViolation) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{24}
+	return file_sequences_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ConcurrencyViolation) GetEventSourceId() string {
@@ -3129,7 +3221,7 @@ type ConstraintViolation struct {
 
 func (x *ConstraintViolation) Reset() {
 	*x = ConstraintViolation{}
-	mi := &file_sequences_proto_msgTypes[25]
+	mi := &file_sequences_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3141,7 +3233,7 @@ func (x *ConstraintViolation) String() string {
 func (*ConstraintViolation) ProtoMessage() {}
 
 func (x *ConstraintViolation) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[25]
+	mi := &file_sequences_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3154,7 +3246,7 @@ func (x *ConstraintViolation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConstraintViolation.ProtoReflect.Descriptor instead.
 func (*ConstraintViolation) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{25}
+	return file_sequences_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ConstraintViolation) GetEventTypeId() string {
@@ -3199,6 +3291,90 @@ func (x *ConstraintViolation) GetDetails() map[string]string {
 	return nil
 }
 
+type CopyEventsForEventSourceRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EventStore      string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace       string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	EventSequenceId string                 `protobuf:"bytes,3,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
+	SourceId        string                 `protobuf:"bytes,4,opt,name=SourceId,proto3" json:"SourceId,omitempty"`
+	TargetId        string                 `protobuf:"bytes,5,opt,name=TargetId,proto3" json:"TargetId,omitempty"`
+	EventTypes      []string               `protobuf:"bytes,6,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CopyEventsForEventSourceRequest) Reset() {
+	*x = CopyEventsForEventSourceRequest{}
+	mi := &file_sequences_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CopyEventsForEventSourceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CopyEventsForEventSourceRequest) ProtoMessage() {}
+
+func (x *CopyEventsForEventSourceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_sequences_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CopyEventsForEventSourceRequest.ProtoReflect.Descriptor instead.
+func (*CopyEventsForEventSourceRequest) Descriptor() ([]byte, []int) {
+	return file_sequences_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *CopyEventsForEventSourceRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *CopyEventsForEventSourceRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *CopyEventsForEventSourceRequest) GetEventSequenceId() string {
+	if x != nil {
+		return x.EventSequenceId
+	}
+	return ""
+}
+
+func (x *CopyEventsForEventSourceRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *CopyEventsForEventSourceRequest) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *CopyEventsForEventSourceRequest) GetEventTypes() []string {
+	if x != nil {
+		return x.EventTypes
+	}
+	return nil
+}
+
 type EffectReceipt struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	OccurrenceId  string                 `protobuf:"bytes,1,opt,name=OccurrenceId,proto3" json:"OccurrenceId,omitempty"`
@@ -3211,7 +3387,7 @@ type EffectReceipt struct {
 
 func (x *EffectReceipt) Reset() {
 	*x = EffectReceipt{}
-	mi := &file_sequences_proto_msgTypes[26]
+	mi := &file_sequences_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3223,7 +3399,7 @@ func (x *EffectReceipt) String() string {
 func (*EffectReceipt) ProtoMessage() {}
 
 func (x *EffectReceipt) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[26]
+	mi := &file_sequences_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3236,7 +3412,7 @@ func (x *EffectReceipt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EffectReceipt.ProtoReflect.Descriptor instead.
 func (*EffectReceipt) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{26}
+	return file_sequences_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *EffectReceipt) GetOccurrenceId() string {
@@ -3285,7 +3461,7 @@ type EffectReceiptDetails struct {
 
 func (x *EffectReceiptDetails) Reset() {
 	*x = EffectReceiptDetails{}
-	mi := &file_sequences_proto_msgTypes[27]
+	mi := &file_sequences_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3297,7 +3473,7 @@ func (x *EffectReceiptDetails) String() string {
 func (*EffectReceiptDetails) ProtoMessage() {}
 
 func (x *EffectReceiptDetails) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[27]
+	mi := &file_sequences_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3310,7 +3486,7 @@ func (x *EffectReceiptDetails) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EffectReceiptDetails.ProtoReflect.Descriptor instead.
 func (*EffectReceiptDetails) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{27}
+	return file_sequences_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *EffectReceiptDetails) GetId() string {
@@ -3393,7 +3569,7 @@ type EndOfRequest struct {
 
 func (x *EndOfRequest) Reset() {
 	*x = EndOfRequest{}
-	mi := &file_sequences_proto_msgTypes[28]
+	mi := &file_sequences_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3405,7 +3581,7 @@ func (x *EndOfRequest) String() string {
 func (*EndOfRequest) ProtoMessage() {}
 
 func (x *EndOfRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[28]
+	mi := &file_sequences_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3418,7 +3594,7 @@ func (x *EndOfRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EndOfRequest.ProtoReflect.Descriptor instead.
 func (*EndOfRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{28}
+	return file_sequences_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *EndOfRequest) GetStart() *SerializableDateTimeOffset {
@@ -3459,7 +3635,7 @@ type EventContext struct {
 
 func (x *EventContext) Reset() {
 	*x = EventContext{}
-	mi := &file_sequences_proto_msgTypes[29]
+	mi := &file_sequences_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3471,7 +3647,7 @@ func (x *EventContext) String() string {
 func (*EventContext) ProtoMessage() {}
 
 func (x *EventContext) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[29]
+	mi := &file_sequences_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3484,7 +3660,7 @@ func (x *EventContext) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventContext.ProtoReflect.Descriptor instead.
 func (*EventContext) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{29}
+	return file_sequences_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *EventContext) GetEventType() *EventType {
@@ -3618,7 +3794,7 @@ type EventForEventSourceId struct {
 
 func (x *EventForEventSourceId) Reset() {
 	*x = EventForEventSourceId{}
-	mi := &file_sequences_proto_msgTypes[30]
+	mi := &file_sequences_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3630,7 +3806,7 @@ func (x *EventForEventSourceId) String() string {
 func (*EventForEventSourceId) ProtoMessage() {}
 
 func (x *EventForEventSourceId) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[30]
+	mi := &file_sequences_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3643,7 +3819,7 @@ func (x *EventForEventSourceId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventForEventSourceId.ProtoReflect.Descriptor instead.
 func (*EventForEventSourceId) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{30}
+	return file_sequences_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *EventForEventSourceId) GetEventSourceId() string {
@@ -3743,7 +3919,7 @@ type EventForEventSourceIdWithNamedTags struct {
 
 func (x *EventForEventSourceIdWithNamedTags) Reset() {
 	*x = EventForEventSourceIdWithNamedTags{}
-	mi := &file_sequences_proto_msgTypes[31]
+	mi := &file_sequences_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3755,7 +3931,7 @@ func (x *EventForEventSourceIdWithNamedTags) String() string {
 func (*EventForEventSourceIdWithNamedTags) ProtoMessage() {}
 
 func (x *EventForEventSourceIdWithNamedTags) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[31]
+	mi := &file_sequences_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3768,7 +3944,7 @@ func (x *EventForEventSourceIdWithNamedTags) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use EventForEventSourceIdWithNamedTags.ProtoReflect.Descriptor instead.
 func (*EventForEventSourceIdWithNamedTags) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{31}
+	return file_sequences_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *EventForEventSourceIdWithNamedTags) GetEventSourceId() string {
@@ -3877,7 +4053,7 @@ type EventMetadataResponse struct {
 
 func (x *EventMetadataResponse) Reset() {
 	*x = EventMetadataResponse{}
-	mi := &file_sequences_proto_msgTypes[32]
+	mi := &file_sequences_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3889,7 +4065,7 @@ func (x *EventMetadataResponse) String() string {
 func (*EventMetadataResponse) ProtoMessage() {}
 
 func (x *EventMetadataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[32]
+	mi := &file_sequences_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3902,7 +4078,7 @@ func (x *EventMetadataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventMetadataResponse.ProtoReflect.Descriptor instead.
 func (*EventMetadataResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{32}
+	return file_sequences_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *EventMetadataResponse) GetSequenceNumber() uint64 {
@@ -4016,7 +4192,7 @@ type EventRevision struct {
 
 func (x *EventRevision) Reset() {
 	*x = EventRevision{}
-	mi := &file_sequences_proto_msgTypes[33]
+	mi := &file_sequences_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4028,7 +4204,7 @@ func (x *EventRevision) String() string {
 func (*EventRevision) ProtoMessage() {}
 
 func (x *EventRevision) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[33]
+	mi := &file_sequences_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4041,7 +4217,7 @@ func (x *EventRevision) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventRevision.ProtoReflect.Descriptor instead.
 func (*EventRevision) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{33}
+	return file_sequences_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *EventRevision) GetGeneration() uint32 {
@@ -4089,7 +4265,7 @@ type EventSequenceNamesResponse struct {
 
 func (x *EventSequenceNamesResponse) Reset() {
 	*x = EventSequenceNamesResponse{}
-	mi := &file_sequences_proto_msgTypes[34]
+	mi := &file_sequences_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4101,7 +4277,7 @@ func (x *EventSequenceNamesResponse) String() string {
 func (*EventSequenceNamesResponse) ProtoMessage() {}
 
 func (x *EventSequenceNamesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[34]
+	mi := &file_sequences_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4114,7 +4290,7 @@ func (x *EventSequenceNamesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventSequenceNamesResponse.ProtoReflect.Descriptor instead.
 func (*EventSequenceNamesResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{34}
+	return file_sequences_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *EventSequenceNamesResponse) GetId() string {
@@ -4140,7 +4316,7 @@ type EventSequenceTailResponse struct {
 
 func (x *EventSequenceTailResponse) Reset() {
 	*x = EventSequenceTailResponse{}
-	mi := &file_sequences_proto_msgTypes[35]
+	mi := &file_sequences_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4152,7 +4328,7 @@ func (x *EventSequenceTailResponse) String() string {
 func (*EventSequenceTailResponse) ProtoMessage() {}
 
 func (x *EventSequenceTailResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[35]
+	mi := &file_sequences_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4165,7 +4341,7 @@ func (x *EventSequenceTailResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventSequenceTailResponse.ProtoReflect.Descriptor instead.
 func (*EventSequenceTailResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{35}
+	return file_sequences_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *EventSequenceTailResponse) GetSequenceNumber() uint64 {
@@ -4185,7 +4361,7 @@ type EventSourceConcurrencyScope struct {
 
 func (x *EventSourceConcurrencyScope) Reset() {
 	*x = EventSourceConcurrencyScope{}
-	mi := &file_sequences_proto_msgTypes[36]
+	mi := &file_sequences_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4197,7 +4373,7 @@ func (x *EventSourceConcurrencyScope) String() string {
 func (*EventSourceConcurrencyScope) ProtoMessage() {}
 
 func (x *EventSourceConcurrencyScope) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[36]
+	mi := &file_sequences_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4210,7 +4386,7 @@ func (x *EventSourceConcurrencyScope) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventSourceConcurrencyScope.ProtoReflect.Descriptor instead.
 func (*EventSourceConcurrencyScope) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{36}
+	return file_sequences_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *EventSourceConcurrencyScope) GetEventSourceId() string {
@@ -4236,7 +4412,7 @@ type EventSourceEventsResponse struct {
 
 func (x *EventSourceEventsResponse) Reset() {
 	*x = EventSourceEventsResponse{}
-	mi := &file_sequences_proto_msgTypes[37]
+	mi := &file_sequences_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4248,7 +4424,7 @@ func (x *EventSourceEventsResponse) String() string {
 func (*EventSourceEventsResponse) ProtoMessage() {}
 
 func (x *EventSourceEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[37]
+	mi := &file_sequences_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4261,7 +4437,7 @@ func (x *EventSourceEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventSourceEventsResponse.ProtoReflect.Descriptor instead.
 func (*EventSourceEventsResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{37}
+	return file_sequences_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *EventSourceEventsResponse) GetHasEvents() bool {
@@ -4282,7 +4458,7 @@ type EventToAppend struct {
 
 func (x *EventToAppend) Reset() {
 	*x = EventToAppend{}
-	mi := &file_sequences_proto_msgTypes[38]
+	mi := &file_sequences_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4294,7 +4470,7 @@ func (x *EventToAppend) String() string {
 func (*EventToAppend) ProtoMessage() {}
 
 func (x *EventToAppend) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[38]
+	mi := &file_sequences_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4307,7 +4483,7 @@ func (x *EventToAppend) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventToAppend.ProtoReflect.Descriptor instead.
 func (*EventToAppend) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{38}
+	return file_sequences_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *EventToAppend) GetEventType() *EventType {
@@ -4343,7 +4519,7 @@ type EventToAppendWithNamedTags struct {
 
 func (x *EventToAppendWithNamedTags) Reset() {
 	*x = EventToAppendWithNamedTags{}
-	mi := &file_sequences_proto_msgTypes[39]
+	mi := &file_sequences_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4355,7 +4531,7 @@ func (x *EventToAppendWithNamedTags) String() string {
 func (*EventToAppendWithNamedTags) ProtoMessage() {}
 
 func (x *EventToAppendWithNamedTags) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[39]
+	mi := &file_sequences_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4368,7 +4544,7 @@ func (x *EventToAppendWithNamedTags) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventToAppendWithNamedTags.ProtoReflect.Descriptor instead.
 func (*EventToAppendWithNamedTags) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{39}
+	return file_sequences_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *EventToAppendWithNamedTags) GetEventType() *EventType {
@@ -4410,7 +4586,7 @@ type EventType struct {
 
 func (x *EventType) Reset() {
 	*x = EventType{}
-	mi := &file_sequences_proto_msgTypes[40]
+	mi := &file_sequences_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4422,7 +4598,7 @@ func (x *EventType) String() string {
 func (*EventType) ProtoMessage() {}
 
 func (x *EventType) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[40]
+	mi := &file_sequences_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4435,7 +4611,7 @@ func (x *EventType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventType.ProtoReflect.Descriptor instead.
 func (*EventType) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{40}
+	return file_sequences_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *EventType) GetId() string {
@@ -4478,7 +4654,7 @@ type ExportEventsRequest struct {
 
 func (x *ExportEventsRequest) Reset() {
 	*x = ExportEventsRequest{}
-	mi := &file_sequences_proto_msgTypes[41]
+	mi := &file_sequences_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4490,7 +4666,7 @@ func (x *ExportEventsRequest) String() string {
 func (*ExportEventsRequest) ProtoMessage() {}
 
 func (x *ExportEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[41]
+	mi := &file_sequences_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4503,7 +4679,7 @@ func (x *ExportEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportEventsRequest.ProtoReflect.Descriptor instead.
 func (*ExportEventsRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{41}
+	return file_sequences_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ExportEventsRequest) GetEventStore() string {
@@ -4601,7 +4777,7 @@ type ExportedEventResponse struct {
 
 func (x *ExportedEventResponse) Reset() {
 	*x = ExportedEventResponse{}
-	mi := &file_sequences_proto_msgTypes[42]
+	mi := &file_sequences_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4613,7 +4789,7 @@ func (x *ExportedEventResponse) String() string {
 func (*ExportedEventResponse) ProtoMessage() {}
 
 func (x *ExportedEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[42]
+	mi := &file_sequences_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4626,7 +4802,7 @@ func (x *ExportedEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportedEventResponse.ProtoReflect.Descriptor instead.
 func (*ExportedEventResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{42}
+	return file_sequences_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ExportedEventResponse) GetSequenceNumber() uint64 {
@@ -4715,7 +4891,7 @@ type ForEventSourceIdAndEventTypesRequest struct {
 
 func (x *ForEventSourceIdAndEventTypesRequest) Reset() {
 	*x = ForEventSourceIdAndEventTypesRequest{}
-	mi := &file_sequences_proto_msgTypes[43]
+	mi := &file_sequences_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4727,7 +4903,7 @@ func (x *ForEventSourceIdAndEventTypesRequest) String() string {
 func (*ForEventSourceIdAndEventTypesRequest) ProtoMessage() {}
 
 func (x *ForEventSourceIdAndEventTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[43]
+	mi := &file_sequences_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4740,7 +4916,7 @@ func (x *ForEventSourceIdAndEventTypesRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ForEventSourceIdAndEventTypesRequest.ProtoReflect.Descriptor instead.
 func (*ForEventSourceIdAndEventTypesRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{43}
+	return file_sequences_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ForEventSourceIdAndEventTypesRequest) GetEventStore() string {
@@ -4813,7 +4989,7 @@ type FromSequenceNumberRequest struct {
 
 func (x *FromSequenceNumberRequest) Reset() {
 	*x = FromSequenceNumberRequest{}
-	mi := &file_sequences_proto_msgTypes[44]
+	mi := &file_sequences_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4825,7 +5001,7 @@ func (x *FromSequenceNumberRequest) String() string {
 func (*FromSequenceNumberRequest) ProtoMessage() {}
 
 func (x *FromSequenceNumberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[44]
+	mi := &file_sequences_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4838,7 +5014,7 @@ func (x *FromSequenceNumberRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FromSequenceNumberRequest.ProtoReflect.Descriptor instead.
 func (*FromSequenceNumberRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{44}
+	return file_sequences_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *FromSequenceNumberRequest) GetEventStore() string {
@@ -4895,7 +5071,7 @@ type HasEventsForEventSourceIdRequest struct {
 
 func (x *HasEventsForEventSourceIdRequest) Reset() {
 	*x = HasEventsForEventSourceIdRequest{}
-	mi := &file_sequences_proto_msgTypes[45]
+	mi := &file_sequences_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4907,7 +5083,7 @@ func (x *HasEventsForEventSourceIdRequest) String() string {
 func (*HasEventsForEventSourceIdRequest) ProtoMessage() {}
 
 func (x *HasEventsForEventSourceIdRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[45]
+	mi := &file_sequences_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4920,7 +5096,7 @@ func (x *HasEventsForEventSourceIdRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HasEventsForEventSourceIdRequest.ProtoReflect.Descriptor instead.
 func (*HasEventsForEventSourceIdRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{45}
+	return file_sequences_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *HasEventsForEventSourceIdRequest) GetEventStore() string {
@@ -4963,7 +5139,7 @@ type Identity struct {
 
 func (x *Identity) Reset() {
 	*x = Identity{}
-	mi := &file_sequences_proto_msgTypes[46]
+	mi := &file_sequences_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4975,7 +5151,7 @@ func (x *Identity) String() string {
 func (*Identity) ProtoMessage() {}
 
 func (x *Identity) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[46]
+	mi := &file_sequences_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4988,7 +5164,7 @@ func (x *Identity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Identity.ProtoReflect.Descriptor instead.
 func (*Identity) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{46}
+	return file_sequences_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *Identity) GetSubject() string {
@@ -5034,7 +5210,7 @@ type IsStreamScopeCompletedRequest struct {
 
 func (x *IsStreamScopeCompletedRequest) Reset() {
 	*x = IsStreamScopeCompletedRequest{}
-	mi := &file_sequences_proto_msgTypes[47]
+	mi := &file_sequences_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5046,7 +5222,7 @@ func (x *IsStreamScopeCompletedRequest) String() string {
 func (*IsStreamScopeCompletedRequest) ProtoMessage() {}
 
 func (x *IsStreamScopeCompletedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[47]
+	mi := &file_sequences_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5059,7 +5235,7 @@ func (x *IsStreamScopeCompletedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IsStreamScopeCompletedRequest.ProtoReflect.Descriptor instead.
 func (*IsStreamScopeCompletedRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{47}
+	return file_sequences_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *IsStreamScopeCompletedRequest) GetEventStore() string {
@@ -5121,7 +5297,7 @@ type KeyValuePair_Int32_String struct {
 
 func (x *KeyValuePair_Int32_String) Reset() {
 	*x = KeyValuePair_Int32_String{}
-	mi := &file_sequences_proto_msgTypes[48]
+	mi := &file_sequences_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5133,7 +5309,7 @@ func (x *KeyValuePair_Int32_String) String() string {
 func (*KeyValuePair_Int32_String) ProtoMessage() {}
 
 func (x *KeyValuePair_Int32_String) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[48]
+	mi := &file_sequences_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5146,7 +5322,7 @@ func (x *KeyValuePair_Int32_String) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyValuePair_Int32_String.ProtoReflect.Descriptor instead.
 func (*KeyValuePair_Int32_String) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{48}
+	return file_sequences_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *KeyValuePair_Int32_String) GetKey() int32 {
@@ -5175,7 +5351,7 @@ type MetadataAtRequest struct {
 
 func (x *MetadataAtRequest) Reset() {
 	*x = MetadataAtRequest{}
-	mi := &file_sequences_proto_msgTypes[49]
+	mi := &file_sequences_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5187,7 +5363,7 @@ func (x *MetadataAtRequest) String() string {
 func (*MetadataAtRequest) ProtoMessage() {}
 
 func (x *MetadataAtRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[49]
+	mi := &file_sequences_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5200,7 +5376,7 @@ func (x *MetadataAtRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetadataAtRequest.ProtoReflect.Descriptor instead.
 func (*MetadataAtRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{49}
+	return file_sequences_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *MetadataAtRequest) GetEventStore() string {
@@ -5241,7 +5417,7 @@ type NamedTag struct {
 
 func (x *NamedTag) Reset() {
 	*x = NamedTag{}
-	mi := &file_sequences_proto_msgTypes[50]
+	mi := &file_sequences_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5253,7 +5429,7 @@ func (x *NamedTag) String() string {
 func (*NamedTag) ProtoMessage() {}
 
 func (x *NamedTag) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[50]
+	mi := &file_sequences_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5266,7 +5442,7 @@ func (x *NamedTag) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamedTag.ProtoReflect.Descriptor instead.
 func (*NamedTag) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{50}
+	return file_sequences_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *NamedTag) GetName() string {
@@ -5294,7 +5470,7 @@ type NamedTagQueryCriterion struct {
 
 func (x *NamedTagQueryCriterion) Reset() {
 	*x = NamedTagQueryCriterion{}
-	mi := &file_sequences_proto_msgTypes[51]
+	mi := &file_sequences_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5306,7 +5482,7 @@ func (x *NamedTagQueryCriterion) String() string {
 func (*NamedTagQueryCriterion) ProtoMessage() {}
 
 func (x *NamedTagQueryCriterion) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[51]
+	mi := &file_sequences_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5319,7 +5495,7 @@ func (x *NamedTagQueryCriterion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamedTagQueryCriterion.ProtoReflect.Descriptor instead.
 func (*NamedTagQueryCriterion) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{51}
+	return file_sequences_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *NamedTagQueryCriterion) GetName() string {
@@ -5352,7 +5528,7 @@ type ParseResolutionRequest struct {
 
 func (x *ParseResolutionRequest) Reset() {
 	*x = ParseResolutionRequest{}
-	mi := &file_sequences_proto_msgTypes[52]
+	mi := &file_sequences_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5364,7 +5540,7 @@ func (x *ParseResolutionRequest) String() string {
 func (*ParseResolutionRequest) ProtoMessage() {}
 
 func (x *ParseResolutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[52]
+	mi := &file_sequences_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5377,7 +5553,7 @@ func (x *ParseResolutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParseResolutionRequest.ProtoReflect.Descriptor instead.
 func (*ParseResolutionRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{52}
+	return file_sequences_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ParseResolutionRequest) GetResolution() string {
@@ -5406,7 +5582,7 @@ type QueryEventsRequest struct {
 
 func (x *QueryEventsRequest) Reset() {
 	*x = QueryEventsRequest{}
-	mi := &file_sequences_proto_msgTypes[53]
+	mi := &file_sequences_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5418,7 +5594,7 @@ func (x *QueryEventsRequest) String() string {
 func (*QueryEventsRequest) ProtoMessage() {}
 
 func (x *QueryEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[53]
+	mi := &file_sequences_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5431,7 +5607,7 @@ func (x *QueryEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryEventsRequest.ProtoReflect.Descriptor instead.
 func (*QueryEventsRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{53}
+	return file_sequences_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *QueryEventsRequest) GetEventStore() string {
@@ -5531,7 +5707,7 @@ type QueryEventsWithNamedTagsRequest struct {
 
 func (x *QueryEventsWithNamedTagsRequest) Reset() {
 	*x = QueryEventsWithNamedTagsRequest{}
-	mi := &file_sequences_proto_msgTypes[54]
+	mi := &file_sequences_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5543,7 +5719,7 @@ func (x *QueryEventsWithNamedTagsRequest) String() string {
 func (*QueryEventsWithNamedTagsRequest) ProtoMessage() {}
 
 func (x *QueryEventsWithNamedTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[54]
+	mi := &file_sequences_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5556,7 +5732,7 @@ func (x *QueryEventsWithNamedTagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryEventsWithNamedTagsRequest.ProtoReflect.Descriptor instead.
 func (*QueryEventsWithNamedTagsRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{54}
+	return file_sequences_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *QueryEventsWithNamedTagsRequest) GetEventStore() string {
@@ -5657,7 +5833,7 @@ type QueryResult_EventSequenceTailResponse struct {
 
 func (x *QueryResult_EventSequenceTailResponse) Reset() {
 	*x = QueryResult_EventSequenceTailResponse{}
-	mi := &file_sequences_proto_msgTypes[55]
+	mi := &file_sequences_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5669,7 +5845,7 @@ func (x *QueryResult_EventSequenceTailResponse) String() string {
 func (*QueryResult_EventSequenceTailResponse) ProtoMessage() {}
 
 func (x *QueryResult_EventSequenceTailResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[55]
+	mi := &file_sequences_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5682,7 +5858,7 @@ func (x *QueryResult_EventSequenceTailResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use QueryResult_EventSequenceTailResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_EventSequenceTailResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{55}
+	return file_sequences_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *QueryResult_EventSequenceTailResponse) GetCorrelationId() *bcl.Guid {
@@ -5741,7 +5917,7 @@ type QueryResult_EventSourceEventsResponse struct {
 
 func (x *QueryResult_EventSourceEventsResponse) Reset() {
 	*x = QueryResult_EventSourceEventsResponse{}
-	mi := &file_sequences_proto_msgTypes[56]
+	mi := &file_sequences_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5753,7 +5929,7 @@ func (x *QueryResult_EventSourceEventsResponse) String() string {
 func (*QueryResult_EventSourceEventsResponse) ProtoMessage() {}
 
 func (x *QueryResult_EventSourceEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[56]
+	mi := &file_sequences_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5766,7 +5942,7 @@ func (x *QueryResult_EventSourceEventsResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use QueryResult_EventSourceEventsResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_EventSourceEventsResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{56}
+	return file_sequences_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *QueryResult_EventSourceEventsResponse) GetCorrelationId() *bcl.Guid {
@@ -5825,7 +6001,7 @@ type QueryResult_HistogramResolution struct {
 
 func (x *QueryResult_HistogramResolution) Reset() {
 	*x = QueryResult_HistogramResolution{}
-	mi := &file_sequences_proto_msgTypes[57]
+	mi := &file_sequences_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5837,7 +6013,7 @@ func (x *QueryResult_HistogramResolution) String() string {
 func (*QueryResult_HistogramResolution) ProtoMessage() {}
 
 func (x *QueryResult_HistogramResolution) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[57]
+	mi := &file_sequences_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5850,7 +6026,7 @@ func (x *QueryResult_HistogramResolution) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryResult_HistogramResolution.ProtoReflect.Descriptor instead.
 func (*QueryResult_HistogramResolution) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{57}
+	return file_sequences_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *QueryResult_HistogramResolution) GetCorrelationId() *bcl.Guid {
@@ -5909,7 +6085,7 @@ type QueryResult_IEnumerable_AppendedEventResponse struct {
 
 func (x *QueryResult_IEnumerable_AppendedEventResponse) Reset() {
 	*x = QueryResult_IEnumerable_AppendedEventResponse{}
-	mi := &file_sequences_proto_msgTypes[58]
+	mi := &file_sequences_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5921,7 +6097,7 @@ func (x *QueryResult_IEnumerable_AppendedEventResponse) String() string {
 func (*QueryResult_IEnumerable_AppendedEventResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_AppendedEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[58]
+	mi := &file_sequences_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5934,7 +6110,7 @@ func (x *QueryResult_IEnumerable_AppendedEventResponse) ProtoReflect() protorefl
 
 // Deprecated: Use QueryResult_IEnumerable_AppendedEventResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_AppendedEventResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{58}
+	return file_sequences_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *QueryResult_IEnumerable_AppendedEventResponse) GetCorrelationId() *bcl.Guid {
@@ -5993,7 +6169,7 @@ type QueryResult_IEnumerable_ClosedStreamResponse struct {
 
 func (x *QueryResult_IEnumerable_ClosedStreamResponse) Reset() {
 	*x = QueryResult_IEnumerable_ClosedStreamResponse{}
-	mi := &file_sequences_proto_msgTypes[59]
+	mi := &file_sequences_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6005,7 +6181,7 @@ func (x *QueryResult_IEnumerable_ClosedStreamResponse) String() string {
 func (*QueryResult_IEnumerable_ClosedStreamResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_ClosedStreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[59]
+	mi := &file_sequences_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6018,7 +6194,7 @@ func (x *QueryResult_IEnumerable_ClosedStreamResponse) ProtoReflect() protorefle
 
 // Deprecated: Use QueryResult_IEnumerable_ClosedStreamResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_ClosedStreamResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{59}
+	return file_sequences_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *QueryResult_IEnumerable_ClosedStreamResponse) GetCorrelationId() *bcl.Guid {
@@ -6077,7 +6253,7 @@ type QueryResult_IEnumerable_EventMetadataResponse struct {
 
 func (x *QueryResult_IEnumerable_EventMetadataResponse) Reset() {
 	*x = QueryResult_IEnumerable_EventMetadataResponse{}
-	mi := &file_sequences_proto_msgTypes[60]
+	mi := &file_sequences_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6089,7 +6265,7 @@ func (x *QueryResult_IEnumerable_EventMetadataResponse) String() string {
 func (*QueryResult_IEnumerable_EventMetadataResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_EventMetadataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[60]
+	mi := &file_sequences_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6102,7 +6278,7 @@ func (x *QueryResult_IEnumerable_EventMetadataResponse) ProtoReflect() protorefl
 
 // Deprecated: Use QueryResult_IEnumerable_EventMetadataResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_EventMetadataResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{60}
+	return file_sequences_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *QueryResult_IEnumerable_EventMetadataResponse) GetCorrelationId() *bcl.Guid {
@@ -6161,7 +6337,7 @@ type QueryResult_IEnumerable_EventSequenceNamesResponse struct {
 
 func (x *QueryResult_IEnumerable_EventSequenceNamesResponse) Reset() {
 	*x = QueryResult_IEnumerable_EventSequenceNamesResponse{}
-	mi := &file_sequences_proto_msgTypes[61]
+	mi := &file_sequences_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6173,7 +6349,7 @@ func (x *QueryResult_IEnumerable_EventSequenceNamesResponse) String() string {
 func (*QueryResult_IEnumerable_EventSequenceNamesResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_EventSequenceNamesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[61]
+	mi := &file_sequences_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6186,7 +6362,7 @@ func (x *QueryResult_IEnumerable_EventSequenceNamesResponse) ProtoReflect() prot
 
 // Deprecated: Use QueryResult_IEnumerable_EventSequenceNamesResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_EventSequenceNamesResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{61}
+	return file_sequences_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *QueryResult_IEnumerable_EventSequenceNamesResponse) GetCorrelationId() *bcl.Guid {
@@ -6245,7 +6421,7 @@ type QueryResult_IEnumerable_ExportedEventResponse struct {
 
 func (x *QueryResult_IEnumerable_ExportedEventResponse) Reset() {
 	*x = QueryResult_IEnumerable_ExportedEventResponse{}
-	mi := &file_sequences_proto_msgTypes[62]
+	mi := &file_sequences_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6257,7 +6433,7 @@ func (x *QueryResult_IEnumerable_ExportedEventResponse) String() string {
 func (*QueryResult_IEnumerable_ExportedEventResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_ExportedEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[62]
+	mi := &file_sequences_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6270,7 +6446,7 @@ func (x *QueryResult_IEnumerable_ExportedEventResponse) ProtoReflect() protorefl
 
 // Deprecated: Use QueryResult_IEnumerable_ExportedEventResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_ExportedEventResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{62}
+	return file_sequences_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *QueryResult_IEnumerable_ExportedEventResponse) GetCorrelationId() *bcl.Guid {
@@ -6329,7 +6505,7 @@ type QueryResult_IEnumerable_SequenceHistogramBucketResponse struct {
 
 func (x *QueryResult_IEnumerable_SequenceHistogramBucketResponse) Reset() {
 	*x = QueryResult_IEnumerable_SequenceHistogramBucketResponse{}
-	mi := &file_sequences_proto_msgTypes[63]
+	mi := &file_sequences_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6341,7 +6517,7 @@ func (x *QueryResult_IEnumerable_SequenceHistogramBucketResponse) String() strin
 func (*QueryResult_IEnumerable_SequenceHistogramBucketResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_SequenceHistogramBucketResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[63]
+	mi := &file_sequences_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6354,7 +6530,7 @@ func (x *QueryResult_IEnumerable_SequenceHistogramBucketResponse) ProtoReflect()
 
 // Deprecated: Use QueryResult_IEnumerable_SequenceHistogramBucketResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_SequenceHistogramBucketResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{63}
+	return file_sequences_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *QueryResult_IEnumerable_SequenceHistogramBucketResponse) GetCorrelationId() *bcl.Guid {
@@ -6413,7 +6589,7 @@ type QueryResult_SerializableDateTimeOffset struct {
 
 func (x *QueryResult_SerializableDateTimeOffset) Reset() {
 	*x = QueryResult_SerializableDateTimeOffset{}
-	mi := &file_sequences_proto_msgTypes[64]
+	mi := &file_sequences_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6425,7 +6601,7 @@ func (x *QueryResult_SerializableDateTimeOffset) String() string {
 func (*QueryResult_SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *QueryResult_SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[64]
+	mi := &file_sequences_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6438,7 +6614,7 @@ func (x *QueryResult_SerializableDateTimeOffset) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use QueryResult_SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*QueryResult_SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{64}
+	return file_sequences_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *QueryResult_SerializableDateTimeOffset) GetCorrelationId() *bcl.Guid {
@@ -6497,7 +6673,7 @@ type QueryResult_StreamScopeCompletionResponse struct {
 
 func (x *QueryResult_StreamScopeCompletionResponse) Reset() {
 	*x = QueryResult_StreamScopeCompletionResponse{}
-	mi := &file_sequences_proto_msgTypes[65]
+	mi := &file_sequences_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6509,7 +6685,7 @@ func (x *QueryResult_StreamScopeCompletionResponse) String() string {
 func (*QueryResult_StreamScopeCompletionResponse) ProtoMessage() {}
 
 func (x *QueryResult_StreamScopeCompletionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[65]
+	mi := &file_sequences_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6522,7 +6698,7 @@ func (x *QueryResult_StreamScopeCompletionResponse) ProtoReflect() protoreflect.
 
 // Deprecated: Use QueryResult_StreamScopeCompletionResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_StreamScopeCompletionResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{65}
+	return file_sequences_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *QueryResult_StreamScopeCompletionResponse) GetCorrelationId() *bcl.Guid {
@@ -6583,7 +6759,7 @@ type RedactForEventSourceRequest struct {
 
 func (x *RedactForEventSourceRequest) Reset() {
 	*x = RedactForEventSourceRequest{}
-	mi := &file_sequences_proto_msgTypes[66]
+	mi := &file_sequences_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6595,7 +6771,7 @@ func (x *RedactForEventSourceRequest) String() string {
 func (*RedactForEventSourceRequest) ProtoMessage() {}
 
 func (x *RedactForEventSourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[66]
+	mi := &file_sequences_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6608,7 +6784,7 @@ func (x *RedactForEventSourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedactForEventSourceRequest.ProtoReflect.Descriptor instead.
 func (*RedactForEventSourceRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{66}
+	return file_sequences_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *RedactForEventSourceRequest) GetEventStore() string {
@@ -6682,7 +6858,7 @@ type RedactRequest struct {
 
 func (x *RedactRequest) Reset() {
 	*x = RedactRequest{}
-	mi := &file_sequences_proto_msgTypes[67]
+	mi := &file_sequences_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6694,7 +6870,7 @@ func (x *RedactRequest) String() string {
 func (*RedactRequest) ProtoMessage() {}
 
 func (x *RedactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[67]
+	mi := &file_sequences_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6707,7 +6883,7 @@ func (x *RedactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedactRequest.ProtoReflect.Descriptor instead.
 func (*RedactRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{67}
+	return file_sequences_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *RedactRequest) GetEventStore() string {
@@ -6777,7 +6953,7 @@ type ReopenStreamScopeRequest struct {
 
 func (x *ReopenStreamScopeRequest) Reset() {
 	*x = ReopenStreamScopeRequest{}
-	mi := &file_sequences_proto_msgTypes[68]
+	mi := &file_sequences_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6789,7 +6965,7 @@ func (x *ReopenStreamScopeRequest) String() string {
 func (*ReopenStreamScopeRequest) ProtoMessage() {}
 
 func (x *ReopenStreamScopeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[68]
+	mi := &file_sequences_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6802,7 +6978,7 @@ func (x *ReopenStreamScopeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReopenStreamScopeRequest.ProtoReflect.Descriptor instead.
 func (*ReopenStreamScopeRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{68}
+	return file_sequences_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *ReopenStreamScopeRequest) GetEventStore() string {
@@ -6885,7 +7061,7 @@ type ReopenStreamScopeResponse struct {
 
 func (x *ReopenStreamScopeResponse) Reset() {
 	*x = ReopenStreamScopeResponse{}
-	mi := &file_sequences_proto_msgTypes[69]
+	mi := &file_sequences_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6897,7 +7073,7 @@ func (x *ReopenStreamScopeResponse) String() string {
 func (*ReopenStreamScopeResponse) ProtoMessage() {}
 
 func (x *ReopenStreamScopeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[69]
+	mi := &file_sequences_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6910,7 +7086,7 @@ func (x *ReopenStreamScopeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReopenStreamScopeResponse.ProtoReflect.Descriptor instead.
 func (*ReopenStreamScopeResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{69}
+	return file_sequences_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ReopenStreamScopeResponse) GetIsSuccess() bool {
@@ -6940,7 +7116,7 @@ type ResolvedIdentity struct {
 
 func (x *ResolvedIdentity) Reset() {
 	*x = ResolvedIdentity{}
-	mi := &file_sequences_proto_msgTypes[70]
+	mi := &file_sequences_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6952,7 +7128,7 @@ func (x *ResolvedIdentity) String() string {
 func (*ResolvedIdentity) ProtoMessage() {}
 
 func (x *ResolvedIdentity) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[70]
+	mi := &file_sequences_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6965,7 +7141,7 @@ func (x *ResolvedIdentity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolvedIdentity.ProtoReflect.Descriptor instead.
 func (*ResolvedIdentity) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{70}
+	return file_sequences_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *ResolvedIdentity) GetSubject() string {
@@ -7019,7 +7195,7 @@ type ReviseRequest struct {
 
 func (x *ReviseRequest) Reset() {
 	*x = ReviseRequest{}
-	mi := &file_sequences_proto_msgTypes[71]
+	mi := &file_sequences_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7031,7 +7207,7 @@ func (x *ReviseRequest) String() string {
 func (*ReviseRequest) ProtoMessage() {}
 
 func (x *ReviseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[71]
+	mi := &file_sequences_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7044,7 +7220,7 @@ func (x *ReviseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviseRequest.ProtoReflect.Descriptor instead.
 func (*ReviseRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{71}
+	return file_sequences_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ReviseRequest) GetEventStore() string {
@@ -7114,7 +7290,7 @@ type SequenceHistogramBucketResponse struct {
 
 func (x *SequenceHistogramBucketResponse) Reset() {
 	*x = SequenceHistogramBucketResponse{}
-	mi := &file_sequences_proto_msgTypes[72]
+	mi := &file_sequences_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7126,7 +7302,7 @@ func (x *SequenceHistogramBucketResponse) String() string {
 func (*SequenceHistogramBucketResponse) ProtoMessage() {}
 
 func (x *SequenceHistogramBucketResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[72]
+	mi := &file_sequences_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7139,7 +7315,7 @@ func (x *SequenceHistogramBucketResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SequenceHistogramBucketResponse.ProtoReflect.Descriptor instead.
 func (*SequenceHistogramBucketResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{72}
+	return file_sequences_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *SequenceHistogramBucketResponse) GetFrom() *SerializableDateTimeOffset {
@@ -7183,7 +7359,7 @@ type SequenceHistogramRequest struct {
 
 func (x *SequenceHistogramRequest) Reset() {
 	*x = SequenceHistogramRequest{}
-	mi := &file_sequences_proto_msgTypes[73]
+	mi := &file_sequences_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7195,7 +7371,7 @@ func (x *SequenceHistogramRequest) String() string {
 func (*SequenceHistogramRequest) ProtoMessage() {}
 
 func (x *SequenceHistogramRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[73]
+	mi := &file_sequences_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7208,7 +7384,7 @@ func (x *SequenceHistogramRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SequenceHistogramRequest.ProtoReflect.Descriptor instead.
 func (*SequenceHistogramRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{73}
+	return file_sequences_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *SequenceHistogramRequest) GetEventStore() string {
@@ -7316,7 +7492,7 @@ type SequenceHistogramWithNamedTagsRequest struct {
 
 func (x *SequenceHistogramWithNamedTagsRequest) Reset() {
 	*x = SequenceHistogramWithNamedTagsRequest{}
-	mi := &file_sequences_proto_msgTypes[74]
+	mi := &file_sequences_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7328,7 +7504,7 @@ func (x *SequenceHistogramWithNamedTagsRequest) String() string {
 func (*SequenceHistogramWithNamedTagsRequest) ProtoMessage() {}
 
 func (x *SequenceHistogramWithNamedTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[74]
+	mi := &file_sequences_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7341,7 +7517,7 @@ func (x *SequenceHistogramWithNamedTagsRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use SequenceHistogramWithNamedTagsRequest.ProtoReflect.Descriptor instead.
 func (*SequenceHistogramWithNamedTagsRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{74}
+	return file_sequences_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *SequenceHistogramWithNamedTagsRequest) GetEventStore() string {
@@ -7445,7 +7621,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_sequences_proto_msgTypes[75]
+	mi := &file_sequences_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7457,7 +7633,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[75]
+	mi := &file_sequences_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7470,7 +7646,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{75}
+	return file_sequences_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -7489,7 +7665,7 @@ type StreamScopeCompletionResponse struct {
 
 func (x *StreamScopeCompletionResponse) Reset() {
 	*x = StreamScopeCompletionResponse{}
-	mi := &file_sequences_proto_msgTypes[76]
+	mi := &file_sequences_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7501,7 +7677,7 @@ func (x *StreamScopeCompletionResponse) String() string {
 func (*StreamScopeCompletionResponse) ProtoMessage() {}
 
 func (x *StreamScopeCompletionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[76]
+	mi := &file_sequences_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7514,7 +7690,7 @@ func (x *StreamScopeCompletionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamScopeCompletionResponse.ProtoReflect.Descriptor instead.
 func (*StreamScopeCompletionResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{76}
+	return file_sequences_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *StreamScopeCompletionResponse) GetIsCompleted() bool {
@@ -7540,7 +7716,7 @@ type TailSequenceNumberRequest struct {
 
 func (x *TailSequenceNumberRequest) Reset() {
 	*x = TailSequenceNumberRequest{}
-	mi := &file_sequences_proto_msgTypes[77]
+	mi := &file_sequences_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7552,7 +7728,7 @@ func (x *TailSequenceNumberRequest) String() string {
 func (*TailSequenceNumberRequest) ProtoMessage() {}
 
 func (x *TailSequenceNumberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[77]
+	mi := &file_sequences_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7565,7 +7741,7 @@ func (x *TailSequenceNumberRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TailSequenceNumberRequest.ProtoReflect.Descriptor instead.
 func (*TailSequenceNumberRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{77}
+	return file_sequences_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *TailSequenceNumberRequest) GetEventStore() string {
@@ -7635,7 +7811,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_sequences_proto_msgTypes[78]
+	mi := &file_sequences_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7647,7 +7823,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[78]
+	mi := &file_sequences_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7660,7 +7836,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{78}
+	return file_sequences_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -7699,7 +7875,7 @@ type VerifyContentRequest struct {
 
 func (x *VerifyContentRequest) Reset() {
 	*x = VerifyContentRequest{}
-	mi := &file_sequences_proto_msgTypes[79]
+	mi := &file_sequences_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7711,7 +7887,7 @@ func (x *VerifyContentRequest) String() string {
 func (*VerifyContentRequest) ProtoMessage() {}
 
 func (x *VerifyContentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[79]
+	mi := &file_sequences_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7724,7 +7900,7 @@ func (x *VerifyContentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyContentRequest.ProtoReflect.Descriptor instead.
 func (*VerifyContentRequest) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{79}
+	return file_sequences_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *VerifyContentRequest) GetEventStore() string {
@@ -7785,7 +7961,7 @@ type VerifyContentResponse struct {
 
 func (x *VerifyContentResponse) Reset() {
 	*x = VerifyContentResponse{}
-	mi := &file_sequences_proto_msgTypes[80]
+	mi := &file_sequences_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7797,7 +7973,7 @@ func (x *VerifyContentResponse) String() string {
 func (*VerifyContentResponse) ProtoMessage() {}
 
 func (x *VerifyContentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sequences_proto_msgTypes[80]
+	mi := &file_sequences_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7810,7 +7986,7 @@ func (x *VerifyContentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyContentResponse.ProtoReflect.Descriptor instead.
 func (*VerifyContentResponse) Descriptor() ([]byte, []int) {
-	return file_sequences_proto_rawDescGZIP(), []int{80}
+	return file_sequences_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *VerifyContentResponse) GetResult() ContentVerificationResult {
@@ -8036,7 +8212,15 @@ const file_sequences_proto_rawDesc = "" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
 	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\x12X\n" +
-	"\bResponse\x18\a \x01(\v2<.Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponseR\bResponse\"\xe1\x03\n" +
+	"\bResponse\x18\a \x01(\v2<.Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponseR\bResponse\"\x96\x03\n" +
+	"\x12CommandResult_Guid\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12d\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v26.Cratis.Chronicle.Contracts.Sequences.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\x12%\n" +
+	"\bResponse\x18\a \x01(\v2\t.bcl.GuidR\bResponse\"\xe1\x03\n" +
 	"'CommandResult_ReopenStreamScopeResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
 	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12d\n" +
@@ -8099,7 +8283,18 @@ const file_sequences_proto_rawDesc = "" +
 	"\aDetails\x18\x06 \x03(\v2F.Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.DetailsEntryR\aDetails\x1a:\n" +
 	"\fDetailsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x83\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe1\x01\n" +
+	"\x1fCopyEventsForEventSourceRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12(\n" +
+	"\x0fEventSequenceId\x18\x03 \x01(\tR\x0fEventSequenceId\x12\x1a\n" +
+	"\bSourceId\x18\x04 \x01(\tR\bSourceId\x12\x1a\n" +
+	"\bTargetId\x18\x05 \x01(\tR\bTargetId\x12\x1e\n" +
+	"\n" +
+	"EventTypes\x18\x06 \x03(\tR\n" +
+	"EventTypes\"\x83\x01\n" +
 	"\rEffectReceipt\x12\"\n" +
 	"\fOccurrenceId\x18\x01 \x01(\tR\fOccurrenceId\x12\x1c\n" +
 	"\tEffectKey\x18\x02 \x01(\tR\tEffectKey\x12\x14\n" +
@@ -8620,7 +8815,7 @@ const file_sequences_proto_rawDesc = "" +
 	"\"VALIDATION_RESULT_SEVERITY_Unknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\x8a%\n" +
+	"\x05Error\x10\x032\xa8&\n" +
 	"\x0eEventSequences\x12\xad\x01\n" +
 	"\x11AllEventSequences\x12>.Cratis.Chronicle.Contracts.Sequences.AllEventSequencesRequest\x1aX.Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse\x12\x81\x01\n" +
 	"\x06Append\x123.Cratis.Chronicle.Contracts.Sequences.AppendRequest\x1aB.Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse\x12\xa2\x01\n" +
@@ -8633,7 +8828,8 @@ const file_sequences_proto_rawDesc = "" +
 	"\x13AppendWithNamedTags\x12@.Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest\x1aB.Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse\x12\x9f\x01\n" +
 	"\rClosedStreams\x12:.Cratis.Chronicle.Contracts.Sequences.ClosedStreamsRequest\x1aR.Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse\x12\x99\x01\n" +
 	"\x0eCompleteStream\x12;.Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest\x1aJ.Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse\x12\xa3\x01\n" +
-	"\x13CompleteStreamScope\x12@.Cratis.Chronicle.Contracts.Sequences.CompleteStreamScopeRequest\x1aJ.Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse\x12\x89\x01\n" +
+	"\x13CompleteStreamScope\x12@.Cratis.Chronicle.Contracts.Sequences.CompleteStreamScopeRequest\x1aJ.Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse\x12\x9b\x01\n" +
+	"\x18CopyEventsForEventSource\x12E.Cratis.Chronicle.Contracts.Sequences.CopyEventsForEventSourceRequest\x1a8.Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid\x12\x89\x01\n" +
 	"\x05EndOf\x122.Cratis.Chronicle.Contracts.Sequences.EndOfRequest\x1aL.Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset\x12\x9e\x01\n" +
 	"\fExportEvents\x129.Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest\x1aS.Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse\x12\xc0\x01\n" +
 	"\x1dForEventSourceIdAndEventTypes\x12J.Cratis.Chronicle.Contracts.Sequences.ForEventSourceIdAndEventTypesRequest\x1aS.Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse\x12\xaa\x01\n" +
@@ -8668,7 +8864,7 @@ func file_sequences_proto_rawDescGZIP() []byte {
 }
 
 var file_sequences_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
-var file_sequences_proto_msgTypes = make([]protoimpl.MessageInfo, 83)
+var file_sequences_proto_msgTypes = make([]protoimpl.MessageInfo, 85)
 var file_sequences_proto_goTypes = []any{
 	(ClosedStreamOrigin)(0),                                         // 0: Cratis.Chronicle.Contracts.Sequences.ClosedStreamOrigin
 	(CompleteStreamError)(0),                                        // 1: Cratis.Chronicle.Contracts.Sequences.CompleteStreamError
@@ -8699,308 +8895,315 @@ var file_sequences_proto_goTypes = []any{
 	(*CommandResult_AppendManyResponse)(nil),                        // 26: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
 	(*CommandResult_AppendResponse)(nil),                            // 27: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
 	(*CommandResult_CompleteStreamResponse)(nil),                    // 28: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse
-	(*CommandResult_ReopenStreamScopeResponse)(nil),                 // 29: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse
-	(*CommandResult_VerifyContentResponse)(nil),                     // 30: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse
-	(*CompleteStreamRequest)(nil),                                   // 31: Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest
-	(*CompleteStreamResponse)(nil),                                  // 32: Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse
-	(*CompleteStreamScopeRequest)(nil),                              // 33: Cratis.Chronicle.Contracts.Sequences.CompleteStreamScopeRequest
-	(*ConcurrencyScope)(nil),                                        // 34: Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	(*ConcurrencyViolation)(nil),                                    // 35: Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
-	(*ConstraintViolation)(nil),                                     // 36: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
-	(*EffectReceipt)(nil),                                           // 37: Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	(*EffectReceiptDetails)(nil),                                    // 38: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
-	(*EndOfRequest)(nil),                                            // 39: Cratis.Chronicle.Contracts.Sequences.EndOfRequest
-	(*EventContext)(nil),                                            // 40: Cratis.Chronicle.Contracts.Sequences.EventContext
-	(*EventForEventSourceId)(nil),                                   // 41: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId
-	(*EventForEventSourceIdWithNamedTags)(nil),                      // 42: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags
-	(*EventMetadataResponse)(nil),                                   // 43: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse
-	(*EventRevision)(nil),                                           // 44: Cratis.Chronicle.Contracts.Sequences.EventRevision
-	(*EventSequenceNamesResponse)(nil),                              // 45: Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse
-	(*EventSequenceTailResponse)(nil),                               // 46: Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse
-	(*EventSourceConcurrencyScope)(nil),                             // 47: Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope
-	(*EventSourceEventsResponse)(nil),                               // 48: Cratis.Chronicle.Contracts.Sequences.EventSourceEventsResponse
-	(*EventToAppend)(nil),                                           // 49: Cratis.Chronicle.Contracts.Sequences.EventToAppend
-	(*EventToAppendWithNamedTags)(nil),                              // 50: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags
-	(*EventType)(nil),                                               // 51: Cratis.Chronicle.Contracts.Sequences.EventType
-	(*ExportEventsRequest)(nil),                                     // 52: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest
-	(*ExportedEventResponse)(nil),                                   // 53: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse
-	(*ForEventSourceIdAndEventTypesRequest)(nil),                    // 54: Cratis.Chronicle.Contracts.Sequences.ForEventSourceIdAndEventTypesRequest
-	(*FromSequenceNumberRequest)(nil),                               // 55: Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberRequest
-	(*HasEventsForEventSourceIdRequest)(nil),                        // 56: Cratis.Chronicle.Contracts.Sequences.HasEventsForEventSourceIdRequest
-	(*Identity)(nil),                                                // 57: Cratis.Chronicle.Contracts.Sequences.Identity
-	(*IsStreamScopeCompletedRequest)(nil),                           // 58: Cratis.Chronicle.Contracts.Sequences.IsStreamScopeCompletedRequest
-	(*KeyValuePair_Int32_String)(nil),                               // 59: Cratis.Chronicle.Contracts.Sequences.KeyValuePair_Int32_String
-	(*MetadataAtRequest)(nil),                                       // 60: Cratis.Chronicle.Contracts.Sequences.MetadataAtRequest
-	(*NamedTag)(nil),                                                // 61: Cratis.Chronicle.Contracts.Sequences.NamedTag
-	(*NamedTagQueryCriterion)(nil),                                  // 62: Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
-	(*ParseResolutionRequest)(nil),                                  // 63: Cratis.Chronicle.Contracts.Sequences.ParseResolutionRequest
-	(*QueryEventsRequest)(nil),                                      // 64: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest
-	(*QueryEventsWithNamedTagsRequest)(nil),                         // 65: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest
-	(*QueryResult_EventSequenceTailResponse)(nil),                   // 66: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse
-	(*QueryResult_EventSourceEventsResponse)(nil),                   // 67: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse
-	(*QueryResult_HistogramResolution)(nil),                         // 68: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution
-	(*QueryResult_IEnumerable_AppendedEventResponse)(nil),           // 69: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	(*QueryResult_IEnumerable_ClosedStreamResponse)(nil),            // 70: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse
-	(*QueryResult_IEnumerable_EventMetadataResponse)(nil),           // 71: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse
-	(*QueryResult_IEnumerable_EventSequenceNamesResponse)(nil),      // 72: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse
-	(*QueryResult_IEnumerable_ExportedEventResponse)(nil),           // 73: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse
-	(*QueryResult_IEnumerable_SequenceHistogramBucketResponse)(nil), // 74: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
-	(*QueryResult_SerializableDateTimeOffset)(nil),                  // 75: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset
-	(*QueryResult_StreamScopeCompletionResponse)(nil),               // 76: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse
-	(*RedactForEventSourceRequest)(nil),                             // 77: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest
-	(*RedactRequest)(nil),                                           // 78: Cratis.Chronicle.Contracts.Sequences.RedactRequest
-	(*ReopenStreamScopeRequest)(nil),                                // 79: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest
-	(*ReopenStreamScopeResponse)(nil),                               // 80: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse
-	(*ResolvedIdentity)(nil),                                        // 81: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
-	(*ReviseRequest)(nil),                                           // 82: Cratis.Chronicle.Contracts.Sequences.ReviseRequest
-	(*SequenceHistogramBucketResponse)(nil),                         // 83: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse
-	(*SequenceHistogramRequest)(nil),                                // 84: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest
-	(*SequenceHistogramWithNamedTagsRequest)(nil),                   // 85: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest
-	(*SerializableDateTimeOffset)(nil),                              // 86: Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	(*StreamScopeCompletionResponse)(nil),                           // 87: Cratis.Chronicle.Contracts.Sequences.StreamScopeCompletionResponse
-	(*TailSequenceNumberRequest)(nil),                               // 88: Cratis.Chronicle.Contracts.Sequences.TailSequenceNumberRequest
-	(*ValidationResult)(nil),                                        // 89: Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	(*VerifyContentRequest)(nil),                                    // 90: Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest
-	(*VerifyContentResponse)(nil),                                   // 91: Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse
-	nil,                                                             // 92: Cratis.Chronicle.Contracts.Sequences.Causation.PropertiesEntry
-	nil,                                                             // 93: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.DetailsEntry
-	(*bcl.Guid)(nil),                                                // 94: bcl.Guid
+	(*CommandResult_Guid)(nil),                                      // 29: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid
+	(*CommandResult_ReopenStreamScopeResponse)(nil),                 // 30: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse
+	(*CommandResult_VerifyContentResponse)(nil),                     // 31: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse
+	(*CompleteStreamRequest)(nil),                                   // 32: Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest
+	(*CompleteStreamResponse)(nil),                                  // 33: Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse
+	(*CompleteStreamScopeRequest)(nil),                              // 34: Cratis.Chronicle.Contracts.Sequences.CompleteStreamScopeRequest
+	(*ConcurrencyScope)(nil),                                        // 35: Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	(*ConcurrencyViolation)(nil),                                    // 36: Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
+	(*ConstraintViolation)(nil),                                     // 37: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
+	(*CopyEventsForEventSourceRequest)(nil),                         // 38: Cratis.Chronicle.Contracts.Sequences.CopyEventsForEventSourceRequest
+	(*EffectReceipt)(nil),                                           // 39: Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	(*EffectReceiptDetails)(nil),                                    // 40: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
+	(*EndOfRequest)(nil),                                            // 41: Cratis.Chronicle.Contracts.Sequences.EndOfRequest
+	(*EventContext)(nil),                                            // 42: Cratis.Chronicle.Contracts.Sequences.EventContext
+	(*EventForEventSourceId)(nil),                                   // 43: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId
+	(*EventForEventSourceIdWithNamedTags)(nil),                      // 44: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags
+	(*EventMetadataResponse)(nil),                                   // 45: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse
+	(*EventRevision)(nil),                                           // 46: Cratis.Chronicle.Contracts.Sequences.EventRevision
+	(*EventSequenceNamesResponse)(nil),                              // 47: Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse
+	(*EventSequenceTailResponse)(nil),                               // 48: Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse
+	(*EventSourceConcurrencyScope)(nil),                             // 49: Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope
+	(*EventSourceEventsResponse)(nil),                               // 50: Cratis.Chronicle.Contracts.Sequences.EventSourceEventsResponse
+	(*EventToAppend)(nil),                                           // 51: Cratis.Chronicle.Contracts.Sequences.EventToAppend
+	(*EventToAppendWithNamedTags)(nil),                              // 52: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags
+	(*EventType)(nil),                                               // 53: Cratis.Chronicle.Contracts.Sequences.EventType
+	(*ExportEventsRequest)(nil),                                     // 54: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest
+	(*ExportedEventResponse)(nil),                                   // 55: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse
+	(*ForEventSourceIdAndEventTypesRequest)(nil),                    // 56: Cratis.Chronicle.Contracts.Sequences.ForEventSourceIdAndEventTypesRequest
+	(*FromSequenceNumberRequest)(nil),                               // 57: Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberRequest
+	(*HasEventsForEventSourceIdRequest)(nil),                        // 58: Cratis.Chronicle.Contracts.Sequences.HasEventsForEventSourceIdRequest
+	(*Identity)(nil),                                                // 59: Cratis.Chronicle.Contracts.Sequences.Identity
+	(*IsStreamScopeCompletedRequest)(nil),                           // 60: Cratis.Chronicle.Contracts.Sequences.IsStreamScopeCompletedRequest
+	(*KeyValuePair_Int32_String)(nil),                               // 61: Cratis.Chronicle.Contracts.Sequences.KeyValuePair_Int32_String
+	(*MetadataAtRequest)(nil),                                       // 62: Cratis.Chronicle.Contracts.Sequences.MetadataAtRequest
+	(*NamedTag)(nil),                                                // 63: Cratis.Chronicle.Contracts.Sequences.NamedTag
+	(*NamedTagQueryCriterion)(nil),                                  // 64: Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
+	(*ParseResolutionRequest)(nil),                                  // 65: Cratis.Chronicle.Contracts.Sequences.ParseResolutionRequest
+	(*QueryEventsRequest)(nil),                                      // 66: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest
+	(*QueryEventsWithNamedTagsRequest)(nil),                         // 67: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest
+	(*QueryResult_EventSequenceTailResponse)(nil),                   // 68: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse
+	(*QueryResult_EventSourceEventsResponse)(nil),                   // 69: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse
+	(*QueryResult_HistogramResolution)(nil),                         // 70: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution
+	(*QueryResult_IEnumerable_AppendedEventResponse)(nil),           // 71: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	(*QueryResult_IEnumerable_ClosedStreamResponse)(nil),            // 72: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse
+	(*QueryResult_IEnumerable_EventMetadataResponse)(nil),           // 73: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse
+	(*QueryResult_IEnumerable_EventSequenceNamesResponse)(nil),      // 74: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse
+	(*QueryResult_IEnumerable_ExportedEventResponse)(nil),           // 75: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse
+	(*QueryResult_IEnumerable_SequenceHistogramBucketResponse)(nil), // 76: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
+	(*QueryResult_SerializableDateTimeOffset)(nil),                  // 77: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset
+	(*QueryResult_StreamScopeCompletionResponse)(nil),               // 78: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse
+	(*RedactForEventSourceRequest)(nil),                             // 79: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest
+	(*RedactRequest)(nil),                                           // 80: Cratis.Chronicle.Contracts.Sequences.RedactRequest
+	(*ReopenStreamScopeRequest)(nil),                                // 81: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest
+	(*ReopenStreamScopeResponse)(nil),                               // 82: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse
+	(*ResolvedIdentity)(nil),                                        // 83: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
+	(*ReviseRequest)(nil),                                           // 84: Cratis.Chronicle.Contracts.Sequences.ReviseRequest
+	(*SequenceHistogramBucketResponse)(nil),                         // 85: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse
+	(*SequenceHistogramRequest)(nil),                                // 86: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest
+	(*SequenceHistogramWithNamedTagsRequest)(nil),                   // 87: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest
+	(*SerializableDateTimeOffset)(nil),                              // 88: Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	(*StreamScopeCompletionResponse)(nil),                           // 89: Cratis.Chronicle.Contracts.Sequences.StreamScopeCompletionResponse
+	(*TailSequenceNumberRequest)(nil),                               // 90: Cratis.Chronicle.Contracts.Sequences.TailSequenceNumberRequest
+	(*ValidationResult)(nil),                                        // 91: Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	(*VerifyContentRequest)(nil),                                    // 92: Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest
+	(*VerifyContentResponse)(nil),                                   // 93: Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse
+	nil,                                                             // 94: Cratis.Chronicle.Contracts.Sequences.Causation.PropertiesEntry
+	nil,                                                             // 95: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.DetailsEntry
+	(*bcl.Guid)(nil),                                                // 96: bcl.Guid
 }
 var file_sequences_proto_depIdxs = []int32{
-	41,  // 0: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId
-	94,  // 1: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.CorrelationId:type_name -> bcl.Guid
+	43,  // 0: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId
+	96,  // 1: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.CorrelationId:type_name -> bcl.Guid
 	22,  // 2: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 3: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	47,  // 4: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.ConcurrencyScopes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope
-	37,  // 5: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	42,  // 6: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags
-	94,  // 7: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
+	59,  // 3: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	49,  // 4: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.ConcurrencyScopes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope
+	39,  // 5: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	44,  // 6: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags
+	96,  // 7: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
 	22,  // 8: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 9: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	47,  // 10: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.ConcurrencyScopes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope
-	37,  // 11: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	49,  // 12: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventToAppend
-	94,  // 13: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.CorrelationId:type_name -> bcl.Guid
+	59,  // 9: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	49,  // 10: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.ConcurrencyScopes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope
+	39,  // 11: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	51,  // 12: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventToAppend
+	96,  // 13: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.CorrelationId:type_name -> bcl.Guid
 	22,  // 14: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 15: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	34,  // 16: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	86,  // 17: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	37,  // 18: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	94,  // 19: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.CorrelationId:type_name -> bcl.Guid
-	36,  // 20: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
-	35,  // 21: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.ConcurrencyViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
-	38,  // 22: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
-	50,  // 23: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags
-	94,  // 24: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
-	86,  // 25: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	59,  // 15: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	35,  // 16: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	88,  // 17: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	39,  // 18: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	96,  // 19: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.CorrelationId:type_name -> bcl.Guid
+	37,  // 20: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
+	36,  // 21: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.ConcurrencyViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
+	40,  // 22: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
+	52,  // 23: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags
+	96,  // 24: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
+	88,  // 25: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
 	22,  // 26: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 27: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	34,  // 28: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	37,  // 29: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	51,  // 30: Cratis.Chronicle.Contracts.Sequences.AppendRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	94,  // 31: Cratis.Chronicle.Contracts.Sequences.AppendRequest.CorrelationId:type_name -> bcl.Guid
-	86,  // 32: Cratis.Chronicle.Contracts.Sequences.AppendRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	59,  // 27: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	35,  // 28: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	39,  // 29: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	53,  // 30: Cratis.Chronicle.Contracts.Sequences.AppendRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	96,  // 31: Cratis.Chronicle.Contracts.Sequences.AppendRequest.CorrelationId:type_name -> bcl.Guid
+	88,  // 32: Cratis.Chronicle.Contracts.Sequences.AppendRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
 	22,  // 33: Cratis.Chronicle.Contracts.Sequences.AppendRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 34: Cratis.Chronicle.Contracts.Sequences.AppendRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	34,  // 35: Cratis.Chronicle.Contracts.Sequences.AppendRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	37,  // 36: Cratis.Chronicle.Contracts.Sequences.AppendRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	94,  // 37: Cratis.Chronicle.Contracts.Sequences.AppendResponse.CorrelationId:type_name -> bcl.Guid
-	36,  // 38: Cratis.Chronicle.Contracts.Sequences.AppendResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
-	35,  // 39: Cratis.Chronicle.Contracts.Sequences.AppendResponse.ConcurrencyViolation:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
-	38,  // 40: Cratis.Chronicle.Contracts.Sequences.AppendResponse.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
-	51,  // 41: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	61,  // 42: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	94,  // 43: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
-	86,  // 44: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	59,  // 34: Cratis.Chronicle.Contracts.Sequences.AppendRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	35,  // 35: Cratis.Chronicle.Contracts.Sequences.AppendRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	39,  // 36: Cratis.Chronicle.Contracts.Sequences.AppendRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	96,  // 37: Cratis.Chronicle.Contracts.Sequences.AppendResponse.CorrelationId:type_name -> bcl.Guid
+	37,  // 38: Cratis.Chronicle.Contracts.Sequences.AppendResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
+	36,  // 39: Cratis.Chronicle.Contracts.Sequences.AppendResponse.ConcurrencyViolation:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
+	40,  // 40: Cratis.Chronicle.Contracts.Sequences.AppendResponse.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
+	53,  // 41: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	63,  // 42: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	96,  // 43: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
+	88,  // 44: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
 	22,  // 45: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 46: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	34,  // 47: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	37,  // 48: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	40,  // 49: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.Context:type_name -> Cratis.Chronicle.Contracts.Sequences.EventContext
-	44,  // 50: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.Revisions:type_name -> Cratis.Chronicle.Contracts.Sequences.EventRevision
-	59,  // 51: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.GenerationalContent:type_name -> Cratis.Chronicle.Contracts.Sequences.KeyValuePair_Int32_String
-	86,  // 52: Cratis.Chronicle.Contracts.Sequences.Causation.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	92,  // 53: Cratis.Chronicle.Contracts.Sequences.Causation.Properties:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation.PropertiesEntry
+	59,  // 46: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	35,  // 47: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	39,  // 48: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	42,  // 49: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.Context:type_name -> Cratis.Chronicle.Contracts.Sequences.EventContext
+	46,  // 50: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.Revisions:type_name -> Cratis.Chronicle.Contracts.Sequences.EventRevision
+	61,  // 51: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.GenerationalContent:type_name -> Cratis.Chronicle.Contracts.Sequences.KeyValuePair_Int32_String
+	88,  // 52: Cratis.Chronicle.Contracts.Sequences.Causation.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	94,  // 53: Cratis.Chronicle.Contracts.Sequences.Causation.Properties:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation.PropertiesEntry
 	0,   // 54: Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse.Origin:type_name -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamOrigin
-	86,  // 55: Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse.ClosedAt:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	94,  // 56: Cratis.Chronicle.Contracts.Sequences.CommandResult.CorrelationId:type_name -> bcl.Guid
-	89,  // 57: Cratis.Chronicle.Contracts.Sequences.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	94,  // 58: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 59: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	88,  // 55: Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse.ClosedAt:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	96,  // 56: Cratis.Chronicle.Contracts.Sequences.CommandResult.CorrelationId:type_name -> bcl.Guid
+	91,  // 57: Cratis.Chronicle.Contracts.Sequences.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	96,  // 58: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 59: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
 	15,  // 60: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendManyResponse
-	94,  // 61: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 62: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	96,  // 61: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 62: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
 	18,  // 63: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendResponse
-	94,  // 64: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 65: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	32,  // 66: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse
-	94,  // 67: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 68: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	80,  // 69: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse
-	94,  // 70: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 71: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	91,  // 72: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse
-	1,   // 73: Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse.Error:type_name -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamError
-	51,  // 74: Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope.EventTypes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	2,   // 75: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.ConstraintType:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintType
-	93,  // 76: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.Details:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.DetailsEntry
-	4,   // 77: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails.Outcome:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectOutcome
-	86,  // 78: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	86,  // 79: Cratis.Chronicle.Contracts.Sequences.EndOfRequest.Start:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	6,   // 80: Cratis.Chronicle.Contracts.Sequences.EndOfRequest.Resolution:type_name -> Cratis.Chronicle.Contracts.Sequences.HistogramResolution
-	51,  // 81: Cratis.Chronicle.Contracts.Sequences.EventContext.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	86,  // 82: Cratis.Chronicle.Contracts.Sequences.EventContext.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	94,  // 83: Cratis.Chronicle.Contracts.Sequences.EventContext.CorrelationId:type_name -> bcl.Guid
-	22,  // 84: Cratis.Chronicle.Contracts.Sequences.EventContext.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 85: Cratis.Chronicle.Contracts.Sequences.EventContext.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	5,   // 86: Cratis.Chronicle.Contracts.Sequences.EventContext.ObservationState:type_name -> Cratis.Chronicle.Contracts.Sequences.EventObservationState
-	61,  // 87: Cratis.Chronicle.Contracts.Sequences.EventContext.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	51,  // 88: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	86,  // 89: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	22,  // 90: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	51,  // 91: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	61,  // 92: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	86,  // 93: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	22,  // 94: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	86,  // 95: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	94,  // 96: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.CorrelationId:type_name -> bcl.Guid
-	22,  // 97: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	81,  // 98: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
-	8,   // 99: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.InitiatorType:type_name -> Cratis.Chronicle.Contracts.Sequences.InitiatorType
-	57,  // 100: Cratis.Chronicle.Contracts.Sequences.EventRevision.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	86,  // 101: Cratis.Chronicle.Contracts.Sequences.EventRevision.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	34,  // 102: Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope.Scope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	51,  // 103: Cratis.Chronicle.Contracts.Sequences.EventToAppend.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	51,  // 104: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	61,  // 105: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	86,  // 106: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	86,  // 107: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	86,  // 108: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	61,  // 109: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	57,  // 110: Cratis.Chronicle.Contracts.Sequences.Identity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	86,  // 111: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	86,  // 112: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	62,  // 113: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
-	86,  // 114: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	86,  // 115: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	94,  // 116: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 117: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	46,  // 118: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse
-	94,  // 119: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 120: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	48,  // 121: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceEventsResponse
-	94,  // 122: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.CorrelationId:type_name -> bcl.Guid
-	89,  // 123: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	6,   // 124: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.HistogramResolution
-	94,  // 125: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 126: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	20,  // 127: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse
-	94,  // 128: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 129: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	23,  // 130: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse
-	94,  // 131: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 132: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	43,  // 133: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse
-	94,  // 134: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 135: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	45,  // 136: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse
-	94,  // 137: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 138: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	53,  // 139: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse
-	94,  // 140: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 141: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	83,  // 142: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse
-	94,  // 143: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.CorrelationId:type_name -> bcl.Guid
-	89,  // 144: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	86,  // 145: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	94,  // 146: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.CorrelationId:type_name -> bcl.Guid
-	89,  // 147: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	87,  // 148: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.StreamScopeCompletionResponse
-	22,  // 149: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 150: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	22,  // 151: Cratis.Chronicle.Contracts.Sequences.RedactRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 152: Cratis.Chronicle.Contracts.Sequences.RedactRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	22,  // 153: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 154: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	9,   // 155: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse.Error:type_name -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeError
-	7,   // 156: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity.Resolution:type_name -> Cratis.Chronicle.Contracts.Sequences.IdentityResolution
-	81,  // 157: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
-	51,  // 158: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	22,  // 159: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	57,  // 160: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	86,  // 161: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse.From:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	86,  // 162: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse.To:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	86,  // 163: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	86,  // 164: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	62,  // 165: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
-	86,  // 166: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	86,  // 167: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	10,  // 168: Cratis.Chronicle.Contracts.Sequences.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResultSeverity
-	51,  // 169: Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	3,   // 170: Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse.Result:type_name -> Cratis.Chronicle.Contracts.Sequences.ContentVerificationResult
-	11,  // 171: Cratis.Chronicle.Contracts.Sequences.EventSequences.AllEventSequences:input_type -> Cratis.Chronicle.Contracts.Sequences.AllEventSequencesRequest
-	17,  // 172: Cratis.Chronicle.Contracts.Sequences.EventSequences.Append:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendRequest
-	21,  // 173: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendedEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendedEventsRequest
-	14,  // 174: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendMany:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyRequest
-	12,  // 175: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSources:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest
-	13,  // 176: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSourcesWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest
-	16,  // 177: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest
-	19,  // 178: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest
-	24,  // 179: Cratis.Chronicle.Contracts.Sequences.EventSequences.ClosedStreams:input_type -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamsRequest
-	31,  // 180: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStream:input_type -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest
-	33,  // 181: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStreamScope:input_type -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamScopeRequest
-	39,  // 182: Cratis.Chronicle.Contracts.Sequences.EventSequences.EndOf:input_type -> Cratis.Chronicle.Contracts.Sequences.EndOfRequest
-	52,  // 183: Cratis.Chronicle.Contracts.Sequences.EventSequences.ExportEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest
-	54,  // 184: Cratis.Chronicle.Contracts.Sequences.EventSequences.ForEventSourceIdAndEventTypes:input_type -> Cratis.Chronicle.Contracts.Sequences.ForEventSourceIdAndEventTypesRequest
-	55,  // 185: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumber:input_type -> Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberRequest
-	56,  // 186: Cratis.Chronicle.Contracts.Sequences.EventSequences.HasEventsForEventSourceId:input_type -> Cratis.Chronicle.Contracts.Sequences.HasEventsForEventSourceIdRequest
-	58,  // 187: Cratis.Chronicle.Contracts.Sequences.EventSequences.IsStreamScopeCompleted:input_type -> Cratis.Chronicle.Contracts.Sequences.IsStreamScopeCompletedRequest
-	60,  // 188: Cratis.Chronicle.Contracts.Sequences.EventSequences.MetadataAt:input_type -> Cratis.Chronicle.Contracts.Sequences.MetadataAtRequest
-	63,  // 189: Cratis.Chronicle.Contracts.Sequences.EventSequences.ParseResolution:input_type -> Cratis.Chronicle.Contracts.Sequences.ParseResolutionRequest
-	64,  // 190: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest
-	65,  // 191: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEventsWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest
-	78,  // 192: Cratis.Chronicle.Contracts.Sequences.EventSequences.Redact:input_type -> Cratis.Chronicle.Contracts.Sequences.RedactRequest
-	77,  // 193: Cratis.Chronicle.Contracts.Sequences.EventSequences.RedactForEventSource:input_type -> Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest
-	79,  // 194: Cratis.Chronicle.Contracts.Sequences.EventSequences.ReopenStreamScope:input_type -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest
-	82,  // 195: Cratis.Chronicle.Contracts.Sequences.EventSequences.Revise:input_type -> Cratis.Chronicle.Contracts.Sequences.ReviseRequest
-	84,  // 196: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogram:input_type -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest
-	85,  // 197: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogramWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest
-	88,  // 198: Cratis.Chronicle.Contracts.Sequences.EventSequences.TailSequenceNumber:input_type -> Cratis.Chronicle.Contracts.Sequences.TailSequenceNumberRequest
-	90,  // 199: Cratis.Chronicle.Contracts.Sequences.EventSequences.VerifyContent:input_type -> Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest
-	72,  // 200: Cratis.Chronicle.Contracts.Sequences.EventSequences.AllEventSequences:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse
-	27,  // 201: Cratis.Chronicle.Contracts.Sequences.EventSequences.Append:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
-	69,  // 202: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendedEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	26,  // 203: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendMany:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
-	26,  // 204: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSources:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
-	26,  // 205: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSourcesWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
-	26,  // 206: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
-	27,  // 207: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
-	70,  // 208: Cratis.Chronicle.Contracts.Sequences.EventSequences.ClosedStreams:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse
-	28,  // 209: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStream:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse
-	28,  // 210: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStreamScope:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse
-	75,  // 211: Cratis.Chronicle.Contracts.Sequences.EventSequences.EndOf:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset
-	73,  // 212: Cratis.Chronicle.Contracts.Sequences.EventSequences.ExportEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse
-	69,  // 213: Cratis.Chronicle.Contracts.Sequences.EventSequences.ForEventSourceIdAndEventTypes:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	69,  // 214: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumber:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	67,  // 215: Cratis.Chronicle.Contracts.Sequences.EventSequences.HasEventsForEventSourceId:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse
-	76,  // 216: Cratis.Chronicle.Contracts.Sequences.EventSequences.IsStreamScopeCompleted:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse
-	71,  // 217: Cratis.Chronicle.Contracts.Sequences.EventSequences.MetadataAt:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse
-	68,  // 218: Cratis.Chronicle.Contracts.Sequences.EventSequences.ParseResolution:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution
-	69,  // 219: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	69,  // 220: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEventsWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	25,  // 221: Cratis.Chronicle.Contracts.Sequences.EventSequences.Redact:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
-	25,  // 222: Cratis.Chronicle.Contracts.Sequences.EventSequences.RedactForEventSource:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
-	29,  // 223: Cratis.Chronicle.Contracts.Sequences.EventSequences.ReopenStreamScope:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse
-	25,  // 224: Cratis.Chronicle.Contracts.Sequences.EventSequences.Revise:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
-	74,  // 225: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogram:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
-	74,  // 226: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogramWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
-	66,  // 227: Cratis.Chronicle.Contracts.Sequences.EventSequences.TailSequenceNumber:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse
-	30,  // 228: Cratis.Chronicle.Contracts.Sequences.EventSequences.VerifyContent:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse
-	200, // [200:229] is the sub-list for method output_type
-	171, // [171:200] is the sub-list for method input_type
-	171, // [171:171] is the sub-list for extension type_name
-	171, // [171:171] is the sub-list for extension extendee
-	0,   // [0:171] is the sub-list for field type_name
+	96,  // 64: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 65: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	33,  // 66: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse
+	96,  // 67: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid.CorrelationId:type_name -> bcl.Guid
+	91,  // 68: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	96,  // 69: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid.Response:type_name -> bcl.Guid
+	96,  // 70: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 71: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	82,  // 72: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse
+	96,  // 73: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 74: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	93,  // 75: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse
+	1,   // 76: Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse.Error:type_name -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamError
+	53,  // 77: Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope.EventTypes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	2,   // 78: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.ConstraintType:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintType
+	95,  // 79: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.Details:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.DetailsEntry
+	4,   // 80: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails.Outcome:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectOutcome
+	88,  // 81: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	88,  // 82: Cratis.Chronicle.Contracts.Sequences.EndOfRequest.Start:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	6,   // 83: Cratis.Chronicle.Contracts.Sequences.EndOfRequest.Resolution:type_name -> Cratis.Chronicle.Contracts.Sequences.HistogramResolution
+	53,  // 84: Cratis.Chronicle.Contracts.Sequences.EventContext.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	88,  // 85: Cratis.Chronicle.Contracts.Sequences.EventContext.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	96,  // 86: Cratis.Chronicle.Contracts.Sequences.EventContext.CorrelationId:type_name -> bcl.Guid
+	22,  // 87: Cratis.Chronicle.Contracts.Sequences.EventContext.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	59,  // 88: Cratis.Chronicle.Contracts.Sequences.EventContext.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	5,   // 89: Cratis.Chronicle.Contracts.Sequences.EventContext.ObservationState:type_name -> Cratis.Chronicle.Contracts.Sequences.EventObservationState
+	63,  // 90: Cratis.Chronicle.Contracts.Sequences.EventContext.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	53,  // 91: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	88,  // 92: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	22,  // 93: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	53,  // 94: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	63,  // 95: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	88,  // 96: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	22,  // 97: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	88,  // 98: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	96,  // 99: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.CorrelationId:type_name -> bcl.Guid
+	22,  // 100: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	83,  // 101: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
+	8,   // 102: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.InitiatorType:type_name -> Cratis.Chronicle.Contracts.Sequences.InitiatorType
+	59,  // 103: Cratis.Chronicle.Contracts.Sequences.EventRevision.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	88,  // 104: Cratis.Chronicle.Contracts.Sequences.EventRevision.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	35,  // 105: Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope.Scope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	53,  // 106: Cratis.Chronicle.Contracts.Sequences.EventToAppend.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	53,  // 107: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	63,  // 108: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	88,  // 109: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	88,  // 110: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	88,  // 111: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	63,  // 112: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	59,  // 113: Cratis.Chronicle.Contracts.Sequences.Identity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	88,  // 114: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	88,  // 115: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	64,  // 116: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
+	88,  // 117: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	88,  // 118: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	96,  // 119: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 120: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	48,  // 121: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse
+	96,  // 122: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 123: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	50,  // 124: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceEventsResponse
+	96,  // 125: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.CorrelationId:type_name -> bcl.Guid
+	91,  // 126: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	6,   // 127: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.HistogramResolution
+	96,  // 128: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 129: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	20,  // 130: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse
+	96,  // 131: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 132: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	23,  // 133: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse
+	96,  // 134: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 135: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	45,  // 136: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse
+	96,  // 137: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 138: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	47,  // 139: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse
+	96,  // 140: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 141: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	55,  // 142: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse
+	96,  // 143: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 144: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	85,  // 145: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse
+	96,  // 146: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.CorrelationId:type_name -> bcl.Guid
+	91,  // 147: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	88,  // 148: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	96,  // 149: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.CorrelationId:type_name -> bcl.Guid
+	91,  // 150: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	89,  // 151: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.StreamScopeCompletionResponse
+	22,  // 152: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	59,  // 153: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	22,  // 154: Cratis.Chronicle.Contracts.Sequences.RedactRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	59,  // 155: Cratis.Chronicle.Contracts.Sequences.RedactRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	22,  // 156: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	59,  // 157: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	9,   // 158: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse.Error:type_name -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeError
+	7,   // 159: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity.Resolution:type_name -> Cratis.Chronicle.Contracts.Sequences.IdentityResolution
+	83,  // 160: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
+	53,  // 161: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	22,  // 162: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	59,  // 163: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	88,  // 164: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse.From:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	88,  // 165: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse.To:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	88,  // 166: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	88,  // 167: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	64,  // 168: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
+	88,  // 169: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	88,  // 170: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	10,  // 171: Cratis.Chronicle.Contracts.Sequences.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResultSeverity
+	53,  // 172: Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	3,   // 173: Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse.Result:type_name -> Cratis.Chronicle.Contracts.Sequences.ContentVerificationResult
+	11,  // 174: Cratis.Chronicle.Contracts.Sequences.EventSequences.AllEventSequences:input_type -> Cratis.Chronicle.Contracts.Sequences.AllEventSequencesRequest
+	17,  // 175: Cratis.Chronicle.Contracts.Sequences.EventSequences.Append:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendRequest
+	21,  // 176: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendedEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendedEventsRequest
+	14,  // 177: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendMany:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyRequest
+	12,  // 178: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSources:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest
+	13,  // 179: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSourcesWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest
+	16,  // 180: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest
+	19,  // 181: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest
+	24,  // 182: Cratis.Chronicle.Contracts.Sequences.EventSequences.ClosedStreams:input_type -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamsRequest
+	32,  // 183: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStream:input_type -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest
+	34,  // 184: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStreamScope:input_type -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamScopeRequest
+	38,  // 185: Cratis.Chronicle.Contracts.Sequences.EventSequences.CopyEventsForEventSource:input_type -> Cratis.Chronicle.Contracts.Sequences.CopyEventsForEventSourceRequest
+	41,  // 186: Cratis.Chronicle.Contracts.Sequences.EventSequences.EndOf:input_type -> Cratis.Chronicle.Contracts.Sequences.EndOfRequest
+	54,  // 187: Cratis.Chronicle.Contracts.Sequences.EventSequences.ExportEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest
+	56,  // 188: Cratis.Chronicle.Contracts.Sequences.EventSequences.ForEventSourceIdAndEventTypes:input_type -> Cratis.Chronicle.Contracts.Sequences.ForEventSourceIdAndEventTypesRequest
+	57,  // 189: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumber:input_type -> Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberRequest
+	58,  // 190: Cratis.Chronicle.Contracts.Sequences.EventSequences.HasEventsForEventSourceId:input_type -> Cratis.Chronicle.Contracts.Sequences.HasEventsForEventSourceIdRequest
+	60,  // 191: Cratis.Chronicle.Contracts.Sequences.EventSequences.IsStreamScopeCompleted:input_type -> Cratis.Chronicle.Contracts.Sequences.IsStreamScopeCompletedRequest
+	62,  // 192: Cratis.Chronicle.Contracts.Sequences.EventSequences.MetadataAt:input_type -> Cratis.Chronicle.Contracts.Sequences.MetadataAtRequest
+	65,  // 193: Cratis.Chronicle.Contracts.Sequences.EventSequences.ParseResolution:input_type -> Cratis.Chronicle.Contracts.Sequences.ParseResolutionRequest
+	66,  // 194: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest
+	67,  // 195: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEventsWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest
+	80,  // 196: Cratis.Chronicle.Contracts.Sequences.EventSequences.Redact:input_type -> Cratis.Chronicle.Contracts.Sequences.RedactRequest
+	79,  // 197: Cratis.Chronicle.Contracts.Sequences.EventSequences.RedactForEventSource:input_type -> Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest
+	81,  // 198: Cratis.Chronicle.Contracts.Sequences.EventSequences.ReopenStreamScope:input_type -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest
+	84,  // 199: Cratis.Chronicle.Contracts.Sequences.EventSequences.Revise:input_type -> Cratis.Chronicle.Contracts.Sequences.ReviseRequest
+	86,  // 200: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogram:input_type -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest
+	87,  // 201: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogramWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest
+	90,  // 202: Cratis.Chronicle.Contracts.Sequences.EventSequences.TailSequenceNumber:input_type -> Cratis.Chronicle.Contracts.Sequences.TailSequenceNumberRequest
+	92,  // 203: Cratis.Chronicle.Contracts.Sequences.EventSequences.VerifyContent:input_type -> Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest
+	74,  // 204: Cratis.Chronicle.Contracts.Sequences.EventSequences.AllEventSequences:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse
+	27,  // 205: Cratis.Chronicle.Contracts.Sequences.EventSequences.Append:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
+	71,  // 206: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendedEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	26,  // 207: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendMany:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
+	26,  // 208: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSources:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
+	26,  // 209: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSourcesWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
+	26,  // 210: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
+	27,  // 211: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
+	72,  // 212: Cratis.Chronicle.Contracts.Sequences.EventSequences.ClosedStreams:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse
+	28,  // 213: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStream:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse
+	28,  // 214: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStreamScope:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse
+	29,  // 215: Cratis.Chronicle.Contracts.Sequences.EventSequences.CopyEventsForEventSource:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid
+	77,  // 216: Cratis.Chronicle.Contracts.Sequences.EventSequences.EndOf:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset
+	75,  // 217: Cratis.Chronicle.Contracts.Sequences.EventSequences.ExportEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse
+	71,  // 218: Cratis.Chronicle.Contracts.Sequences.EventSequences.ForEventSourceIdAndEventTypes:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	71,  // 219: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumber:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	69,  // 220: Cratis.Chronicle.Contracts.Sequences.EventSequences.HasEventsForEventSourceId:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse
+	78,  // 221: Cratis.Chronicle.Contracts.Sequences.EventSequences.IsStreamScopeCompleted:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse
+	73,  // 222: Cratis.Chronicle.Contracts.Sequences.EventSequences.MetadataAt:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse
+	70,  // 223: Cratis.Chronicle.Contracts.Sequences.EventSequences.ParseResolution:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution
+	71,  // 224: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	71,  // 225: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEventsWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	25,  // 226: Cratis.Chronicle.Contracts.Sequences.EventSequences.Redact:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
+	25,  // 227: Cratis.Chronicle.Contracts.Sequences.EventSequences.RedactForEventSource:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
+	30,  // 228: Cratis.Chronicle.Contracts.Sequences.EventSequences.ReopenStreamScope:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse
+	25,  // 229: Cratis.Chronicle.Contracts.Sequences.EventSequences.Revise:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
+	76,  // 230: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogram:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
+	76,  // 231: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogramWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
+	68,  // 232: Cratis.Chronicle.Contracts.Sequences.EventSequences.TailSequenceNumber:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse
+	31,  // 233: Cratis.Chronicle.Contracts.Sequences.EventSequences.VerifyContent:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse
+	204, // [204:234] is the sub-list for method output_type
+	174, // [174:204] is the sub-list for method input_type
+	174, // [174:174] is the sub-list for extension type_name
+	174, // [174:174] is the sub-list for extension extendee
+	0,   // [0:174] is the sub-list for field type_name
 }
 
 func init() { file_sequences_proto_init() }
@@ -9014,7 +9217,7 @@ func file_sequences_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_sequences_proto_rawDesc), len(file_sequences_proto_rawDesc)),
 			NumEnums:      11,
-			NumMessages:   83,
+			NumMessages:   85,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

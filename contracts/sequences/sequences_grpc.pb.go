@@ -30,6 +30,7 @@ const (
 	EventSequences_ClosedStreams_FullMethodName                          = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ClosedStreams"
 	EventSequences_CompleteStream_FullMethodName                         = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CompleteStream"
 	EventSequences_CompleteStreamScope_FullMethodName                    = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CompleteStreamScope"
+	EventSequences_CopyEventsForEventSource_FullMethodName               = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CopyEventsForEventSource"
 	EventSequences_EndOf_FullMethodName                                  = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/EndOf"
 	EventSequences_ExportEvents_FullMethodName                           = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ExportEvents"
 	EventSequences_ForEventSourceIdAndEventTypes_FullMethodName          = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ForEventSourceIdAndEventTypes"
@@ -65,6 +66,7 @@ type EventSequencesClient interface {
 	ClosedStreams(ctx context.Context, in *ClosedStreamsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_ClosedStreamResponse, error)
 	CompleteStream(ctx context.Context, in *CompleteStreamRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error)
 	CompleteStreamScope(ctx context.Context, in *CompleteStreamScopeRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error)
+	CopyEventsForEventSource(ctx context.Context, in *CopyEventsForEventSourceRequest, opts ...grpc.CallOption) (*CommandResult_Guid, error)
 	EndOf(ctx context.Context, in *EndOfRequest, opts ...grpc.CallOption) (*QueryResult_SerializableDateTimeOffset, error)
 	ExportEvents(ctx context.Context, in *ExportEventsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_ExportedEventResponse, error)
 	ForEventSourceIdAndEventTypes(ctx context.Context, in *ForEventSourceIdAndEventTypesRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
@@ -197,6 +199,16 @@ func (c *eventSequencesClient) CompleteStreamScope(ctx context.Context, in *Comp
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CommandResult_CompleteStreamResponse)
 	err := c.cc.Invoke(ctx, EventSequences_CompleteStreamScope_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventSequencesClient) CopyEventsForEventSource(ctx context.Context, in *CopyEventsForEventSourceRequest, opts ...grpc.CallOption) (*CommandResult_Guid, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_Guid)
+	err := c.cc.Invoke(ctx, EventSequences_CopyEventsForEventSource_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -398,6 +410,7 @@ type EventSequencesServer interface {
 	ClosedStreams(context.Context, *ClosedStreamsRequest) (*QueryResult_IEnumerable_ClosedStreamResponse, error)
 	CompleteStream(context.Context, *CompleteStreamRequest) (*CommandResult_CompleteStreamResponse, error)
 	CompleteStreamScope(context.Context, *CompleteStreamScopeRequest) (*CommandResult_CompleteStreamResponse, error)
+	CopyEventsForEventSource(context.Context, *CopyEventsForEventSourceRequest) (*CommandResult_Guid, error)
 	EndOf(context.Context, *EndOfRequest) (*QueryResult_SerializableDateTimeOffset, error)
 	ExportEvents(context.Context, *ExportEventsRequest) (*QueryResult_IEnumerable_ExportedEventResponse, error)
 	ForEventSourceIdAndEventTypes(context.Context, *ForEventSourceIdAndEventTypesRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
@@ -458,6 +471,9 @@ func (UnimplementedEventSequencesServer) CompleteStream(context.Context, *Comple
 }
 func (UnimplementedEventSequencesServer) CompleteStreamScope(context.Context, *CompleteStreamScopeRequest) (*CommandResult_CompleteStreamResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompleteStreamScope not implemented")
+}
+func (UnimplementedEventSequencesServer) CopyEventsForEventSource(context.Context, *CopyEventsForEventSourceRequest) (*CommandResult_Guid, error) {
+	return nil, status.Error(codes.Unimplemented, "method CopyEventsForEventSource not implemented")
 }
 func (UnimplementedEventSequencesServer) EndOf(context.Context, *EndOfRequest) (*QueryResult_SerializableDateTimeOffset, error) {
 	return nil, status.Error(codes.Unimplemented, "method EndOf not implemented")
@@ -728,6 +744,24 @@ func _EventSequences_CompleteStreamScope_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EventSequencesServer).CompleteStreamScope(ctx, req.(*CompleteStreamScopeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventSequences_CopyEventsForEventSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CopyEventsForEventSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).CopyEventsForEventSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_CopyEventsForEventSource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).CopyEventsForEventSource(ctx, req.(*CopyEventsForEventSourceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1106,6 +1140,10 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CompleteStreamScope",
 			Handler:    _EventSequences_CompleteStreamScope_Handler,
+		},
+		{
+			MethodName: "CopyEventsForEventSource",
+			Handler:    _EventSequences_CopyEventsForEventSource_Handler,
 		},
 		{
 			MethodName: "EndOf",
