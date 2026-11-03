@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"reflect"
 	"slices"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/discovery"
+	"github.com/cratis/chronicle.go/observation"
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
@@ -46,6 +48,7 @@ type Plan struct {
 	shadows     []Shadow
 	hash        string
 	replay      map[ReplayState]bool
+	batch       *batchFold
 }
 
 // Logger returns the frozen borrowed diagnostic logger. Chronicle never closes it.
@@ -140,6 +143,20 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 				continue
 			}
 			t := method.Type
+			if index, ok := takesBatch(t, true); ok {
+				f, err := compileBatchFold(method.Name, method.Func, true, model.GoType())
+				observes, named := d.config.batchMethods[method.Name]
+				if err == nil && !named {
+					err = observation.ErrBatchMethodObservesNothing
+				}
+				if err == nil {
+					err = p.bindBatch(f, observes, catalog)
+				}
+				if err != nil {
+					return fail(method.Name, t.In(index), err)
+				}
+				continue
+			}
 			first := 1
 			if t.NumIn() > first && t.In(first) == contextType {
 				first++
@@ -174,8 +191,26 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 			}
 		}
 	}
+	for _, name := range slices.Sorted(maps.Keys(d.config.batchMethods)) {
+		if p.batch == nil || p.batch.name != name {
+			return fail(name, nil, observation.ErrObservesOnlyOnBatchMethods)
+		}
+	}
 	for i, h := range d.config.handlers {
 		name := fmt.Sprintf("callback[%d]", i)
+		if h.batch {
+			if artifacts.NilLike(h.function) || h.model != model.GoType() {
+				return fail(name, h.model, invalid("callback model mismatch or nil callback"))
+			}
+			f, err := compileBatchFold(name, reflect.ValueOf(h.function), false, model.GoType())
+			if err == nil {
+				err = p.bindBatch(f, h.observes, catalog)
+			}
+			if err != nil {
+				return fail(name, eventBatchPointerType, err)
+			}
+			continue
+		}
 		if artifacts.NilLike(h.function) || h.model != model.GoType() || h.event == nil {
 			return fail(name, h.model, invalid("callback model mismatch or nil callback"))
 		}
@@ -195,7 +230,10 @@ func Compile(d Declaration, catalog *events.Catalog, models *readmodels.Catalog,
 			p.folds[id], p.descriptors[id] = f, descriptor
 		}
 	}
-	if len(p.folds) == 0 {
+	if p.batch != nil && len(p.folds) > 0 {
+		return fail(p.batch.name, nil, observation.ErrReducerMixesBatchAndPerEventMethods)
+	}
+	if len(p.folds) == 0 && p.batch == nil {
 		return fail("", nil, invalid("no registered folds"))
 	}
 	for _, descriptor := range catalog.Descriptors() {
@@ -237,6 +275,9 @@ func compileFold(name string, function reflect.Value, receiver bool, model refle
 	}
 	f.valueCurrent = current == model
 	if n == 3 {
+		if t.In(first+2) == batchContextType {
+			return f, observation.ErrBatchContextOnlyForBatchMethods
+		}
 		if t.In(first+2) != eventContextType {
 			return f, invalid("third fold argument must be events.Context")
 		}
@@ -261,6 +302,18 @@ func (p *Plan) fingerprint() string {
 		f := p.folds[events.TypeID(id)]
 		d := p.descriptors[events.TypeID(id)]
 		shape = append(shape, []any{id, d.Ref().Generation, d.GoType().PkgPath() + "." + d.GoType().Name(), f.event.PkgPath(), f.event.String(), f.context, f.eventContext, f.valueCurrent, f.returnsError, f.function.Type().Out(0).Kind() == reflect.Pointer})
+	}
+	if b := p.batch; b != nil {
+		batchIDs := make([]string, 0, len(p.descriptors))
+		for id := range p.descriptors {
+			batchIDs = append(batchIDs, string(id))
+		}
+		slices.Sort(batchIDs)
+		for _, id := range batchIDs {
+			d := p.descriptors[events.TypeID(id)]
+			shape = append(shape, []any{"batch", id, d.Ref().Generation, d.GoType().PkgPath() + "." + d.GoType().Name()})
+		}
+		shape = append(shape, []any{"batch-signature", b.context, b.batchContext, b.valueCurrent, b.returnsError, b.function.Type().Out(0).Kind() == reflect.Pointer})
 	}
 	for i, callback := range p.declaration.config.replay.values() {
 		if p.replay[ReplayState(i+1)] || !reflect.ValueOf(callback).IsNil() {
