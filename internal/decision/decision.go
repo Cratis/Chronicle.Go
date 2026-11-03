@@ -13,7 +13,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/cratis/chronicle.go/contracts"
 	"github.com/cratis/chronicle.go/contracts/projections"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/faults"
@@ -29,10 +28,15 @@ var (
 	ErrScope   = errors.New("chronicle: explicit scope conflicts with decision protection")
 )
 
+// verifiedProtocol is the protocol version of the characterized kernel release.
+// It is pinned separately from contracts.ProtocolVersion: regenerating the
+// contracts from a newer Chronicle does not verify decision guards against it.
+const verifiedProtocol = "19.70.0"
+
 // Supported deliberately recognizes only the characterized release. Descriptor
 // compatibility, a newer version and skipped preflight are not positive evidence.
 func Supported(version, protocol string) bool {
-	return (version == "19.70.0" || version == "19.70.0-development") && protocol == contracts.ProtocolVersion
+	return (version == "19.70.0" || version == "19.70.0-development") && protocol == verifiedProtocol
 }
 
 // Target includes client identity, not merely wire coordinates.

@@ -149,6 +149,7 @@ type ReleaseRequest struct {
 	Subject       string                 `protobuf:"bytes,3,opt,name=Subject,proto3" json:"Subject,omitempty"`
 	Schema        string                 `protobuf:"bytes,4,opt,name=Schema,proto3" json:"Schema,omitempty"`
 	Payload       string                 `protobuf:"bytes,5,opt,name=Payload,proto3" json:"Payload,omitempty"`
+	Strict        bool                   `protobuf:"varint,6,opt,name=Strict,proto3" json:"Strict,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -218,13 +219,22 @@ func (x *ReleaseRequest) GetPayload() string {
 	return ""
 }
 
+func (x *ReleaseRequest) GetStrict() bool {
+	if x != nil {
+		return x.Strict
+	}
+	return false
+}
+
 type ReleaseResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Payload       string                 `protobuf:"bytes,1,opt,name=Payload,proto3" json:"Payload,omitempty"`
-	HasError      bool                   `protobuf:"varint,2,opt,name=HasError,proto3" json:"HasError,omitempty"`
-	Error         string                 `protobuf:"bytes,3,opt,name=Error,proto3" json:"Error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Payload          string                 `protobuf:"bytes,1,opt,name=Payload,proto3" json:"Payload,omitempty"`
+	HasError         bool                   `protobuf:"varint,2,opt,name=HasError,proto3" json:"HasError,omitempty"`
+	Error            string                 `protobuf:"bytes,3,opt,name=Error,proto3" json:"Error,omitempty"`
+	FailedProperties []string               `protobuf:"bytes,4,rep,name=FailedProperties,proto3" json:"FailedProperties,omitempty"`
+	Strict           bool                   `protobuf:"varint,5,opt,name=Strict,proto3" json:"Strict,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ReleaseResponse) Reset() {
@@ -278,6 +288,20 @@ func (x *ReleaseResponse) GetError() string {
 	return ""
 }
 
+func (x *ReleaseResponse) GetFailedProperties() []string {
+	if x != nil {
+		return x.FailedProperties
+	}
+	return nil
+}
+
+func (x *ReleaseResponse) GetStrict() bool {
+	if x != nil {
+		return x.Strict
+	}
+	return false
+}
+
 var File_compliance_proto protoreflect.FileDescriptor
 
 const file_compliance_proto_rawDesc = "" +
@@ -298,7 +322,7 @@ const file_compliance_proto_rawDesc = "" +
 	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x1e\n" +
 	"\n" +
 	"Identifier\x18\x03 \x01(\tR\n" +
-	"Identifier\"\x9a\x01\n" +
+	"Identifier\"\xb2\x01\n" +
 	"\x0eReleaseRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -306,11 +330,14 @@ const file_compliance_proto_rawDesc = "" +
 	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x18\n" +
 	"\aSubject\x18\x03 \x01(\tR\aSubject\x12\x16\n" +
 	"\x06Schema\x18\x04 \x01(\tR\x06Schema\x12\x18\n" +
-	"\aPayload\x18\x05 \x01(\tR\aPayload\"]\n" +
+	"\aPayload\x18\x05 \x01(\tR\aPayload\x12\x16\n" +
+	"\x06Strict\x18\x06 \x01(\bR\x06Strict\"\xa1\x01\n" +
 	"\x0fReleaseResponse\x12\x18\n" +
 	"\aPayload\x18\x01 \x01(\tR\aPayload\x12\x1a\n" +
 	"\bHasError\x18\x02 \x01(\bR\bHasError\x12\x14\n" +
-	"\x05Error\x18\x03 \x01(\tR\x05Error2\xee\x02\n" +
+	"\x05Error\x18\x03 \x01(\tR\x05Error\x12*\n" +
+	"\x10FailedProperties\x18\x04 \x03(\tR\x10FailedProperties\x12\x16\n" +
+	"\x06Strict\x18\x05 \x01(\bR\x06Strict2\xee\x02\n" +
 	"\n" +
 	"Compliance\x12t\n" +
 	"\x15AllowNewEncryptionKey\x12C.Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyRequest\x1a\x16.google.protobuf.Empty\x12p\n" +
