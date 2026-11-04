@@ -35,7 +35,7 @@ func (s *Service) snapshotEvent(model Descriptor, event *contracts.Event) (event
 		Tombstone: c.EventType.Tombstone, SourceType: events.SourceType(c.EventSourceType), SourceID: events.SourceID(c.EventSourceId),
 		SequenceNumber: events.SequenceNumber(c.SequenceNumber), StreamType: events.StreamType(c.EventStreamType), StreamID: events.StreamID(c.EventStreamId),
 		Occurred: occurred, CorrelationID: wire.Correlation(c.CorrelationId), CausedBy: snapshotIdentity(c.CausedBy),
-		Hash: c.Hash, ObservationState: events.ObservationState(c.ObservationState), Subject: events.Subject(c.Subject),
+		Hash: c.Hash, ObservationState: events.ObservationState(c.ObservationState), CompensationFor: events.CompensationTarget(c.CompensationFor), Subject: events.Subject(c.Subject),
 	}}
 	if result.Context.Subject == "" {
 		result.Context.Subject = events.Subject(c.EventSourceId)

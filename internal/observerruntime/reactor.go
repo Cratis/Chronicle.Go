@@ -181,7 +181,7 @@ func eventContext(c *contracts.EventContext, store metadata.StoreName, namespace
 	if err != nil {
 		return events.Context{}, faults.ErrProtocol
 	}
-	ec := events.Context{Store: store, Namespace: namespace, Sequence: sequence, EventType: events.TypeRef{ID: events.TypeID(c.EventType.Id), Generation: events.Generation(c.EventType.Generation)}, Tombstone: c.EventType.Tombstone, SourceID: events.SourceID(c.EventSourceId), SourceType: events.SourceType(c.EventSourceType), StreamID: events.StreamID(c.EventStreamId), StreamType: events.StreamType(c.EventStreamType), SequenceNumber: events.SequenceNumber(c.SequenceNumber), Occurred: occurred, CorrelationID: wire.Correlation(c.CorrelationId), Subject: events.Subject(c.Subject), Hash: c.Hash, ObservationState: events.ObservationState(c.ObservationState), CausedBy: identity(c.CausedBy)}
+	ec := events.Context{Store: store, Namespace: namespace, Sequence: sequence, EventType: events.TypeRef{ID: events.TypeID(c.EventType.Id), Generation: events.Generation(c.EventType.Generation)}, Tombstone: c.EventType.Tombstone, SourceID: events.SourceID(c.EventSourceId), SourceType: events.SourceType(c.EventSourceType), StreamID: events.StreamID(c.EventStreamId), StreamType: events.StreamType(c.EventStreamType), SequenceNumber: events.SequenceNumber(c.SequenceNumber), Occurred: occurred, CorrelationID: wire.Correlation(c.CorrelationId), Subject: events.Subject(c.Subject), Hash: c.Hash, ObservationState: events.ObservationState(c.ObservationState), CompensationFor: events.CompensationTarget(c.CompensationFor), CausedBy: identity(c.CausedBy)}
 	if ec.Subject == "" {
 		ec.Subject = events.Subject(ec.SourceID)
 	}
