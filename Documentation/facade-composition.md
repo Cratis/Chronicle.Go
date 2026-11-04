@@ -3,12 +3,19 @@ title: Prepare a client with a shared provider
 description: Bind one borrowed client identity before preparing Chronicle definitions with Fundamentals.Go scopes.
 ---
 
+Start with [ordinary client construction](clients/go/getting-started.md) and [lifecycle/readiness](connection-strings/lifecycle.md). Continue here only for the optional shared-provider preparation task; this is not another setup step for every client.
+
 Use captured preparation when one shared provider must contain the client identity
 and supply services needed to prepare that same client's definitions. This
 experimental v0.x workflow uses the optional `services` adapter to bind borrowed
 client, store and facade instances. Root Chronicle packages remain independent of
 dependency injection. For ordinary clients, keep using `NewClient` or
 `NewClientContext`; they capture and prepare in one call.
+
+An Arc SDK consumer that reads catalogs during construction must be created after
+preparation. This slice verifies a local catalog consumer, not actual Arc SDK
+adoption or a published cross-module pairing. Actual Arc consumer adoption remains
+tracked in [Arc.Go #29](https://github.com/Cratis/Arc.Go/issues/29).
 
 ## Compose the provider before preparing definitions
 
@@ -37,11 +44,6 @@ events. Neither capture nor preparation performs SDK transport I/O. Configuratio
 option functions still execute during capture; arbitrary application callbacks
 can perform effects that Chronicle cannot prevent or roll back.
 
-An Arc SDK consumer that reads catalogs during construction must be created after
-preparation. This slice verifies a local catalog consumer, not actual Arc SDK
-adoption or a published cross-module pairing. Actual Arc consumer adoption remains
-tracked in [Arc.Go #29](https://github.com/Cratis/Arc.Go/issues/29).
-
 ## Select and borrow facades per operation
 
 After preparation, open a provider scope using trusted host metadata. Resolve the
@@ -62,12 +64,7 @@ forwards the same instance exposed by that store. Across scopes, `Client.EventSt
 reuses its existing cache keyed by **store and namespace**; there is no adapter-wide
 cache or cross-provider cache.
 
-The [source example](../services/example_bindings_test.go) shows both provider and
-plain store access, application-owned `SourceStoreMetadata`, append-origin options
-captured before preparation, and a metadata/principal guard. `ExampleBindEventStore`
-compiles as part of the unit suite; direct execution needs a development kernel.
-`TestFacadeSourceExampleUsesRealStoreAPI` runs its composition function against an
-in-process gRPC fixture, not a real kernel.
+See the [scoped binding example and its development-kernel/fixture limits](#scoped-binding-example-and-qualification).
 
 A consumer interface must resolve its concrete key and return that **same borrowed
 instance**, with the same lifetime, rather than call another constructor. Multiple
@@ -272,3 +269,12 @@ A client closed before preparation admits no callbacks and cannot publish catalo
 After a successful preparation, closure is independent: repeated `Prepare` still
 returns that same, now-closed identity. Operational calls return `ErrClosed`, while
 `Catalogs` and `Artifacts` remain available as historical frozen configuration.
+
+## Scoped binding example and qualification
+
+The [source example](../services/example_bindings_test.go) shows both provider and
+plain store access, application-owned `SourceStoreMetadata`, append-origin options
+captured before preparation, and a metadata/principal guard. `ExampleBindEventStore`
+compiles as part of the unit suite; direct execution needs a development kernel.
+`TestFacadeSourceExampleUsesRealStoreAPI` runs its composition function against an
+in-process gRPC fixture, not a real kernel.
