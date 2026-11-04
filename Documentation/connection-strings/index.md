@@ -3,7 +3,7 @@ title: Connect to Chronicle
 description: Configure endpoints, TLS, OAuth credentials and client ownership in Go.
 ---
 
-A client shares one supervised connection generation across stores and namespaces. Create it with `chronicle.NewClient(options...)` for lazy construction, or `chronicle.Dial(ctx, options...)` to complete authentication, structural compatibility and the first kernel keep-alive before returning.
+A client shares one connection generation across stores and namespaces. Create it with `chronicle.NewClient(options...)` for lazy construction, or `chronicle.Dial(ctx, options...)` to finish startup before returning. With normal logical sessions, startup includes authentication, structural compatibility and the first kernel keep-alive. With `WithSkipKeepAlive`, the protected read-only startup probe replaces that heartbeat; compatibility is still checked unless explicitly skipped. See [short-lived clients and process ownership](lifecycle.md#short-lived-clients-and-process-ownership) for exclusions and readiness limits.
 
 ## Connection strings
 
@@ -97,7 +97,7 @@ Built-in OAuth sends a form POST to the selected kernel's `/connect/token`, cach
 - `Close()` cancels and joins owned work. `CloseContext(ctx)` bounds that wait; `Shutdown(ctx)` first drains admitted RPCs. A context error means cleanup is incomplete, not successful. Later operations return `ErrClosed`. A custom source that ignores cancellation can delay actual cleanup.
 - `WithGRPCConnection(conn)` borrows a channel; you own its security, retry policy and eventual close. The SDK still applies its own admission, metadata and compatibility checks. Multihost/SRV selection on a borrowed channel is rejected because its owner controls routing. You must explicitly select `WithConnectionString` as the OAuth authority, `WithTokenSource`, or `WithNoAuthentication`; the SDK never guesses a localhost authority for a borrowed channel. Use `WithNoAuthentication` if the supplied channel owns credentials. Do not enable application-level append retries on a borrowed channel.
 
-Transient stream loss or missing heartbeats triggers automatic reconnection and registration replay. Existing handles remain usable after recovery. Authentication rejection and incompatible protocols stop supervision until an explicit `Connect`; readiness never silently bypasses those failures. See [connection lifecycle and readiness](lifecycle.md) for admission, retry and shutdown contracts.
+With normal logical sessions, transient stream loss or missing heartbeats triggers automatic reconnection and registration replay. Existing handles remain usable after recovery. Authentication rejection and incompatible protocols stop supervision until an explicit `Connect`; readiness never silently bypasses those failures. `WithSkipKeepAlive` omits that session and its loss detection; transport reconnection alone does not guarantee registration replay. Read [short-lived clients and process ownership](lifecycle.md#short-lived-clients-and-process-ownership) before selecting it, and [connection lifecycle and readiness](lifecycle.md) for admission, retry and shutdown contracts.
 
 ## Diagnose connection failures
 

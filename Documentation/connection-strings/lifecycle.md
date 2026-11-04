@@ -3,11 +3,11 @@ title: Connection lifecycle and readiness
 description: Understand automatic recovery, registration outcomes and bounded Go client shutdown.
 ---
 
-Keep your client and store handles across transient outages. The client replaces failed connection generations, refreshes endpoint discovery and OAuth, and replays the frozen registrations before admitting writes through those handles. It does not replay application operations.
+With normal logical sessions, keep your client and store handles across transient outages. The client replaces failed connection generations, refreshes endpoint discovery and OAuth, and replays the frozen registrations before admitting writes through those handles. It does not replay application operations. [Clients without a logical session](#short-lived-clients-and-process-ownership) have different loss detection and replay limits.
 
 ## Connection versus registration
 
-`NewClient` validates configuration without network I/O. `Connect(ctx)` and `Dial(ctx, ...)` wait for compatibility preflight and the first acknowledged kernel heartbeat. Construction of a gRPC channel is not readiness.
+`NewClient` validates configuration without network I/O. With normal logical sessions, `Connect(ctx)` and `Dial(ctx, ...)` wait for compatibility preflight and the first acknowledged kernel heartbeat. With `WithSkipKeepAlive`, startup uses the protected probe described below instead of a heartbeat. Construction of a gRPC channel is not readiness.
 
 `EventStore(ctx, name, ...)` ensures the store and namespace and registers event types before returning a cached handle. Cache keys include both store and namespace. Definitions are shared only within the same logical store and generation; namespace barriers remain separate. A failed creation can be retried without permanently poisoning its cache entry.
 
@@ -20,7 +20,7 @@ An outcome contains:
 - `Artifacts`: acknowledged store, namespace and event-type stages, including the failed stage.
 - `Failure` and `RetryPending`; `RegistrationError` unwraps the underlying cause.
 
-Event-type registration acknowledges a batch, not separate server verdicts for individual definitions. This surface currently covers event types only. It makes no readiness claim for unimplemented reactors, reducers or other artifacts. Registry additions after `NewClient` are still excluded from its frozen snapshot.
+Event-type registration acknowledges a batch, not separate server verdicts for individual definitions. A registration acknowledgment does not establish that observers are caught up. A failed reactor Open can appear in the registration outcome while subscription retries continue; a later readiness call can observe recovery. Registry additions after `NewClient` are still excluded from its frozen snapshot.
 
 ## Connection hooks
 
@@ -59,6 +59,16 @@ defer func() { _ = client.Close() }()
 
 See the executable `ExampleWithOnConnected` and `ExampleWithOnDisconnected` in
 [the connection examples](https://github.com/Cratis/Chronicle.Go/blob/main/example_connection_test.go).
+
+## Short-lived clients and process ownership
+
+`WithSkipKeepAlive` is an option for a short-lived producer or on-demand operation that needs no configured observer runtime. It omits the application Connect session, heartbeat acknowledgments and watchdog. HTTP/2 keepalive remains enabled. Startup still checks compatibility unless explicitly skipped and always calls the protected read-only `GetConnectedClients` probe; probe failures fail startup. Skipping compatibility does not enable decision reads.
+
+The option rejects configured reactors, reducers **including passive reducers**, read-model reactors and an explicit `WithKeepAliveTimeout`. Keep observer ownership in a long-running process with normal logical sessions; registration sent is not observer subscription or catch-up. A transport reconnect by itself does not guarantee registration replay after a kernel restart. There is no logical ConnectionID or session-driven loss detection in this mode.
+
+Reuse a client and its store handles for the lifetime of a process where practical, rather than constructing a client for every request. Bound each operation with its own context. The process that owns the client must close it when finished; see [shutdown and ownership](#shutdown-and-ownership) for cancellation, draining and borrowed-resource limits. A short-lived job can own and close its client, but must still inspect transport errors and append outcomes before reporting success. Do not retry an ambiguous append automatically.
+
+The [getting-started example](../clients/go/getting-started.md) demonstrates bounded append and cleanup with a **normal client**, including its keep-alive worker. It is not a runnable skipped-session function/job example. Do not infer cloud-host suitability, cold-start cost or a latency improvement from this option.
 
 ## Evict cached event stores
 

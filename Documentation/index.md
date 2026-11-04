@@ -3,11 +3,13 @@ title: Chronicle for Go
 description: Register typed events and append them securely to Cratis Chronicle from Go.
 ---
 
-Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Without the client, you manage OAuth, structural compatibility, schemas and RPC envelopes yourself; with it, you register event structs and append facts through context-aware store handles.
+Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Chronicle is part of Cratis Platform and can be adopted independently of its other components. Without the client, you manage OAuth, structural compatibility, schemas and RPC envelopes yourself; with it, you register event structs and append facts through context-aware store handles.
 
 ## Start here
 
-[Append your first event](clients/go/getting-started.md) using a local development kernel. Requires Go 1.26 or newer. The API remains experimental in the v0.x release series.
+Requires Go 1.26 or newer. The API remains experimental in the v0.x release series. First check the [capability and limits summary](parity.md#experimental-v0-capabilities-and-limits), then follow the [first-append source example](clients/go/getting-started.md).
+
+For short-lived producers or on-demand operations, read [one-shot and process ownership](connection-strings/lifecycle.md#short-lived-clients-and-process-ownership). Observer runtimes need normal logical sessions; registration sent does not prove subscription or catch-up.
 
 ## Use the foundation
 
@@ -30,4 +32,4 @@ Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Without th
 - [Parity and limitations](parity.md): executable evidence and deliberate C# differences.
 - [Release policy](releases.md): module versioning and experimental compatibility.
 
-Contracts target Chronicle 19.32.3; kernel-backed tests run against 19.32.3-development. Basic projections, event reactors, reducers and supervised recovery are available; advanced observer features remain incomplete. Inclusion in the central Cratis documentation site remains a separate site integration.
+Contracts target Chronicle 19.123.0 and real-kernel tests run against 19.123.0-development. The pin is not a supported kernel range. The [capability summary](parity.md#experimental-v0-capabilities-and-limits) gives the exact decision-read gate and other conditions. [Release policy](releases.md) distinguishes source, tagged modules and documentation publication; this repository owns the product pages.
