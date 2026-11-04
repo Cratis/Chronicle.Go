@@ -5,7 +5,7 @@ description: Read admitted projection state and reject stale decisions in one at
 
 Use a decision read when events depend on projection state that must not become stale before the append. Enroll the read in a [unit of work](../events/unit-of-work.md), stage the resulting events, and let its owner commit once. A competing matching append rejects the entire batch, including events for other sources.
 
-This API is experimental in the v0.x SDK. It implements **client-issued optimistic guards, not signed or server-authenticated read proofs**. It requires the characterized Chronicle **19.32.3** profile, including session reads, explicit no-match scopes and eventless plain-batch validation. Unknown, older and uncharacterized newer versions return `chronicle.ErrUnsupported`; structural compatibility alone does not establish these behaviors. `WithSkipCompatibilityCheck` supplies no positive evidence and cannot enable decision reads.
+This API is experimental in the v0.x SDK. It implements **client-issued optimistic guards, not signed or server-authenticated read proofs**. The client requires server version exactly **19.123.0** or **19.123.0-development**, **and protocol exactly 19.123.0**, after successful compatibility preflight. This is an exact allowlist, not a minimum version or a whole-client support range. Other versions return `chronicle.ErrUnsupported`; structural compatibility alone does not establish session reads, explicit no-match scopes or eventless plain-batch validation. `WithSkipCompatibilityCheck` leaves decision reads disabled. See the [capability summary](../parity.md#experimental-v0-capabilities-and-limits) for other source APIs and their limits.
 
 ## Read, decide and commit
 
@@ -25,13 +25,13 @@ if err != nil {
 }
 ```
 
-`read.Instance` is an `Instance[Account]`, and the successful call has already enrolled its token. The example creates an account from an absent decision, then reads the same name and completes an eventless decision. With a disposable development kernel as described in [getting started](../clients/go/getting-started.md), run:
+`read.Instance` is an `Instance[Account]`, and the successful call has already enrolled its token. The example creates an account from an absent decision, then reads the same name and completes an eventless decision. Before running it, provide an endpoint that meets the exact server/protocol gate above and the admitted projection requirements below. The development kernel in [getting started](../clients/go/getting-started.md) meets this gate. From the repository checkout:
 
 ```sh
 go run ./examples/decisions
 ```
 
-Expected output:
+On successful creation and eventless validation, the program prints:
 
 ```text
 Created account; unchanged decision validated without appending events
@@ -62,13 +62,13 @@ Admission requires exactly one known event-log projection, active or passive, an
 
 Reducers, other event sequences, joins, removal joins, children, nested projections, open-ended subscriptions, `FromEvery` derivatives and `FromEventProperty` are refused. The actual schema key must be an unformatted string or a string with `uuid`/`guid` format; numeric, absent and other conversion keys are unsupported. A plain nullable string retains its string conversion; nullable format suffixes such as `uuid?` are unsupported. Keys cannot be blank, padded, `*`, or contain `#`. UUID keys must use lowercase, hyphenated canonical text.
 
-Classified models are admitted like C#. From kernel 19.32.2 ([Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561)) the decision session fold releases each protected value with the subject it was written under, not the requested key, and the SDK never decrypts the result again. `TestKernelDecisionReadsReleaseClassifiedModelsWithEventSubjects` reads PII and namespace-encrypted values whose subject differs from the key, before and after erasure, and commits the guarded unit. Earlier kernels released with the source key; decision reads already require the verified 19.32.3 profile, so they never run against those kernels. `DecisionProtectedModel` and `DecisionProtectionMetadata` are deprecated and no longer produced.
+Classified models are admitted like C#. From kernel 19.32.2 ([Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561)) the decision session fold releases each protected value with the subject it was written under, not the requested key, and the SDK never decrypts the result again. `TestKernelDecisionReadsReleaseClassifiedModelsWithEventSubjects` reads PII and namespace-encrypted values whose subject differs from the key, before and after erasure, and commits the guarded unit. Earlier kernels released with the source key; the current exact server/protocol gate excludes those kernels. This decision-session behavior does not enable classified Watch, which remains refused. `DecisionProtectedModel` and `DecisionProtectionMetadata` are deprecated and no longer produced.
 
 `DecisionReadRefused` provides a model identifier and stable `Reason`; inspect it with `errors.As`, or match `ErrDecisionReadRefused` with `errors.Is`. Local admission and key failures issue no RPCs.
 
 ## Read boundaries and cleanup
 
-Each attempt checks selected server model/projection fields, captures an **unfiltered event-log boundary**, probes matching source/event-type progress separately, then folds through a fresh random session. Admitted models are unclassified: the reader validates the server-released session document and uses ordinary descriptor decoding without a second compliance RPC. A fold behind the probe or ahead of the pre-fold boundary retries with a new session and new tails, at most three attempts. Exhaustion returns `DecisionFoldIncomplete` or `DecisionFoldAhead`, never a token.
+Each attempt checks selected server model/projection fields, captures an **unfiltered event-log boundary**, probes matching source/event-type progress separately, then folds through a fresh random session. For admitted models, including classified models, the kernel owns release; the reader validates the released session document and uses ordinary descriptor decoding without a second compliance RPC. A fold behind the probe or ahead of the pre-fold boundary retries with a new session and new tails, at most three attempts. Exhaustion returns `DecisionFoldIncomplete` or `DecisionFoldAhead`, never a token.
 
 Unavailable progress means absent state even if the projection returns initial-state JSON. Removal can return absent state with meaningful `LastHandled`. Neither `LastHandled` nor an observer checkpoint is a protection boundary. An empty log uses an explicit no-match scope, not ordinary unchecked empty-tail resolution.
 
@@ -92,4 +92,4 @@ Before and after each fold, server agreement checks the selected producer, seque
 
 The protocol binds neither a definition revision nor a history revision to the read or commit. Definition replacement, an ABA definition change, in-place revision and redaction can race between checks. Rechecking before and after a fold cannot eliminate those races, and a later definition change need not invalidate an already detached token. Local publication epochs and reconnect invalidation are not substitutes for atomic server revision support. Keep definitions and existing history stable while relying on these guards, or use a protocol that supplies that stronger binding.
 
-Compared with C#, Go refuses the third ahead fold, awaits cleanup fail-closed, re-admits server parent/`All` keys, key schema, model generation and protection metadata, permanently binds detached-token ownership, and rejects unchecked mixed scopes. See the [decision parity entries](../parity.md#decision-read-migration) for the exact reference and behavioral coverage.
+Compared with C#, Go refuses the third ahead fold, awaits cleanup fail-closed, re-admits server parent/`All` keys, key schema and model generation, permanently binds detached-token ownership, and rejects unchecked mixed scopes. See the [decision parity entries](../parity.md#decision-read-migration) for the exact reference and behavioral coverage.

@@ -5,29 +5,31 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Cratis/Chronicle.Go/blob/main/LICENSE)
 [![Discord](https://img.shields.io/discord/1182595891576717413?label=Discord&logo=discord&color=7289da)](https://discord.gg/kt4AMpV8WV)
 
-The idiomatic Go client for [Cratis Chronicle](https://github.com/Cratis/Chronicle). Register typed events, connect securely, select a store and namespace, and append with explicit concurrency protection and complete outcomes.
+The Go client for [Cratis Chronicle](https://github.com/Cratis/Chronicle), the event store in Cratis Platform. You can adopt Chronicle without the other Platform components. Register typed events, select a store and namespace, and append with explicit concurrency protection and complete outcomes.
 
 ## Status and installation
 
-**Experimental foundation, v0.x.** Connection/TLS/OAuth, compatibility, event registration, single/atomic batch appends and event history reads are implemented. Observers, projections and automatic lifecycle recovery are not yet implemented. See [parity and limitations](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md).
+**Experimental, v0.x.** The source includes appends, reads, observers, projections and normal-session recovery, with feature-specific restrictions. Start with the single [capability and limits summary](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md#experimental-v0-capabilities-and-limits), then the detailed [parity and limitations](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md). Source API presence is not production readiness or a compatibility guarantee for a selected release.
 
-Requires Go **1.26 or later**. After the first tagged release:
+Requires Go **1.26 or later**. Experimental tags exist, including [v0.11.1](https://github.com/Cratis/Chronicle.Go/releases/tag/v0.11.1). Consult the [release policy](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/releases.md) before selecting a version; current main source and a tagged module can differ. The install command asks Go to resolve the latest module version:
 
 ```sh
 go get github.com/cratis/chronicle.go@latest
 ```
 
-Contracts are pinned to Chronicle **19.32.3**; real-kernel tests use **19.32.3-development**. Generated contracts are public packages in this same module, with no .NET or sibling checkout needed.
+Contracts are pinned to Chronicle **19.123.0**; real-kernel tests use **19.123.0-development**. The pin is not a supported kernel range: decision reads require this exact version (see the capability summary). Generated contracts are public packages in this same module, with no .NET or sibling checkout needed.
 
 ## Quick start
 
-Start the development kernel and wait for `https://localhost:35000/health` to report `Healthy`:
+Start the development kernel and wait for `https://localhost:35000/health` to report `Healthy`. Health establishes process health, not feature compatibility; read the [getting-started environment notes](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/clients/go/getting-started.md) before relying on a feature:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.32.3-development
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.123.0-development
 ```
 
-This complete program is also available as `go run ./examples/getting-started` in a checkout:
+### Normal-client append example
+
+The maintained program is available as `go run ./examples/getting-started` in a checkout against that kernel. It owns a normal client, including its keep-alive worker; it is not a runnable skipped-session job example. Read [short-lived clients and process ownership](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/connection-strings/lifecycle.md#short-lived-clients-and-process-ownership) before choosing `WithSkipKeepAlive`:
 
 ```go
 package main

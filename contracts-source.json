@@ -1,7 +1,7 @@
 {
   "repository": "Cratis/Chronicle",
-  "version": "19.122.0",
-  "commit": "74f927603a6da4a2d6f86fe29768f8eac4370ac9",
+  "version": "19.123.0",
+  "commit": "132bf5041336974a575c217c4729e1ca5df3d749",
   "sourcePath": "Source/Kernel/Protobuf",
   "tools": {
     "buf": "1.73.0",
@@ -20,7 +20,7 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/captures"
     },
     "chronicle.desc": {
-      "sha256": "2dd16a5af9b26f5709c8539bfed551ee21bf0ad7169a05cfdfe5797b48f5ccb9"
+      "sha256": "1ec17c727b0e6a3ae813ec716c58f9949633758e5297db4580ce1630aad8dbd4"
     },
     "clients.proto": {
       "sha256": "8a6fa07a9b7f7ff38bd5c9cce541f794499b50d59f73bd1b057209db8b5ecb25",
@@ -163,7 +163,7 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/seeding"
     },
     "sequences.proto": {
-      "sha256": "00d53b7c90ba82b88a7faabdd569528eb65b929cf8869cad87e696ef1e5d3db4",
+      "sha256": "53b4185bf07de1c179f6631e71a71b32b6f4cfd2faeb26cf1d57d4fb1db2cdd6",
       "package": "Cratis.Chronicle.Contracts.Sequences",
       "goPackage": "github.com/cratis/chronicle.go/contracts/sequences"
     },

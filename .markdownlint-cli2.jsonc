@@ -9,6 +9,8 @@
     ".claude/**",
     ".cursor/**",
     ".opencode/**",
-    ".pi/**"
+    ".pi/**",
+    // Client snippets are checked as Go code, not by Markdown structure rules.
+    "Documentation/client-snippets/**"
   ]
 }

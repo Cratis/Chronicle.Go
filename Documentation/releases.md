@@ -1,6 +1,8 @@
 # Go releases
 
-This repository is in early development and has no tagged Go release yet. Repository setup uses `no-release`; the first implemented, minor-labeled release will be v0.1.0. Experimental releases remain v0.x until an approved stable launch.
+Chronicle.Go has experimental v0.x releases, including [v0.11.1](https://github.com/Cratis/Chronicle.Go/releases/tag/v0.11.1). Experimental releases remain v0.x until an approved stable launch. A release/tag establishes a source version; its existence alone does not establish module archive contents, consumer usability or kernel compatibility.
+
+The [capability and limits summary](parity.md#experimental-v0-capabilities-and-limits) describes current repository source. Use the selected version's release notes and source when evaluating a tagged module; current main features must not be assumed present in that module. Chronicle is independently adoptable within Cratis Platform, not a requirement to adopt its other components.
 
 ## Release intent
 
@@ -24,4 +26,4 @@ Wait for Publish to finish before merging another release-bound PR: GitHub concu
 
 If proxy indexing fails after publication, rerun the failed jobs. A full rerun resolves the existing stable release for the same commit and indexes that tag without bumping again. Investigate any conflicting tag or release; never move or delete a published tag. Correct a bad release with a new version and, where appropriate, a Go `retract` directive.
 
-The first public-proxy installation and pkg.go.dev visibility can be verified only after a release exists. Central Cratis documentation publication requires registering this repository in Cratis/Documentation and setting the repository variable `DOCUMENTATION_ENABLED` to `true`; it is independent of Go module indexing.
+Public-proxy installation and pkg.go.dev visibility are separate from GitHub release creation. Central Cratis documentation publication requires registering this repository in Cratis/Documentation and setting the repository variable `DOCUMENTATION_ENABLED` to `true`; it is independent of Go module indexing. Site source configuration does not by itself establish deployed page availability.
