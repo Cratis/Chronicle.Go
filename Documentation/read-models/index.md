@@ -5,6 +5,50 @@ description: Register model schemas and read typed or raw state without confusin
 
 Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the client. A model describes state produced by a projection or reducer; **registration alone does not create an instance**. This page covers catalog registration, one-shot reads, watches, materialized windows, projection sessions and release. [Projection authoring](../projections/index.md), [collections and history](collections-and-history.md), and [decision reads](decision-reads.md) have their own references.
 
+## Run the example
+
+The [read-model example](../../examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.32.3-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
+
+```sh
+CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
+  GOWORK=off go run ./examples/readmodels
+```
+
+Expected output:
+
+```text
+Example.InventoryItem registered; item-1 exists: false
+```
+
+Optional next step: use [watch changes](#watch-changes) or [materialized windows](#materialized-windows) when you need those routes.
+
+For watches, projection-backed callbacks and an initial materialized window,
+run the [watch example](../../examples/watches/main.go):
+
+```sh
+CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
+  GOWORK=off go run ./examples/watches
+```
+
+It prints `watch: product-1 = Coffee`, `reactor: Coffee`, then
+`materialized window: 1 product`. It also uses development-only credentials/TLS
+and retains a uniquely named store.
+
+Each read-model example run retains its uniquely named store in your development kernel. It does not delete data or install a projection. See [parity and migration notes](../parity.md#read-model-migration) for the C# mapping and remaining boundaries.
+
+## One-shot reads
+
+Create a typed reader with `readmodels.For(store.ReadModels(), model)`. Its `Get(ctx, key)` returns `(readmodels.Instance[T], error)`:
+
+- Check the error first, then `Exists`. Only use `Value` when `Exists` is true.
+- `LastHandled` is a separate `*events.SequenceNumber`. Nil means unavailable; position zero is valid. A removed model can be absent and still have a last-handled position.
+- A present empty object is a valid zero-valued model. JSON `null` is absence; malformed, empty or non-object documents fail with `chronicle.ErrProtocol`.
+- Present models normalize absent/null slice fields to empty slices, including nested collections. Use a pointer-to-slice to retain nullable presence. Maps retain their own null semantics.
+
+For raw reads, call `store.ReadModels().Get(ctx, model.Identifier(), key)`. It returns `Instance[json.RawMessage]`, preserves stored metadata and never manufactures an absent document. Keys are preserved verbatim; blank keys are invalid and the kernel's `*` replay wildcard is unsupported by this one-instance API.
+
+Reads require a declaration in the service catalog. A typed reader also requires the exact declaration retained from registration, not a separately constructed equivalent. Unknown/foreign declarations return `ErrNotRegistered`. Materialized reads are eventually consistent; neither `LastHandled` nor a session is a concurrency-protection token.
+
 ## Registration reference
 
 `RegisterReadModel[T](registry, options...)` returns `(readmodels.Model[T], error)`. `T` must be a named, non-pointer struct supported by the shared [serialization contract](../events/event-types.md). Unsupported shapes and conflicting protection tags fail before network I/O.
@@ -65,19 +109,6 @@ connection configuration. A successful registration does not prove that the
 server has a usable SQL or InMemory backend. The pinned kernel witness covers
 MongoDB materialization, including a MongoDB model overriding a SQL client
 default; live SQL and InMemory support are not qualified by that witness.
-
-## One-shot reads
-
-Create a typed reader with `readmodels.For(store.ReadModels(), model)`. Its `Get(ctx, key)` returns `(readmodels.Instance[T], error)`:
-
-- Check the error first, then `Exists`. Only use `Value` when `Exists` is true.
-- `LastHandled` is a separate `*events.SequenceNumber`. Nil means unavailable; position zero is valid. A removed model can be absent and still have a last-handled position.
-- A present empty object is a valid zero-valued model. JSON `null` is absence; malformed, empty or non-object documents fail with `chronicle.ErrProtocol`.
-- Present models normalize absent/null slice fields to empty slices, including nested collections. Use a pointer-to-slice to retain nullable presence. Maps retain their own null semantics.
-
-For raw reads, call `store.ReadModels().Get(ctx, model.Identifier(), key)`. It returns `Instance[json.RawMessage]`, preserves stored metadata and never manufactures an absent document. Keys are preserved verbatim; blank keys are invalid and the kernel's `*` replay wildcard is unsupported by this one-instance API.
-
-Reads require a declaration in the service catalog. A typed reader also requires the exact declaration retained from registration, not a separately constructed equivalent. Unknown/foreign declarations return `ErrNotRegistered`. Materialized reads are eventually consistent; neither `LastHandled` nor a session is a concurrency-protection token.
 
 ## Watch changes
 
@@ -188,32 +219,3 @@ Release uses the model schema and namespace. Raw documents preserve `__subject` 
 Unlike C#'s best-effort release, Go returns `ErrRelease` and no model when a present subject-protected value has no owner, the release RPC fails, the kernel reports a release error, or the response is malformed. Inspect `*readmodels.ReleaseError` with `errors.As`; context and unsupported-operation identities survive wrapping. Error text omits payloads and subjects.
 
 Namespace/global confidentiality can release without a subject. See [compliance and confidentiality](../compliance.md) for field/type classifications, erasure, reauthorization and pinned-kernel limitations. Unsupported codecs and conflicting declarations fail rather than silently publishing plaintext. Kernel release remains authoritative for cryptographic correctness and erased-value behavior.
-
-## Run the example
-
-The [read-model example](../../examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.32.3-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
-
-```sh
-CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
-  GOWORK=off go run ./examples/readmodels
-```
-
-Expected output:
-
-```text
-Example.InventoryItem registered; item-1 exists: false
-```
-
-For watches, projection-backed callbacks and an initial materialized window,
-run the [watch example](../../examples/watches/main.go):
-
-```sh
-CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
-  GOWORK=off go run ./examples/watches
-```
-
-It prints `watch: product-1 = Coffee`, `reactor: Coffee`, then
-`materialized window: 1 product`. It also uses development-only credentials/TLS
-and retains a uniquely named store.
-
-Each read-model example run retains its uniquely named store in your development kernel. It does not delete data or install a projection. See [parity and migration notes](../parity.md#read-model-migration) for the C# mapping and remaining boundaries.
