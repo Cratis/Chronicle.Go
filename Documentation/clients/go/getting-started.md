@@ -3,29 +3,31 @@ title: Get started with Chronicle for Go
 description: Register a typed event and append it to a local Chronicle kernel.
 ---
 
-By the end, you will have a registered event type and a persisted customer event, with its sequence position printed in your terminal. Chronicle.Go handles OAuth, compatibility, registration and transport; you supply the event facts and their source identity.
+The maintained Go example below registers a typed customer event, appends it and prints its sequence position on success. A live run requires a compatible Chronicle endpoint; this page does not yet provide a validated replacement local recipe for current source. Begin with the [capability and limits summary](../../parity.md#experimental-v0-capabilities-and-limits), especially before using observers or decision reads. Chronicle.Go handles OAuth, compatibility, registration and transport; you supply the event facts and their source identity.
 
-## Start a development kernel
+## Historical development kernel recipe
 
-Use Go 1.26 or newer and Docker. Start the integration kernel matching the contract release:
+Use Go 1.26 or newer for the client. The older Docker recipe below is retained for context, **not as a current setup recommendation**. It no longer matches the source's contract pin and cannot satisfy current decision-read admission. A configured CI image alone is not a validated replacement recipe:
 
 ```sh
 docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.32.3-development
 ```
 
-Wait until `curl -skf https://localhost:35000/health` returns `Healthy`. The development image includes MongoDB and a self-signed certificate. Never expose its built-in credentials on a production endpoint.
+For that historical image, `curl -skf https://localhost:35000/health` returning `Healthy` establishes process health, not feature compatibility. The development image includes MongoDB and a self-signed certificate. Never expose its built-in credentials on a production endpoint.
 
-After the first Go release, install the module:
+## Select a release or source checkout
+
+Experimental Go releases exist; see [release policy](../../releases.md) before selecting a version. The command below asks Go to resolve the latest module. A GitHub release does not by itself establish its module archive contents or kernel compatibility:
 
 ```sh
 go get github.com/cratis/chronicle.go@latest
 ```
 
-Before publication, run the checked-out example with `go run ./examples/getting-started` from the repository root.
+For the repository source example, use `go run ./examples/getting-started` from the repository root after providing a compatible endpoint. Do not assume a tagged module contains every API on current main.
 
 ## Append your first event
 
-This complete program is compiled as [the getting-started example](../../../examples/getting-started/main.go). The source ID is event metadata, not a payload property.
+This program is maintained as [the getting-started example](../../../examples/getting-started/main.go). It uses a bounded operation context, a normal client and explicit cleanup; it is not a runnable `WithSkipKeepAlive` function/job example. The source ID is event metadata, not a payload property.
 
 ```go
 package main
@@ -83,7 +85,9 @@ func appendCustomer(ctx context.Context) (err error) {
 
 An empty namespace starts at position `0`; later runs append at higher sequence-wide positions. Every successful run appends another fact. The program does not retry a failed write: a lost response may hide a committed event.
 
-`EventStore` connects, ensures the default namespace and waits for event registration before publishing the handle. `Close` releases the client, including its keep-alive worker. Generated contracts target Chronicle **19.32.3**; the real-kernel smoke test exercises **19.32.3-development**, including protected first append and read-back through the public contracts.
+`EventStore` connects, ensures the default namespace and waits for event registration before publishing the handle. Registration sent is not observer subscription or catch-up. `Close` releases the client, including its keep-alive worker. Read [short-lived clients and process ownership](../../connection-strings/lifecycle.md#short-lived-clients-and-process-ownership) for skipped-session exclusions and process reuse.
+
+Current source contracts target Chronicle **19.70.0**; integration CI is configured with **19.70.0-development**. Those facts do not prove this displayed example against a replacement local setup. [Decision reads](../../read-models/decision-reads.md) have their own exact server/protocol and projection-admission requirements.
 
 ## Continue
 
@@ -92,4 +96,4 @@ An empty namespace starts at position `0`; later runs append at higher sequence-
 - [Append with concurrency protection](../../events/appending-events.md) when a business decision depends on previously read state.
 - [Review the parity map](../../parity.md) before relying on advanced client features.
 
-Stop your foreground container with Ctrl+C. The example kernel is disposable; configure durable kernel storage separately for real data.
+If using the historical foreground container, stop it with Ctrl+C. That development kernel is disposable; configure durable kernel storage separately for real data.
