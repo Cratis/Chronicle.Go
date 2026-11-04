@@ -1208,8 +1208,8 @@ contract independently.
 
 References use C# `74f927603a6da4a2d6f86fe29768f8eac4370ac9` (Chronicle#5610),
 relative to `Source/Clients/DotNET`, and decision
-`decisions/0022-observers-receive-batches-on-every-path.md`. Contracts are
-generated from the same commit. The [batch guide](observer-batches.md) shows the
+`decisions/0022-observers-receive-batches-on-every-path.md`. Page delivery
+shipped in Chronicle 19.122.0; the generated contracts pin 19.123.0. The [batch guide](observer-batches.md) shows the
 Go surface. No real-kernel page delivery witness exists yet: the evidence below
 drives the production observer runtime with protocol messages, not a kernel.
 
