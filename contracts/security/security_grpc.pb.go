@@ -20,6 +20,184 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	Administrators_AllAdministrators_FullMethodName   = "/Cratis.Chronicle.Contracts.Security.Administrators/AllAdministrators"
+	Administrators_GrantAdministrator_FullMethodName  = "/Cratis.Chronicle.Contracts.Security.Administrators/GrantAdministrator"
+	Administrators_RevokeAdministrator_FullMethodName = "/Cratis.Chronicle.Contracts.Security.Administrators/RevokeAdministrator"
+)
+
+// AdministratorsClient is the client API for Administrators service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type AdministratorsClient interface {
+	AllAdministrators(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AdministratorResponse, error)
+	GrantAdministrator(ctx context.Context, in *GrantAdministratorRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	RevokeAdministrator(ctx context.Context, in *RevokeAdministratorRequest, opts ...grpc.CallOption) (*CommandResult, error)
+}
+
+type administratorsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAdministratorsClient(cc grpc.ClientConnInterface) AdministratorsClient {
+	return &administratorsClient{cc}
+}
+
+func (c *administratorsClient) AllAdministrators(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AdministratorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_IEnumerable_AdministratorResponse)
+	err := c.cc.Invoke(ctx, Administrators_AllAdministrators_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *administratorsClient) GrantAdministrator(ctx context.Context, in *GrantAdministratorRequest, opts ...grpc.CallOption) (*CommandResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult)
+	err := c.cc.Invoke(ctx, Administrators_GrantAdministrator_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *administratorsClient) RevokeAdministrator(ctx context.Context, in *RevokeAdministratorRequest, opts ...grpc.CallOption) (*CommandResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult)
+	err := c.cc.Invoke(ctx, Administrators_RevokeAdministrator_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AdministratorsServer is the server API for Administrators service.
+// All implementations must embed UnimplementedAdministratorsServer
+// for forward compatibility.
+type AdministratorsServer interface {
+	AllAdministrators(context.Context, *emptypb.Empty) (*QueryResult_IEnumerable_AdministratorResponse, error)
+	GrantAdministrator(context.Context, *GrantAdministratorRequest) (*CommandResult, error)
+	RevokeAdministrator(context.Context, *RevokeAdministratorRequest) (*CommandResult, error)
+	mustEmbedUnimplementedAdministratorsServer()
+}
+
+// UnimplementedAdministratorsServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAdministratorsServer struct{}
+
+func (UnimplementedAdministratorsServer) AllAdministrators(context.Context, *emptypb.Empty) (*QueryResult_IEnumerable_AdministratorResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AllAdministrators not implemented")
+}
+func (UnimplementedAdministratorsServer) GrantAdministrator(context.Context, *GrantAdministratorRequest) (*CommandResult, error) {
+	return nil, status.Error(codes.Unimplemented, "method GrantAdministrator not implemented")
+}
+func (UnimplementedAdministratorsServer) RevokeAdministrator(context.Context, *RevokeAdministratorRequest) (*CommandResult, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeAdministrator not implemented")
+}
+func (UnimplementedAdministratorsServer) mustEmbedUnimplementedAdministratorsServer() {}
+func (UnimplementedAdministratorsServer) testEmbeddedByValue()                        {}
+
+// UnsafeAdministratorsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AdministratorsServer will
+// result in compilation errors.
+type UnsafeAdministratorsServer interface {
+	mustEmbedUnimplementedAdministratorsServer()
+}
+
+func RegisterAdministratorsServer(s grpc.ServiceRegistrar, srv AdministratorsServer) {
+	// If the following call panics, it indicates UnimplementedAdministratorsServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&Administrators_ServiceDesc, srv)
+}
+
+func _Administrators_AllAdministrators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdministratorsServer).AllAdministrators(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Administrators_AllAdministrators_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdministratorsServer).AllAdministrators(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Administrators_GrantAdministrator_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantAdministratorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdministratorsServer).GrantAdministrator(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Administrators_GrantAdministrator_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdministratorsServer).GrantAdministrator(ctx, req.(*GrantAdministratorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Administrators_RevokeAdministrator_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeAdministratorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdministratorsServer).RevokeAdministrator(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Administrators_RevokeAdministrator_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdministratorsServer).RevokeAdministrator(ctx, req.(*RevokeAdministratorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Administrators_ServiceDesc is the grpc.ServiceDesc for Administrators service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Administrators_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "Cratis.Chronicle.Contracts.Security.Administrators",
+	HandlerType: (*AdministratorsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AllAdministrators",
+			Handler:    _Administrators_AllAdministrators_Handler,
+		},
+		{
+			MethodName: "GrantAdministrator",
+			Handler:    _Administrators_GrantAdministrator_Handler,
+		},
+		{
+			MethodName: "RevokeAdministrator",
+			Handler:    _Administrators_RevokeAdministrator_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "security.proto",
+}
+
+const (
 	Applications_AddApplication_FullMethodName          = "/Cratis.Chronicle.Contracts.Security.Applications/AddApplication"
 	Applications_AllApplications_FullMethodName         = "/Cratis.Chronicle.Contracts.Security.Applications/AllApplications"
 	Applications_ChangeApplicationSecret_FullMethodName = "/Cratis.Chronicle.Contracts.Security.Applications/ChangeApplicationSecret"

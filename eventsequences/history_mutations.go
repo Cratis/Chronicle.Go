@@ -70,15 +70,9 @@ func (s *Sequence) RedactForEventSource(ctx context.Context, source events.Sourc
 	if strings.TrimSpace(string(source)) == "" {
 		return fmt.Errorf("%w: source is required", faults.ErrInvalidConfiguration)
 	}
-	ids := make([]string, len(eventTypes))
-	for i, id := range eventTypes {
-		if strings.TrimSpace(string(id)) == "" {
-			return fmt.Errorf("%w: event type ID is required", faults.ErrInvalidConfiguration)
-		}
-		if _, ok := s.catalog.LookupID(id); !ok {
-			return fmt.Errorf("%w: redaction event type %q", faults.ErrNotRegistered, id)
-		}
-		ids[i] = string(id)
+	ids, err := s.registeredTypeIDs("redaction", eventTypes)
+	if err != nil {
+		return err
 	}
 	response, err := s.service.RedactForEventSource(ctx, &sequences.RedactForEventSourceRequest{
 		EventStore: string(s.store), Namespace: string(s.namespace), EventSequenceId: string(s.id),
@@ -188,6 +182,22 @@ func revisionSchemaProtected(schema string) (bool, error) {
 		return false, errProtectedRevisionUnsupported
 	}
 	return len(roots) != 0, nil
+}
+
+// registeredTypeIDs validates and converts event type IDs for a source-scoped
+// kernel request. IDs must be nonblank and registered; none means every type.
+func (s *Sequence) registeredTypeIDs(operation string, eventTypes []events.TypeID) ([]string, error) {
+	ids := make([]string, len(eventTypes))
+	for i, id := range eventTypes {
+		if strings.TrimSpace(string(id)) == "" {
+			return nil, fmt.Errorf("%w: event type ID is required", faults.ErrInvalidConfiguration)
+		}
+		if _, ok := s.catalog.LookupID(id); !ok {
+			return nil, fmt.Errorf("%w: %s event type %q", faults.ErrNotRegistered, operation, id)
+		}
+		ids[i] = string(id)
+	}
+	return ids, nil
 }
 
 func validateMutation(ctx context.Context, position events.SequenceNumber, reason events.RedactionReason) error {

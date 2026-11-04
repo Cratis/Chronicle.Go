@@ -124,6 +124,7 @@ const (
 	FailureKind_Handling             FailureKind = 1
 	FailureKind_Timeout              FailureKind = 2
 	FailureKind_Disconnected         FailureKind = 3
+	FailureKind_WaitingForHandler    FailureKind = 4
 )
 
 // Enum value maps for FailureKind.
@@ -133,12 +134,14 @@ var (
 		1: "Handling",
 		2: "Timeout",
 		3: "Disconnected",
+		4: "WaitingForHandler",
 	}
 	FailureKind_value = map[string]int32{
 		"FAILURE_KIND_Unknown": 0,
 		"Handling":             1,
 		"Timeout":              2,
 		"Disconnected":         3,
+		"WaitingForHandler":    4,
 	}
 )
 
@@ -1445,12 +1448,13 @@ const file_alerts_proto_rawDesc = "" +
 	"\bDegraded\x10\x02*9\n" +
 	"\rAlertSeverity\x12\x1a\n" +
 	"\x16ALERT_SEVERITY_Warning\x10\x00\x12\f\n" +
-	"\bCritical\x10\x01*T\n" +
+	"\bCritical\x10\x01*k\n" +
 	"\vFailureKind\x12\x18\n" +
 	"\x14FAILURE_KIND_Unknown\x10\x00\x12\f\n" +
 	"\bHandling\x10\x01\x12\v\n" +
 	"\aTimeout\x10\x02\x12\x10\n" +
-	"\fDisconnected\x10\x03*\x86\x01\n" +
+	"\fDisconnected\x10\x03\x12\x15\n" +
+	"\x11WaitingForHandler\x10\x04*\x86\x01\n" +
 	"\x18ValidationResultSeverity\x12&\n" +
 	"\"VALIDATION_RESULT_SEVERITY_Unknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12&\n" +

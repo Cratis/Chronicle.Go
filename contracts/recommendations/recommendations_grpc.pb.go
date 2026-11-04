@@ -19,10 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Recommendations_AllRecommendations_FullMethodName    = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/AllRecommendations"
-	Recommendations_GetRecommendations_FullMethodName    = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/GetRecommendations"
-	Recommendations_IgnoreRecommendation_FullMethodName  = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/IgnoreRecommendation"
-	Recommendations_PerformRecommendation_FullMethodName = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/PerformRecommendation"
+	Recommendations_AllRecommendations_FullMethodName        = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/AllRecommendations"
+	Recommendations_GetIgnoredRecommendations_FullMethodName = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/GetIgnoredRecommendations"
+	Recommendations_GetRecommendations_FullMethodName        = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/GetRecommendations"
+	Recommendations_IgnoredRecommendations_FullMethodName    = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/IgnoredRecommendations"
+	Recommendations_IgnoreRecommendation_FullMethodName      = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/IgnoreRecommendation"
+	Recommendations_PerformRecommendation_FullMethodName     = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/PerformRecommendation"
+	Recommendations_UnignoreRecommendation_FullMethodName    = "/Cratis.Chronicle.Contracts.Recommendations.Recommendations/UnignoreRecommendation"
 )
 
 // RecommendationsClient is the client API for Recommendations service.
@@ -30,9 +33,12 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RecommendationsClient interface {
 	AllRecommendations(ctx context.Context, in *AllRecommendationsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_RecommendationDetailsResponse], error)
+	GetIgnoredRecommendations(ctx context.Context, in *GetIgnoredRecommendationsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_RecommendationDetailsResponse, error)
 	GetRecommendations(ctx context.Context, in *GetRecommendationsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_RecommendationDetailsResponse, error)
+	IgnoredRecommendations(ctx context.Context, in *IgnoredRecommendationsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_RecommendationDetailsResponse], error)
 	IgnoreRecommendation(ctx context.Context, in *IgnoreRecommendationRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	PerformRecommendation(ctx context.Context, in *PerformRecommendationRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	UnignoreRecommendation(ctx context.Context, in *UnignoreRecommendationRequest, opts ...grpc.CallOption) (*CommandResult, error)
 }
 
 type recommendationsClient struct {
@@ -62,6 +68,16 @@ func (c *recommendationsClient) AllRecommendations(ctx context.Context, in *AllR
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Recommendations_AllRecommendationsClient = grpc.ServerStreamingClient[QueryResult_IEnumerable_RecommendationDetailsResponse]
 
+func (c *recommendationsClient) GetIgnoredRecommendations(ctx context.Context, in *GetIgnoredRecommendationsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_RecommendationDetailsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_IEnumerable_RecommendationDetailsResponse)
+	err := c.cc.Invoke(ctx, Recommendations_GetIgnoredRecommendations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *recommendationsClient) GetRecommendations(ctx context.Context, in *GetRecommendationsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_RecommendationDetailsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryResult_IEnumerable_RecommendationDetailsResponse)
@@ -71,6 +87,25 @@ func (c *recommendationsClient) GetRecommendations(ctx context.Context, in *GetR
 	}
 	return out, nil
 }
+
+func (c *recommendationsClient) IgnoredRecommendations(ctx context.Context, in *IgnoredRecommendationsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_RecommendationDetailsResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &Recommendations_ServiceDesc.Streams[1], Recommendations_IgnoredRecommendations_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[IgnoredRecommendationsRequest, QueryResult_IEnumerable_RecommendationDetailsResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Recommendations_IgnoredRecommendationsClient = grpc.ServerStreamingClient[QueryResult_IEnumerable_RecommendationDetailsResponse]
 
 func (c *recommendationsClient) IgnoreRecommendation(ctx context.Context, in *IgnoreRecommendationRequest, opts ...grpc.CallOption) (*CommandResult, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -92,14 +127,27 @@ func (c *recommendationsClient) PerformRecommendation(ctx context.Context, in *P
 	return out, nil
 }
 
+func (c *recommendationsClient) UnignoreRecommendation(ctx context.Context, in *UnignoreRecommendationRequest, opts ...grpc.CallOption) (*CommandResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult)
+	err := c.cc.Invoke(ctx, Recommendations_UnignoreRecommendation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RecommendationsServer is the server API for Recommendations service.
 // All implementations must embed UnimplementedRecommendationsServer
 // for forward compatibility.
 type RecommendationsServer interface {
 	AllRecommendations(*AllRecommendationsRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_RecommendationDetailsResponse]) error
+	GetIgnoredRecommendations(context.Context, *GetIgnoredRecommendationsRequest) (*QueryResult_IEnumerable_RecommendationDetailsResponse, error)
 	GetRecommendations(context.Context, *GetRecommendationsRequest) (*QueryResult_IEnumerable_RecommendationDetailsResponse, error)
+	IgnoredRecommendations(*IgnoredRecommendationsRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_RecommendationDetailsResponse]) error
 	IgnoreRecommendation(context.Context, *IgnoreRecommendationRequest) (*CommandResult, error)
 	PerformRecommendation(context.Context, *PerformRecommendationRequest) (*CommandResult, error)
+	UnignoreRecommendation(context.Context, *UnignoreRecommendationRequest) (*CommandResult, error)
 	mustEmbedUnimplementedRecommendationsServer()
 }
 
@@ -113,14 +161,23 @@ type UnimplementedRecommendationsServer struct{}
 func (UnimplementedRecommendationsServer) AllRecommendations(*AllRecommendationsRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_RecommendationDetailsResponse]) error {
 	return status.Error(codes.Unimplemented, "method AllRecommendations not implemented")
 }
+func (UnimplementedRecommendationsServer) GetIgnoredRecommendations(context.Context, *GetIgnoredRecommendationsRequest) (*QueryResult_IEnumerable_RecommendationDetailsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetIgnoredRecommendations not implemented")
+}
 func (UnimplementedRecommendationsServer) GetRecommendations(context.Context, *GetRecommendationsRequest) (*QueryResult_IEnumerable_RecommendationDetailsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRecommendations not implemented")
+}
+func (UnimplementedRecommendationsServer) IgnoredRecommendations(*IgnoredRecommendationsRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_RecommendationDetailsResponse]) error {
+	return status.Error(codes.Unimplemented, "method IgnoredRecommendations not implemented")
 }
 func (UnimplementedRecommendationsServer) IgnoreRecommendation(context.Context, *IgnoreRecommendationRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method IgnoreRecommendation not implemented")
 }
 func (UnimplementedRecommendationsServer) PerformRecommendation(context.Context, *PerformRecommendationRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method PerformRecommendation not implemented")
+}
+func (UnimplementedRecommendationsServer) UnignoreRecommendation(context.Context, *UnignoreRecommendationRequest) (*CommandResult, error) {
+	return nil, status.Error(codes.Unimplemented, "method UnignoreRecommendation not implemented")
 }
 func (UnimplementedRecommendationsServer) mustEmbedUnimplementedRecommendationsServer() {}
 func (UnimplementedRecommendationsServer) testEmbeddedByValue()                         {}
@@ -154,6 +211,24 @@ func _Recommendations_AllRecommendations_Handler(srv interface{}, stream grpc.Se
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Recommendations_AllRecommendationsServer = grpc.ServerStreamingServer[QueryResult_IEnumerable_RecommendationDetailsResponse]
 
+func _Recommendations_GetIgnoredRecommendations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetIgnoredRecommendationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RecommendationsServer).GetIgnoredRecommendations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Recommendations_GetIgnoredRecommendations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RecommendationsServer).GetIgnoredRecommendations(ctx, req.(*GetIgnoredRecommendationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Recommendations_GetRecommendations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetRecommendationsRequest)
 	if err := dec(in); err != nil {
@@ -171,6 +246,17 @@ func _Recommendations_GetRecommendations_Handler(srv interface{}, ctx context.Co
 	}
 	return interceptor(ctx, in, info, handler)
 }
+
+func _Recommendations_IgnoredRecommendations_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(IgnoredRecommendationsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(RecommendationsServer).IgnoredRecommendations(m, &grpc.GenericServerStream[IgnoredRecommendationsRequest, QueryResult_IEnumerable_RecommendationDetailsResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Recommendations_IgnoredRecommendationsServer = grpc.ServerStreamingServer[QueryResult_IEnumerable_RecommendationDetailsResponse]
 
 func _Recommendations_IgnoreRecommendation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(IgnoreRecommendationRequest)
@@ -208,6 +294,24 @@ func _Recommendations_PerformRecommendation_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Recommendations_UnignoreRecommendation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnignoreRecommendationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RecommendationsServer).UnignoreRecommendation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Recommendations_UnignoreRecommendation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RecommendationsServer).UnignoreRecommendation(ctx, req.(*UnignoreRecommendationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Recommendations_ServiceDesc is the grpc.ServiceDesc for Recommendations service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -215,6 +319,10 @@ var Recommendations_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Cratis.Chronicle.Contracts.Recommendations.Recommendations",
 	HandlerType: (*RecommendationsServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetIgnoredRecommendations",
+			Handler:    _Recommendations_GetIgnoredRecommendations_Handler,
+		},
 		{
 			MethodName: "GetRecommendations",
 			Handler:    _Recommendations_GetRecommendations_Handler,
@@ -227,11 +335,20 @@ var Recommendations_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "PerformRecommendation",
 			Handler:    _Recommendations_PerformRecommendation_Handler,
 		},
+		{
+			MethodName: "UnignoreRecommendation",
+			Handler:    _Recommendations_UnignoreRecommendation_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "AllRecommendations",
 			Handler:       _Recommendations_AllRecommendations_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "IgnoredRecommendations",
+			Handler:       _Recommendations_IgnoredRecommendations_Handler,
 			ServerStreams: true,
 		},
 	},

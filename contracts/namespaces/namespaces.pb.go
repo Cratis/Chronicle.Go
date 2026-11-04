@@ -434,6 +434,58 @@ func (x *QueryResult_IEnumerable_NamespaceNamesResponse) GetData() []*NamespaceN
 	return nil
 }
 
+type RemoveNamespaceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveNamespaceRequest) Reset() {
+	*x = RemoveNamespaceRequest{}
+	mi := &file_namespaces_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveNamespaceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveNamespaceRequest) ProtoMessage() {}
+
+func (x *RemoveNamespaceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_namespaces_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveNamespaceRequest.ProtoReflect.Descriptor instead.
+func (*RemoveNamespaceRequest) Descriptor() ([]byte, []int) {
+	return file_namespaces_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *RemoveNamespaceRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *RemoveNamespaceRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
 type ValidationResult struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Severity      ValidationResultSeverity `protobuf:"varint,1,opt,name=Severity,proto3,enum=Cratis.Chronicle.Contracts.Namespaces.ValidationResultSeverity" json:"Severity,omitempty"` // default value could not be applied: Error
@@ -445,7 +497,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_namespaces_proto_msgTypes[6]
+	mi := &file_namespaces_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -457,7 +509,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_namespaces_proto_msgTypes[6]
+	mi := &file_namespaces_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -470,7 +522,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_namespaces_proto_rawDescGZIP(), []int{6}
+	return file_namespaces_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -528,7 +580,12 @@ const file_namespaces_proto_rawDesc = "" +
 	"\x11ValidationResults\x18\x03 \x03(\v27.Cratis.Chronicle.Contracts.Namespaces.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12Q\n" +
-	"\x04Data\x18\x06 \x03(\v2=.Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponseR\x04Data\"\xa3\x01\n" +
+	"\x04Data\x18\x06 \x03(\v2=.Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponseR\x04Data\"V\n" +
+	"\x16RemoveNamespaceRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x02 \x01(\tR\tNamespace\"\xa3\x01\n" +
 	"\x10ValidationResult\x12[\n" +
 	"\bSeverity\x18\x01 \x01(\x0e2?.Cratis.Chronicle.Contracts.Namespaces.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
@@ -537,12 +594,13 @@ const file_namespaces_proto_rawDesc = "" +
 	"\aUnknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\xeb\x03\n" +
+	"\x05Error\x10\x032\xf4\x04\n" +
 	"\n" +
 	"Namespaces\x12\xa3\x01\n" +
 	"\rAllNamespaces\x12;.Cratis.Chronicle.Contracts.Namespaces.AllNamespacesRequest\x1aU.Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse\x12\x86\x01\n" +
 	"\x0fEnsureNamespace\x12=.Cratis.Chronicle.Contracts.Namespaces.EnsureNamespaceRequest\x1a4.Cratis.Chronicle.Contracts.Namespaces.CommandResult\x12\xad\x01\n" +
-	"\x11ObserveNamespaces\x12?.Cratis.Chronicle.Contracts.Namespaces.ObserveNamespacesRequest\x1aU.Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse0\x01B\xa9\x02\n" +
+	"\x11ObserveNamespaces\x12?.Cratis.Chronicle.Contracts.Namespaces.ObserveNamespacesRequest\x1aU.Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse0\x01\x12\x86\x01\n" +
+	"\x0fRemoveNamespace\x12=.Cratis.Chronicle.Contracts.Namespaces.RemoveNamespaceRequest\x1a4.Cratis.Chronicle.Contracts.Namespaces.CommandResultB\xa9\x02\n" +
 	")com.Cratis.Chronicle.Contracts.NamespacesB\x0fNamespacesProtoP\x01Z3github.com/cratis/chronicle.go/contracts/namespaces\xa2\x02\x04CCCN\xaa\x02%Cratis.Chronicle.Contracts.Namespaces\xca\x02%Cratis\\Chronicle\\Contracts\\Namespaces\xe2\x021Cratis\\Chronicle\\Contracts\\Namespaces\\GPBMetadata\xea\x02(Cratis::Chronicle::Contracts::Namespacesb\x06proto3"
 
 var (
@@ -558,7 +616,7 @@ func file_namespaces_proto_rawDescGZIP() []byte {
 }
 
 var file_namespaces_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_namespaces_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_namespaces_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_namespaces_proto_goTypes = []any{
 	(ValidationResultSeverity)(0),                          // 0: Cratis.Chronicle.Contracts.Namespaces.ValidationResultSeverity
 	(*AllNamespacesRequest)(nil),                           // 1: Cratis.Chronicle.Contracts.Namespaces.AllNamespacesRequest
@@ -567,27 +625,30 @@ var file_namespaces_proto_goTypes = []any{
 	(*NamespaceNamesResponse)(nil),                         // 4: Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse
 	(*ObserveNamespacesRequest)(nil),                       // 5: Cratis.Chronicle.Contracts.Namespaces.ObserveNamespacesRequest
 	(*QueryResult_IEnumerable_NamespaceNamesResponse)(nil), // 6: Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse
-	(*ValidationResult)(nil),                               // 7: Cratis.Chronicle.Contracts.Namespaces.ValidationResult
-	(*bcl.Guid)(nil),                                       // 8: bcl.Guid
+	(*RemoveNamespaceRequest)(nil),                         // 7: Cratis.Chronicle.Contracts.Namespaces.RemoveNamespaceRequest
+	(*ValidationResult)(nil),                               // 8: Cratis.Chronicle.Contracts.Namespaces.ValidationResult
+	(*bcl.Guid)(nil),                                       // 9: bcl.Guid
 }
 var file_namespaces_proto_depIdxs = []int32{
-	8, // 0: Cratis.Chronicle.Contracts.Namespaces.CommandResult.CorrelationId:type_name -> bcl.Guid
-	7, // 1: Cratis.Chronicle.Contracts.Namespaces.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Namespaces.ValidationResult
-	8, // 2: Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse.CorrelationId:type_name -> bcl.Guid
-	7, // 3: Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Namespaces.ValidationResult
-	4, // 4: Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse.Data:type_name -> Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse
-	0, // 5: Cratis.Chronicle.Contracts.Namespaces.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Namespaces.ValidationResultSeverity
-	1, // 6: Cratis.Chronicle.Contracts.Namespaces.Namespaces.AllNamespaces:input_type -> Cratis.Chronicle.Contracts.Namespaces.AllNamespacesRequest
-	3, // 7: Cratis.Chronicle.Contracts.Namespaces.Namespaces.EnsureNamespace:input_type -> Cratis.Chronicle.Contracts.Namespaces.EnsureNamespaceRequest
-	5, // 8: Cratis.Chronicle.Contracts.Namespaces.Namespaces.ObserveNamespaces:input_type -> Cratis.Chronicle.Contracts.Namespaces.ObserveNamespacesRequest
-	6, // 9: Cratis.Chronicle.Contracts.Namespaces.Namespaces.AllNamespaces:output_type -> Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse
-	2, // 10: Cratis.Chronicle.Contracts.Namespaces.Namespaces.EnsureNamespace:output_type -> Cratis.Chronicle.Contracts.Namespaces.CommandResult
-	6, // 11: Cratis.Chronicle.Contracts.Namespaces.Namespaces.ObserveNamespaces:output_type -> Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse
-	9, // [9:12] is the sub-list for method output_type
-	6, // [6:9] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	9,  // 0: Cratis.Chronicle.Contracts.Namespaces.CommandResult.CorrelationId:type_name -> bcl.Guid
+	8,  // 1: Cratis.Chronicle.Contracts.Namespaces.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Namespaces.ValidationResult
+	9,  // 2: Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse.CorrelationId:type_name -> bcl.Guid
+	8,  // 3: Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Namespaces.ValidationResult
+	4,  // 4: Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse.Data:type_name -> Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse
+	0,  // 5: Cratis.Chronicle.Contracts.Namespaces.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Namespaces.ValidationResultSeverity
+	1,  // 6: Cratis.Chronicle.Contracts.Namespaces.Namespaces.AllNamespaces:input_type -> Cratis.Chronicle.Contracts.Namespaces.AllNamespacesRequest
+	3,  // 7: Cratis.Chronicle.Contracts.Namespaces.Namespaces.EnsureNamespace:input_type -> Cratis.Chronicle.Contracts.Namespaces.EnsureNamespaceRequest
+	5,  // 8: Cratis.Chronicle.Contracts.Namespaces.Namespaces.ObserveNamespaces:input_type -> Cratis.Chronicle.Contracts.Namespaces.ObserveNamespacesRequest
+	7,  // 9: Cratis.Chronicle.Contracts.Namespaces.Namespaces.RemoveNamespace:input_type -> Cratis.Chronicle.Contracts.Namespaces.RemoveNamespaceRequest
+	6,  // 10: Cratis.Chronicle.Contracts.Namespaces.Namespaces.AllNamespaces:output_type -> Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse
+	2,  // 11: Cratis.Chronicle.Contracts.Namespaces.Namespaces.EnsureNamespace:output_type -> Cratis.Chronicle.Contracts.Namespaces.CommandResult
+	6,  // 12: Cratis.Chronicle.Contracts.Namespaces.Namespaces.ObserveNamespaces:output_type -> Cratis.Chronicle.Contracts.Namespaces.QueryResult_IEnumerable_NamespaceNamesResponse
+	2,  // 13: Cratis.Chronicle.Contracts.Namespaces.Namespaces.RemoveNamespace:output_type -> Cratis.Chronicle.Contracts.Namespaces.CommandResult
+	10, // [10:14] is the sub-list for method output_type
+	6,  // [6:10] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_namespaces_proto_init() }
@@ -601,7 +662,7 @@ func file_namespaces_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_namespaces_proto_rawDesc), len(file_namespaces_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

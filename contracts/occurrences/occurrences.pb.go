@@ -881,6 +881,98 @@ func (x *CommandResult_RecordEffectReceiptResponse) GetResponse() *RecordEffectR
 	return nil
 }
 
+type CommandResult_RecordLifecycleOccurrenceResponse struct {
+	state                      protoimpl.MessageState             `protogen:"open.v1"`
+	CorrelationId              *bcl.Guid                          `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized               bool                               `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults          []*ValidationResult                `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages          []string                           `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace        string                             `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	AuthorizationFailureReason string                             `protobuf:"bytes,6,opt,name=AuthorizationFailureReason,proto3" json:"AuthorizationFailureReason,omitempty"`
+	Response                   *RecordLifecycleOccurrenceResponse `protobuf:"bytes,7,opt,name=Response,proto3" json:"Response,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) Reset() {
+	*x = CommandResult_RecordLifecycleOccurrenceResponse{}
+	mi := &file_occurrences_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandResult_RecordLifecycleOccurrenceResponse) ProtoMessage() {}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_occurrences_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandResult_RecordLifecycleOccurrenceResponse.ProtoReflect.Descriptor instead.
+func (*CommandResult_RecordLifecycleOccurrenceResponse) Descriptor() ([]byte, []int) {
+	return file_occurrences_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) GetAuthorizationFailureReason() string {
+	if x != nil {
+		return x.AuthorizationFailureReason
+	}
+	return ""
+}
+
+func (x *CommandResult_RecordLifecycleOccurrenceResponse) GetResponse() *RecordLifecycleOccurrenceResponse {
+	if x != nil {
+		return x.Response
+	}
+	return nil
+}
+
 type CommandResult_RecordOccurrenceResponse struct {
 	state                      protoimpl.MessageState    `protogen:"open.v1"`
 	CorrelationId              *bcl.Guid                 `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -896,7 +988,7 @@ type CommandResult_RecordOccurrenceResponse struct {
 
 func (x *CommandResult_RecordOccurrenceResponse) Reset() {
 	*x = CommandResult_RecordOccurrenceResponse{}
-	mi := &file_occurrences_proto_msgTypes[6]
+	mi := &file_occurrences_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -908,7 +1000,7 @@ func (x *CommandResult_RecordOccurrenceResponse) String() string {
 func (*CommandResult_RecordOccurrenceResponse) ProtoMessage() {}
 
 func (x *CommandResult_RecordOccurrenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[6]
+	mi := &file_occurrences_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -921,7 +1013,7 @@ func (x *CommandResult_RecordOccurrenceResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use CommandResult_RecordOccurrenceResponse.ProtoReflect.Descriptor instead.
 func (*CommandResult_RecordOccurrenceResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{6}
+	return file_occurrences_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CommandResult_RecordOccurrenceResponse) GetCorrelationId() *bcl.Guid {
@@ -988,7 +1080,7 @@ type CommandResult_RegisterTriggersResponse struct {
 
 func (x *CommandResult_RegisterTriggersResponse) Reset() {
 	*x = CommandResult_RegisterTriggersResponse{}
-	mi := &file_occurrences_proto_msgTypes[7]
+	mi := &file_occurrences_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1000,7 +1092,7 @@ func (x *CommandResult_RegisterTriggersResponse) String() string {
 func (*CommandResult_RegisterTriggersResponse) ProtoMessage() {}
 
 func (x *CommandResult_RegisterTriggersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[7]
+	mi := &file_occurrences_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1013,7 +1105,7 @@ func (x *CommandResult_RegisterTriggersResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use CommandResult_RegisterTriggersResponse.ProtoReflect.Descriptor instead.
 func (*CommandResult_RegisterTriggersResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{7}
+	return file_occurrences_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CommandResult_RegisterTriggersResponse) GetCorrelationId() *bcl.Guid {
@@ -1079,7 +1171,7 @@ type CompleteOccurrenceRequest struct {
 
 func (x *CompleteOccurrenceRequest) Reset() {
 	*x = CompleteOccurrenceRequest{}
-	mi := &file_occurrences_proto_msgTypes[8]
+	mi := &file_occurrences_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1091,7 +1183,7 @@ func (x *CompleteOccurrenceRequest) String() string {
 func (*CompleteOccurrenceRequest) ProtoMessage() {}
 
 func (x *CompleteOccurrenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[8]
+	mi := &file_occurrences_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1104,7 +1196,7 @@ func (x *CompleteOccurrenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteOccurrenceRequest.ProtoReflect.Descriptor instead.
 func (*CompleteOccurrenceRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{8}
+	return file_occurrences_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CompleteOccurrenceRequest) GetEventStore() string {
@@ -1158,7 +1250,7 @@ type CompleteOccurrenceResponse struct {
 
 func (x *CompleteOccurrenceResponse) Reset() {
 	*x = CompleteOccurrenceResponse{}
-	mi := &file_occurrences_proto_msgTypes[9]
+	mi := &file_occurrences_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1170,7 +1262,7 @@ func (x *CompleteOccurrenceResponse) String() string {
 func (*CompleteOccurrenceResponse) ProtoMessage() {}
 
 func (x *CompleteOccurrenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[9]
+	mi := &file_occurrences_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1183,7 +1275,7 @@ func (x *CompleteOccurrenceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteOccurrenceResponse.ProtoReflect.Descriptor instead.
 func (*CompleteOccurrenceResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{9}
+	return file_occurrences_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CompleteOccurrenceResponse) GetStatus() OccurrenceLeaseResult {
@@ -1205,7 +1297,7 @@ type EffectReceipt struct {
 
 func (x *EffectReceipt) Reset() {
 	*x = EffectReceipt{}
-	mi := &file_occurrences_proto_msgTypes[10]
+	mi := &file_occurrences_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1217,7 +1309,7 @@ func (x *EffectReceipt) String() string {
 func (*EffectReceipt) ProtoMessage() {}
 
 func (x *EffectReceipt) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[10]
+	mi := &file_occurrences_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1230,7 +1322,7 @@ func (x *EffectReceipt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EffectReceipt.ProtoReflect.Descriptor instead.
 func (*EffectReceipt) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{10}
+	return file_occurrences_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *EffectReceipt) GetOccurrenceId() string {
@@ -1279,7 +1371,7 @@ type EffectReceiptDetails struct {
 
 func (x *EffectReceiptDetails) Reset() {
 	*x = EffectReceiptDetails{}
-	mi := &file_occurrences_proto_msgTypes[11]
+	mi := &file_occurrences_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1291,7 +1383,7 @@ func (x *EffectReceiptDetails) String() string {
 func (*EffectReceiptDetails) ProtoMessage() {}
 
 func (x *EffectReceiptDetails) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[11]
+	mi := &file_occurrences_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1304,7 +1396,7 @@ func (x *EffectReceiptDetails) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EffectReceiptDetails.ProtoReflect.Descriptor instead.
 func (*EffectReceiptDetails) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{11}
+	return file_occurrences_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *EffectReceiptDetails) GetId() string {
@@ -1395,7 +1487,7 @@ type EffectReceiptRecordResponse struct {
 
 func (x *EffectReceiptRecordResponse) Reset() {
 	*x = EffectReceiptRecordResponse{}
-	mi := &file_occurrences_proto_msgTypes[12]
+	mi := &file_occurrences_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1407,7 +1499,7 @@ func (x *EffectReceiptRecordResponse) String() string {
 func (*EffectReceiptRecordResponse) ProtoMessage() {}
 
 func (x *EffectReceiptRecordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[12]
+	mi := &file_occurrences_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1420,7 +1512,7 @@ func (x *EffectReceiptRecordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EffectReceiptRecordResponse.ProtoReflect.Descriptor instead.
 func (*EffectReceiptRecordResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{12}
+	return file_occurrences_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *EffectReceiptRecordResponse) GetId() string {
@@ -1508,7 +1600,7 @@ type FailOccurrenceRequest struct {
 
 func (x *FailOccurrenceRequest) Reset() {
 	*x = FailOccurrenceRequest{}
-	mi := &file_occurrences_proto_msgTypes[13]
+	mi := &file_occurrences_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1520,7 +1612,7 @@ func (x *FailOccurrenceRequest) String() string {
 func (*FailOccurrenceRequest) ProtoMessage() {}
 
 func (x *FailOccurrenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[13]
+	mi := &file_occurrences_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1533,7 +1625,7 @@ func (x *FailOccurrenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailOccurrenceRequest.ProtoReflect.Descriptor instead.
 func (*FailOccurrenceRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{13}
+	return file_occurrences_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *FailOccurrenceRequest) GetEventStore() string {
@@ -1597,7 +1689,7 @@ type GetEffectReceiptRequest struct {
 
 func (x *GetEffectReceiptRequest) Reset() {
 	*x = GetEffectReceiptRequest{}
-	mi := &file_occurrences_proto_msgTypes[14]
+	mi := &file_occurrences_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1609,7 +1701,7 @@ func (x *GetEffectReceiptRequest) String() string {
 func (*GetEffectReceiptRequest) ProtoMessage() {}
 
 func (x *GetEffectReceiptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[14]
+	mi := &file_occurrences_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1622,7 +1714,7 @@ func (x *GetEffectReceiptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEffectReceiptRequest.ProtoReflect.Descriptor instead.
 func (*GetEffectReceiptRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{14}
+	return file_occurrences_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetEffectReceiptRequest) GetEventStore() string {
@@ -1665,7 +1757,7 @@ type GetOccurrenceRequest struct {
 
 func (x *GetOccurrenceRequest) Reset() {
 	*x = GetOccurrenceRequest{}
-	mi := &file_occurrences_proto_msgTypes[15]
+	mi := &file_occurrences_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1677,7 +1769,7 @@ func (x *GetOccurrenceRequest) String() string {
 func (*GetOccurrenceRequest) ProtoMessage() {}
 
 func (x *GetOccurrenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[15]
+	mi := &file_occurrences_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1690,7 +1782,7 @@ func (x *GetOccurrenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOccurrenceRequest.ProtoReflect.Descriptor instead.
 func (*GetOccurrenceRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{15}
+	return file_occurrences_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetOccurrenceRequest) GetEventStore() string {
@@ -1733,7 +1825,7 @@ type ObserveOccurrencesRequest struct {
 
 func (x *ObserveOccurrencesRequest) Reset() {
 	*x = ObserveOccurrencesRequest{}
-	mi := &file_occurrences_proto_msgTypes[16]
+	mi := &file_occurrences_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1745,7 +1837,7 @@ func (x *ObserveOccurrencesRequest) String() string {
 func (*ObserveOccurrencesRequest) ProtoMessage() {}
 
 func (x *ObserveOccurrencesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[16]
+	mi := &file_occurrences_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1758,7 +1850,7 @@ func (x *ObserveOccurrencesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObserveOccurrencesRequest.ProtoReflect.Descriptor instead.
 func (*ObserveOccurrencesRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{16}
+	return file_occurrences_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ObserveOccurrencesRequest) GetEventStore() string {
@@ -1807,7 +1899,7 @@ type OccurrenceClaimDetails struct {
 
 func (x *OccurrenceClaimDetails) Reset() {
 	*x = OccurrenceClaimDetails{}
-	mi := &file_occurrences_proto_msgTypes[17]
+	mi := &file_occurrences_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1819,7 +1911,7 @@ func (x *OccurrenceClaimDetails) String() string {
 func (*OccurrenceClaimDetails) ProtoMessage() {}
 
 func (x *OccurrenceClaimDetails) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[17]
+	mi := &file_occurrences_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1832,7 +1924,7 @@ func (x *OccurrenceClaimDetails) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OccurrenceClaimDetails.ProtoReflect.Descriptor instead.
 func (*OccurrenceClaimDetails) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{17}
+	return file_occurrences_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *OccurrenceClaimDetails) GetId() string {
@@ -1915,7 +2007,7 @@ type OccurrenceEffectReceipt struct {
 
 func (x *OccurrenceEffectReceipt) Reset() {
 	*x = OccurrenceEffectReceipt{}
-	mi := &file_occurrences_proto_msgTypes[18]
+	mi := &file_occurrences_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1927,7 +2019,7 @@ func (x *OccurrenceEffectReceipt) String() string {
 func (*OccurrenceEffectReceipt) ProtoMessage() {}
 
 func (x *OccurrenceEffectReceipt) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[18]
+	mi := &file_occurrences_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1940,7 +2032,7 @@ func (x *OccurrenceEffectReceipt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OccurrenceEffectReceipt.ProtoReflect.Descriptor instead.
 func (*OccurrenceEffectReceipt) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{18}
+	return file_occurrences_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *OccurrenceEffectReceipt) GetNamespace() string {
@@ -1982,7 +2074,7 @@ type OccurrenceSnapshotResponse struct {
 
 func (x *OccurrenceSnapshotResponse) Reset() {
 	*x = OccurrenceSnapshotResponse{}
-	mi := &file_occurrences_proto_msgTypes[19]
+	mi := &file_occurrences_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1994,7 +2086,7 @@ func (x *OccurrenceSnapshotResponse) String() string {
 func (*OccurrenceSnapshotResponse) ProtoMessage() {}
 
 func (x *OccurrenceSnapshotResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[19]
+	mi := &file_occurrences_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2007,7 +2099,7 @@ func (x *OccurrenceSnapshotResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OccurrenceSnapshotResponse.ProtoReflect.Descriptor instead.
 func (*OccurrenceSnapshotResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{19}
+	return file_occurrences_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *OccurrenceSnapshotResponse) GetId() string {
@@ -2143,7 +2235,7 @@ type QueryResult_EffectReceiptRecordResponse struct {
 
 func (x *QueryResult_EffectReceiptRecordResponse) Reset() {
 	*x = QueryResult_EffectReceiptRecordResponse{}
-	mi := &file_occurrences_proto_msgTypes[20]
+	mi := &file_occurrences_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2155,7 +2247,7 @@ func (x *QueryResult_EffectReceiptRecordResponse) String() string {
 func (*QueryResult_EffectReceiptRecordResponse) ProtoMessage() {}
 
 func (x *QueryResult_EffectReceiptRecordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[20]
+	mi := &file_occurrences_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2168,7 +2260,7 @@ func (x *QueryResult_EffectReceiptRecordResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use QueryResult_EffectReceiptRecordResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_EffectReceiptRecordResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{20}
+	return file_occurrences_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *QueryResult_EffectReceiptRecordResponse) GetCorrelationId() *bcl.Guid {
@@ -2227,7 +2319,7 @@ type QueryResult_IEnumerable_OccurrenceSnapshotResponse struct {
 
 func (x *QueryResult_IEnumerable_OccurrenceSnapshotResponse) Reset() {
 	*x = QueryResult_IEnumerable_OccurrenceSnapshotResponse{}
-	mi := &file_occurrences_proto_msgTypes[21]
+	mi := &file_occurrences_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2239,7 +2331,7 @@ func (x *QueryResult_IEnumerable_OccurrenceSnapshotResponse) String() string {
 func (*QueryResult_IEnumerable_OccurrenceSnapshotResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_OccurrenceSnapshotResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[21]
+	mi := &file_occurrences_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2252,7 +2344,7 @@ func (x *QueryResult_IEnumerable_OccurrenceSnapshotResponse) ProtoReflect() prot
 
 // Deprecated: Use QueryResult_IEnumerable_OccurrenceSnapshotResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_OccurrenceSnapshotResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{21}
+	return file_occurrences_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *QueryResult_IEnumerable_OccurrenceSnapshotResponse) GetCorrelationId() *bcl.Guid {
@@ -2311,7 +2403,7 @@ type QueryResult_OccurrenceSnapshotResponse struct {
 
 func (x *QueryResult_OccurrenceSnapshotResponse) Reset() {
 	*x = QueryResult_OccurrenceSnapshotResponse{}
-	mi := &file_occurrences_proto_msgTypes[22]
+	mi := &file_occurrences_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2323,7 +2415,7 @@ func (x *QueryResult_OccurrenceSnapshotResponse) String() string {
 func (*QueryResult_OccurrenceSnapshotResponse) ProtoMessage() {}
 
 func (x *QueryResult_OccurrenceSnapshotResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[22]
+	mi := &file_occurrences_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2336,7 +2428,7 @@ func (x *QueryResult_OccurrenceSnapshotResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use QueryResult_OccurrenceSnapshotResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_OccurrenceSnapshotResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{22}
+	return file_occurrences_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *QueryResult_OccurrenceSnapshotResponse) GetCorrelationId() *bcl.Guid {
@@ -2394,7 +2486,7 @@ type RecordEffectReceiptRequest struct {
 
 func (x *RecordEffectReceiptRequest) Reset() {
 	*x = RecordEffectReceiptRequest{}
-	mi := &file_occurrences_proto_msgTypes[23]
+	mi := &file_occurrences_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2406,7 +2498,7 @@ func (x *RecordEffectReceiptRequest) String() string {
 func (*RecordEffectReceiptRequest) ProtoMessage() {}
 
 func (x *RecordEffectReceiptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[23]
+	mi := &file_occurrences_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2419,7 +2511,7 @@ func (x *RecordEffectReceiptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordEffectReceiptRequest.ProtoReflect.Descriptor instead.
 func (*RecordEffectReceiptRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{23}
+	return file_occurrences_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *RecordEffectReceiptRequest) GetEventStore() string {
@@ -2467,7 +2559,7 @@ type RecordEffectReceiptResponse struct {
 
 func (x *RecordEffectReceiptResponse) Reset() {
 	*x = RecordEffectReceiptResponse{}
-	mi := &file_occurrences_proto_msgTypes[24]
+	mi := &file_occurrences_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2479,7 +2571,7 @@ func (x *RecordEffectReceiptResponse) String() string {
 func (*RecordEffectReceiptResponse) ProtoMessage() {}
 
 func (x *RecordEffectReceiptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[24]
+	mi := &file_occurrences_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2492,7 +2584,7 @@ func (x *RecordEffectReceiptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordEffectReceiptResponse.ProtoReflect.Descriptor instead.
 func (*RecordEffectReceiptResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{24}
+	return file_occurrences_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RecordEffectReceiptResponse) GetStatus() EffectReceiptStatus {
@@ -2505,6 +2597,134 @@ func (x *RecordEffectReceiptResponse) GetStatus() EffectReceiptStatus {
 func (x *RecordEffectReceiptResponse) GetReceipt() *EffectReceiptDetails {
 	if x != nil {
 		return x.Receipt
+	}
+	return nil
+}
+
+type RecordLifecycleOccurrenceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	ActivationId  string                 `protobuf:"bytes,2,opt,name=ActivationId,proto3" json:"ActivationId,omitempty"`
+	Kind          OccurrenceKind         `protobuf:"varint,3,opt,name=Kind,proto3,enum=Cratis.Chronicle.Contracts.Occurrences.OccurrenceKind" json:"Kind,omitempty"`
+	AllNamespaces bool                   `protobuf:"varint,4,opt,name=AllNamespaces,proto3" json:"AllNamespaces,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecordLifecycleOccurrenceRequest) Reset() {
+	*x = RecordLifecycleOccurrenceRequest{}
+	mi := &file_occurrences_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordLifecycleOccurrenceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordLifecycleOccurrenceRequest) ProtoMessage() {}
+
+func (x *RecordLifecycleOccurrenceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_occurrences_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordLifecycleOccurrenceRequest.ProtoReflect.Descriptor instead.
+func (*RecordLifecycleOccurrenceRequest) Descriptor() ([]byte, []int) {
+	return file_occurrences_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *RecordLifecycleOccurrenceRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *RecordLifecycleOccurrenceRequest) GetActivationId() string {
+	if x != nil {
+		return x.ActivationId
+	}
+	return ""
+}
+
+func (x *RecordLifecycleOccurrenceRequest) GetKind() OccurrenceKind {
+	if x != nil {
+		return x.Kind
+	}
+	return OccurrenceKind_Application
+}
+
+func (x *RecordLifecycleOccurrenceRequest) GetAllNamespaces() bool {
+	if x != nil {
+		return x.AllNamespaces
+	}
+	return false
+}
+
+type RecordLifecycleOccurrenceResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Id            string                  `protobuf:"bytes,1,opt,name=Id,proto3" json:"Id,omitempty"`
+	Status        OccurrenceIngressStatus `protobuf:"varint,2,opt,name=Status,proto3,enum=Cratis.Chronicle.Contracts.Occurrences.OccurrenceIngressStatus" json:"Status,omitempty"`
+	Namespaces    []string                `protobuf:"bytes,3,rep,name=Namespaces,proto3" json:"Namespaces,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecordLifecycleOccurrenceResponse) Reset() {
+	*x = RecordLifecycleOccurrenceResponse{}
+	mi := &file_occurrences_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordLifecycleOccurrenceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordLifecycleOccurrenceResponse) ProtoMessage() {}
+
+func (x *RecordLifecycleOccurrenceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_occurrences_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordLifecycleOccurrenceResponse.ProtoReflect.Descriptor instead.
+func (*RecordLifecycleOccurrenceResponse) Descriptor() ([]byte, []int) {
+	return file_occurrences_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *RecordLifecycleOccurrenceResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RecordLifecycleOccurrenceResponse) GetStatus() OccurrenceIngressStatus {
+	if x != nil {
+		return x.Status
+	}
+	return OccurrenceIngressStatus_OCCURRENCE_INGRESS_STATUS_Recorded
+}
+
+func (x *RecordLifecycleOccurrenceResponse) GetNamespaces() []string {
+	if x != nil {
+		return x.Namespaces
 	}
 	return nil
 }
@@ -2524,7 +2744,7 @@ type RecordOccurrenceRequest struct {
 
 func (x *RecordOccurrenceRequest) Reset() {
 	*x = RecordOccurrenceRequest{}
-	mi := &file_occurrences_proto_msgTypes[25]
+	mi := &file_occurrences_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2536,7 +2756,7 @@ func (x *RecordOccurrenceRequest) String() string {
 func (*RecordOccurrenceRequest) ProtoMessage() {}
 
 func (x *RecordOccurrenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[25]
+	mi := &file_occurrences_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2549,7 +2769,7 @@ func (x *RecordOccurrenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordOccurrenceRequest.ProtoReflect.Descriptor instead.
 func (*RecordOccurrenceRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{25}
+	return file_occurrences_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *RecordOccurrenceRequest) GetEventStore() string {
@@ -2611,7 +2831,7 @@ type RecordOccurrenceResponse struct {
 
 func (x *RecordOccurrenceResponse) Reset() {
 	*x = RecordOccurrenceResponse{}
-	mi := &file_occurrences_proto_msgTypes[26]
+	mi := &file_occurrences_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2623,7 +2843,7 @@ func (x *RecordOccurrenceResponse) String() string {
 func (*RecordOccurrenceResponse) ProtoMessage() {}
 
 func (x *RecordOccurrenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[26]
+	mi := &file_occurrences_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2636,7 +2856,7 @@ func (x *RecordOccurrenceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordOccurrenceResponse.ProtoReflect.Descriptor instead.
 func (*RecordOccurrenceResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{26}
+	return file_occurrences_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *RecordOccurrenceResponse) GetId() string {
@@ -2663,7 +2883,7 @@ type RegisterTriggersRequest struct {
 
 func (x *RegisterTriggersRequest) Reset() {
 	*x = RegisterTriggersRequest{}
-	mi := &file_occurrences_proto_msgTypes[27]
+	mi := &file_occurrences_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2675,7 +2895,7 @@ func (x *RegisterTriggersRequest) String() string {
 func (*RegisterTriggersRequest) ProtoMessage() {}
 
 func (x *RegisterTriggersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[27]
+	mi := &file_occurrences_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2688,7 +2908,7 @@ func (x *RegisterTriggersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterTriggersRequest.ProtoReflect.Descriptor instead.
 func (*RegisterTriggersRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{27}
+	return file_occurrences_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RegisterTriggersRequest) GetEventStore() string {
@@ -2715,7 +2935,7 @@ type RegisterTriggersResponse struct {
 
 func (x *RegisterTriggersResponse) Reset() {
 	*x = RegisterTriggersResponse{}
-	mi := &file_occurrences_proto_msgTypes[28]
+	mi := &file_occurrences_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2727,7 +2947,7 @@ func (x *RegisterTriggersResponse) String() string {
 func (*RegisterTriggersResponse) ProtoMessage() {}
 
 func (x *RegisterTriggersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[28]
+	mi := &file_occurrences_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2740,7 +2960,7 @@ func (x *RegisterTriggersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterTriggersResponse.ProtoReflect.Descriptor instead.
 func (*RegisterTriggersResponse) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{28}
+	return file_occurrences_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *RegisterTriggersResponse) GetRegistered() bool {
@@ -2772,7 +2992,7 @@ type RenewOccurrenceLeaseRequest struct {
 
 func (x *RenewOccurrenceLeaseRequest) Reset() {
 	*x = RenewOccurrenceLeaseRequest{}
-	mi := &file_occurrences_proto_msgTypes[29]
+	mi := &file_occurrences_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2784,7 +3004,7 @@ func (x *RenewOccurrenceLeaseRequest) String() string {
 func (*RenewOccurrenceLeaseRequest) ProtoMessage() {}
 
 func (x *RenewOccurrenceLeaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[29]
+	mi := &file_occurrences_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2797,7 +3017,7 @@ func (x *RenewOccurrenceLeaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenewOccurrenceLeaseRequest.ProtoReflect.Descriptor instead.
 func (*RenewOccurrenceLeaseRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{29}
+	return file_occurrences_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *RenewOccurrenceLeaseRequest) GetEventStore() string {
@@ -2862,7 +3082,7 @@ type RetryQuarantinedOccurrenceRequest struct {
 
 func (x *RetryQuarantinedOccurrenceRequest) Reset() {
 	*x = RetryQuarantinedOccurrenceRequest{}
-	mi := &file_occurrences_proto_msgTypes[30]
+	mi := &file_occurrences_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2874,7 +3094,7 @@ func (x *RetryQuarantinedOccurrenceRequest) String() string {
 func (*RetryQuarantinedOccurrenceRequest) ProtoMessage() {}
 
 func (x *RetryQuarantinedOccurrenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[30]
+	mi := &file_occurrences_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2887,7 +3107,7 @@ func (x *RetryQuarantinedOccurrenceRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use RetryQuarantinedOccurrenceRequest.ProtoReflect.Descriptor instead.
 func (*RetryQuarantinedOccurrenceRequest) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{30}
+	return file_occurrences_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *RetryQuarantinedOccurrenceRequest) GetEventStore() string {
@@ -2935,7 +3155,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_occurrences_proto_msgTypes[31]
+	mi := &file_occurrences_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2947,7 +3167,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[31]
+	mi := &file_occurrences_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2960,7 +3180,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{31}
+	return file_occurrences_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -2981,7 +3201,7 @@ type TriggerRegistration struct {
 
 func (x *TriggerRegistration) Reset() {
 	*x = TriggerRegistration{}
-	mi := &file_occurrences_proto_msgTypes[32]
+	mi := &file_occurrences_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2993,7 +3213,7 @@ func (x *TriggerRegistration) String() string {
 func (*TriggerRegistration) ProtoMessage() {}
 
 func (x *TriggerRegistration) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[32]
+	mi := &file_occurrences_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3006,7 +3226,7 @@ func (x *TriggerRegistration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TriggerRegistration.ProtoReflect.Descriptor instead.
 func (*TriggerRegistration) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{32}
+	return file_occurrences_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *TriggerRegistration) GetId() string {
@@ -3041,7 +3261,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_occurrences_proto_msgTypes[33]
+	mi := &file_occurrences_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3053,7 +3273,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_occurrences_proto_msgTypes[33]
+	mi := &file_occurrences_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3066,7 +3286,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_occurrences_proto_rawDescGZIP(), []int{33}
+	return file_occurrences_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -3138,7 +3358,15 @@ const file_occurrences_proto_rawDesc = "" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
 	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\x12_\n" +
-	"\bResponse\x18\a \x01(\v2C.Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponseR\bResponse\"\xe3\x03\n" +
+	"\bResponse\x18\a \x01(\v2C.Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponseR\bResponse\"\xf5\x03\n" +
+	"/CommandResult_RecordLifecycleOccurrenceResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12f\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v28.Cratis.Chronicle.Contracts.Occurrences.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\x12e\n" +
+	"\bResponse\x18\a \x01(\v2I.Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceResponseR\bResponse\"\xe3\x03\n" +
 	"&CommandResult_RecordOccurrenceResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
 	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12f\n" +
@@ -3299,7 +3527,20 @@ const file_occurrences_proto_rawDesc = "" +
 	"\aReasons\x18\x05 \x03(\tR\aReasons\"\xca\x01\n" +
 	"\x1bRecordEffectReceiptResponse\x12S\n" +
 	"\x06Status\x18\x01 \x01(\x0e2;.Cratis.Chronicle.Contracts.Occurrences.EffectReceiptStatusR\x06Status\x12V\n" +
-	"\aReceipt\x18\x02 \x01(\v2<.Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetailsR\aReceipt\"\xa9\x02\n" +
+	"\aReceipt\x18\x02 \x01(\v2<.Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetailsR\aReceipt\"\xd8\x01\n" +
+	" RecordLifecycleOccurrenceRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\"\n" +
+	"\fActivationId\x18\x02 \x01(\tR\fActivationId\x12J\n" +
+	"\x04Kind\x18\x03 \x01(\x0e26.Cratis.Chronicle.Contracts.Occurrences.OccurrenceKindR\x04Kind\x12$\n" +
+	"\rAllNamespaces\x18\x04 \x01(\bR\rAllNamespaces\"\xac\x01\n" +
+	"!RecordLifecycleOccurrenceResponse\x12\x0e\n" +
+	"\x02Id\x18\x01 \x01(\tR\x02Id\x12W\n" +
+	"\x06Status\x18\x02 \x01(\x0e2?.Cratis.Chronicle.Contracts.Occurrences.OccurrenceIngressStatusR\x06Status\x12\x1e\n" +
+	"\n" +
+	"Namespaces\x18\x03 \x03(\tR\n" +
+	"Namespaces\"\xa9\x02\n" +
 	"\x17RecordOccurrenceRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -3383,7 +3624,7 @@ const file_occurrences_proto_rawDesc = "" +
 	"\aUnknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\xd6\x0e\n" +
+	"\x05Error\x10\x032\x97\x10\n" +
 	"\vOccurrences\x12\xa3\x01\n" +
 	"\x10ClaimOccurrences\x12?.Cratis.Chronicle.Contracts.Occurrences.ClaimOccurrencesRequest\x1aN.Cratis.Chronicle.Contracts.Occurrences.CommandResult_ClaimOccurrencesResponse\x12\xa9\x01\n" +
 	"\x12CompleteOccurrence\x12A.Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceRequest\x1aP.Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse\x12\xa1\x01\n" +
@@ -3391,7 +3632,8 @@ const file_occurrences_proto_rawDesc = "" +
 	"\x10GetEffectReceipt\x12?.Cratis.Chronicle.Contracts.Occurrences.GetEffectReceiptRequest\x1aO.Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse\x12\x9d\x01\n" +
 	"\rGetOccurrence\x12<.Cratis.Chronicle.Contracts.Occurrences.GetOccurrenceRequest\x1aN.Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse\x12\xb5\x01\n" +
 	"\x12ObserveOccurrences\x12A.Cratis.Chronicle.Contracts.Occurrences.ObserveOccurrencesRequest\x1aZ.Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse0\x01\x12\xac\x01\n" +
-	"\x13RecordEffectReceipt\x12B.Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest\x1aQ.Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse\x12\xa3\x01\n" +
+	"\x13RecordEffectReceipt\x12B.Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest\x1aQ.Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse\x12\xbe\x01\n" +
+	"\x19RecordLifecycleOccurrence\x12H.Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceRequest\x1aW.Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordLifecycleOccurrenceResponse\x12\xa3\x01\n" +
 	"\x10RecordOccurrence\x12?.Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceRequest\x1aN.Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse\x12\xa3\x01\n" +
 	"\x10RegisterTriggers\x12?.Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersRequest\x1aN.Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse\x12\xad\x01\n" +
 	"\x14RenewOccurrenceLease\x12C.Cratis.Chronicle.Contracts.Occurrences.RenewOccurrenceLeaseRequest\x1aP.Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse\x12\xa6\x01\n" +
@@ -3411,7 +3653,7 @@ func file_occurrences_proto_rawDescGZIP() []byte {
 }
 
 var file_occurrences_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_occurrences_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_occurrences_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_occurrences_proto_goTypes = []any{
 	(EffectOutcome)(0),                                         // 0: Cratis.Chronicle.Contracts.Occurrences.EffectOutcome
 	(EffectReceiptStatus)(0),                                   // 1: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptStatus
@@ -3426,117 +3668,127 @@ var file_occurrences_proto_goTypes = []any{
 	(*CommandResult_ClaimOccurrencesResponse)(nil),             // 10: Cratis.Chronicle.Contracts.Occurrences.CommandResult_ClaimOccurrencesResponse
 	(*CommandResult_CompleteOccurrenceResponse)(nil),           // 11: Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse
 	(*CommandResult_RecordEffectReceiptResponse)(nil),          // 12: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse
-	(*CommandResult_RecordOccurrenceResponse)(nil),             // 13: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse
-	(*CommandResult_RegisterTriggersResponse)(nil),             // 14: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse
-	(*CompleteOccurrenceRequest)(nil),                          // 15: Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceRequest
-	(*CompleteOccurrenceResponse)(nil),                         // 16: Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceResponse
-	(*EffectReceipt)(nil),                                      // 17: Cratis.Chronicle.Contracts.Occurrences.EffectReceipt
-	(*EffectReceiptDetails)(nil),                               // 18: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails
-	(*EffectReceiptRecordResponse)(nil),                        // 19: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse
-	(*FailOccurrenceRequest)(nil),                              // 20: Cratis.Chronicle.Contracts.Occurrences.FailOccurrenceRequest
-	(*GetEffectReceiptRequest)(nil),                            // 21: Cratis.Chronicle.Contracts.Occurrences.GetEffectReceiptRequest
-	(*GetOccurrenceRequest)(nil),                               // 22: Cratis.Chronicle.Contracts.Occurrences.GetOccurrenceRequest
-	(*ObserveOccurrencesRequest)(nil),                          // 23: Cratis.Chronicle.Contracts.Occurrences.ObserveOccurrencesRequest
-	(*OccurrenceClaimDetails)(nil),                             // 24: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails
-	(*OccurrenceEffectReceipt)(nil),                            // 25: Cratis.Chronicle.Contracts.Occurrences.OccurrenceEffectReceipt
-	(*OccurrenceSnapshotResponse)(nil),                         // 26: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse
-	(*QueryResult_EffectReceiptRecordResponse)(nil),            // 27: Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse
-	(*QueryResult_IEnumerable_OccurrenceSnapshotResponse)(nil), // 28: Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse
-	(*QueryResult_OccurrenceSnapshotResponse)(nil),             // 29: Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse
-	(*RecordEffectReceiptRequest)(nil),                         // 30: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest
-	(*RecordEffectReceiptResponse)(nil),                        // 31: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponse
-	(*RecordOccurrenceRequest)(nil),                            // 32: Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceRequest
-	(*RecordOccurrenceResponse)(nil),                           // 33: Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceResponse
-	(*RegisterTriggersRequest)(nil),                            // 34: Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersRequest
-	(*RegisterTriggersResponse)(nil),                           // 35: Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersResponse
-	(*RenewOccurrenceLeaseRequest)(nil),                        // 36: Cratis.Chronicle.Contracts.Occurrences.RenewOccurrenceLeaseRequest
-	(*RetryQuarantinedOccurrenceRequest)(nil),                  // 37: Cratis.Chronicle.Contracts.Occurrences.RetryQuarantinedOccurrenceRequest
-	(*SerializableDateTimeOffset)(nil),                         // 38: Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	(*TriggerRegistration)(nil),                                // 39: Cratis.Chronicle.Contracts.Occurrences.TriggerRegistration
-	(*ValidationResult)(nil),                                   // 40: Cratis.Chronicle.Contracts.Occurrences.ValidationResult
-	(*bcl.Guid)(nil),                                           // 41: bcl.Guid
+	(*CommandResult_RecordLifecycleOccurrenceResponse)(nil),    // 13: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordLifecycleOccurrenceResponse
+	(*CommandResult_RecordOccurrenceResponse)(nil),             // 14: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse
+	(*CommandResult_RegisterTriggersResponse)(nil),             // 15: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse
+	(*CompleteOccurrenceRequest)(nil),                          // 16: Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceRequest
+	(*CompleteOccurrenceResponse)(nil),                         // 17: Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceResponse
+	(*EffectReceipt)(nil),                                      // 18: Cratis.Chronicle.Contracts.Occurrences.EffectReceipt
+	(*EffectReceiptDetails)(nil),                               // 19: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails
+	(*EffectReceiptRecordResponse)(nil),                        // 20: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse
+	(*FailOccurrenceRequest)(nil),                              // 21: Cratis.Chronicle.Contracts.Occurrences.FailOccurrenceRequest
+	(*GetEffectReceiptRequest)(nil),                            // 22: Cratis.Chronicle.Contracts.Occurrences.GetEffectReceiptRequest
+	(*GetOccurrenceRequest)(nil),                               // 23: Cratis.Chronicle.Contracts.Occurrences.GetOccurrenceRequest
+	(*ObserveOccurrencesRequest)(nil),                          // 24: Cratis.Chronicle.Contracts.Occurrences.ObserveOccurrencesRequest
+	(*OccurrenceClaimDetails)(nil),                             // 25: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails
+	(*OccurrenceEffectReceipt)(nil),                            // 26: Cratis.Chronicle.Contracts.Occurrences.OccurrenceEffectReceipt
+	(*OccurrenceSnapshotResponse)(nil),                         // 27: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse
+	(*QueryResult_EffectReceiptRecordResponse)(nil),            // 28: Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse
+	(*QueryResult_IEnumerable_OccurrenceSnapshotResponse)(nil), // 29: Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse
+	(*QueryResult_OccurrenceSnapshotResponse)(nil),             // 30: Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse
+	(*RecordEffectReceiptRequest)(nil),                         // 31: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest
+	(*RecordEffectReceiptResponse)(nil),                        // 32: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponse
+	(*RecordLifecycleOccurrenceRequest)(nil),                   // 33: Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceRequest
+	(*RecordLifecycleOccurrenceResponse)(nil),                  // 34: Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceResponse
+	(*RecordOccurrenceRequest)(nil),                            // 35: Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceRequest
+	(*RecordOccurrenceResponse)(nil),                           // 36: Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceResponse
+	(*RegisterTriggersRequest)(nil),                            // 37: Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersRequest
+	(*RegisterTriggersResponse)(nil),                           // 38: Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersResponse
+	(*RenewOccurrenceLeaseRequest)(nil),                        // 39: Cratis.Chronicle.Contracts.Occurrences.RenewOccurrenceLeaseRequest
+	(*RetryQuarantinedOccurrenceRequest)(nil),                  // 40: Cratis.Chronicle.Contracts.Occurrences.RetryQuarantinedOccurrenceRequest
+	(*SerializableDateTimeOffset)(nil),                         // 41: Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	(*TriggerRegistration)(nil),                                // 42: Cratis.Chronicle.Contracts.Occurrences.TriggerRegistration
+	(*ValidationResult)(nil),                                   // 43: Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	(*bcl.Guid)(nil),                                           // 44: bcl.Guid
 }
 var file_occurrences_proto_depIdxs = []int32{
-	24, // 0: Cratis.Chronicle.Contracts.Occurrences.ClaimOccurrencesResponse.Claims:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails
-	41, // 1: Cratis.Chronicle.Contracts.Occurrences.CommandResult_Boolean.CorrelationId:type_name -> bcl.Guid
-	40, // 2: Cratis.Chronicle.Contracts.Occurrences.CommandResult_Boolean.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
-	41, // 3: Cratis.Chronicle.Contracts.Occurrences.CommandResult_ClaimOccurrencesResponse.CorrelationId:type_name -> bcl.Guid
-	40, // 4: Cratis.Chronicle.Contracts.Occurrences.CommandResult_ClaimOccurrencesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	25, // 0: Cratis.Chronicle.Contracts.Occurrences.ClaimOccurrencesResponse.Claims:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails
+	44, // 1: Cratis.Chronicle.Contracts.Occurrences.CommandResult_Boolean.CorrelationId:type_name -> bcl.Guid
+	43, // 2: Cratis.Chronicle.Contracts.Occurrences.CommandResult_Boolean.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	44, // 3: Cratis.Chronicle.Contracts.Occurrences.CommandResult_ClaimOccurrencesResponse.CorrelationId:type_name -> bcl.Guid
+	43, // 4: Cratis.Chronicle.Contracts.Occurrences.CommandResult_ClaimOccurrencesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
 	8,  // 5: Cratis.Chronicle.Contracts.Occurrences.CommandResult_ClaimOccurrencesResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.ClaimOccurrencesResponse
-	41, // 6: Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse.CorrelationId:type_name -> bcl.Guid
-	40, // 7: Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
-	16, // 8: Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceResponse
-	41, // 9: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse.CorrelationId:type_name -> bcl.Guid
-	40, // 10: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
-	31, // 11: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponse
-	41, // 12: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse.CorrelationId:type_name -> bcl.Guid
-	40, // 13: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
-	33, // 14: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceResponse
-	41, // 15: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse.CorrelationId:type_name -> bcl.Guid
-	40, // 16: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
-	35, // 17: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersResponse
-	4,  // 18: Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceResponse.Status:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceLeaseResult
-	0,  // 19: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails.Outcome:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectOutcome
-	38, // 20: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	0,  // 21: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectOutcome
-	38, // 22: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	3,  // 23: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails.Kind:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceKind
-	38, // 24: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	38, // 25: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails.Due:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	38, // 26: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails.LeaseExpiry:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	18, // 27: Cratis.Chronicle.Contracts.Occurrences.OccurrenceEffectReceipt.Receipt:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails
-	3,  // 28: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.Kind:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceKind
-	38, // 29: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	38, // 30: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.Due:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	5,  // 31: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.State:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceState
-	38, // 32: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.LeaseExpiry:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	38, // 33: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.NextAttempt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	38, // 34: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.RetriedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
-	25, // 35: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.Receipts:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceEffectReceipt
-	41, // 36: Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse.CorrelationId:type_name -> bcl.Guid
-	40, // 37: Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
-	19, // 38: Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse.Data:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse
-	41, // 39: Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse.CorrelationId:type_name -> bcl.Guid
-	40, // 40: Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
-	26, // 41: Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse.Data:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse
-	41, // 42: Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse.CorrelationId:type_name -> bcl.Guid
-	40, // 43: Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
-	26, // 44: Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse.Data:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse
-	17, // 45: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceipt
-	0,  // 46: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest.Outcome:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectOutcome
-	1,  // 47: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponse.Status:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceiptStatus
-	18, // 48: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponse.Receipt:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails
-	3,  // 49: Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceRequest.Kind:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceKind
-	2,  // 50: Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceResponse.Status:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceIngressStatus
-	39, // 51: Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersRequest.Triggers:type_name -> Cratis.Chronicle.Contracts.Occurrences.TriggerRegistration
-	6,  // 52: Cratis.Chronicle.Contracts.Occurrences.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResultSeverity
-	7,  // 53: Cratis.Chronicle.Contracts.Occurrences.Occurrences.ClaimOccurrences:input_type -> Cratis.Chronicle.Contracts.Occurrences.ClaimOccurrencesRequest
-	15, // 54: Cratis.Chronicle.Contracts.Occurrences.Occurrences.CompleteOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceRequest
-	20, // 55: Cratis.Chronicle.Contracts.Occurrences.Occurrences.FailOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.FailOccurrenceRequest
-	21, // 56: Cratis.Chronicle.Contracts.Occurrences.Occurrences.GetEffectReceipt:input_type -> Cratis.Chronicle.Contracts.Occurrences.GetEffectReceiptRequest
-	22, // 57: Cratis.Chronicle.Contracts.Occurrences.Occurrences.GetOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.GetOccurrenceRequest
-	23, // 58: Cratis.Chronicle.Contracts.Occurrences.Occurrences.ObserveOccurrences:input_type -> Cratis.Chronicle.Contracts.Occurrences.ObserveOccurrencesRequest
-	30, // 59: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordEffectReceipt:input_type -> Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest
-	32, // 60: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceRequest
-	34, // 61: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RegisterTriggers:input_type -> Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersRequest
-	36, // 62: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RenewOccurrenceLease:input_type -> Cratis.Chronicle.Contracts.Occurrences.RenewOccurrenceLeaseRequest
-	37, // 63: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RetryQuarantinedOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.RetryQuarantinedOccurrenceRequest
-	10, // 64: Cratis.Chronicle.Contracts.Occurrences.Occurrences.ClaimOccurrences:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_ClaimOccurrencesResponse
-	11, // 65: Cratis.Chronicle.Contracts.Occurrences.Occurrences.CompleteOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse
-	11, // 66: Cratis.Chronicle.Contracts.Occurrences.Occurrences.FailOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse
-	27, // 67: Cratis.Chronicle.Contracts.Occurrences.Occurrences.GetEffectReceipt:output_type -> Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse
-	29, // 68: Cratis.Chronicle.Contracts.Occurrences.Occurrences.GetOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse
-	28, // 69: Cratis.Chronicle.Contracts.Occurrences.Occurrences.ObserveOccurrences:output_type -> Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse
-	12, // 70: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordEffectReceipt:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse
-	13, // 71: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse
-	14, // 72: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RegisterTriggers:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse
-	11, // 73: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RenewOccurrenceLease:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse
-	9,  // 74: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RetryQuarantinedOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_Boolean
-	64, // [64:75] is the sub-list for method output_type
-	53, // [53:64] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	44, // 6: Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse.CorrelationId:type_name -> bcl.Guid
+	43, // 7: Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	17, // 8: Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceResponse
+	44, // 9: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse.CorrelationId:type_name -> bcl.Guid
+	43, // 10: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	32, // 11: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponse
+	44, // 12: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordLifecycleOccurrenceResponse.CorrelationId:type_name -> bcl.Guid
+	43, // 13: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordLifecycleOccurrenceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	34, // 14: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordLifecycleOccurrenceResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceResponse
+	44, // 15: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse.CorrelationId:type_name -> bcl.Guid
+	43, // 16: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	36, // 17: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceResponse
+	44, // 18: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse.CorrelationId:type_name -> bcl.Guid
+	43, // 19: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	38, // 20: Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse.Response:type_name -> Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersResponse
+	4,  // 21: Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceResponse.Status:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceLeaseResult
+	0,  // 22: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails.Outcome:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectOutcome
+	41, // 23: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	0,  // 24: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectOutcome
+	41, // 25: Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	3,  // 26: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails.Kind:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceKind
+	41, // 27: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	41, // 28: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails.Due:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	41, // 29: Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails.LeaseExpiry:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	19, // 30: Cratis.Chronicle.Contracts.Occurrences.OccurrenceEffectReceipt.Receipt:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails
+	3,  // 31: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.Kind:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceKind
+	41, // 32: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	41, // 33: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.Due:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	5,  // 34: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.State:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceState
+	41, // 35: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.LeaseExpiry:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	41, // 36: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.NextAttempt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	41, // 37: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.RetriedAt:type_name -> Cratis.Chronicle.Contracts.Occurrences.SerializableDateTimeOffset
+	26, // 38: Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse.Receipts:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceEffectReceipt
+	44, // 39: Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse.CorrelationId:type_name -> bcl.Guid
+	43, // 40: Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	20, // 41: Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse.Data:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse
+	44, // 42: Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse.CorrelationId:type_name -> bcl.Guid
+	43, // 43: Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	27, // 44: Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse.Data:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse
+	44, // 45: Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse.CorrelationId:type_name -> bcl.Guid
+	43, // 46: Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResult
+	27, // 47: Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse.Data:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse
+	18, // 48: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceipt
+	0,  // 49: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest.Outcome:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectOutcome
+	1,  // 50: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponse.Status:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceiptStatus
+	19, // 51: Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptResponse.Receipt:type_name -> Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails
+	3,  // 52: Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceRequest.Kind:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceKind
+	2,  // 53: Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceResponse.Status:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceIngressStatus
+	3,  // 54: Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceRequest.Kind:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceKind
+	2,  // 55: Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceResponse.Status:type_name -> Cratis.Chronicle.Contracts.Occurrences.OccurrenceIngressStatus
+	42, // 56: Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersRequest.Triggers:type_name -> Cratis.Chronicle.Contracts.Occurrences.TriggerRegistration
+	6,  // 57: Cratis.Chronicle.Contracts.Occurrences.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Occurrences.ValidationResultSeverity
+	7,  // 58: Cratis.Chronicle.Contracts.Occurrences.Occurrences.ClaimOccurrences:input_type -> Cratis.Chronicle.Contracts.Occurrences.ClaimOccurrencesRequest
+	16, // 59: Cratis.Chronicle.Contracts.Occurrences.Occurrences.CompleteOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.CompleteOccurrenceRequest
+	21, // 60: Cratis.Chronicle.Contracts.Occurrences.Occurrences.FailOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.FailOccurrenceRequest
+	22, // 61: Cratis.Chronicle.Contracts.Occurrences.Occurrences.GetEffectReceipt:input_type -> Cratis.Chronicle.Contracts.Occurrences.GetEffectReceiptRequest
+	23, // 62: Cratis.Chronicle.Contracts.Occurrences.Occurrences.GetOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.GetOccurrenceRequest
+	24, // 63: Cratis.Chronicle.Contracts.Occurrences.Occurrences.ObserveOccurrences:input_type -> Cratis.Chronicle.Contracts.Occurrences.ObserveOccurrencesRequest
+	31, // 64: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordEffectReceipt:input_type -> Cratis.Chronicle.Contracts.Occurrences.RecordEffectReceiptRequest
+	33, // 65: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordLifecycleOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceRequest
+	35, // 66: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceRequest
+	37, // 67: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RegisterTriggers:input_type -> Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersRequest
+	39, // 68: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RenewOccurrenceLease:input_type -> Cratis.Chronicle.Contracts.Occurrences.RenewOccurrenceLeaseRequest
+	40, // 69: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RetryQuarantinedOccurrence:input_type -> Cratis.Chronicle.Contracts.Occurrences.RetryQuarantinedOccurrenceRequest
+	10, // 70: Cratis.Chronicle.Contracts.Occurrences.Occurrences.ClaimOccurrences:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_ClaimOccurrencesResponse
+	11, // 71: Cratis.Chronicle.Contracts.Occurrences.Occurrences.CompleteOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse
+	11, // 72: Cratis.Chronicle.Contracts.Occurrences.Occurrences.FailOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse
+	28, // 73: Cratis.Chronicle.Contracts.Occurrences.Occurrences.GetEffectReceipt:output_type -> Cratis.Chronicle.Contracts.Occurrences.QueryResult_EffectReceiptRecordResponse
+	30, // 74: Cratis.Chronicle.Contracts.Occurrences.Occurrences.GetOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.QueryResult_OccurrenceSnapshotResponse
+	29, // 75: Cratis.Chronicle.Contracts.Occurrences.Occurrences.ObserveOccurrences:output_type -> Cratis.Chronicle.Contracts.Occurrences.QueryResult_IEnumerable_OccurrenceSnapshotResponse
+	12, // 76: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordEffectReceipt:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordEffectReceiptResponse
+	13, // 77: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordLifecycleOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordLifecycleOccurrenceResponse
+	14, // 78: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RecordOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_RecordOccurrenceResponse
+	15, // 79: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RegisterTriggers:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_RegisterTriggersResponse
+	11, // 80: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RenewOccurrenceLease:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_CompleteOccurrenceResponse
+	9,  // 81: Cratis.Chronicle.Contracts.Occurrences.Occurrences.RetryQuarantinedOccurrence:output_type -> Cratis.Chronicle.Contracts.Occurrences.CommandResult_Boolean
+	70, // [70:82] is the sub-list for method output_type
+	58, // [58:70] is the sub-list for method input_type
+	58, // [58:58] is the sub-list for extension type_name
+	58, // [58:58] is the sub-list for extension extendee
+	0,  // [0:58] is the sub-list for field type_name
 }
 
 func init() { file_occurrences_proto_init() }
@@ -3550,7 +3802,7 @@ func file_occurrences_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_occurrences_proto_rawDesc), len(file_occurrences_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   34,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

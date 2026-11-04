@@ -14,8 +14,10 @@ import (
 )
 
 // eventLogStatisticsObservers are the kernel-owned event-log observers every
-// store has. They observe all event types, so they share the test's partitions.
-var eventLogStatisticsObservers = []string{"$system.statistics.event-types", "$system.statistics.event-types.global"}
+// store has (on 19.123 the global statistics observer stays
+// disconnected, so it is not awaited). They observe all event types, so they
+// share the test's partitions.
+var eventLogStatisticsObservers = []string{"$system.statistics.event-types"}
 
 // awaitObserversObserving waits until each named event-log observer has a live
 // subscription in the kernel's observing state (running state Active).

@@ -83,6 +83,9 @@ managed:
       path: readmodelexplorer.proto
       value: github.com/cratis/chronicle.go/contracts/readmodelexplorer
     - file_option: go_package
+      path: readmodellookups.proto
+      value: github.com/cratis/chronicle.go/contracts/readmodellookups
+    - file_option: go_package
       path: readmodels.proto
       value: github.com/cratis/chronicle.go/contracts/readmodels
     - file_option: go_package
