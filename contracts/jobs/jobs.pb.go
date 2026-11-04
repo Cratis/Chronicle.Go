@@ -22,6 +22,64 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type JobCommandRefusal int32
+
+const (
+	JobCommandRefusal_NotRefused      JobCommandRefusal = 0
+	JobCommandRefusal_NotFound        JobCommandRefusal = 1
+	JobCommandRefusal_JobIsCompleted  JobCommandRefusal = 2
+	JobCommandRefusal_JobIsNotRunning JobCommandRefusal = 3
+	JobCommandRefusal_CouldNotPersist JobCommandRefusal = 4
+	JobCommandRefusal_NotResumed      JobCommandRefusal = 5
+)
+
+// Enum value maps for JobCommandRefusal.
+var (
+	JobCommandRefusal_name = map[int32]string{
+		0: "NotRefused",
+		1: "NotFound",
+		2: "JobIsCompleted",
+		3: "JobIsNotRunning",
+		4: "CouldNotPersist",
+		5: "NotResumed",
+	}
+	JobCommandRefusal_value = map[string]int32{
+		"NotRefused":      0,
+		"NotFound":        1,
+		"JobIsCompleted":  2,
+		"JobIsNotRunning": 3,
+		"CouldNotPersist": 4,
+		"NotResumed":      5,
+	}
+)
+
+func (x JobCommandRefusal) Enum() *JobCommandRefusal {
+	p := new(JobCommandRefusal)
+	*p = x
+	return p
+}
+
+func (x JobCommandRefusal) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (JobCommandRefusal) Descriptor() protoreflect.EnumDescriptor {
+	return file_jobs_proto_enumTypes[0].Descriptor()
+}
+
+func (JobCommandRefusal) Type() protoreflect.EnumType {
+	return &file_jobs_proto_enumTypes[0]
+}
+
+func (x JobCommandRefusal) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use JobCommandRefusal.Descriptor instead.
+func (JobCommandRefusal) EnumDescriptor() ([]byte, []int) {
+	return file_jobs_proto_rawDescGZIP(), []int{0}
+}
+
 type JobStatus int32
 
 const (
@@ -76,11 +134,11 @@ func (x JobStatus) String() string {
 }
 
 func (JobStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobs_proto_enumTypes[0].Descriptor()
+	return file_jobs_proto_enumTypes[1].Descriptor()
 }
 
 func (JobStatus) Type() protoreflect.EnumType {
-	return &file_jobs_proto_enumTypes[0]
+	return &file_jobs_proto_enumTypes[1]
 }
 
 func (x JobStatus) Number() protoreflect.EnumNumber {
@@ -89,7 +147,7 @@ func (x JobStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use JobStatus.Descriptor instead.
 func (JobStatus) EnumDescriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{0}
+	return file_jobs_proto_rawDescGZIP(), []int{1}
 }
 
 type JobStepStatus int32
@@ -140,11 +198,11 @@ func (x JobStepStatus) String() string {
 }
 
 func (JobStepStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobs_proto_enumTypes[1].Descriptor()
+	return file_jobs_proto_enumTypes[2].Descriptor()
 }
 
 func (JobStepStatus) Type() protoreflect.EnumType {
-	return &file_jobs_proto_enumTypes[1]
+	return &file_jobs_proto_enumTypes[2]
 }
 
 func (x JobStepStatus) Number() protoreflect.EnumNumber {
@@ -153,7 +211,7 @@ func (x JobStepStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use JobStepStatus.Descriptor instead.
 func (JobStepStatus) EnumDescriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{1}
+	return file_jobs_proto_rawDescGZIP(), []int{2}
 }
 
 type ValidationResultSeverity int32
@@ -192,11 +250,11 @@ func (x ValidationResultSeverity) String() string {
 }
 
 func (ValidationResultSeverity) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobs_proto_enumTypes[2].Descriptor()
+	return file_jobs_proto_enumTypes[3].Descriptor()
 }
 
 func (ValidationResultSeverity) Type() protoreflect.EnumType {
-	return &file_jobs_proto_enumTypes[2]
+	return &file_jobs_proto_enumTypes[3]
 }
 
 func (x ValidationResultSeverity) Number() protoreflect.EnumNumber {
@@ -205,7 +263,7 @@ func (x ValidationResultSeverity) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ValidationResultSeverity.Descriptor instead.
 func (ValidationResultSeverity) EnumDescriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{2}
+	return file_jobs_proto_rawDescGZIP(), []int{3}
 }
 
 type AllJobsRequest struct {
@@ -344,6 +402,190 @@ func (x *CommandResult) GetAuthorizationFailureReason() string {
 	return ""
 }
 
+type CommandResult_ResumeJobWithResultResponse struct {
+	state                      protoimpl.MessageState       `protogen:"open.v1"`
+	CorrelationId              *bcl.Guid                    `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized               bool                         `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults          []*ValidationResult          `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages          []string                     `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace        string                       `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	AuthorizationFailureReason string                       `protobuf:"bytes,6,opt,name=AuthorizationFailureReason,proto3" json:"AuthorizationFailureReason,omitempty"`
+	Response                   *ResumeJobWithResultResponse `protobuf:"bytes,7,opt,name=Response,proto3" json:"Response,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CommandResult_ResumeJobWithResultResponse) Reset() {
+	*x = CommandResult_ResumeJobWithResultResponse{}
+	mi := &file_jobs_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandResult_ResumeJobWithResultResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandResult_ResumeJobWithResultResponse) ProtoMessage() {}
+
+func (x *CommandResult_ResumeJobWithResultResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jobs_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandResult_ResumeJobWithResultResponse.ProtoReflect.Descriptor instead.
+func (*CommandResult_ResumeJobWithResultResponse) Descriptor() ([]byte, []int) {
+	return file_jobs_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CommandResult_ResumeJobWithResultResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *CommandResult_ResumeJobWithResultResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *CommandResult_ResumeJobWithResultResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *CommandResult_ResumeJobWithResultResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *CommandResult_ResumeJobWithResultResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *CommandResult_ResumeJobWithResultResponse) GetAuthorizationFailureReason() string {
+	if x != nil {
+		return x.AuthorizationFailureReason
+	}
+	return ""
+}
+
+func (x *CommandResult_ResumeJobWithResultResponse) GetResponse() *ResumeJobWithResultResponse {
+	if x != nil {
+		return x.Response
+	}
+	return nil
+}
+
+type CommandResult_StopJobWithResultResponse struct {
+	state                      protoimpl.MessageState     `protogen:"open.v1"`
+	CorrelationId              *bcl.Guid                  `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized               bool                       `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults          []*ValidationResult        `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages          []string                   `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace        string                     `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	AuthorizationFailureReason string                     `protobuf:"bytes,6,opt,name=AuthorizationFailureReason,proto3" json:"AuthorizationFailureReason,omitempty"`
+	Response                   *StopJobWithResultResponse `protobuf:"bytes,7,opt,name=Response,proto3" json:"Response,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CommandResult_StopJobWithResultResponse) Reset() {
+	*x = CommandResult_StopJobWithResultResponse{}
+	mi := &file_jobs_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandResult_StopJobWithResultResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandResult_StopJobWithResultResponse) ProtoMessage() {}
+
+func (x *CommandResult_StopJobWithResultResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jobs_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandResult_StopJobWithResultResponse.ProtoReflect.Descriptor instead.
+func (*CommandResult_StopJobWithResultResponse) Descriptor() ([]byte, []int) {
+	return file_jobs_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CommandResult_StopJobWithResultResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *CommandResult_StopJobWithResultResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *CommandResult_StopJobWithResultResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *CommandResult_StopJobWithResultResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *CommandResult_StopJobWithResultResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *CommandResult_StopJobWithResultResponse) GetAuthorizationFailureReason() string {
+	if x != nil {
+		return x.AuthorizationFailureReason
+	}
+	return ""
+}
+
+func (x *CommandResult_StopJobWithResultResponse) GetResponse() *StopJobWithResultResponse {
+	if x != nil {
+		return x.Response
+	}
+	return nil
+}
+
 type DeleteJobRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -355,7 +597,7 @@ type DeleteJobRequest struct {
 
 func (x *DeleteJobRequest) Reset() {
 	*x = DeleteJobRequest{}
-	mi := &file_jobs_proto_msgTypes[2]
+	mi := &file_jobs_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -367,7 +609,7 @@ func (x *DeleteJobRequest) String() string {
 func (*DeleteJobRequest) ProtoMessage() {}
 
 func (x *DeleteJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[2]
+	mi := &file_jobs_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -380,7 +622,7 @@ func (x *DeleteJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteJobRequest.ProtoReflect.Descriptor instead.
 func (*DeleteJobRequest) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{2}
+	return file_jobs_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *DeleteJobRequest) GetEventStore() string {
@@ -415,7 +657,7 @@ type GetJobStepsRequest struct {
 
 func (x *GetJobStepsRequest) Reset() {
 	*x = GetJobStepsRequest{}
-	mi := &file_jobs_proto_msgTypes[3]
+	mi := &file_jobs_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -427,7 +669,7 @@ func (x *GetJobStepsRequest) String() string {
 func (*GetJobStepsRequest) ProtoMessage() {}
 
 func (x *GetJobStepsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[3]
+	mi := &file_jobs_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,7 +682,7 @@ func (x *GetJobStepsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJobStepsRequest.ProtoReflect.Descriptor instead.
 func (*GetJobStepsRequest) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{3}
+	return file_jobs_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetJobStepsRequest) GetEventStore() string {
@@ -479,7 +721,7 @@ type JobProgress struct {
 
 func (x *JobProgress) Reset() {
 	*x = JobProgress{}
-	mi := &file_jobs_proto_msgTypes[4]
+	mi := &file_jobs_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -491,7 +733,7 @@ func (x *JobProgress) String() string {
 func (*JobProgress) ProtoMessage() {}
 
 func (x *JobProgress) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[4]
+	mi := &file_jobs_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -504,7 +746,7 @@ func (x *JobProgress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobProgress.ProtoReflect.Descriptor instead.
 func (*JobProgress) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{4}
+	return file_jobs_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *JobProgress) GetTotalSteps() int32 {
@@ -568,7 +810,7 @@ type JobStatusChanged struct {
 
 func (x *JobStatusChanged) Reset() {
 	*x = JobStatusChanged{}
-	mi := &file_jobs_proto_msgTypes[5]
+	mi := &file_jobs_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -580,7 +822,7 @@ func (x *JobStatusChanged) String() string {
 func (*JobStatusChanged) ProtoMessage() {}
 
 func (x *JobStatusChanged) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[5]
+	mi := &file_jobs_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -593,7 +835,7 @@ func (x *JobStatusChanged) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobStatusChanged.ProtoReflect.Descriptor instead.
 func (*JobStatusChanged) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{5}
+	return file_jobs_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *JobStatusChanged) GetStatus() JobStatus {
@@ -634,7 +876,7 @@ type JobStepProgress struct {
 
 func (x *JobStepProgress) Reset() {
 	*x = JobStepProgress{}
-	mi := &file_jobs_proto_msgTypes[6]
+	mi := &file_jobs_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -646,7 +888,7 @@ func (x *JobStepProgress) String() string {
 func (*JobStepProgress) ProtoMessage() {}
 
 func (x *JobStepProgress) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[6]
+	mi := &file_jobs_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -659,7 +901,7 @@ func (x *JobStepProgress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobStepProgress.ProtoReflect.Descriptor instead.
 func (*JobStepProgress) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{6}
+	return file_jobs_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *JobStepProgress) GetPercentage() int32 {
@@ -688,7 +930,7 @@ type JobStepStatusChanged struct {
 
 func (x *JobStepStatusChanged) Reset() {
 	*x = JobStepStatusChanged{}
-	mi := &file_jobs_proto_msgTypes[7]
+	mi := &file_jobs_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -700,7 +942,7 @@ func (x *JobStepStatusChanged) String() string {
 func (*JobStepStatusChanged) ProtoMessage() {}
 
 func (x *JobStepStatusChanged) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[7]
+	mi := &file_jobs_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -713,7 +955,7 @@ func (x *JobStepStatusChanged) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobStepStatusChanged.ProtoReflect.Descriptor instead.
 func (*JobStepStatusChanged) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{7}
+	return file_jobs_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *JobStepStatusChanged) GetStatus() JobStepStatus {
@@ -758,7 +1000,7 @@ type JobStepSummaryResponse struct {
 
 func (x *JobStepSummaryResponse) Reset() {
 	*x = JobStepSummaryResponse{}
-	mi := &file_jobs_proto_msgTypes[8]
+	mi := &file_jobs_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -770,7 +1012,7 @@ func (x *JobStepSummaryResponse) String() string {
 func (*JobStepSummaryResponse) ProtoMessage() {}
 
 func (x *JobStepSummaryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[8]
+	mi := &file_jobs_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -783,7 +1025,7 @@ func (x *JobStepSummaryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobStepSummaryResponse.ProtoReflect.Descriptor instead.
 func (*JobStepSummaryResponse) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{8}
+	return file_jobs_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *JobStepSummaryResponse) GetId() *bcl.Guid {
@@ -843,7 +1085,7 @@ type JobSummaryResponse struct {
 
 func (x *JobSummaryResponse) Reset() {
 	*x = JobSummaryResponse{}
-	mi := &file_jobs_proto_msgTypes[9]
+	mi := &file_jobs_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -855,7 +1097,7 @@ func (x *JobSummaryResponse) String() string {
 func (*JobSummaryResponse) ProtoMessage() {}
 
 func (x *JobSummaryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[9]
+	mi := &file_jobs_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -868,7 +1110,7 @@ func (x *JobSummaryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobSummaryResponse.ProtoReflect.Descriptor instead.
 func (*JobSummaryResponse) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{9}
+	return file_jobs_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *JobSummaryResponse) GetId() *bcl.Guid {
@@ -930,7 +1172,7 @@ type ObserveJobsRequest struct {
 
 func (x *ObserveJobsRequest) Reset() {
 	*x = ObserveJobsRequest{}
-	mi := &file_jobs_proto_msgTypes[10]
+	mi := &file_jobs_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -942,7 +1184,7 @@ func (x *ObserveJobsRequest) String() string {
 func (*ObserveJobsRequest) ProtoMessage() {}
 
 func (x *ObserveJobsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[10]
+	mi := &file_jobs_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -955,7 +1197,7 @@ func (x *ObserveJobsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObserveJobsRequest.ProtoReflect.Descriptor instead.
 func (*ObserveJobsRequest) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{10}
+	return file_jobs_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ObserveJobsRequest) GetEventStore() string {
@@ -986,7 +1228,7 @@ type QueryResult_IEnumerable_JobStepSummaryResponse struct {
 
 func (x *QueryResult_IEnumerable_JobStepSummaryResponse) Reset() {
 	*x = QueryResult_IEnumerable_JobStepSummaryResponse{}
-	mi := &file_jobs_proto_msgTypes[11]
+	mi := &file_jobs_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -998,7 +1240,7 @@ func (x *QueryResult_IEnumerable_JobStepSummaryResponse) String() string {
 func (*QueryResult_IEnumerable_JobStepSummaryResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_JobStepSummaryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[11]
+	mi := &file_jobs_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1011,7 +1253,7 @@ func (x *QueryResult_IEnumerable_JobStepSummaryResponse) ProtoReflect() protoref
 
 // Deprecated: Use QueryResult_IEnumerable_JobStepSummaryResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_JobStepSummaryResponse) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{11}
+	return file_jobs_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *QueryResult_IEnumerable_JobStepSummaryResponse) GetCorrelationId() *bcl.Guid {
@@ -1070,7 +1312,7 @@ type QueryResult_IEnumerable_JobSummaryResponse struct {
 
 func (x *QueryResult_IEnumerable_JobSummaryResponse) Reset() {
 	*x = QueryResult_IEnumerable_JobSummaryResponse{}
-	mi := &file_jobs_proto_msgTypes[12]
+	mi := &file_jobs_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1082,7 +1324,7 @@ func (x *QueryResult_IEnumerable_JobSummaryResponse) String() string {
 func (*QueryResult_IEnumerable_JobSummaryResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_JobSummaryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[12]
+	mi := &file_jobs_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1095,7 +1337,7 @@ func (x *QueryResult_IEnumerable_JobSummaryResponse) ProtoReflect() protoreflect
 
 // Deprecated: Use QueryResult_IEnumerable_JobSummaryResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_JobSummaryResponse) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{12}
+	return file_jobs_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *QueryResult_IEnumerable_JobSummaryResponse) GetCorrelationId() *bcl.Guid {
@@ -1151,7 +1393,7 @@ type ResumeJobRequest struct {
 
 func (x *ResumeJobRequest) Reset() {
 	*x = ResumeJobRequest{}
-	mi := &file_jobs_proto_msgTypes[13]
+	mi := &file_jobs_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1163,7 +1405,7 @@ func (x *ResumeJobRequest) String() string {
 func (*ResumeJobRequest) ProtoMessage() {}
 
 func (x *ResumeJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[13]
+	mi := &file_jobs_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1176,7 +1418,7 @@ func (x *ResumeJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResumeJobRequest.ProtoReflect.Descriptor instead.
 func (*ResumeJobRequest) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{13}
+	return file_jobs_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ResumeJobRequest) GetEventStore() string {
@@ -1200,6 +1442,118 @@ func (x *ResumeJobRequest) GetJobId() *bcl.Guid {
 	return nil
 }
 
+type ResumeJobWithResultRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	JobId         *bcl.Guid              `protobuf:"bytes,3,opt,name=JobId,proto3" json:"JobId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeJobWithResultRequest) Reset() {
+	*x = ResumeJobWithResultRequest{}
+	mi := &file_jobs_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeJobWithResultRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeJobWithResultRequest) ProtoMessage() {}
+
+func (x *ResumeJobWithResultRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_jobs_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeJobWithResultRequest.ProtoReflect.Descriptor instead.
+func (*ResumeJobWithResultRequest) Descriptor() ([]byte, []int) {
+	return file_jobs_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ResumeJobWithResultRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *ResumeJobWithResultRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *ResumeJobWithResultRequest) GetJobId() *bcl.Guid {
+	if x != nil {
+		return x.JobId
+	}
+	return nil
+}
+
+type ResumeJobWithResultResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Accepted      bool                   `protobuf:"varint,1,opt,name=Accepted,proto3" json:"Accepted,omitempty"`
+	Refusal       JobCommandRefusal      `protobuf:"varint,2,opt,name=Refusal,proto3,enum=Cratis.Chronicle.Contracts.Jobs.JobCommandRefusal" json:"Refusal,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeJobWithResultResponse) Reset() {
+	*x = ResumeJobWithResultResponse{}
+	mi := &file_jobs_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeJobWithResultResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeJobWithResultResponse) ProtoMessage() {}
+
+func (x *ResumeJobWithResultResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jobs_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeJobWithResultResponse.ProtoReflect.Descriptor instead.
+func (*ResumeJobWithResultResponse) Descriptor() ([]byte, []int) {
+	return file_jobs_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ResumeJobWithResultResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *ResumeJobWithResultResponse) GetRefusal() JobCommandRefusal {
+	if x != nil {
+		return x.Refusal
+	}
+	return JobCommandRefusal_NotRefused
+}
+
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 type SerializableDateTimeOffset struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1210,7 +1564,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_jobs_proto_msgTypes[14]
+	mi := &file_jobs_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1222,7 +1576,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[14]
+	mi := &file_jobs_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1235,7 +1589,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{14}
+	return file_jobs_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -1256,7 +1610,7 @@ type StopJobRequest struct {
 
 func (x *StopJobRequest) Reset() {
 	*x = StopJobRequest{}
-	mi := &file_jobs_proto_msgTypes[15]
+	mi := &file_jobs_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1268,7 +1622,7 @@ func (x *StopJobRequest) String() string {
 func (*StopJobRequest) ProtoMessage() {}
 
 func (x *StopJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[15]
+	mi := &file_jobs_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1281,7 +1635,7 @@ func (x *StopJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopJobRequest.ProtoReflect.Descriptor instead.
 func (*StopJobRequest) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{15}
+	return file_jobs_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *StopJobRequest) GetEventStore() string {
@@ -1305,6 +1659,118 @@ func (x *StopJobRequest) GetJobId() *bcl.Guid {
 	return nil
 }
 
+type StopJobWithResultRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	JobId         *bcl.Guid              `protobuf:"bytes,3,opt,name=JobId,proto3" json:"JobId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StopJobWithResultRequest) Reset() {
+	*x = StopJobWithResultRequest{}
+	mi := &file_jobs_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StopJobWithResultRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StopJobWithResultRequest) ProtoMessage() {}
+
+func (x *StopJobWithResultRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_jobs_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StopJobWithResultRequest.ProtoReflect.Descriptor instead.
+func (*StopJobWithResultRequest) Descriptor() ([]byte, []int) {
+	return file_jobs_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *StopJobWithResultRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *StopJobWithResultRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *StopJobWithResultRequest) GetJobId() *bcl.Guid {
+	if x != nil {
+		return x.JobId
+	}
+	return nil
+}
+
+type StopJobWithResultResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Accepted      bool                   `protobuf:"varint,1,opt,name=Accepted,proto3" json:"Accepted,omitempty"`
+	Refusal       JobCommandRefusal      `protobuf:"varint,2,opt,name=Refusal,proto3,enum=Cratis.Chronicle.Contracts.Jobs.JobCommandRefusal" json:"Refusal,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StopJobWithResultResponse) Reset() {
+	*x = StopJobWithResultResponse{}
+	mi := &file_jobs_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StopJobWithResultResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StopJobWithResultResponse) ProtoMessage() {}
+
+func (x *StopJobWithResultResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jobs_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StopJobWithResultResponse.ProtoReflect.Descriptor instead.
+func (*StopJobWithResultResponse) Descriptor() ([]byte, []int) {
+	return file_jobs_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *StopJobWithResultResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *StopJobWithResultResponse) GetRefusal() JobCommandRefusal {
+	if x != nil {
+		return x.Refusal
+	}
+	return JobCommandRefusal_NotRefused
+}
+
 type ValidationResult struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Severity      ValidationResultSeverity `protobuf:"varint,1,opt,name=Severity,proto3,enum=Cratis.Chronicle.Contracts.Jobs.ValidationResultSeverity" json:"Severity,omitempty"` // default value could not be applied: Error
@@ -1316,7 +1782,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_jobs_proto_msgTypes[16]
+	mi := &file_jobs_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1328,7 +1794,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_jobs_proto_msgTypes[16]
+	mi := &file_jobs_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1341,7 +1807,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_jobs_proto_rawDescGZIP(), []int{16}
+	return file_jobs_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -1382,7 +1848,23 @@ const file_jobs_proto_rawDesc = "" +
 	"\x11ValidationResults\x18\x03 \x03(\v21.Cratis.Chronicle.Contracts.Jobs.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
-	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"q\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"\xdb\x03\n" +
+	")CommandResult_ResumeJobWithResultResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12_\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v21.Cratis.Chronicle.Contracts.Jobs.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\x12X\n" +
+	"\bResponse\x18\a \x01(\v2<.Cratis.Chronicle.Contracts.Jobs.ResumeJobWithResultResponseR\bResponse\"\xd7\x03\n" +
+	"'CommandResult_StopJobWithResultResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12_\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v21.Cratis.Chronicle.Contracts.Jobs.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\x12V\n" +
+	"\bResponse\x18\a \x01(\v2:.Cratis.Chronicle.Contracts.Jobs.StopJobWithResultResponseR\bResponse\"q\n" +
 	"\x10DeleteJobRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1459,7 +1941,16 @@ const file_jobs_proto_rawDesc = "" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12\x1c\n" +
 	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x1f\n" +
-	"\x05JobId\x18\x03 \x01(\v2\t.bcl.GuidR\x05JobId\"2\n" +
+	"\x05JobId\x18\x03 \x01(\v2\t.bcl.GuidR\x05JobId\"{\n" +
+	"\x1aResumeJobWithResultRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x1f\n" +
+	"\x05JobId\x18\x03 \x01(\v2\t.bcl.GuidR\x05JobId\"\x87\x01\n" +
+	"\x1bResumeJobWithResultResponse\x12\x1a\n" +
+	"\bAccepted\x18\x01 \x01(\bR\bAccepted\x12L\n" +
+	"\aRefusal\x18\x02 \x01(\x0e22.Cratis.Chronicle.Contracts.Jobs.JobCommandRefusalR\aRefusal\"2\n" +
 	"\x1aSerializableDateTimeOffset\x12\x14\n" +
 	"\x05Value\x18\x01 \x01(\tR\x05Value\"o\n" +
 	"\x0eStopJobRequest\x12\x1e\n" +
@@ -1467,11 +1958,29 @@ const file_jobs_proto_rawDesc = "" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12\x1c\n" +
 	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x1f\n" +
-	"\x05JobId\x18\x03 \x01(\v2\t.bcl.GuidR\x05JobId\"\x9d\x01\n" +
+	"\x05JobId\x18\x03 \x01(\v2\t.bcl.GuidR\x05JobId\"y\n" +
+	"\x18StopJobWithResultRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x1f\n" +
+	"\x05JobId\x18\x03 \x01(\v2\t.bcl.GuidR\x05JobId\"\x85\x01\n" +
+	"\x19StopJobWithResultResponse\x12\x1a\n" +
+	"\bAccepted\x18\x01 \x01(\bR\bAccepted\x12L\n" +
+	"\aRefusal\x18\x02 \x01(\x0e22.Cratis.Chronicle.Contracts.Jobs.JobCommandRefusalR\aRefusal\"\x9d\x01\n" +
 	"\x10ValidationResult\x12U\n" +
 	"\bSeverity\x18\x01 \x01(\x0e29.Cratis.Chronicle.Contracts.Jobs.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
-	"\aMembers\x18\x03 \x03(\tR\aMembers*\xef\x01\n" +
+	"\aMembers\x18\x03 \x03(\tR\aMembers*\x7f\n" +
+	"\x11JobCommandRefusal\x12\x0e\n" +
+	"\n" +
+	"NotRefused\x10\x00\x12\f\n" +
+	"\bNotFound\x10\x01\x12\x12\n" +
+	"\x0eJobIsCompleted\x10\x02\x12\x13\n" +
+	"\x0fJobIsNotRunning\x10\x03\x12\x13\n" +
+	"\x0fCouldNotPersist\x10\x04\x12\x0e\n" +
+	"\n" +
+	"NotResumed\x10\x05*\xef\x01\n" +
 	"\tJobStatus\x12\b\n" +
 	"\x04None\x10\x00\x12\x10\n" +
 	"\fPreparingJob\x10\x01\x12\x12\n" +
@@ -1496,14 +2005,16 @@ const file_jobs_proto_rawDesc = "" +
 	"\"VALIDATION_RESULT_SEVERITY_Unknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\x86\x06\n" +
+	"\x05Error\x10\x032\xc2\b\n" +
 	"\x04Jobs\x12\x87\x01\n" +
 	"\aAllJobs\x12/.Cratis.Chronicle.Contracts.Jobs.AllJobsRequest\x1aK.Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse\x12n\n" +
 	"\tDeleteJob\x121.Cratis.Chronicle.Contracts.Jobs.DeleteJobRequest\x1a..Cratis.Chronicle.Contracts.Jobs.CommandResult\x12\x93\x01\n" +
 	"\vGetJobSteps\x123.Cratis.Chronicle.Contracts.Jobs.GetJobStepsRequest\x1aO.Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse\x12\x91\x01\n" +
 	"\vObserveJobs\x123.Cratis.Chronicle.Contracts.Jobs.ObserveJobsRequest\x1aK.Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse0\x01\x12n\n" +
-	"\tResumeJob\x121.Cratis.Chronicle.Contracts.Jobs.ResumeJobRequest\x1a..Cratis.Chronicle.Contracts.Jobs.CommandResult\x12j\n" +
-	"\aStopJob\x12/.Cratis.Chronicle.Contracts.Jobs.StopJobRequest\x1a..Cratis.Chronicle.Contracts.Jobs.CommandResultB\xff\x01\n" +
+	"\tResumeJob\x121.Cratis.Chronicle.Contracts.Jobs.ResumeJobRequest\x1a..Cratis.Chronicle.Contracts.Jobs.CommandResult\x12\x9e\x01\n" +
+	"\x13ResumeJobWithResult\x12;.Cratis.Chronicle.Contracts.Jobs.ResumeJobWithResultRequest\x1aJ.Cratis.Chronicle.Contracts.Jobs.CommandResult_ResumeJobWithResultResponse\x12j\n" +
+	"\aStopJob\x12/.Cratis.Chronicle.Contracts.Jobs.StopJobRequest\x1a..Cratis.Chronicle.Contracts.Jobs.CommandResult\x12\x98\x01\n" +
+	"\x11StopJobWithResult\x129.Cratis.Chronicle.Contracts.Jobs.StopJobWithResultRequest\x1aH.Cratis.Chronicle.Contracts.Jobs.CommandResult_StopJobWithResultResponseB\xff\x01\n" +
 	"#com.Cratis.Chronicle.Contracts.JobsB\tJobsProtoP\x01Z-github.com/cratis/chronicle.go/contracts/jobs\xa2\x02\x04CCCJ\xaa\x02\x1fCratis.Chronicle.Contracts.Jobs\xca\x02\x1fCratis\\Chronicle\\Contracts\\Jobs\xe2\x02+Cratis\\Chronicle\\Contracts\\Jobs\\GPBMetadata\xea\x02\"Cratis::Chronicle::Contracts::Jobsb\x06proto3"
 
 var (
@@ -1518,75 +2029,96 @@ func file_jobs_proto_rawDescGZIP() []byte {
 	return file_jobs_proto_rawDescData
 }
 
-var file_jobs_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_jobs_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_jobs_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_jobs_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_jobs_proto_goTypes = []any{
-	(JobStatus)(0),                                         // 0: Cratis.Chronicle.Contracts.Jobs.JobStatus
-	(JobStepStatus)(0),                                     // 1: Cratis.Chronicle.Contracts.Jobs.JobStepStatus
-	(ValidationResultSeverity)(0),                          // 2: Cratis.Chronicle.Contracts.Jobs.ValidationResultSeverity
-	(*AllJobsRequest)(nil),                                 // 3: Cratis.Chronicle.Contracts.Jobs.AllJobsRequest
-	(*CommandResult)(nil),                                  // 4: Cratis.Chronicle.Contracts.Jobs.CommandResult
-	(*DeleteJobRequest)(nil),                               // 5: Cratis.Chronicle.Contracts.Jobs.DeleteJobRequest
-	(*GetJobStepsRequest)(nil),                             // 6: Cratis.Chronicle.Contracts.Jobs.GetJobStepsRequest
-	(*JobProgress)(nil),                                    // 7: Cratis.Chronicle.Contracts.Jobs.JobProgress
-	(*JobStatusChanged)(nil),                               // 8: Cratis.Chronicle.Contracts.Jobs.JobStatusChanged
-	(*JobStepProgress)(nil),                                // 9: Cratis.Chronicle.Contracts.Jobs.JobStepProgress
-	(*JobStepStatusChanged)(nil),                           // 10: Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged
-	(*JobStepSummaryResponse)(nil),                         // 11: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse
-	(*JobSummaryResponse)(nil),                             // 12: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse
-	(*ObserveJobsRequest)(nil),                             // 13: Cratis.Chronicle.Contracts.Jobs.ObserveJobsRequest
-	(*QueryResult_IEnumerable_JobStepSummaryResponse)(nil), // 14: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse
-	(*QueryResult_IEnumerable_JobSummaryResponse)(nil),     // 15: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse
-	(*ResumeJobRequest)(nil),                               // 16: Cratis.Chronicle.Contracts.Jobs.ResumeJobRequest
-	(*SerializableDateTimeOffset)(nil),                     // 17: Cratis.Chronicle.Contracts.Jobs.SerializableDateTimeOffset
-	(*StopJobRequest)(nil),                                 // 18: Cratis.Chronicle.Contracts.Jobs.StopJobRequest
-	(*ValidationResult)(nil),                               // 19: Cratis.Chronicle.Contracts.Jobs.ValidationResult
-	(*bcl.Guid)(nil),                                       // 20: bcl.Guid
+	(JobCommandRefusal)(0),                                 // 0: Cratis.Chronicle.Contracts.Jobs.JobCommandRefusal
+	(JobStatus)(0),                                         // 1: Cratis.Chronicle.Contracts.Jobs.JobStatus
+	(JobStepStatus)(0),                                     // 2: Cratis.Chronicle.Contracts.Jobs.JobStepStatus
+	(ValidationResultSeverity)(0),                          // 3: Cratis.Chronicle.Contracts.Jobs.ValidationResultSeverity
+	(*AllJobsRequest)(nil),                                 // 4: Cratis.Chronicle.Contracts.Jobs.AllJobsRequest
+	(*CommandResult)(nil),                                  // 5: Cratis.Chronicle.Contracts.Jobs.CommandResult
+	(*CommandResult_ResumeJobWithResultResponse)(nil),      // 6: Cratis.Chronicle.Contracts.Jobs.CommandResult_ResumeJobWithResultResponse
+	(*CommandResult_StopJobWithResultResponse)(nil),        // 7: Cratis.Chronicle.Contracts.Jobs.CommandResult_StopJobWithResultResponse
+	(*DeleteJobRequest)(nil),                               // 8: Cratis.Chronicle.Contracts.Jobs.DeleteJobRequest
+	(*GetJobStepsRequest)(nil),                             // 9: Cratis.Chronicle.Contracts.Jobs.GetJobStepsRequest
+	(*JobProgress)(nil),                                    // 10: Cratis.Chronicle.Contracts.Jobs.JobProgress
+	(*JobStatusChanged)(nil),                               // 11: Cratis.Chronicle.Contracts.Jobs.JobStatusChanged
+	(*JobStepProgress)(nil),                                // 12: Cratis.Chronicle.Contracts.Jobs.JobStepProgress
+	(*JobStepStatusChanged)(nil),                           // 13: Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged
+	(*JobStepSummaryResponse)(nil),                         // 14: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse
+	(*JobSummaryResponse)(nil),                             // 15: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse
+	(*ObserveJobsRequest)(nil),                             // 16: Cratis.Chronicle.Contracts.Jobs.ObserveJobsRequest
+	(*QueryResult_IEnumerable_JobStepSummaryResponse)(nil), // 17: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse
+	(*QueryResult_IEnumerable_JobSummaryResponse)(nil),     // 18: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse
+	(*ResumeJobRequest)(nil),                               // 19: Cratis.Chronicle.Contracts.Jobs.ResumeJobRequest
+	(*ResumeJobWithResultRequest)(nil),                     // 20: Cratis.Chronicle.Contracts.Jobs.ResumeJobWithResultRequest
+	(*ResumeJobWithResultResponse)(nil),                    // 21: Cratis.Chronicle.Contracts.Jobs.ResumeJobWithResultResponse
+	(*SerializableDateTimeOffset)(nil),                     // 22: Cratis.Chronicle.Contracts.Jobs.SerializableDateTimeOffset
+	(*StopJobRequest)(nil),                                 // 23: Cratis.Chronicle.Contracts.Jobs.StopJobRequest
+	(*StopJobWithResultRequest)(nil),                       // 24: Cratis.Chronicle.Contracts.Jobs.StopJobWithResultRequest
+	(*StopJobWithResultResponse)(nil),                      // 25: Cratis.Chronicle.Contracts.Jobs.StopJobWithResultResponse
+	(*ValidationResult)(nil),                               // 26: Cratis.Chronicle.Contracts.Jobs.ValidationResult
+	(*bcl.Guid)(nil),                                       // 27: bcl.Guid
 }
 var file_jobs_proto_depIdxs = []int32{
-	20, // 0: Cratis.Chronicle.Contracts.Jobs.CommandResult.CorrelationId:type_name -> bcl.Guid
-	19, // 1: Cratis.Chronicle.Contracts.Jobs.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResult
-	20, // 2: Cratis.Chronicle.Contracts.Jobs.DeleteJobRequest.JobId:type_name -> bcl.Guid
-	20, // 3: Cratis.Chronicle.Contracts.Jobs.GetJobStepsRequest.JobId:type_name -> bcl.Guid
-	0,  // 4: Cratis.Chronicle.Contracts.Jobs.JobStatusChanged.Status:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStatus
-	17, // 5: Cratis.Chronicle.Contracts.Jobs.JobStatusChanged.Occurred:type_name -> Cratis.Chronicle.Contracts.Jobs.SerializableDateTimeOffset
-	1,  // 6: Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged.Status:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepStatus
-	17, // 7: Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged.Occurred:type_name -> Cratis.Chronicle.Contracts.Jobs.SerializableDateTimeOffset
-	20, // 8: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse.Id:type_name -> bcl.Guid
-	1,  // 9: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse.Status:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepStatus
-	10, // 10: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse.StatusChanges:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged
-	9,  // 11: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse.Progress:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepProgress
-	20, // 12: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.Id:type_name -> bcl.Guid
-	0,  // 13: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.Status:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStatus
-	17, // 14: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.Created:type_name -> Cratis.Chronicle.Contracts.Jobs.SerializableDateTimeOffset
-	8,  // 15: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.StatusChanges:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStatusChanged
-	7,  // 16: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.Progress:type_name -> Cratis.Chronicle.Contracts.Jobs.JobProgress
-	20, // 17: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse.CorrelationId:type_name -> bcl.Guid
-	19, // 18: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResult
-	11, // 19: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse.Data:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse
-	20, // 20: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse.CorrelationId:type_name -> bcl.Guid
-	19, // 21: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResult
-	12, // 22: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse.Data:type_name -> Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse
-	20, // 23: Cratis.Chronicle.Contracts.Jobs.ResumeJobRequest.JobId:type_name -> bcl.Guid
-	20, // 24: Cratis.Chronicle.Contracts.Jobs.StopJobRequest.JobId:type_name -> bcl.Guid
-	2,  // 25: Cratis.Chronicle.Contracts.Jobs.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResultSeverity
-	3,  // 26: Cratis.Chronicle.Contracts.Jobs.Jobs.AllJobs:input_type -> Cratis.Chronicle.Contracts.Jobs.AllJobsRequest
-	5,  // 27: Cratis.Chronicle.Contracts.Jobs.Jobs.DeleteJob:input_type -> Cratis.Chronicle.Contracts.Jobs.DeleteJobRequest
-	6,  // 28: Cratis.Chronicle.Contracts.Jobs.Jobs.GetJobSteps:input_type -> Cratis.Chronicle.Contracts.Jobs.GetJobStepsRequest
-	13, // 29: Cratis.Chronicle.Contracts.Jobs.Jobs.ObserveJobs:input_type -> Cratis.Chronicle.Contracts.Jobs.ObserveJobsRequest
-	16, // 30: Cratis.Chronicle.Contracts.Jobs.Jobs.ResumeJob:input_type -> Cratis.Chronicle.Contracts.Jobs.ResumeJobRequest
-	18, // 31: Cratis.Chronicle.Contracts.Jobs.Jobs.StopJob:input_type -> Cratis.Chronicle.Contracts.Jobs.StopJobRequest
-	15, // 32: Cratis.Chronicle.Contracts.Jobs.Jobs.AllJobs:output_type -> Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse
-	4,  // 33: Cratis.Chronicle.Contracts.Jobs.Jobs.DeleteJob:output_type -> Cratis.Chronicle.Contracts.Jobs.CommandResult
-	14, // 34: Cratis.Chronicle.Contracts.Jobs.Jobs.GetJobSteps:output_type -> Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse
-	15, // 35: Cratis.Chronicle.Contracts.Jobs.Jobs.ObserveJobs:output_type -> Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse
-	4,  // 36: Cratis.Chronicle.Contracts.Jobs.Jobs.ResumeJob:output_type -> Cratis.Chronicle.Contracts.Jobs.CommandResult
-	4,  // 37: Cratis.Chronicle.Contracts.Jobs.Jobs.StopJob:output_type -> Cratis.Chronicle.Contracts.Jobs.CommandResult
-	32, // [32:38] is the sub-list for method output_type
-	26, // [26:32] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	27, // 0: Cratis.Chronicle.Contracts.Jobs.CommandResult.CorrelationId:type_name -> bcl.Guid
+	26, // 1: Cratis.Chronicle.Contracts.Jobs.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResult
+	27, // 2: Cratis.Chronicle.Contracts.Jobs.CommandResult_ResumeJobWithResultResponse.CorrelationId:type_name -> bcl.Guid
+	26, // 3: Cratis.Chronicle.Contracts.Jobs.CommandResult_ResumeJobWithResultResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResult
+	21, // 4: Cratis.Chronicle.Contracts.Jobs.CommandResult_ResumeJobWithResultResponse.Response:type_name -> Cratis.Chronicle.Contracts.Jobs.ResumeJobWithResultResponse
+	27, // 5: Cratis.Chronicle.Contracts.Jobs.CommandResult_StopJobWithResultResponse.CorrelationId:type_name -> bcl.Guid
+	26, // 6: Cratis.Chronicle.Contracts.Jobs.CommandResult_StopJobWithResultResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResult
+	25, // 7: Cratis.Chronicle.Contracts.Jobs.CommandResult_StopJobWithResultResponse.Response:type_name -> Cratis.Chronicle.Contracts.Jobs.StopJobWithResultResponse
+	27, // 8: Cratis.Chronicle.Contracts.Jobs.DeleteJobRequest.JobId:type_name -> bcl.Guid
+	27, // 9: Cratis.Chronicle.Contracts.Jobs.GetJobStepsRequest.JobId:type_name -> bcl.Guid
+	1,  // 10: Cratis.Chronicle.Contracts.Jobs.JobStatusChanged.Status:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStatus
+	22, // 11: Cratis.Chronicle.Contracts.Jobs.JobStatusChanged.Occurred:type_name -> Cratis.Chronicle.Contracts.Jobs.SerializableDateTimeOffset
+	2,  // 12: Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged.Status:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepStatus
+	22, // 13: Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged.Occurred:type_name -> Cratis.Chronicle.Contracts.Jobs.SerializableDateTimeOffset
+	27, // 14: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse.Id:type_name -> bcl.Guid
+	2,  // 15: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse.Status:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepStatus
+	13, // 16: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse.StatusChanges:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged
+	12, // 17: Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse.Progress:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepProgress
+	27, // 18: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.Id:type_name -> bcl.Guid
+	1,  // 19: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.Status:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStatus
+	22, // 20: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.Created:type_name -> Cratis.Chronicle.Contracts.Jobs.SerializableDateTimeOffset
+	11, // 21: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.StatusChanges:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStatusChanged
+	10, // 22: Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse.Progress:type_name -> Cratis.Chronicle.Contracts.Jobs.JobProgress
+	27, // 23: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse.CorrelationId:type_name -> bcl.Guid
+	26, // 24: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResult
+	14, // 25: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse.Data:type_name -> Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse
+	27, // 26: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse.CorrelationId:type_name -> bcl.Guid
+	26, // 27: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResult
+	15, // 28: Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse.Data:type_name -> Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse
+	27, // 29: Cratis.Chronicle.Contracts.Jobs.ResumeJobRequest.JobId:type_name -> bcl.Guid
+	27, // 30: Cratis.Chronicle.Contracts.Jobs.ResumeJobWithResultRequest.JobId:type_name -> bcl.Guid
+	0,  // 31: Cratis.Chronicle.Contracts.Jobs.ResumeJobWithResultResponse.Refusal:type_name -> Cratis.Chronicle.Contracts.Jobs.JobCommandRefusal
+	27, // 32: Cratis.Chronicle.Contracts.Jobs.StopJobRequest.JobId:type_name -> bcl.Guid
+	27, // 33: Cratis.Chronicle.Contracts.Jobs.StopJobWithResultRequest.JobId:type_name -> bcl.Guid
+	0,  // 34: Cratis.Chronicle.Contracts.Jobs.StopJobWithResultResponse.Refusal:type_name -> Cratis.Chronicle.Contracts.Jobs.JobCommandRefusal
+	3,  // 35: Cratis.Chronicle.Contracts.Jobs.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Jobs.ValidationResultSeverity
+	4,  // 36: Cratis.Chronicle.Contracts.Jobs.Jobs.AllJobs:input_type -> Cratis.Chronicle.Contracts.Jobs.AllJobsRequest
+	8,  // 37: Cratis.Chronicle.Contracts.Jobs.Jobs.DeleteJob:input_type -> Cratis.Chronicle.Contracts.Jobs.DeleteJobRequest
+	9,  // 38: Cratis.Chronicle.Contracts.Jobs.Jobs.GetJobSteps:input_type -> Cratis.Chronicle.Contracts.Jobs.GetJobStepsRequest
+	16, // 39: Cratis.Chronicle.Contracts.Jobs.Jobs.ObserveJobs:input_type -> Cratis.Chronicle.Contracts.Jobs.ObserveJobsRequest
+	19, // 40: Cratis.Chronicle.Contracts.Jobs.Jobs.ResumeJob:input_type -> Cratis.Chronicle.Contracts.Jobs.ResumeJobRequest
+	20, // 41: Cratis.Chronicle.Contracts.Jobs.Jobs.ResumeJobWithResult:input_type -> Cratis.Chronicle.Contracts.Jobs.ResumeJobWithResultRequest
+	23, // 42: Cratis.Chronicle.Contracts.Jobs.Jobs.StopJob:input_type -> Cratis.Chronicle.Contracts.Jobs.StopJobRequest
+	24, // 43: Cratis.Chronicle.Contracts.Jobs.Jobs.StopJobWithResult:input_type -> Cratis.Chronicle.Contracts.Jobs.StopJobWithResultRequest
+	18, // 44: Cratis.Chronicle.Contracts.Jobs.Jobs.AllJobs:output_type -> Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse
+	5,  // 45: Cratis.Chronicle.Contracts.Jobs.Jobs.DeleteJob:output_type -> Cratis.Chronicle.Contracts.Jobs.CommandResult
+	17, // 46: Cratis.Chronicle.Contracts.Jobs.Jobs.GetJobSteps:output_type -> Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobStepSummaryResponse
+	18, // 47: Cratis.Chronicle.Contracts.Jobs.Jobs.ObserveJobs:output_type -> Cratis.Chronicle.Contracts.Jobs.QueryResult_IEnumerable_JobSummaryResponse
+	5,  // 48: Cratis.Chronicle.Contracts.Jobs.Jobs.ResumeJob:output_type -> Cratis.Chronicle.Contracts.Jobs.CommandResult
+	6,  // 49: Cratis.Chronicle.Contracts.Jobs.Jobs.ResumeJobWithResult:output_type -> Cratis.Chronicle.Contracts.Jobs.CommandResult_ResumeJobWithResultResponse
+	5,  // 50: Cratis.Chronicle.Contracts.Jobs.Jobs.StopJob:output_type -> Cratis.Chronicle.Contracts.Jobs.CommandResult
+	7,  // 51: Cratis.Chronicle.Contracts.Jobs.Jobs.StopJobWithResult:output_type -> Cratis.Chronicle.Contracts.Jobs.CommandResult_StopJobWithResultResponse
+	44, // [44:52] is the sub-list for method output_type
+	36, // [36:44] is the sub-list for method input_type
+	36, // [36:36] is the sub-list for extension type_name
+	36, // [36:36] is the sub-list for extension extendee
+	0,  // [0:36] is the sub-list for field type_name
 }
 
 func init() { file_jobs_proto_init() }
@@ -1599,8 +2131,8 @@ func file_jobs_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_jobs_proto_rawDesc), len(file_jobs_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   17,
+			NumEnums:      4,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

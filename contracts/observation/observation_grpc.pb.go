@@ -176,6 +176,7 @@ const (
 	Observers_RemoveObserver_FullMethodName                      = "/Cratis.Chronicle.Contracts.Observation.Observers/RemoveObserver"
 	Observers_Replay_FullMethodName                              = "/Cratis.Chronicle.Contracts.Observation.Observers/Replay"
 	Observers_ReplayPartition_FullMethodName                     = "/Cratis.Chronicle.Contracts.Observation.Observers/ReplayPartition"
+	Observers_RetryFailedPartitions_FullMethodName               = "/Cratis.Chronicle.Contracts.Observation.Observers/RetryFailedPartitions"
 	Observers_RetryPartition_FullMethodName                      = "/Cratis.Chronicle.Contracts.Observation.Observers/RetryPartition"
 	Observers_WaitForCompletion_FullMethodName                   = "/Cratis.Chronicle.Contracts.Observation.Observers/WaitForCompletion"
 )
@@ -196,6 +197,7 @@ type ObserversClient interface {
 	RemoveObserver(ctx context.Context, in *RemoveObserver, opts ...grpc.CallOption) (*RemoveObserverResponse, error)
 	Replay(ctx context.Context, in *Replay, opts ...grpc.CallOption) (*ReplayResponse, error)
 	ReplayPartition(ctx context.Context, in *ReplayPartition, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	RetryFailedPartitions(ctx context.Context, in *RetryFailedPartitions, opts ...grpc.CallOption) (*RetryFailedPartitionsResponse, error)
 	RetryPartition(ctx context.Context, in *RetryPartition, opts ...grpc.CallOption) (*RetryPartitionResponse, error)
 	WaitForCompletion(ctx context.Context, in *WaitForObserverCompletionRequest, opts ...grpc.CallOption) (*WaitForObserverCompletionResponse, error)
 }
@@ -337,6 +339,16 @@ func (c *observersClient) ReplayPartition(ctx context.Context, in *ReplayPartiti
 	return out, nil
 }
 
+func (c *observersClient) RetryFailedPartitions(ctx context.Context, in *RetryFailedPartitions, opts ...grpc.CallOption) (*RetryFailedPartitionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RetryFailedPartitionsResponse)
+	err := c.cc.Invoke(ctx, Observers_RetryFailedPartitions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *observersClient) RetryPartition(ctx context.Context, in *RetryPartition, opts ...grpc.CallOption) (*RetryPartitionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RetryPartitionResponse)
@@ -373,6 +385,7 @@ type ObserversServer interface {
 	RemoveObserver(context.Context, *RemoveObserver) (*RemoveObserverResponse, error)
 	Replay(context.Context, *Replay) (*ReplayResponse, error)
 	ReplayPartition(context.Context, *ReplayPartition) (*emptypb.Empty, error)
+	RetryFailedPartitions(context.Context, *RetryFailedPartitions) (*RetryFailedPartitionsResponse, error)
 	RetryPartition(context.Context, *RetryPartition) (*RetryPartitionResponse, error)
 	WaitForCompletion(context.Context, *WaitForObserverCompletionRequest) (*WaitForObserverCompletionResponse, error)
 	mustEmbedUnimplementedObserversServer()
@@ -420,6 +433,9 @@ func (UnimplementedObserversServer) Replay(context.Context, *Replay) (*ReplayRes
 }
 func (UnimplementedObserversServer) ReplayPartition(context.Context, *ReplayPartition) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReplayPartition not implemented")
+}
+func (UnimplementedObserversServer) RetryFailedPartitions(context.Context, *RetryFailedPartitions) (*RetryFailedPartitionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RetryFailedPartitions not implemented")
 }
 func (UnimplementedObserversServer) RetryPartition(context.Context, *RetryPartition) (*RetryPartitionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RetryPartition not implemented")
@@ -657,6 +673,24 @@ func _Observers_ReplayPartition_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Observers_RetryFailedPartitions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RetryFailedPartitions)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ObserversServer).RetryFailedPartitions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Observers_RetryFailedPartitions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ObserversServer).RetryFailedPartitions(ctx, req.(*RetryFailedPartitions))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Observers_RetryPartition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RetryPartition)
 	if err := dec(in); err != nil {
@@ -743,6 +777,10 @@ var Observers_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReplayPartition",
 			Handler:    _Observers_ReplayPartition_Handler,
+		},
+		{
+			MethodName: "RetryFailedPartitions",
+			Handler:    _Observers_RetryFailedPartitions_Handler,
 		},
 		{
 			MethodName: "RetryPartition",

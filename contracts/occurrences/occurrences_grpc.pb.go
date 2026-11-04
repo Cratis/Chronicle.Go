@@ -26,6 +26,7 @@ const (
 	Occurrences_GetOccurrence_FullMethodName              = "/Cratis.Chronicle.Contracts.Occurrences.Occurrences/GetOccurrence"
 	Occurrences_ObserveOccurrences_FullMethodName         = "/Cratis.Chronicle.Contracts.Occurrences.Occurrences/ObserveOccurrences"
 	Occurrences_RecordEffectReceipt_FullMethodName        = "/Cratis.Chronicle.Contracts.Occurrences.Occurrences/RecordEffectReceipt"
+	Occurrences_RecordLifecycleOccurrence_FullMethodName  = "/Cratis.Chronicle.Contracts.Occurrences.Occurrences/RecordLifecycleOccurrence"
 	Occurrences_RecordOccurrence_FullMethodName           = "/Cratis.Chronicle.Contracts.Occurrences.Occurrences/RecordOccurrence"
 	Occurrences_RegisterTriggers_FullMethodName           = "/Cratis.Chronicle.Contracts.Occurrences.Occurrences/RegisterTriggers"
 	Occurrences_RenewOccurrenceLease_FullMethodName       = "/Cratis.Chronicle.Contracts.Occurrences.Occurrences/RenewOccurrenceLease"
@@ -43,6 +44,7 @@ type OccurrencesClient interface {
 	GetOccurrence(ctx context.Context, in *GetOccurrenceRequest, opts ...grpc.CallOption) (*QueryResult_OccurrenceSnapshotResponse, error)
 	ObserveOccurrences(ctx context.Context, in *ObserveOccurrencesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_OccurrenceSnapshotResponse], error)
 	RecordEffectReceipt(ctx context.Context, in *RecordEffectReceiptRequest, opts ...grpc.CallOption) (*CommandResult_RecordEffectReceiptResponse, error)
+	RecordLifecycleOccurrence(ctx context.Context, in *RecordLifecycleOccurrenceRequest, opts ...grpc.CallOption) (*CommandResult_RecordLifecycleOccurrenceResponse, error)
 	RecordOccurrence(ctx context.Context, in *RecordOccurrenceRequest, opts ...grpc.CallOption) (*CommandResult_RecordOccurrenceResponse, error)
 	RegisterTriggers(ctx context.Context, in *RegisterTriggersRequest, opts ...grpc.CallOption) (*CommandResult_RegisterTriggersResponse, error)
 	RenewOccurrenceLease(ctx context.Context, in *RenewOccurrenceLeaseRequest, opts ...grpc.CallOption) (*CommandResult_CompleteOccurrenceResponse, error)
@@ -136,6 +138,16 @@ func (c *occurrencesClient) RecordEffectReceipt(ctx context.Context, in *RecordE
 	return out, nil
 }
 
+func (c *occurrencesClient) RecordLifecycleOccurrence(ctx context.Context, in *RecordLifecycleOccurrenceRequest, opts ...grpc.CallOption) (*CommandResult_RecordLifecycleOccurrenceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_RecordLifecycleOccurrenceResponse)
+	err := c.cc.Invoke(ctx, Occurrences_RecordLifecycleOccurrence_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *occurrencesClient) RecordOccurrence(ctx context.Context, in *RecordOccurrenceRequest, opts ...grpc.CallOption) (*CommandResult_RecordOccurrenceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CommandResult_RecordOccurrenceResponse)
@@ -187,6 +199,7 @@ type OccurrencesServer interface {
 	GetOccurrence(context.Context, *GetOccurrenceRequest) (*QueryResult_OccurrenceSnapshotResponse, error)
 	ObserveOccurrences(*ObserveOccurrencesRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_OccurrenceSnapshotResponse]) error
 	RecordEffectReceipt(context.Context, *RecordEffectReceiptRequest) (*CommandResult_RecordEffectReceiptResponse, error)
+	RecordLifecycleOccurrence(context.Context, *RecordLifecycleOccurrenceRequest) (*CommandResult_RecordLifecycleOccurrenceResponse, error)
 	RecordOccurrence(context.Context, *RecordOccurrenceRequest) (*CommandResult_RecordOccurrenceResponse, error)
 	RegisterTriggers(context.Context, *RegisterTriggersRequest) (*CommandResult_RegisterTriggersResponse, error)
 	RenewOccurrenceLease(context.Context, *RenewOccurrenceLeaseRequest) (*CommandResult_CompleteOccurrenceResponse, error)
@@ -221,6 +234,9 @@ func (UnimplementedOccurrencesServer) ObserveOccurrences(*ObserveOccurrencesRequ
 }
 func (UnimplementedOccurrencesServer) RecordEffectReceipt(context.Context, *RecordEffectReceiptRequest) (*CommandResult_RecordEffectReceiptResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RecordEffectReceipt not implemented")
+}
+func (UnimplementedOccurrencesServer) RecordLifecycleOccurrence(context.Context, *RecordLifecycleOccurrenceRequest) (*CommandResult_RecordLifecycleOccurrenceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecordLifecycleOccurrence not implemented")
 }
 func (UnimplementedOccurrencesServer) RecordOccurrence(context.Context, *RecordOccurrenceRequest) (*CommandResult_RecordOccurrenceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RecordOccurrence not implemented")
@@ -374,6 +390,24 @@ func _Occurrences_RecordEffectReceipt_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Occurrences_RecordLifecycleOccurrence_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordLifecycleOccurrenceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OccurrencesServer).RecordLifecycleOccurrence(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Occurrences_RecordLifecycleOccurrence_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OccurrencesServer).RecordLifecycleOccurrence(ctx, req.(*RecordLifecycleOccurrenceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Occurrences_RecordOccurrence_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RecordOccurrenceRequest)
 	if err := dec(in); err != nil {
@@ -476,6 +510,10 @@ var Occurrences_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RecordEffectReceipt",
 			Handler:    _Occurrences_RecordEffectReceipt_Handler,
+		},
+		{
+			MethodName: "RecordLifecycleOccurrence",
+			Handler:    _Occurrences_RecordLifecycleOccurrence_Handler,
 		},
 		{
 			MethodName: "RecordOccurrence",

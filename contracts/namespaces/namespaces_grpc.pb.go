@@ -22,6 +22,7 @@ const (
 	Namespaces_AllNamespaces_FullMethodName     = "/Cratis.Chronicle.Contracts.Namespaces.Namespaces/AllNamespaces"
 	Namespaces_EnsureNamespace_FullMethodName   = "/Cratis.Chronicle.Contracts.Namespaces.Namespaces/EnsureNamespace"
 	Namespaces_ObserveNamespaces_FullMethodName = "/Cratis.Chronicle.Contracts.Namespaces.Namespaces/ObserveNamespaces"
+	Namespaces_RemoveNamespace_FullMethodName   = "/Cratis.Chronicle.Contracts.Namespaces.Namespaces/RemoveNamespace"
 )
 
 // NamespacesClient is the client API for Namespaces service.
@@ -31,6 +32,7 @@ type NamespacesClient interface {
 	AllNamespaces(ctx context.Context, in *AllNamespacesRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_NamespaceNamesResponse, error)
 	EnsureNamespace(ctx context.Context, in *EnsureNamespaceRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	ObserveNamespaces(ctx context.Context, in *ObserveNamespacesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_NamespaceNamesResponse], error)
+	RemoveNamespace(ctx context.Context, in *RemoveNamespaceRequest, opts ...grpc.CallOption) (*CommandResult, error)
 }
 
 type namespacesClient struct {
@@ -80,6 +82,16 @@ func (c *namespacesClient) ObserveNamespaces(ctx context.Context, in *ObserveNam
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Namespaces_ObserveNamespacesClient = grpc.ServerStreamingClient[QueryResult_IEnumerable_NamespaceNamesResponse]
 
+func (c *namespacesClient) RemoveNamespace(ctx context.Context, in *RemoveNamespaceRequest, opts ...grpc.CallOption) (*CommandResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult)
+	err := c.cc.Invoke(ctx, Namespaces_RemoveNamespace_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NamespacesServer is the server API for Namespaces service.
 // All implementations must embed UnimplementedNamespacesServer
 // for forward compatibility.
@@ -87,6 +99,7 @@ type NamespacesServer interface {
 	AllNamespaces(context.Context, *AllNamespacesRequest) (*QueryResult_IEnumerable_NamespaceNamesResponse, error)
 	EnsureNamespace(context.Context, *EnsureNamespaceRequest) (*CommandResult, error)
 	ObserveNamespaces(*ObserveNamespacesRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_NamespaceNamesResponse]) error
+	RemoveNamespace(context.Context, *RemoveNamespaceRequest) (*CommandResult, error)
 	mustEmbedUnimplementedNamespacesServer()
 }
 
@@ -105,6 +118,9 @@ func (UnimplementedNamespacesServer) EnsureNamespace(context.Context, *EnsureNam
 }
 func (UnimplementedNamespacesServer) ObserveNamespaces(*ObserveNamespacesRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_NamespaceNamesResponse]) error {
 	return status.Error(codes.Unimplemented, "method ObserveNamespaces not implemented")
+}
+func (UnimplementedNamespacesServer) RemoveNamespace(context.Context, *RemoveNamespaceRequest) (*CommandResult, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveNamespace not implemented")
 }
 func (UnimplementedNamespacesServer) mustEmbedUnimplementedNamespacesServer() {}
 func (UnimplementedNamespacesServer) testEmbeddedByValue()                    {}
@@ -174,6 +190,24 @@ func _Namespaces_ObserveNamespaces_Handler(srv interface{}, stream grpc.ServerSt
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Namespaces_ObserveNamespacesServer = grpc.ServerStreamingServer[QueryResult_IEnumerable_NamespaceNamesResponse]
 
+func _Namespaces_RemoveNamespace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveNamespaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NamespacesServer).RemoveNamespace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Namespaces_RemoveNamespace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NamespacesServer).RemoveNamespace(ctx, req.(*RemoveNamespaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Namespaces_ServiceDesc is the grpc.ServiceDesc for Namespaces service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -188,6 +222,10 @@ var Namespaces_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EnsureNamespace",
 			Handler:    _Namespaces_EnsureNamespace_Handler,
+		},
+		{
+			MethodName: "RemoveNamespace",
+			Handler:    _Namespaces_RemoveNamespace_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

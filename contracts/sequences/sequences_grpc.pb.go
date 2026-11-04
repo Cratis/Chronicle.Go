@@ -25,18 +25,25 @@ const (
 	EventSequences_AppendMany_FullMethodName                             = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendMany"
 	EventSequences_AppendManyForEventSources_FullMethodName              = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendManyForEventSources"
 	EventSequences_AppendManyForEventSourcesWithNamedTags_FullMethodName = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendManyForEventSourcesWithNamedTags"
+	EventSequences_AppendManyOnce_FullMethodName                         = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendManyOnce"
+	EventSequences_AppendManyOnceWithNamedTags_FullMethodName            = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendManyOnceWithNamedTags"
 	EventSequences_AppendManyWithNamedTags_FullMethodName                = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendManyWithNamedTags"
+	EventSequences_AppendOnce_FullMethodName                             = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendOnce"
+	EventSequences_AppendOnceWithNamedTags_FullMethodName                = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendOnceWithNamedTags"
 	EventSequences_AppendWithNamedTags_FullMethodName                    = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendWithNamedTags"
 	EventSequences_ClosedStreams_FullMethodName                          = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ClosedStreams"
 	EventSequences_CompleteStream_FullMethodName                         = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CompleteStream"
 	EventSequences_CompleteStreamScope_FullMethodName                    = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CompleteStreamScope"
+	EventSequences_CopyEventsForEventSource_FullMethodName               = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CopyEventsForEventSource"
 	EventSequences_EndOf_FullMethodName                                  = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/EndOf"
 	EventSequences_ExportEvents_FullMethodName                           = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ExportEvents"
 	EventSequences_ForEventSourceIdAndEventTypes_FullMethodName          = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ForEventSourceIdAndEventTypes"
 	EventSequences_FromSequenceNumber_FullMethodName                     = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/FromSequenceNumber"
+	EventSequences_FromSequenceNumberWithErasedProperties_FullMethodName = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/FromSequenceNumberWithErasedProperties"
 	EventSequences_HasEventsForEventSourceId_FullMethodName              = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/HasEventsForEventSourceId"
 	EventSequences_IsStreamScopeCompleted_FullMethodName                 = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/IsStreamScopeCompleted"
 	EventSequences_MetadataAt_FullMethodName                             = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/MetadataAt"
+	EventSequences_Page_FullMethodName                                   = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/Page"
 	EventSequences_ParseResolution_FullMethodName                        = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ParseResolution"
 	EventSequences_QueryEvents_FullMethodName                            = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/QueryEvents"
 	EventSequences_QueryEventsWithNamedTags_FullMethodName               = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/QueryEventsWithNamedTags"
@@ -60,18 +67,25 @@ type EventSequencesClient interface {
 	AppendMany(ctx context.Context, in *AppendManyRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyResponse, error)
 	AppendManyForEventSources(ctx context.Context, in *AppendManyForEventSourcesRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyResponse, error)
 	AppendManyForEventSourcesWithNamedTags(ctx context.Context, in *AppendManyForEventSourcesWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyResponse, error)
+	AppendManyOnce(ctx context.Context, in *AppendManyOnceRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyOnceResponse, error)
+	AppendManyOnceWithNamedTags(ctx context.Context, in *AppendManyOnceWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyOnceResponse, error)
 	AppendManyWithNamedTags(ctx context.Context, in *AppendManyWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyResponse, error)
+	AppendOnce(ctx context.Context, in *AppendOnceRequest, opts ...grpc.CallOption) (*CommandResult_AppendOnceResponse, error)
+	AppendOnceWithNamedTags(ctx context.Context, in *AppendOnceWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendOnceResponse, error)
 	AppendWithNamedTags(ctx context.Context, in *AppendWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendResponse, error)
 	ClosedStreams(ctx context.Context, in *ClosedStreamsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_ClosedStreamResponse, error)
 	CompleteStream(ctx context.Context, in *CompleteStreamRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error)
 	CompleteStreamScope(ctx context.Context, in *CompleteStreamScopeRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error)
+	CopyEventsForEventSource(ctx context.Context, in *CopyEventsForEventSourceRequest, opts ...grpc.CallOption) (*CommandResult_Guid, error)
 	EndOf(ctx context.Context, in *EndOfRequest, opts ...grpc.CallOption) (*QueryResult_SerializableDateTimeOffset, error)
 	ExportEvents(ctx context.Context, in *ExportEventsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_ExportedEventResponse, error)
 	ForEventSourceIdAndEventTypes(ctx context.Context, in *ForEventSourceIdAndEventTypesRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	FromSequenceNumber(ctx context.Context, in *FromSequenceNumberRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
+	FromSequenceNumberWithErasedProperties(ctx context.Context, in *FromSequenceNumberWithErasedPropertiesRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	HasEventsForEventSourceId(ctx context.Context, in *HasEventsForEventSourceIdRequest, opts ...grpc.CallOption) (*QueryResult_EventSourceEventsResponse, error)
 	IsStreamScopeCompleted(ctx context.Context, in *IsStreamScopeCompletedRequest, opts ...grpc.CallOption) (*QueryResult_StreamScopeCompletionResponse, error)
 	MetadataAt(ctx context.Context, in *MetadataAtRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventMetadataResponse, error)
+	Page(ctx context.Context, in *PageRequest, opts ...grpc.CallOption) (*QueryResult_EventSequencePageResponse, error)
 	ParseResolution(ctx context.Context, in *ParseResolutionRequest, opts ...grpc.CallOption) (*QueryResult_HistogramResolution, error)
 	QueryEvents(ctx context.Context, in *QueryEventsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	QueryEventsWithNamedTags(ctx context.Context, in *QueryEventsWithNamedTagsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error)
@@ -153,10 +167,50 @@ func (c *eventSequencesClient) AppendManyForEventSourcesWithNamedTags(ctx contex
 	return out, nil
 }
 
+func (c *eventSequencesClient) AppendManyOnce(ctx context.Context, in *AppendManyOnceRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyOnceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_AppendManyOnceResponse)
+	err := c.cc.Invoke(ctx, EventSequences_AppendManyOnce_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventSequencesClient) AppendManyOnceWithNamedTags(ctx context.Context, in *AppendManyOnceWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyOnceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_AppendManyOnceResponse)
+	err := c.cc.Invoke(ctx, EventSequences_AppendManyOnceWithNamedTags_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventSequencesClient) AppendManyWithNamedTags(ctx context.Context, in *AppendManyWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendManyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CommandResult_AppendManyResponse)
 	err := c.cc.Invoke(ctx, EventSequences_AppendManyWithNamedTags_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventSequencesClient) AppendOnce(ctx context.Context, in *AppendOnceRequest, opts ...grpc.CallOption) (*CommandResult_AppendOnceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_AppendOnceResponse)
+	err := c.cc.Invoke(ctx, EventSequences_AppendOnce_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventSequencesClient) AppendOnceWithNamedTags(ctx context.Context, in *AppendOnceWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendOnceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_AppendOnceResponse)
+	err := c.cc.Invoke(ctx, EventSequences_AppendOnceWithNamedTags_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -203,6 +257,16 @@ func (c *eventSequencesClient) CompleteStreamScope(ctx context.Context, in *Comp
 	return out, nil
 }
 
+func (c *eventSequencesClient) CopyEventsForEventSource(ctx context.Context, in *CopyEventsForEventSourceRequest, opts ...grpc.CallOption) (*CommandResult_Guid, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_Guid)
+	err := c.cc.Invoke(ctx, EventSequences_CopyEventsForEventSource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventSequencesClient) EndOf(ctx context.Context, in *EndOfRequest, opts ...grpc.CallOption) (*QueryResult_SerializableDateTimeOffset, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryResult_SerializableDateTimeOffset)
@@ -243,6 +307,16 @@ func (c *eventSequencesClient) FromSequenceNumber(ctx context.Context, in *FromS
 	return out, nil
 }
 
+func (c *eventSequencesClient) FromSequenceNumberWithErasedProperties(ctx context.Context, in *FromSequenceNumberWithErasedPropertiesRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AppendedEventResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_IEnumerable_AppendedEventResponse)
+	err := c.cc.Invoke(ctx, EventSequences_FromSequenceNumberWithErasedProperties_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventSequencesClient) HasEventsForEventSourceId(ctx context.Context, in *HasEventsForEventSourceIdRequest, opts ...grpc.CallOption) (*QueryResult_EventSourceEventsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryResult_EventSourceEventsResponse)
@@ -267,6 +341,16 @@ func (c *eventSequencesClient) MetadataAt(ctx context.Context, in *MetadataAtReq
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryResult_IEnumerable_EventMetadataResponse)
 	err := c.cc.Invoke(ctx, EventSequences_MetadataAt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventSequencesClient) Page(ctx context.Context, in *PageRequest, opts ...grpc.CallOption) (*QueryResult_EventSequencePageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_EventSequencePageResponse)
+	err := c.cc.Invoke(ctx, EventSequences_Page_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -393,18 +477,25 @@ type EventSequencesServer interface {
 	AppendMany(context.Context, *AppendManyRequest) (*CommandResult_AppendManyResponse, error)
 	AppendManyForEventSources(context.Context, *AppendManyForEventSourcesRequest) (*CommandResult_AppendManyResponse, error)
 	AppendManyForEventSourcesWithNamedTags(context.Context, *AppendManyForEventSourcesWithNamedTagsRequest) (*CommandResult_AppendManyResponse, error)
+	AppendManyOnce(context.Context, *AppendManyOnceRequest) (*CommandResult_AppendManyOnceResponse, error)
+	AppendManyOnceWithNamedTags(context.Context, *AppendManyOnceWithNamedTagsRequest) (*CommandResult_AppendManyOnceResponse, error)
 	AppendManyWithNamedTags(context.Context, *AppendManyWithNamedTagsRequest) (*CommandResult_AppendManyResponse, error)
+	AppendOnce(context.Context, *AppendOnceRequest) (*CommandResult_AppendOnceResponse, error)
+	AppendOnceWithNamedTags(context.Context, *AppendOnceWithNamedTagsRequest) (*CommandResult_AppendOnceResponse, error)
 	AppendWithNamedTags(context.Context, *AppendWithNamedTagsRequest) (*CommandResult_AppendResponse, error)
 	ClosedStreams(context.Context, *ClosedStreamsRequest) (*QueryResult_IEnumerable_ClosedStreamResponse, error)
 	CompleteStream(context.Context, *CompleteStreamRequest) (*CommandResult_CompleteStreamResponse, error)
 	CompleteStreamScope(context.Context, *CompleteStreamScopeRequest) (*CommandResult_CompleteStreamResponse, error)
+	CopyEventsForEventSource(context.Context, *CopyEventsForEventSourceRequest) (*CommandResult_Guid, error)
 	EndOf(context.Context, *EndOfRequest) (*QueryResult_SerializableDateTimeOffset, error)
 	ExportEvents(context.Context, *ExportEventsRequest) (*QueryResult_IEnumerable_ExportedEventResponse, error)
 	ForEventSourceIdAndEventTypes(context.Context, *ForEventSourceIdAndEventTypesRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	FromSequenceNumber(context.Context, *FromSequenceNumberRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
+	FromSequenceNumberWithErasedProperties(context.Context, *FromSequenceNumberWithErasedPropertiesRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	HasEventsForEventSourceId(context.Context, *HasEventsForEventSourceIdRequest) (*QueryResult_EventSourceEventsResponse, error)
 	IsStreamScopeCompleted(context.Context, *IsStreamScopeCompletedRequest) (*QueryResult_StreamScopeCompletionResponse, error)
 	MetadataAt(context.Context, *MetadataAtRequest) (*QueryResult_IEnumerable_EventMetadataResponse, error)
+	Page(context.Context, *PageRequest) (*QueryResult_EventSequencePageResponse, error)
 	ParseResolution(context.Context, *ParseResolutionRequest) (*QueryResult_HistogramResolution, error)
 	QueryEvents(context.Context, *QueryEventsRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
 	QueryEventsWithNamedTags(context.Context, *QueryEventsWithNamedTagsRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error)
@@ -444,8 +535,20 @@ func (UnimplementedEventSequencesServer) AppendManyForEventSources(context.Conte
 func (UnimplementedEventSequencesServer) AppendManyForEventSourcesWithNamedTags(context.Context, *AppendManyForEventSourcesWithNamedTagsRequest) (*CommandResult_AppendManyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AppendManyForEventSourcesWithNamedTags not implemented")
 }
+func (UnimplementedEventSequencesServer) AppendManyOnce(context.Context, *AppendManyOnceRequest) (*CommandResult_AppendManyOnceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AppendManyOnce not implemented")
+}
+func (UnimplementedEventSequencesServer) AppendManyOnceWithNamedTags(context.Context, *AppendManyOnceWithNamedTagsRequest) (*CommandResult_AppendManyOnceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AppendManyOnceWithNamedTags not implemented")
+}
 func (UnimplementedEventSequencesServer) AppendManyWithNamedTags(context.Context, *AppendManyWithNamedTagsRequest) (*CommandResult_AppendManyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AppendManyWithNamedTags not implemented")
+}
+func (UnimplementedEventSequencesServer) AppendOnce(context.Context, *AppendOnceRequest) (*CommandResult_AppendOnceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AppendOnce not implemented")
+}
+func (UnimplementedEventSequencesServer) AppendOnceWithNamedTags(context.Context, *AppendOnceWithNamedTagsRequest) (*CommandResult_AppendOnceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AppendOnceWithNamedTags not implemented")
 }
 func (UnimplementedEventSequencesServer) AppendWithNamedTags(context.Context, *AppendWithNamedTagsRequest) (*CommandResult_AppendResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AppendWithNamedTags not implemented")
@@ -459,6 +562,9 @@ func (UnimplementedEventSequencesServer) CompleteStream(context.Context, *Comple
 func (UnimplementedEventSequencesServer) CompleteStreamScope(context.Context, *CompleteStreamScopeRequest) (*CommandResult_CompleteStreamResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompleteStreamScope not implemented")
 }
+func (UnimplementedEventSequencesServer) CopyEventsForEventSource(context.Context, *CopyEventsForEventSourceRequest) (*CommandResult_Guid, error) {
+	return nil, status.Error(codes.Unimplemented, "method CopyEventsForEventSource not implemented")
+}
 func (UnimplementedEventSequencesServer) EndOf(context.Context, *EndOfRequest) (*QueryResult_SerializableDateTimeOffset, error) {
 	return nil, status.Error(codes.Unimplemented, "method EndOf not implemented")
 }
@@ -471,6 +577,9 @@ func (UnimplementedEventSequencesServer) ForEventSourceIdAndEventTypes(context.C
 func (UnimplementedEventSequencesServer) FromSequenceNumber(context.Context, *FromSequenceNumberRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FromSequenceNumber not implemented")
 }
+func (UnimplementedEventSequencesServer) FromSequenceNumberWithErasedProperties(context.Context, *FromSequenceNumberWithErasedPropertiesRequest) (*QueryResult_IEnumerable_AppendedEventResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FromSequenceNumberWithErasedProperties not implemented")
+}
 func (UnimplementedEventSequencesServer) HasEventsForEventSourceId(context.Context, *HasEventsForEventSourceIdRequest) (*QueryResult_EventSourceEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method HasEventsForEventSourceId not implemented")
 }
@@ -479,6 +588,9 @@ func (UnimplementedEventSequencesServer) IsStreamScopeCompleted(context.Context,
 }
 func (UnimplementedEventSequencesServer) MetadataAt(context.Context, *MetadataAtRequest) (*QueryResult_IEnumerable_EventMetadataResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MetadataAt not implemented")
+}
+func (UnimplementedEventSequencesServer) Page(context.Context, *PageRequest) (*QueryResult_EventSequencePageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Page not implemented")
 }
 func (UnimplementedEventSequencesServer) ParseResolution(context.Context, *ParseResolutionRequest) (*QueryResult_HistogramResolution, error) {
 	return nil, status.Error(codes.Unimplemented, "method ParseResolution not implemented")
@@ -642,6 +754,42 @@ func _EventSequences_AppendManyForEventSourcesWithNamedTags_Handler(srv interfac
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventSequences_AppendManyOnce_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendManyOnceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).AppendManyOnce(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_AppendManyOnce_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).AppendManyOnce(ctx, req.(*AppendManyOnceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventSequences_AppendManyOnceWithNamedTags_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendManyOnceWithNamedTagsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).AppendManyOnceWithNamedTags(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_AppendManyOnceWithNamedTags_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).AppendManyOnceWithNamedTags(ctx, req.(*AppendManyOnceWithNamedTagsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventSequences_AppendManyWithNamedTags_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AppendManyWithNamedTagsRequest)
 	if err := dec(in); err != nil {
@@ -656,6 +804,42 @@ func _EventSequences_AppendManyWithNamedTags_Handler(srv interface{}, ctx contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EventSequencesServer).AppendManyWithNamedTags(ctx, req.(*AppendManyWithNamedTagsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventSequences_AppendOnce_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendOnceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).AppendOnce(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_AppendOnce_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).AppendOnce(ctx, req.(*AppendOnceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventSequences_AppendOnceWithNamedTags_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendOnceWithNamedTagsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).AppendOnceWithNamedTags(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_AppendOnceWithNamedTags_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).AppendOnceWithNamedTags(ctx, req.(*AppendOnceWithNamedTagsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -732,6 +916,24 @@ func _EventSequences_CompleteStreamScope_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventSequences_CopyEventsForEventSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CopyEventsForEventSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).CopyEventsForEventSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_CopyEventsForEventSource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).CopyEventsForEventSource(ctx, req.(*CopyEventsForEventSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventSequences_EndOf_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EndOfRequest)
 	if err := dec(in); err != nil {
@@ -804,6 +1006,24 @@ func _EventSequences_FromSequenceNumber_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventSequences_FromSequenceNumberWithErasedProperties_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FromSequenceNumberWithErasedPropertiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).FromSequenceNumberWithErasedProperties(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_FromSequenceNumberWithErasedProperties_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).FromSequenceNumberWithErasedProperties(ctx, req.(*FromSequenceNumberWithErasedPropertiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventSequences_HasEventsForEventSourceId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(HasEventsForEventSourceIdRequest)
 	if err := dec(in); err != nil {
@@ -854,6 +1074,24 @@ func _EventSequences_MetadataAt_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EventSequencesServer).MetadataAt(ctx, req.(*MetadataAtRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventSequences_Page_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).Page(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_Page_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).Page(ctx, req.(*PageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1088,8 +1326,24 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EventSequences_AppendManyForEventSourcesWithNamedTags_Handler,
 		},
 		{
+			MethodName: "AppendManyOnce",
+			Handler:    _EventSequences_AppendManyOnce_Handler,
+		},
+		{
+			MethodName: "AppendManyOnceWithNamedTags",
+			Handler:    _EventSequences_AppendManyOnceWithNamedTags_Handler,
+		},
+		{
 			MethodName: "AppendManyWithNamedTags",
 			Handler:    _EventSequences_AppendManyWithNamedTags_Handler,
+		},
+		{
+			MethodName: "AppendOnce",
+			Handler:    _EventSequences_AppendOnce_Handler,
+		},
+		{
+			MethodName: "AppendOnceWithNamedTags",
+			Handler:    _EventSequences_AppendOnceWithNamedTags_Handler,
 		},
 		{
 			MethodName: "AppendWithNamedTags",
@@ -1108,6 +1362,10 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EventSequences_CompleteStreamScope_Handler,
 		},
 		{
+			MethodName: "CopyEventsForEventSource",
+			Handler:    _EventSequences_CopyEventsForEventSource_Handler,
+		},
+		{
 			MethodName: "EndOf",
 			Handler:    _EventSequences_EndOf_Handler,
 		},
@@ -1124,6 +1382,10 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EventSequences_FromSequenceNumber_Handler,
 		},
 		{
+			MethodName: "FromSequenceNumberWithErasedProperties",
+			Handler:    _EventSequences_FromSequenceNumberWithErasedProperties_Handler,
+		},
+		{
 			MethodName: "HasEventsForEventSourceId",
 			Handler:    _EventSequences_HasEventsForEventSourceId_Handler,
 		},
@@ -1134,6 +1396,10 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MetadataAt",
 			Handler:    _EventSequences_MetadataAt_Handler,
+		},
+		{
+			MethodName: "Page",
+			Handler:    _EventSequences_Page_Handler,
 		},
 		{
 			MethodName: "ParseResolution",

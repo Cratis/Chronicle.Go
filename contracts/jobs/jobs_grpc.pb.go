@@ -19,12 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Jobs_AllJobs_FullMethodName     = "/Cratis.Chronicle.Contracts.Jobs.Jobs/AllJobs"
-	Jobs_DeleteJob_FullMethodName   = "/Cratis.Chronicle.Contracts.Jobs.Jobs/DeleteJob"
-	Jobs_GetJobSteps_FullMethodName = "/Cratis.Chronicle.Contracts.Jobs.Jobs/GetJobSteps"
-	Jobs_ObserveJobs_FullMethodName = "/Cratis.Chronicle.Contracts.Jobs.Jobs/ObserveJobs"
-	Jobs_ResumeJob_FullMethodName   = "/Cratis.Chronicle.Contracts.Jobs.Jobs/ResumeJob"
-	Jobs_StopJob_FullMethodName     = "/Cratis.Chronicle.Contracts.Jobs.Jobs/StopJob"
+	Jobs_AllJobs_FullMethodName             = "/Cratis.Chronicle.Contracts.Jobs.Jobs/AllJobs"
+	Jobs_DeleteJob_FullMethodName           = "/Cratis.Chronicle.Contracts.Jobs.Jobs/DeleteJob"
+	Jobs_GetJobSteps_FullMethodName         = "/Cratis.Chronicle.Contracts.Jobs.Jobs/GetJobSteps"
+	Jobs_ObserveJobs_FullMethodName         = "/Cratis.Chronicle.Contracts.Jobs.Jobs/ObserveJobs"
+	Jobs_ResumeJob_FullMethodName           = "/Cratis.Chronicle.Contracts.Jobs.Jobs/ResumeJob"
+	Jobs_ResumeJobWithResult_FullMethodName = "/Cratis.Chronicle.Contracts.Jobs.Jobs/ResumeJobWithResult"
+	Jobs_StopJob_FullMethodName             = "/Cratis.Chronicle.Contracts.Jobs.Jobs/StopJob"
+	Jobs_StopJobWithResult_FullMethodName   = "/Cratis.Chronicle.Contracts.Jobs.Jobs/StopJobWithResult"
 )
 
 // JobsClient is the client API for Jobs service.
@@ -36,7 +38,9 @@ type JobsClient interface {
 	GetJobSteps(ctx context.Context, in *GetJobStepsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_JobStepSummaryResponse, error)
 	ObserveJobs(ctx context.Context, in *ObserveJobsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_JobSummaryResponse], error)
 	ResumeJob(ctx context.Context, in *ResumeJobRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	ResumeJobWithResult(ctx context.Context, in *ResumeJobWithResultRequest, opts ...grpc.CallOption) (*CommandResult_ResumeJobWithResultResponse, error)
 	StopJob(ctx context.Context, in *StopJobRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	StopJobWithResult(ctx context.Context, in *StopJobWithResultRequest, opts ...grpc.CallOption) (*CommandResult_StopJobWithResultResponse, error)
 }
 
 type jobsClient struct {
@@ -106,10 +110,30 @@ func (c *jobsClient) ResumeJob(ctx context.Context, in *ResumeJobRequest, opts .
 	return out, nil
 }
 
+func (c *jobsClient) ResumeJobWithResult(ctx context.Context, in *ResumeJobWithResultRequest, opts ...grpc.CallOption) (*CommandResult_ResumeJobWithResultResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_ResumeJobWithResultResponse)
+	err := c.cc.Invoke(ctx, Jobs_ResumeJobWithResult_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *jobsClient) StopJob(ctx context.Context, in *StopJobRequest, opts ...grpc.CallOption) (*CommandResult, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CommandResult)
 	err := c.cc.Invoke(ctx, Jobs_StopJob_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jobsClient) StopJobWithResult(ctx context.Context, in *StopJobWithResultRequest, opts ...grpc.CallOption) (*CommandResult_StopJobWithResultResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_StopJobWithResultResponse)
+	err := c.cc.Invoke(ctx, Jobs_StopJobWithResult_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +149,9 @@ type JobsServer interface {
 	GetJobSteps(context.Context, *GetJobStepsRequest) (*QueryResult_IEnumerable_JobStepSummaryResponse, error)
 	ObserveJobs(*ObserveJobsRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_JobSummaryResponse]) error
 	ResumeJob(context.Context, *ResumeJobRequest) (*CommandResult, error)
+	ResumeJobWithResult(context.Context, *ResumeJobWithResultRequest) (*CommandResult_ResumeJobWithResultResponse, error)
 	StopJob(context.Context, *StopJobRequest) (*CommandResult, error)
+	StopJobWithResult(context.Context, *StopJobWithResultRequest) (*CommandResult_StopJobWithResultResponse, error)
 	mustEmbedUnimplementedJobsServer()
 }
 
@@ -151,8 +177,14 @@ func (UnimplementedJobsServer) ObserveJobs(*ObserveJobsRequest, grpc.ServerStrea
 func (UnimplementedJobsServer) ResumeJob(context.Context, *ResumeJobRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResumeJob not implemented")
 }
+func (UnimplementedJobsServer) ResumeJobWithResult(context.Context, *ResumeJobWithResultRequest) (*CommandResult_ResumeJobWithResultResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResumeJobWithResult not implemented")
+}
 func (UnimplementedJobsServer) StopJob(context.Context, *StopJobRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method StopJob not implemented")
+}
+func (UnimplementedJobsServer) StopJobWithResult(context.Context, *StopJobWithResultRequest) (*CommandResult_StopJobWithResultResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopJobWithResult not implemented")
 }
 func (UnimplementedJobsServer) mustEmbedUnimplementedJobsServer() {}
 func (UnimplementedJobsServer) testEmbeddedByValue()              {}
@@ -258,6 +290,24 @@ func _Jobs_ResumeJob_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Jobs_ResumeJobWithResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeJobWithResultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JobsServer).ResumeJobWithResult(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Jobs_ResumeJobWithResult_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JobsServer).ResumeJobWithResult(ctx, req.(*ResumeJobWithResultRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Jobs_StopJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StopJobRequest)
 	if err := dec(in); err != nil {
@@ -272,6 +322,24 @@ func _Jobs_StopJob_Handler(srv interface{}, ctx context.Context, dec func(interf
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(JobsServer).StopJob(ctx, req.(*StopJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Jobs_StopJobWithResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopJobWithResultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JobsServer).StopJobWithResult(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Jobs_StopJobWithResult_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JobsServer).StopJobWithResult(ctx, req.(*StopJobWithResultRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -300,8 +368,16 @@ var Jobs_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Jobs_ResumeJob_Handler,
 		},
 		{
+			MethodName: "ResumeJobWithResult",
+			Handler:    _Jobs_ResumeJobWithResult_Handler,
+		},
+		{
 			MethodName: "StopJob",
 			Handler:    _Jobs_StopJob_Handler,
+		},
+		{
+			MethodName: "StopJobWithResult",
+			Handler:    _Jobs_StopJobWithResult_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
