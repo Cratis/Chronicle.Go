@@ -8,6 +8,8 @@ be a backlog item or a pull request, rather than one model with many nullable
 fields. Each variant has its own read model. Entering one removes the same event
 source from its siblings. A normal update cannot create an inactive variant.
 
+Other starting points in this chapter are [recursive children](#recursive-children) for finite nested structures and [source stores and ad-hoc queries](#source-stores-and-ad-hoc-queries) for event-origin selection or one-off PDL exploration. These are separate choices, not steps after defining lifecycle variants.
+
 ## Model-bound variants
 
 Register the events and the two read models below before constructing the client.

@@ -3,6 +3,8 @@ title: Add a projection to an existing store
 description: Register a new ordinary read model and projection while retaining existing readers and truthful registration outcomes.
 ---
 
+For declarations prepared before client construction, start with the [startup projection guide](index.md#model-bound-declarations). This page covers the separate store-level addition workflow.
+
 Use `store.RegisterProjection(ctx, declaration)` to add a new ordinary projection
 and its new read model after obtaining an `EventStore`. The declaration uses the
 same `readmodels.Define`, model-bound tags and projection builders as startup.
