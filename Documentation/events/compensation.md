@@ -16,11 +16,11 @@ The target must be registered in the same store.
 ```go
 original, err := events.Define[OrderPlaced]()
 if err != nil {
-	return err
+    return err
 }
 cancelled, err := events.Define[OrderPlacementRetracted](events.WithCompensationFor(original))
 if err != nil {
-	return err
+    return err
 }
 ```
 
@@ -29,10 +29,10 @@ if err != nil {
 ```go
 result, err := store.EventLog().Compensate(ctx, position, OrderPlacementRetracted{Reason: "duplicate"})
 if err != nil {
-	return err // refused before dispatch, or the outcome is unknown
+    return err // refused before dispatch, or the outcome is unknown
 }
 if err := result.Err(); err != nil {
-	return err // for example eventsequences.CompensatedEventNotFound
+    return err // for example eventsequences.CompensatedEventNotFound
 }
 ```
 
