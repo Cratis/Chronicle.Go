@@ -918,6 +918,7 @@ type EventContext struct {
 	NamedTags          []*NamedTag                 `protobuf:"bytes,17,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
 	EventSource        string                      `protobuf:"bytes,18,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	AppendedGeneration uint32                      `protobuf:"varint,19,opt,name=AppendedGeneration,proto3" json:"AppendedGeneration,omitempty"`
+	CompensationFor    uint64                      `protobuf:"varint,20,opt,name=CompensationFor,proto3" json:"CompensationFor,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -1081,6 +1082,13 @@ func (x *EventContext) GetEventSource() string {
 func (x *EventContext) GetAppendedGeneration() uint32 {
 	if x != nil {
 		return x.AppendedGeneration
+	}
+	return 0
+}
+
+func (x *EventContext) GetCompensationFor() uint64 {
+	if x != nil {
+		return x.CompensationFor
 	}
 	return 0
 }
@@ -2051,7 +2059,7 @@ const file_captures_proto_rawDesc = "" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12'\n" +
-	"\tCaptureId\x18\x02 \x01(\v2\t.bcl.GuidR\tCaptureId\"\xd2\a\n" +
+	"\tCaptureId\x18\x02 \x01(\v2\t.bcl.GuidR\tCaptureId\"\xfc\a\n" +
 	"\fEventContext\x12L\n" +
 	"\tEventType\x18\x01 \x01(\v2..Cratis.Chronicle.Contracts.Captures.EventTypeR\tEventType\x12(\n" +
 	"\x0fEventSourceType\x18\x02 \x01(\tR\x0fEventSourceType\x12$\n" +
@@ -2074,7 +2082,8 @@ const file_captures_proto_rawDesc = "" +
 	"\aSubject\x18\x10 \x01(\tR\aSubject\x12K\n" +
 	"\tNamedTags\x18\x11 \x03(\v2-.Cratis.Chronicle.Contracts.Captures.NamedTagR\tNamedTags\x12 \n" +
 	"\vEventSource\x18\x12 \x01(\tR\vEventSource\x12.\n" +
-	"\x12AppendedGeneration\x18\x13 \x01(\rR\x12AppendedGeneration\"Y\n" +
+	"\x12AppendedGeneration\x18\x13 \x01(\rR\x12AppendedGeneration\x12(\n" +
+	"\x0fCompensationFor\x18\x14 \x01(\x04R\x0fCompensationFor\"Y\n" +
 	"\tEventType\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\tR\x02Id\x12\x1e\n" +
 	"\n" +
