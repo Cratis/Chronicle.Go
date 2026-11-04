@@ -53,7 +53,7 @@ foreign event descriptors and unknown composition names fail atomically.
 
 ## Declare and register a unique value
 
-Register participating events first, build the definition, then call `Registry.AddConstraint` before constructing the client with `WithRegistry`. The client registers constraints after event types and waits for acknowledgement before returning a store or dispatching an append. Reconnection replays those registrations.
+For an explicit-builder alternative to field tags, register participating events first, build the definition, then call `Registry.AddConstraint` before constructing the client with `WithRegistry`. The client registers constraints after event types and waits for acknowledgement before returning a store or dispatching an append. Reconnection replays those registrations. Do not redeclare the same constraint through both routes. To extend a tag-derived declaration, use the composition callback described above.
 
 This excerpt from the [executable example](../../examples/constraints/main.go) uses its `EmailReserved` event (`Email string`, tagged `json:"email"`) and empty `EmailReleased` event. It reserves the address across event sources, ignoring casing, until the owning source appends a release event:
 
