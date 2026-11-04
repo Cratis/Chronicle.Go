@@ -20,9 +20,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EventStores_AllEventStores_FullMethodName     = "/Cratis.Chronicle.Contracts.EventStores.EventStores/AllEventStores"
-	EventStores_EnsureEventStore_FullMethodName   = "/Cratis.Chronicle.Contracts.EventStores.EventStores/EnsureEventStore"
-	EventStores_ObserveEventStores_FullMethodName = "/Cratis.Chronicle.Contracts.EventStores.EventStores/ObserveEventStores"
+	EventStores_AllEventStores_FullMethodName          = "/Cratis.Chronicle.Contracts.EventStores.EventStores/AllEventStores"
+	EventStores_EnsureEventStore_FullMethodName        = "/Cratis.Chronicle.Contracts.EventStores.EventStores/EnsureEventStore"
+	EventStores_GetEventStoreDeployment_FullMethodName = "/Cratis.Chronicle.Contracts.EventStores.EventStores/GetEventStoreDeployment"
+	EventStores_ObserveEventStores_FullMethodName      = "/Cratis.Chronicle.Contracts.EventStores.EventStores/ObserveEventStores"
+	EventStores_RegisterDeployment_FullMethodName      = "/Cratis.Chronicle.Contracts.EventStores.EventStores/RegisterDeployment"
 )
 
 // EventStoresClient is the client API for EventStores service.
@@ -31,7 +33,9 @@ const (
 type EventStoresClient interface {
 	AllEventStores(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventStoreNamesResponse, error)
 	EnsureEventStore(ctx context.Context, in *EnsureEventStoreRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	GetEventStoreDeployment(ctx context.Context, in *GetEventStoreDeploymentRequest, opts ...grpc.CallOption) (*QueryResult_EventStoreDeploymentResponse, error)
 	ObserveEventStores(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_EventStoreNamesResponse], error)
+	RegisterDeployment(ctx context.Context, in *RegisterDeploymentRequest, opts ...grpc.CallOption) (*CommandResult, error)
 }
 
 type eventStoresClient struct {
@@ -62,6 +66,16 @@ func (c *eventStoresClient) EnsureEventStore(ctx context.Context, in *EnsureEven
 	return out, nil
 }
 
+func (c *eventStoresClient) GetEventStoreDeployment(ctx context.Context, in *GetEventStoreDeploymentRequest, opts ...grpc.CallOption) (*QueryResult_EventStoreDeploymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_EventStoreDeploymentResponse)
+	err := c.cc.Invoke(ctx, EventStores_GetEventStoreDeployment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventStoresClient) ObserveEventStores(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_EventStoreNamesResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &EventStores_ServiceDesc.Streams[0], EventStores_ObserveEventStores_FullMethodName, cOpts...)
@@ -81,13 +95,25 @@ func (c *eventStoresClient) ObserveEventStores(ctx context.Context, in *emptypb.
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type EventStores_ObserveEventStoresClient = grpc.ServerStreamingClient[QueryResult_IEnumerable_EventStoreNamesResponse]
 
+func (c *eventStoresClient) RegisterDeployment(ctx context.Context, in *RegisterDeploymentRequest, opts ...grpc.CallOption) (*CommandResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult)
+	err := c.cc.Invoke(ctx, EventStores_RegisterDeployment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EventStoresServer is the server API for EventStores service.
 // All implementations must embed UnimplementedEventStoresServer
 // for forward compatibility.
 type EventStoresServer interface {
 	AllEventStores(context.Context, *emptypb.Empty) (*QueryResult_IEnumerable_EventStoreNamesResponse, error)
 	EnsureEventStore(context.Context, *EnsureEventStoreRequest) (*CommandResult, error)
+	GetEventStoreDeployment(context.Context, *GetEventStoreDeploymentRequest) (*QueryResult_EventStoreDeploymentResponse, error)
 	ObserveEventStores(*emptypb.Empty, grpc.ServerStreamingServer[QueryResult_IEnumerable_EventStoreNamesResponse]) error
+	RegisterDeployment(context.Context, *RegisterDeploymentRequest) (*CommandResult, error)
 	mustEmbedUnimplementedEventStoresServer()
 }
 
@@ -104,8 +130,14 @@ func (UnimplementedEventStoresServer) AllEventStores(context.Context, *emptypb.E
 func (UnimplementedEventStoresServer) EnsureEventStore(context.Context, *EnsureEventStoreRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method EnsureEventStore not implemented")
 }
+func (UnimplementedEventStoresServer) GetEventStoreDeployment(context.Context, *GetEventStoreDeploymentRequest) (*QueryResult_EventStoreDeploymentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetEventStoreDeployment not implemented")
+}
 func (UnimplementedEventStoresServer) ObserveEventStores(*emptypb.Empty, grpc.ServerStreamingServer[QueryResult_IEnumerable_EventStoreNamesResponse]) error {
 	return status.Error(codes.Unimplemented, "method ObserveEventStores not implemented")
+}
+func (UnimplementedEventStoresServer) RegisterDeployment(context.Context, *RegisterDeploymentRequest) (*CommandResult, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegisterDeployment not implemented")
 }
 func (UnimplementedEventStoresServer) mustEmbedUnimplementedEventStoresServer() {}
 func (UnimplementedEventStoresServer) testEmbeddedByValue()                     {}
@@ -164,6 +196,24 @@ func _EventStores_EnsureEventStore_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventStores_GetEventStoreDeployment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEventStoreDeploymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventStoresServer).GetEventStoreDeployment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventStores_GetEventStoreDeployment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventStoresServer).GetEventStoreDeployment(ctx, req.(*GetEventStoreDeploymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventStores_ObserveEventStores_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(emptypb.Empty)
 	if err := stream.RecvMsg(m); err != nil {
@@ -174,6 +224,24 @@ func _EventStores_ObserveEventStores_Handler(srv interface{}, stream grpc.Server
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type EventStores_ObserveEventStoresServer = grpc.ServerStreamingServer[QueryResult_IEnumerable_EventStoreNamesResponse]
+
+func _EventStores_RegisterDeployment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterDeploymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventStoresServer).RegisterDeployment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventStores_RegisterDeployment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventStoresServer).RegisterDeployment(ctx, req.(*RegisterDeploymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
 
 // EventStores_ServiceDesc is the grpc.ServiceDesc for EventStores service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -189,6 +257,14 @@ var EventStores_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EnsureEventStore",
 			Handler:    _EventStores_EnsureEventStore_Handler,
+		},
+		{
+			MethodName: "GetEventStoreDeployment",
+			Handler:    _EventStores_GetEventStoreDeployment_Handler,
+		},
+		{
+			MethodName: "RegisterDeployment",
+			Handler:    _EventStores_RegisterDeployment_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

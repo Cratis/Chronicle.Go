@@ -3,17 +3,17 @@ title: Get started with Chronicle for Go
 description: Register a typed event and append it to a local Chronicle kernel.
 ---
 
-The maintained Go example below registers a typed customer event, appends it and prints its sequence position on success. A live run requires a compatible Chronicle endpoint; this page does not yet provide a validated replacement local recipe for current source. Begin with the [capability and limits summary](../../parity.md#experimental-v0-capabilities-and-limits), especially before using observers or decision reads. Chronicle.Go handles OAuth, compatibility, registration and transport; you supply the event facts and their source identity.
+The maintained Go example below registers a typed customer event, appends it and prints its sequence position on success. A live run needs the development kernel started below. Begin with the [capability and limits summary](../../parity.md#experimental-v0-capabilities-and-limits), especially before using observers or decision reads. Chronicle.Go handles OAuth, compatibility, registration and transport; you supply the event facts and their source identity.
 
-## Historical development kernel recipe
+## Start a development kernel
 
-Use Go 1.26 or newer for the client. The older Docker recipe below is retained for context, **not as a current setup recommendation**. It no longer matches the source's contract pin and cannot satisfy current decision-read admission. A configured CI image alone is not a validated replacement recipe:
+Use Go 1.26 or newer and Docker. Start the integration kernel matching the contract release:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.32.3-development
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.123.0-development
 ```
 
-For that historical image, `curl -skf https://localhost:35000/health` returning `Healthy` establishes process health, not feature compatibility. The development image includes MongoDB and a self-signed certificate. Never expose its built-in credentials on a production endpoint.
+Wait until `curl -skf https://localhost:35000/health` returns `Healthy`; that establishes process health, not feature compatibility. The development image includes MongoDB and a self-signed certificate. Never expose its built-in credentials on a production endpoint.
 
 ## Select a release or source checkout
 
@@ -87,7 +87,7 @@ An empty namespace starts at position `0`; later runs append at higher sequence-
 
 `EventStore` connects, ensures the default namespace and waits for event registration before publishing the handle. Registration sent is not observer subscription or catch-up. `Close` releases the client, including its keep-alive worker. Read [short-lived clients and process ownership](../../connection-strings/lifecycle.md#short-lived-clients-and-process-ownership) for skipped-session exclusions and process reuse.
 
-Current source contracts target Chronicle **19.70.0**; integration CI is configured with **19.70.0-development**. Those facts do not prove this displayed example against a replacement local setup. [Decision reads](../../read-models/decision-reads.md) have their own exact server/protocol and projection-admission requirements.
+Generated contracts target Chronicle **19.123.0**, and the real-kernel tests run against **19.123.0-development**. [Decision reads](../../read-models/decision-reads.md) have their own exact server/protocol and projection-admission requirements.
 
 ## Continue
 
@@ -96,4 +96,4 @@ Current source contracts target Chronicle **19.70.0**; integration CI is configu
 - [Append with concurrency protection](../../events/appending-events.md) when a business decision depends on previously read state.
 - [Review the parity map](../../parity.md) before relying on advanced client features.
 
-If using the historical foreground container, stop it with Ctrl+C. That development kernel is disposable; configure durable kernel storage separately for real data.
+Stop your foreground container with Ctrl+C. The example kernel is disposable; configure durable kernel storage separately for real data.

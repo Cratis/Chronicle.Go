@@ -79,6 +79,7 @@ const (
 	FailureKind_Handling                  FailureKind = 1
 	FailureKind_Timeout                   FailureKind = 2
 	FailureKind_FAILURE_KIND_Disconnected FailureKind = 3
+	FailureKind_WaitingForHandler         FailureKind = 4
 )
 
 // Enum value maps for FailureKind.
@@ -88,12 +89,14 @@ var (
 		1: "Handling",
 		2: "Timeout",
 		3: "FAILURE_KIND_Disconnected",
+		4: "WaitingForHandler",
 	}
 	FailureKind_value = map[string]int32{
 		"FAILURE_KIND_Unknown":      0,
 		"Handling":                  1,
 		"Timeout":                   2,
 		"FAILURE_KIND_Disconnected": 3,
+		"WaitingForHandler":         4,
 	}
 )
 
@@ -1663,19 +1666,20 @@ func (x *IEnumerable_ObserverInformation) GetItems() []*ObserverInformation {
 }
 
 type ObserverInformation struct {
-	state                          protoimpl.MessageState `protogen:"open.v1"`
-	Id                             string                 `protobuf:"bytes,1,opt,name=Id,proto3" json:"Id,omitempty"`
-	EventSequenceId                string                 `protobuf:"bytes,2,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
-	Type                           ObserverType           `protobuf:"varint,3,opt,name=Type,proto3,enum=Cratis.Chronicle.Contracts.Observation.ObserverType" json:"Type,omitempty"`
-	Owner                          ObserverOwner          `protobuf:"varint,4,opt,name=Owner,proto3,enum=Cratis.Chronicle.Contracts.Observation.ObserverOwner" json:"Owner,omitempty"`
-	EventTypes                     []*EventType           `protobuf:"bytes,5,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
-	NextEventSequenceNumber        uint64                 `protobuf:"varint,6,opt,name=NextEventSequenceNumber,proto3" json:"NextEventSequenceNumber,omitempty"`
-	LastHandledEventSequenceNumber uint64                 `protobuf:"varint,7,opt,name=LastHandledEventSequenceNumber,proto3" json:"LastHandledEventSequenceNumber,omitempty"`
-	RunningState                   ObserverRunningState   `protobuf:"varint,8,opt,name=RunningState,proto3,enum=Cratis.Chronicle.Contracts.Observation.ObserverRunningState" json:"RunningState,omitempty"`
-	IsSubscribed                   bool                   `protobuf:"varint,9,opt,name=IsSubscribed,proto3" json:"IsSubscribed,omitempty"`
-	IsReplayable                   bool                   `protobuf:"varint,10,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"`
-	TailEventSequenceNumber        uint64                 `protobuf:"varint,11,opt,name=TailEventSequenceNumber,proto3" json:"TailEventSequenceNumber,omitempty"`
-	HandledEventCount              uint64                 `protobuf:"varint,12,opt,name=HandledEventCount,proto3" json:"HandledEventCount,omitempty"`
+	state                          protoimpl.MessageState      `protogen:"open.v1"`
+	Id                             string                      `protobuf:"bytes,1,opt,name=Id,proto3" json:"Id,omitempty"`
+	EventSequenceId                string                      `protobuf:"bytes,2,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
+	Type                           ObserverType                `protobuf:"varint,3,opt,name=Type,proto3,enum=Cratis.Chronicle.Contracts.Observation.ObserverType" json:"Type,omitempty"`
+	Owner                          ObserverOwner               `protobuf:"varint,4,opt,name=Owner,proto3,enum=Cratis.Chronicle.Contracts.Observation.ObserverOwner" json:"Owner,omitempty"`
+	EventTypes                     []*EventType                `protobuf:"bytes,5,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
+	NextEventSequenceNumber        uint64                      `protobuf:"varint,6,opt,name=NextEventSequenceNumber,proto3" json:"NextEventSequenceNumber,omitempty"`
+	LastHandledEventSequenceNumber uint64                      `protobuf:"varint,7,opt,name=LastHandledEventSequenceNumber,proto3" json:"LastHandledEventSequenceNumber,omitempty"`
+	RunningState                   ObserverRunningState        `protobuf:"varint,8,opt,name=RunningState,proto3,enum=Cratis.Chronicle.Contracts.Observation.ObserverRunningState" json:"RunningState,omitempty"`
+	IsSubscribed                   bool                        `protobuf:"varint,9,opt,name=IsSubscribed,proto3" json:"IsSubscribed,omitempty"`
+	IsReplayable                   bool                        `protobuf:"varint,10,opt,name=IsReplayable,proto3" json:"IsReplayable,omitempty"`
+	TailEventSequenceNumber        uint64                      `protobuf:"varint,11,opt,name=TailEventSequenceNumber,proto3" json:"TailEventSequenceNumber,omitempty"`
+	HandledEventCount              uint64                      `protobuf:"varint,12,opt,name=HandledEventCount,proto3" json:"HandledEventCount,omitempty"`
+	RunningStateChangedAt          *SerializableDateTimeOffset `protobuf:"bytes,13,opt,name=RunningStateChangedAt,proto3" json:"RunningStateChangedAt,omitempty"`
 	unknownFields                  protoimpl.UnknownFields
 	sizeCache                      protoimpl.SizeCache
 }
@@ -1792,6 +1796,13 @@ func (x *ObserverInformation) GetHandledEventCount() uint64 {
 		return x.HandledEventCount
 	}
 	return 0
+}
+
+func (x *ObserverInformation) GetRunningStateChangedAt() *SerializableDateTimeOffset {
+	if x != nil {
+		return x.RunningStateChangedAt
+	}
+	return nil
 }
 
 type RemoveObserver struct {
@@ -2102,6 +2113,118 @@ func (x *ReplayResponse) GetJobId() string {
 	return ""
 }
 
+type RetryFailedPartitions struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EventStore      string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace       string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	ObserverId      string                 `protobuf:"bytes,3,opt,name=ObserverId,proto3" json:"ObserverId,omitempty"`
+	EventSequenceId string                 `protobuf:"bytes,4,opt,name=EventSequenceId,proto3" json:"EventSequenceId,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RetryFailedPartitions) Reset() {
+	*x = RetryFailedPartitions{}
+	mi := &file_observation_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryFailedPartitions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryFailedPartitions) ProtoMessage() {}
+
+func (x *RetryFailedPartitions) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryFailedPartitions.ProtoReflect.Descriptor instead.
+func (*RetryFailedPartitions) Descriptor() ([]byte, []int) {
+	return file_observation_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *RetryFailedPartitions) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *RetryFailedPartitions) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *RetryFailedPartitions) GetObserverId() string {
+	if x != nil {
+		return x.ObserverId
+	}
+	return ""
+}
+
+func (x *RetryFailedPartitions) GetEventSequenceId() string {
+	if x != nil {
+		return x.EventSequenceId
+	}
+	return ""
+}
+
+type RetryFailedPartitionsResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	FailedPartitions int32                  `protobuf:"varint,1,opt,name=FailedPartitions,proto3" json:"FailedPartitions,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *RetryFailedPartitionsResponse) Reset() {
+	*x = RetryFailedPartitionsResponse{}
+	mi := &file_observation_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryFailedPartitionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryFailedPartitionsResponse) ProtoMessage() {}
+
+func (x *RetryFailedPartitionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryFailedPartitionsResponse.ProtoReflect.Descriptor instead.
+func (*RetryFailedPartitionsResponse) Descriptor() ([]byte, []int) {
+	return file_observation_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *RetryFailedPartitionsResponse) GetFailedPartitions() int32 {
+	if x != nil {
+		return x.FailedPartitions
+	}
+	return 0
+}
+
 type RetryPartition struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	EventStore      string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -2115,7 +2238,7 @@ type RetryPartition struct {
 
 func (x *RetryPartition) Reset() {
 	*x = RetryPartition{}
-	mi := &file_observation_proto_msgTypes[25]
+	mi := &file_observation_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2127,7 +2250,7 @@ func (x *RetryPartition) String() string {
 func (*RetryPartition) ProtoMessage() {}
 
 func (x *RetryPartition) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[25]
+	mi := &file_observation_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2140,7 +2263,7 @@ func (x *RetryPartition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryPartition.ProtoReflect.Descriptor instead.
 func (*RetryPartition) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{25}
+	return file_observation_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *RetryPartition) GetEventStore() string {
@@ -2187,7 +2310,7 @@ type RetryPartitionResponse struct {
 
 func (x *RetryPartitionResponse) Reset() {
 	*x = RetryPartitionResponse{}
-	mi := &file_observation_proto_msgTypes[26]
+	mi := &file_observation_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2199,7 +2322,7 @@ func (x *RetryPartitionResponse) String() string {
 func (*RetryPartitionResponse) ProtoMessage() {}
 
 func (x *RetryPartitionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[26]
+	mi := &file_observation_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2212,7 +2335,7 @@ func (x *RetryPartitionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryPartitionResponse.ProtoReflect.Descriptor instead.
 func (*RetryPartitionResponse) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{26}
+	return file_observation_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *RetryPartitionResponse) GetOutcome() PartitionRecoveryOutcome {
@@ -2232,7 +2355,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_observation_proto_msgTypes[27]
+	mi := &file_observation_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2244,7 +2367,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[27]
+	mi := &file_observation_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2257,7 +2380,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{27}
+	return file_observation_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -2283,7 +2406,7 @@ type WaitForObserverCompletionRequest struct {
 
 func (x *WaitForObserverCompletionRequest) Reset() {
 	*x = WaitForObserverCompletionRequest{}
-	mi := &file_observation_proto_msgTypes[28]
+	mi := &file_observation_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2295,7 +2418,7 @@ func (x *WaitForObserverCompletionRequest) String() string {
 func (*WaitForObserverCompletionRequest) ProtoMessage() {}
 
 func (x *WaitForObserverCompletionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[28]
+	mi := &file_observation_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2308,7 +2431,7 @@ func (x *WaitForObserverCompletionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WaitForObserverCompletionRequest.ProtoReflect.Descriptor instead.
 func (*WaitForObserverCompletionRequest) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{28}
+	return file_observation_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *WaitForObserverCompletionRequest) GetEventStore() string {
@@ -2379,7 +2502,7 @@ type WaitForObserverCompletionResponse struct {
 
 func (x *WaitForObserverCompletionResponse) Reset() {
 	*x = WaitForObserverCompletionResponse{}
-	mi := &file_observation_proto_msgTypes[29]
+	mi := &file_observation_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2391,7 +2514,7 @@ func (x *WaitForObserverCompletionResponse) String() string {
 func (*WaitForObserverCompletionResponse) ProtoMessage() {}
 
 func (x *WaitForObserverCompletionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_proto_msgTypes[29]
+	mi := &file_observation_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2404,7 +2527,7 @@ func (x *WaitForObserverCompletionResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use WaitForObserverCompletionResponse.ProtoReflect.Descriptor instead.
 func (*WaitForObserverCompletionResponse) Descriptor() ([]byte, []int) {
-	return file_observation_proto_rawDescGZIP(), []int{29}
+	return file_observation_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *WaitForObserverCompletionResponse) GetIsSuccess() bool {
@@ -2569,7 +2692,7 @@ const file_observation_proto_rawDesc = "" +
 	"\x1bIEnumerable_FailedPartition\x12M\n" +
 	"\x05items\x18\x01 \x03(\v27.Cratis.Chronicle.Contracts.Observation.FailedPartitionR\x05items\"t\n" +
 	"\x1fIEnumerable_ObserverInformation\x12Q\n" +
-	"\x05items\x18\x01 \x03(\v2;.Cratis.Chronicle.Contracts.Observation.ObserverInformationR\x05items\"\xcd\x05\n" +
+	"\x05items\x18\x01 \x03(\v2;.Cratis.Chronicle.Contracts.Observation.ObserverInformationR\x05items\"\xc7\x06\n" +
 	"\x13ObserverInformation\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\tR\x02Id\x12(\n" +
 	"\x0fEventSequenceId\x18\x02 \x01(\tR\x0fEventSequenceId\x12H\n" +
@@ -2585,7 +2708,8 @@ const file_observation_proto_rawDesc = "" +
 	"\fIsReplayable\x18\n" +
 	" \x01(\bR\fIsReplayable\x128\n" +
 	"\x17TailEventSequenceNumber\x18\v \x01(\x04R\x17TailEventSequenceNumber\x12,\n" +
-	"\x11HandledEventCount\x18\f \x01(\x04R\x11HandledEventCount\"\x98\x01\n" +
+	"\x11HandledEventCount\x18\f \x01(\x04R\x11HandledEventCount\x12x\n" +
+	"\x15RunningStateChangedAt\x18\r \x01(\v2B.Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffsetR\x15RunningStateChangedAt\"\x98\x01\n" +
 	"\x0eRemoveObserver\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -2618,7 +2742,18 @@ const file_observation_proto_rawDesc = "" +
 	"\x0fEventSequenceId\x18\x04 \x01(\tR\x0fEventSequenceId\x12\x1c\n" +
 	"\tPartition\x18\x05 \x01(\tR\tPartition\"&\n" +
 	"\x0eReplayResponse\x12\x14\n" +
-	"\x05JobId\x18\x01 \x01(\tR\x05JobId\"\xb6\x01\n" +
+	"\x05JobId\x18\x01 \x01(\tR\x05JobId\"\x9f\x01\n" +
+	"\x15RetryFailedPartitions\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x1e\n" +
+	"\n" +
+	"ObserverId\x18\x03 \x01(\tR\n" +
+	"ObserverId\x12(\n" +
+	"\x0fEventSequenceId\x18\x04 \x01(\tR\x0fEventSequenceId\"K\n" +
+	"\x1dRetryFailedPartitionsResponse\x12*\n" +
+	"\x10FailedPartitions\x18\x01 \x01(\x05R\x10FailedPartitions\"\xb6\x01\n" +
 	"\x0eRetryPartition\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -2652,12 +2787,13 @@ const file_observation_proto_rawDesc = "" +
 	"\x1fClearPartitionQuarantineOutcome\x12\v\n" +
 	"\aCleared\x10\x00\x12\f\n" +
 	"\bNotFound\x10\x01\x12\x12\n" +
-	"\x0eNotQuarantined\x10\x02*a\n" +
+	"\x0eNotQuarantined\x10\x02*x\n" +
 	"\vFailureKind\x12\x18\n" +
 	"\x14FAILURE_KIND_Unknown\x10\x00\x12\f\n" +
 	"\bHandling\x10\x01\x12\v\n" +
 	"\aTimeout\x10\x02\x12\x1d\n" +
-	"\x19FAILURE_KIND_Disconnected\x10\x03*c\n" +
+	"\x19FAILURE_KIND_Disconnected\x10\x03\x12\x15\n" +
+	"\x11WaitingForHandler\x10\x04*c\n" +
 	"\x12FastForwardOutcome\x12\x11\n" +
 	"\rFastForwarded\x10\x00\x12\x11\n" +
 	"\rAlreadyAtTail\x10\x01\x12\x15\n" +
@@ -2696,7 +2832,7 @@ const file_observation_proto_rawDesc = "" +
 	"\x14PartitionQuarantined\x10\x032\xda\x02\n" +
 	"\x10FailedPartitions\x12\x9e\x01\n" +
 	"\x13GetFailedPartitions\x12B.Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest\x1aC.Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition\x12\xa4\x01\n" +
-	"\x17ObserveFailedPartitions\x12B.Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest\x1aC.Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition0\x012\xff\x0f\n" +
+	"\x17ObserveFailedPartitions\x12B.Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest\x1aC.Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition0\x012\x9f\x11\n" +
 	"\tObservers\x12n\n" +
 	"\x15ClearFailedPartitions\x12=.Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions\x1a\x16.google.protobuf.Empty\x12r\n" +
 	"\x17ClearObserverQuarantine\x12?.Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine\x1a\x16.google.protobuf.Empty\x12\xa6\x01\n" +
@@ -2709,7 +2845,8 @@ const file_observation_proto_rawDesc = "" +
 	"\x10ObserveObservers\x12;.Cratis.Chronicle.Contracts.Observation.AllObserversRequest\x1aG.Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation0\x01\x12\x88\x01\n" +
 	"\x0eRemoveObserver\x126.Cratis.Chronicle.Contracts.Observation.RemoveObserver\x1a>.Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse\x12p\n" +
 	"\x06Replay\x12..Cratis.Chronicle.Contracts.Observation.Replay\x1a6.Cratis.Chronicle.Contracts.Observation.ReplayResponse\x12b\n" +
-	"\x0fReplayPartition\x127.Cratis.Chronicle.Contracts.Observation.ReplayPartition\x1a\x16.google.protobuf.Empty\x12\x88\x01\n" +
+	"\x0fReplayPartition\x127.Cratis.Chronicle.Contracts.Observation.ReplayPartition\x1a\x16.google.protobuf.Empty\x12\x9d\x01\n" +
+	"\x15RetryFailedPartitions\x12=.Cratis.Chronicle.Contracts.Observation.RetryFailedPartitions\x1aE.Cratis.Chronicle.Contracts.Observation.RetryFailedPartitionsResponse\x12\x88\x01\n" +
 	"\x0eRetryPartition\x126.Cratis.Chronicle.Contracts.Observation.RetryPartition\x1a>.Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse\x12\xa8\x01\n" +
 	"\x11WaitForCompletion\x12H.Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest\x1aI.Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponseB\xb0\x02\n" +
 	"*com.Cratis.Chronicle.Contracts.ObservationB\x10ObservationProtoP\x01Z4github.com/cratis/chronicle.go/contracts/observation\xa2\x02\x04CCCO\xaa\x02&Cratis.Chronicle.Contracts.Observation\xca\x02&Cratis\\Chronicle\\Contracts\\Observation\xe2\x022Cratis\\Chronicle\\Contracts\\Observation\\GPBMetadata\xea\x02)Cratis::Chronicle::Contracts::Observationb\x06proto3"
@@ -2727,7 +2864,7 @@ func file_observation_proto_rawDescGZIP() []byte {
 }
 
 var file_observation_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_observation_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_observation_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_observation_proto_goTypes = []any{
 	(ClearPartitionQuarantineOutcome)(0),               // 0: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineOutcome
 	(FailureKind)(0),                                   // 1: Cratis.Chronicle.Contracts.Observation.FailureKind
@@ -2762,22 +2899,24 @@ var file_observation_proto_goTypes = []any{
 	(*Replay)(nil),                                     // 30: Cratis.Chronicle.Contracts.Observation.Replay
 	(*ReplayPartition)(nil),                            // 31: Cratis.Chronicle.Contracts.Observation.ReplayPartition
 	(*ReplayResponse)(nil),                             // 32: Cratis.Chronicle.Contracts.Observation.ReplayResponse
-	(*RetryPartition)(nil),                             // 33: Cratis.Chronicle.Contracts.Observation.RetryPartition
-	(*RetryPartitionResponse)(nil),                     // 34: Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse
-	(*SerializableDateTimeOffset)(nil),                 // 35: Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
-	(*WaitForObserverCompletionRequest)(nil),           // 36: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest
-	(*WaitForObserverCompletionResponse)(nil),          // 37: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse
-	(*bcl.Guid)(nil),                                   // 38: bcl.Guid
-	(*emptypb.Empty)(nil),                              // 39: google.protobuf.Empty
+	(*RetryFailedPartitions)(nil),                      // 33: Cratis.Chronicle.Contracts.Observation.RetryFailedPartitions
+	(*RetryFailedPartitionsResponse)(nil),              // 34: Cratis.Chronicle.Contracts.Observation.RetryFailedPartitionsResponse
+	(*RetryPartition)(nil),                             // 35: Cratis.Chronicle.Contracts.Observation.RetryPartition
+	(*RetryPartitionResponse)(nil),                     // 36: Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse
+	(*SerializableDateTimeOffset)(nil),                 // 37: Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
+	(*WaitForObserverCompletionRequest)(nil),           // 38: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest
+	(*WaitForObserverCompletionResponse)(nil),          // 39: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse
+	(*bcl.Guid)(nil),                                   // 40: bcl.Guid
+	(*emptypb.Empty)(nil),                              // 41: google.protobuf.Empty
 }
 var file_observation_proto_depIdxs = []int32{
 	15, // 0: Cratis.Chronicle.Contracts.Observation.AppendedEventTypeTail.EventType:type_name -> Cratis.Chronicle.Contracts.Observation.EventType
 	0,  // 1: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineOutcome
 	7,  // 2: Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse.RetryOutcome:type_name -> Cratis.Chronicle.Contracts.Observation.PartitionRecoveryOutcome
-	35, // 3: Cratis.Chronicle.Contracts.Observation.ConnectedClient.LastSeen:type_name -> Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
-	38, // 4: Cratis.Chronicle.Contracts.Observation.FailedPartition.Id:type_name -> bcl.Guid
+	37, // 3: Cratis.Chronicle.Contracts.Observation.ConnectedClient.LastSeen:type_name -> Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
+	40, // 4: Cratis.Chronicle.Contracts.Observation.FailedPartition.Id:type_name -> bcl.Guid
 	17, // 5: Cratis.Chronicle.Contracts.Observation.FailedPartition.Attempts:type_name -> Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt
-	35, // 6: Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
+	37, // 6: Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
 	1,  // 7: Cratis.Chronicle.Contracts.Observation.FailedPartitionAttempt.Kind:type_name -> Cratis.Chronicle.Contracts.Observation.FailureKind
 	2,  // 8: Cratis.Chronicle.Contracts.Observation.FastForwardResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.FastForwardOutcome
 	15, // 9: Cratis.Chronicle.Contracts.Observation.GetReplayableObserversForEventTypesRequest.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.EventType
@@ -2788,47 +2927,50 @@ var file_observation_proto_depIdxs = []int32{
 	3,  // 14: Cratis.Chronicle.Contracts.Observation.ObserverInformation.Owner:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverOwner
 	15, // 15: Cratis.Chronicle.Contracts.Observation.ObserverInformation.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.EventType
 	5,  // 16: Cratis.Chronicle.Contracts.Observation.ObserverInformation.RunningState:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverRunningState
-	4,  // 17: Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverRemovalOutcome
-	7,  // 18: Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.PartitionRecoveryOutcome
-	9,  // 19: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest.EventTypeTails:type_name -> Cratis.Chronicle.Contracts.Observation.AppendedEventTypeTail
-	16, // 20: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse.FailedPartitions:type_name -> Cratis.Chronicle.Contracts.Observation.FailedPartition
-	21, // 21: Cratis.Chronicle.Contracts.Observation.FailedPartitions.GetFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
-	21, // 22: Cratis.Chronicle.Contracts.Observation.FailedPartitions.ObserveFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
-	10, // 23: Cratis.Chronicle.Contracts.Observation.Observers.ClearFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions
-	11, // 24: Cratis.Chronicle.Contracts.Observation.Observers.ClearObserverQuarantine:input_type -> Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine
-	12, // 25: Cratis.Chronicle.Contracts.Observation.Observers.ClearPartitionQuarantine:input_type -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine
-	18, // 26: Cratis.Chronicle.Contracts.Observation.Observers.FastForward:input_type -> Cratis.Chronicle.Contracts.Observation.FastForward
-	20, // 27: Cratis.Chronicle.Contracts.Observation.Observers.GetConnectedClientsForObserver:input_type -> Cratis.Chronicle.Contracts.Observation.GetConnectedClientsForObserverRequest
-	22, // 28: Cratis.Chronicle.Contracts.Observation.Observers.GetObserverInformation:input_type -> Cratis.Chronicle.Contracts.Observation.GetObserverInformationRequest
-	8,  // 29: Cratis.Chronicle.Contracts.Observation.Observers.GetObservers:input_type -> Cratis.Chronicle.Contracts.Observation.AllObserversRequest
-	23, // 30: Cratis.Chronicle.Contracts.Observation.Observers.GetReplayableObserversForEventTypes:input_type -> Cratis.Chronicle.Contracts.Observation.GetReplayableObserversForEventTypesRequest
-	8,  // 31: Cratis.Chronicle.Contracts.Observation.Observers.ObserveObservers:input_type -> Cratis.Chronicle.Contracts.Observation.AllObserversRequest
-	28, // 32: Cratis.Chronicle.Contracts.Observation.Observers.RemoveObserver:input_type -> Cratis.Chronicle.Contracts.Observation.RemoveObserver
-	30, // 33: Cratis.Chronicle.Contracts.Observation.Observers.Replay:input_type -> Cratis.Chronicle.Contracts.Observation.Replay
-	31, // 34: Cratis.Chronicle.Contracts.Observation.Observers.ReplayPartition:input_type -> Cratis.Chronicle.Contracts.Observation.ReplayPartition
-	33, // 35: Cratis.Chronicle.Contracts.Observation.Observers.RetryPartition:input_type -> Cratis.Chronicle.Contracts.Observation.RetryPartition
-	36, // 36: Cratis.Chronicle.Contracts.Observation.Observers.WaitForCompletion:input_type -> Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest
-	25, // 37: Cratis.Chronicle.Contracts.Observation.FailedPartitions.GetFailedPartitions:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
-	25, // 38: Cratis.Chronicle.Contracts.Observation.FailedPartitions.ObserveFailedPartitions:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
-	39, // 39: Cratis.Chronicle.Contracts.Observation.Observers.ClearFailedPartitions:output_type -> google.protobuf.Empty
-	39, // 40: Cratis.Chronicle.Contracts.Observation.Observers.ClearObserverQuarantine:output_type -> google.protobuf.Empty
-	13, // 41: Cratis.Chronicle.Contracts.Observation.Observers.ClearPartitionQuarantine:output_type -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse
-	19, // 42: Cratis.Chronicle.Contracts.Observation.Observers.FastForward:output_type -> Cratis.Chronicle.Contracts.Observation.FastForwardResponse
-	24, // 43: Cratis.Chronicle.Contracts.Observation.Observers.GetConnectedClientsForObserver:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ConnectedClient
-	27, // 44: Cratis.Chronicle.Contracts.Observation.Observers.GetObserverInformation:output_type -> Cratis.Chronicle.Contracts.Observation.ObserverInformation
-	26, // 45: Cratis.Chronicle.Contracts.Observation.Observers.GetObservers:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
-	26, // 46: Cratis.Chronicle.Contracts.Observation.Observers.GetReplayableObserversForEventTypes:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
-	26, // 47: Cratis.Chronicle.Contracts.Observation.Observers.ObserveObservers:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
-	29, // 48: Cratis.Chronicle.Contracts.Observation.Observers.RemoveObserver:output_type -> Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse
-	32, // 49: Cratis.Chronicle.Contracts.Observation.Observers.Replay:output_type -> Cratis.Chronicle.Contracts.Observation.ReplayResponse
-	39, // 50: Cratis.Chronicle.Contracts.Observation.Observers.ReplayPartition:output_type -> google.protobuf.Empty
-	34, // 51: Cratis.Chronicle.Contracts.Observation.Observers.RetryPartition:output_type -> Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse
-	37, // 52: Cratis.Chronicle.Contracts.Observation.Observers.WaitForCompletion:output_type -> Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse
-	37, // [37:53] is the sub-list for method output_type
-	21, // [21:37] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	37, // 17: Cratis.Chronicle.Contracts.Observation.ObserverInformation.RunningStateChangedAt:type_name -> Cratis.Chronicle.Contracts.Observation.SerializableDateTimeOffset
+	4,  // 18: Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.ObserverRemovalOutcome
+	7,  // 19: Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Observation.PartitionRecoveryOutcome
+	9,  // 20: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest.EventTypeTails:type_name -> Cratis.Chronicle.Contracts.Observation.AppendedEventTypeTail
+	16, // 21: Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse.FailedPartitions:type_name -> Cratis.Chronicle.Contracts.Observation.FailedPartition
+	21, // 22: Cratis.Chronicle.Contracts.Observation.FailedPartitions.GetFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
+	21, // 23: Cratis.Chronicle.Contracts.Observation.FailedPartitions.ObserveFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest
+	10, // 24: Cratis.Chronicle.Contracts.Observation.Observers.ClearFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions
+	11, // 25: Cratis.Chronicle.Contracts.Observation.Observers.ClearObserverQuarantine:input_type -> Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine
+	12, // 26: Cratis.Chronicle.Contracts.Observation.Observers.ClearPartitionQuarantine:input_type -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine
+	18, // 27: Cratis.Chronicle.Contracts.Observation.Observers.FastForward:input_type -> Cratis.Chronicle.Contracts.Observation.FastForward
+	20, // 28: Cratis.Chronicle.Contracts.Observation.Observers.GetConnectedClientsForObserver:input_type -> Cratis.Chronicle.Contracts.Observation.GetConnectedClientsForObserverRequest
+	22, // 29: Cratis.Chronicle.Contracts.Observation.Observers.GetObserverInformation:input_type -> Cratis.Chronicle.Contracts.Observation.GetObserverInformationRequest
+	8,  // 30: Cratis.Chronicle.Contracts.Observation.Observers.GetObservers:input_type -> Cratis.Chronicle.Contracts.Observation.AllObserversRequest
+	23, // 31: Cratis.Chronicle.Contracts.Observation.Observers.GetReplayableObserversForEventTypes:input_type -> Cratis.Chronicle.Contracts.Observation.GetReplayableObserversForEventTypesRequest
+	8,  // 32: Cratis.Chronicle.Contracts.Observation.Observers.ObserveObservers:input_type -> Cratis.Chronicle.Contracts.Observation.AllObserversRequest
+	28, // 33: Cratis.Chronicle.Contracts.Observation.Observers.RemoveObserver:input_type -> Cratis.Chronicle.Contracts.Observation.RemoveObserver
+	30, // 34: Cratis.Chronicle.Contracts.Observation.Observers.Replay:input_type -> Cratis.Chronicle.Contracts.Observation.Replay
+	31, // 35: Cratis.Chronicle.Contracts.Observation.Observers.ReplayPartition:input_type -> Cratis.Chronicle.Contracts.Observation.ReplayPartition
+	33, // 36: Cratis.Chronicle.Contracts.Observation.Observers.RetryFailedPartitions:input_type -> Cratis.Chronicle.Contracts.Observation.RetryFailedPartitions
+	35, // 37: Cratis.Chronicle.Contracts.Observation.Observers.RetryPartition:input_type -> Cratis.Chronicle.Contracts.Observation.RetryPartition
+	38, // 38: Cratis.Chronicle.Contracts.Observation.Observers.WaitForCompletion:input_type -> Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionRequest
+	25, // 39: Cratis.Chronicle.Contracts.Observation.FailedPartitions.GetFailedPartitions:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
+	25, // 40: Cratis.Chronicle.Contracts.Observation.FailedPartitions.ObserveFailedPartitions:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition
+	41, // 41: Cratis.Chronicle.Contracts.Observation.Observers.ClearFailedPartitions:output_type -> google.protobuf.Empty
+	41, // 42: Cratis.Chronicle.Contracts.Observation.Observers.ClearObserverQuarantine:output_type -> google.protobuf.Empty
+	13, // 43: Cratis.Chronicle.Contracts.Observation.Observers.ClearPartitionQuarantine:output_type -> Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantineResponse
+	19, // 44: Cratis.Chronicle.Contracts.Observation.Observers.FastForward:output_type -> Cratis.Chronicle.Contracts.Observation.FastForwardResponse
+	24, // 45: Cratis.Chronicle.Contracts.Observation.Observers.GetConnectedClientsForObserver:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ConnectedClient
+	27, // 46: Cratis.Chronicle.Contracts.Observation.Observers.GetObserverInformation:output_type -> Cratis.Chronicle.Contracts.Observation.ObserverInformation
+	26, // 47: Cratis.Chronicle.Contracts.Observation.Observers.GetObservers:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
+	26, // 48: Cratis.Chronicle.Contracts.Observation.Observers.GetReplayableObserversForEventTypes:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
+	26, // 49: Cratis.Chronicle.Contracts.Observation.Observers.ObserveObservers:output_type -> Cratis.Chronicle.Contracts.Observation.IEnumerable_ObserverInformation
+	29, // 50: Cratis.Chronicle.Contracts.Observation.Observers.RemoveObserver:output_type -> Cratis.Chronicle.Contracts.Observation.RemoveObserverResponse
+	32, // 51: Cratis.Chronicle.Contracts.Observation.Observers.Replay:output_type -> Cratis.Chronicle.Contracts.Observation.ReplayResponse
+	41, // 52: Cratis.Chronicle.Contracts.Observation.Observers.ReplayPartition:output_type -> google.protobuf.Empty
+	34, // 53: Cratis.Chronicle.Contracts.Observation.Observers.RetryFailedPartitions:output_type -> Cratis.Chronicle.Contracts.Observation.RetryFailedPartitionsResponse
+	36, // 54: Cratis.Chronicle.Contracts.Observation.Observers.RetryPartition:output_type -> Cratis.Chronicle.Contracts.Observation.RetryPartitionResponse
+	39, // 55: Cratis.Chronicle.Contracts.Observation.Observers.WaitForCompletion:output_type -> Cratis.Chronicle.Contracts.Observation.WaitForObserverCompletionResponse
+	39, // [39:56] is the sub-list for method output_type
+	22, // [22:39] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_observation_proto_init() }
@@ -2842,7 +2984,7 @@ func file_observation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_observation_proto_rawDesc), len(file_observation_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   30,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

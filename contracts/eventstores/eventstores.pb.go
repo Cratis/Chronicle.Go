@@ -203,6 +203,58 @@ func (x *EnsureEventStoreRequest) GetName() string {
 	return ""
 }
 
+type EventStoreDeploymentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Generation    uint64                 `protobuf:"varint,1,opt,name=Generation,proto3" json:"Generation,omitempty"`
+	Fingerprint   string                 `protobuf:"bytes,2,opt,name=Fingerprint,proto3" json:"Fingerprint,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventStoreDeploymentResponse) Reset() {
+	*x = EventStoreDeploymentResponse{}
+	mi := &file_eventstores_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventStoreDeploymentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventStoreDeploymentResponse) ProtoMessage() {}
+
+func (x *EventStoreDeploymentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventstores_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventStoreDeploymentResponse.ProtoReflect.Descriptor instead.
+func (*EventStoreDeploymentResponse) Descriptor() ([]byte, []int) {
+	return file_eventstores_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *EventStoreDeploymentResponse) GetGeneration() uint64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *EventStoreDeploymentResponse) GetFingerprint() string {
+	if x != nil {
+		return x.Fingerprint
+	}
+	return ""
+}
+
 type EventStoreNamesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=Name,proto3" json:"Name,omitempty"`
@@ -213,7 +265,7 @@ type EventStoreNamesResponse struct {
 
 func (x *EventStoreNamesResponse) Reset() {
 	*x = EventStoreNamesResponse{}
-	mi := &file_eventstores_proto_msgTypes[2]
+	mi := &file_eventstores_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -225,7 +277,7 @@ func (x *EventStoreNamesResponse) String() string {
 func (*EventStoreNamesResponse) ProtoMessage() {}
 
 func (x *EventStoreNamesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventstores_proto_msgTypes[2]
+	mi := &file_eventstores_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -238,7 +290,7 @@ func (x *EventStoreNamesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventStoreNamesResponse.ProtoReflect.Descriptor instead.
 func (*EventStoreNamesResponse) Descriptor() ([]byte, []int) {
-	return file_eventstores_proto_rawDescGZIP(), []int{2}
+	return file_eventstores_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *EventStoreNamesResponse) GetName() string {
@@ -255,6 +307,134 @@ func (x *EventStoreNamesResponse) GetId() string {
 	return ""
 }
 
+type GetEventStoreDeploymentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetEventStoreDeploymentRequest) Reset() {
+	*x = GetEventStoreDeploymentRequest{}
+	mi := &file_eventstores_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetEventStoreDeploymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetEventStoreDeploymentRequest) ProtoMessage() {}
+
+func (x *GetEventStoreDeploymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eventstores_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetEventStoreDeploymentRequest.ProtoReflect.Descriptor instead.
+func (*GetEventStoreDeploymentRequest) Descriptor() ([]byte, []int) {
+	return file_eventstores_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetEventStoreDeploymentRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+type QueryResult_EventStoreDeploymentResponse struct {
+	state               protoimpl.MessageState        `protogen:"open.v1"`
+	CorrelationId       *bcl.Guid                     `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized        bool                          `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults   []*ValidationResult           `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages   []string                      `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace string                        `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	Data                *EventStoreDeploymentResponse `protobuf:"bytes,6,opt,name=Data,proto3" json:"Data,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *QueryResult_EventStoreDeploymentResponse) Reset() {
+	*x = QueryResult_EventStoreDeploymentResponse{}
+	mi := &file_eventstores_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryResult_EventStoreDeploymentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryResult_EventStoreDeploymentResponse) ProtoMessage() {}
+
+func (x *QueryResult_EventStoreDeploymentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventstores_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryResult_EventStoreDeploymentResponse.ProtoReflect.Descriptor instead.
+func (*QueryResult_EventStoreDeploymentResponse) Descriptor() ([]byte, []int) {
+	return file_eventstores_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *QueryResult_EventStoreDeploymentResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *QueryResult_EventStoreDeploymentResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *QueryResult_EventStoreDeploymentResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *QueryResult_EventStoreDeploymentResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *QueryResult_EventStoreDeploymentResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *QueryResult_EventStoreDeploymentResponse) GetData() *EventStoreDeploymentResponse {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type QueryResult_IEnumerable_EventStoreNamesResponse struct {
 	state               protoimpl.MessageState     `protogen:"open.v1"`
 	CorrelationId       *bcl.Guid                  `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -269,7 +449,7 @@ type QueryResult_IEnumerable_EventStoreNamesResponse struct {
 
 func (x *QueryResult_IEnumerable_EventStoreNamesResponse) Reset() {
 	*x = QueryResult_IEnumerable_EventStoreNamesResponse{}
-	mi := &file_eventstores_proto_msgTypes[3]
+	mi := &file_eventstores_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -281,7 +461,7 @@ func (x *QueryResult_IEnumerable_EventStoreNamesResponse) String() string {
 func (*QueryResult_IEnumerable_EventStoreNamesResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_EventStoreNamesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventstores_proto_msgTypes[3]
+	mi := &file_eventstores_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -294,7 +474,7 @@ func (x *QueryResult_IEnumerable_EventStoreNamesResponse) ProtoReflect() protore
 
 // Deprecated: Use QueryResult_IEnumerable_EventStoreNamesResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_EventStoreNamesResponse) Descriptor() ([]byte, []int) {
-	return file_eventstores_proto_rawDescGZIP(), []int{3}
+	return file_eventstores_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *QueryResult_IEnumerable_EventStoreNamesResponse) GetCorrelationId() *bcl.Guid {
@@ -339,6 +519,66 @@ func (x *QueryResult_IEnumerable_EventStoreNamesResponse) GetData() []*EventStor
 	return nil
 }
 
+type RegisterDeploymentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Generation    uint64                 `protobuf:"varint,2,opt,name=Generation,proto3" json:"Generation,omitempty"`
+	Fingerprint   string                 `protobuf:"bytes,3,opt,name=Fingerprint,proto3" json:"Fingerprint,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterDeploymentRequest) Reset() {
+	*x = RegisterDeploymentRequest{}
+	mi := &file_eventstores_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterDeploymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterDeploymentRequest) ProtoMessage() {}
+
+func (x *RegisterDeploymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eventstores_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterDeploymentRequest.ProtoReflect.Descriptor instead.
+func (*RegisterDeploymentRequest) Descriptor() ([]byte, []int) {
+	return file_eventstores_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RegisterDeploymentRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *RegisterDeploymentRequest) GetGeneration() uint64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *RegisterDeploymentRequest) GetFingerprint() string {
+	if x != nil {
+		return x.Fingerprint
+	}
+	return ""
+}
+
 type ValidationResult struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Severity      ValidationResultSeverity `protobuf:"varint,1,opt,name=Severity,proto3,enum=Cratis.Chronicle.Contracts.EventStores.ValidationResultSeverity" json:"Severity,omitempty"` // default value could not be applied: Error
@@ -350,7 +590,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_eventstores_proto_msgTypes[4]
+	mi := &file_eventstores_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -362,7 +602,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_eventstores_proto_msgTypes[4]
+	mi := &file_eventstores_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -375,7 +615,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_eventstores_proto_rawDescGZIP(), []int{4}
+	return file_eventstores_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -412,17 +652,41 @@ const file_eventstores_proto_rawDesc = "" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
 	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"-\n" +
 	"\x17EnsureEventStoreRequest\x12\x12\n" +
-	"\x04Name\x18\x01 \x01(\tR\x04Name\"=\n" +
+	"\x04Name\x18\x01 \x01(\tR\x04Name\"`\n" +
+	"\x1cEventStoreDeploymentResponse\x12\x1e\n" +
+	"\n" +
+	"Generation\x18\x01 \x01(\x04R\n" +
+	"Generation\x12 \n" +
+	"\vFingerprint\x18\x02 \x01(\tR\vFingerprint\"=\n" +
 	"\x17EventStoreNamesResponse\x12\x12\n" +
 	"\x04Name\x18\x01 \x01(\tR\x04Name\x12\x0e\n" +
-	"\x02Id\x18\x02 \x01(\tR\x02Id\"\xa3\x03\n" +
+	"\x02Id\x18\x02 \x01(\tR\x02Id\"@\n" +
+	"\x1eGetEventStoreDeploymentRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\"\xa1\x03\n" +
+	"(QueryResult_EventStoreDeploymentResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12f\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v28.Cratis.Chronicle.Contracts.EventStores.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12X\n" +
+	"\x04Data\x18\x06 \x01(\v2D.Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponseR\x04Data\"\xa3\x03\n" +
 	"/QueryResult_IEnumerable_EventStoreNamesResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
 	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12f\n" +
 	"\x11ValidationResults\x18\x03 \x03(\v28.Cratis.Chronicle.Contracts.EventStores.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12S\n" +
-	"\x04Data\x18\x06 \x03(\v2?.Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponseR\x04Data\"\xa4\x01\n" +
+	"\x04Data\x18\x06 \x03(\v2?.Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponseR\x04Data\"}\n" +
+	"\x19RegisterDeploymentRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1e\n" +
+	"\n" +
+	"Generation\x18\x02 \x01(\x04R\n" +
+	"Generation\x12 \n" +
+	"\vFingerprint\x18\x03 \x01(\tR\vFingerprint\"\xa4\x01\n" +
 	"\x10ValidationResult\x12\\\n" +
 	"\bSeverity\x18\x01 \x01(\x0e2@.Cratis.Chronicle.Contracts.EventStores.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
@@ -431,11 +695,13 @@ const file_eventstores_proto_rawDesc = "" +
 	"\aUnknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\xa8\x03\n" +
+	"\x05Error\x10\x032\xef\x05\n" +
 	"\vEventStores\x12\x81\x01\n" +
 	"\x0eAllEventStores\x12\x16.google.protobuf.Empty\x1aW.Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse\x12\x8a\x01\n" +
-	"\x10EnsureEventStore\x12?.Cratis.Chronicle.Contracts.EventStores.EnsureEventStoreRequest\x1a5.Cratis.Chronicle.Contracts.EventStores.CommandResult\x12\x87\x01\n" +
-	"\x12ObserveEventStores\x12\x16.google.protobuf.Empty\x1aW.Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse0\x01B\xb0\x02\n" +
+	"\x10EnsureEventStore\x12?.Cratis.Chronicle.Contracts.EventStores.EnsureEventStoreRequest\x1a5.Cratis.Chronicle.Contracts.EventStores.CommandResult\x12\xb3\x01\n" +
+	"\x17GetEventStoreDeployment\x12F.Cratis.Chronicle.Contracts.EventStores.GetEventStoreDeploymentRequest\x1aP.Cratis.Chronicle.Contracts.EventStores.QueryResult_EventStoreDeploymentResponse\x12\x87\x01\n" +
+	"\x12ObserveEventStores\x12\x16.google.protobuf.Empty\x1aW.Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse0\x01\x12\x8e\x01\n" +
+	"\x12RegisterDeployment\x12A.Cratis.Chronicle.Contracts.EventStores.RegisterDeploymentRequest\x1a5.Cratis.Chronicle.Contracts.EventStores.CommandResultB\xb0\x02\n" +
 	"*com.Cratis.Chronicle.Contracts.EventStoresB\x10EventstoresProtoP\x01Z4github.com/cratis/chronicle.go/contracts/eventstores\xa2\x02\x04CCCE\xaa\x02&Cratis.Chronicle.Contracts.EventStores\xca\x02&Cratis\\Chronicle\\Contracts\\EventStores\xe2\x022Cratis\\Chronicle\\Contracts\\EventStores\\GPBMetadata\xea\x02)Cratis::Chronicle::Contracts::EventStoresb\x06proto3"
 
 var (
@@ -451,35 +717,46 @@ func file_eventstores_proto_rawDescGZIP() []byte {
 }
 
 var file_eventstores_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_eventstores_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_eventstores_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_eventstores_proto_goTypes = []any{
 	(ValidationResultSeverity)(0),                           // 0: Cratis.Chronicle.Contracts.EventStores.ValidationResultSeverity
 	(*CommandResult)(nil),                                   // 1: Cratis.Chronicle.Contracts.EventStores.CommandResult
 	(*EnsureEventStoreRequest)(nil),                         // 2: Cratis.Chronicle.Contracts.EventStores.EnsureEventStoreRequest
-	(*EventStoreNamesResponse)(nil),                         // 3: Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse
-	(*QueryResult_IEnumerable_EventStoreNamesResponse)(nil), // 4: Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse
-	(*ValidationResult)(nil),                                // 5: Cratis.Chronicle.Contracts.EventStores.ValidationResult
-	(*bcl.Guid)(nil),                                        // 6: bcl.Guid
-	(*emptypb.Empty)(nil),                                   // 7: google.protobuf.Empty
+	(*EventStoreDeploymentResponse)(nil),                    // 3: Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponse
+	(*EventStoreNamesResponse)(nil),                         // 4: Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse
+	(*GetEventStoreDeploymentRequest)(nil),                  // 5: Cratis.Chronicle.Contracts.EventStores.GetEventStoreDeploymentRequest
+	(*QueryResult_EventStoreDeploymentResponse)(nil),        // 6: Cratis.Chronicle.Contracts.EventStores.QueryResult_EventStoreDeploymentResponse
+	(*QueryResult_IEnumerable_EventStoreNamesResponse)(nil), // 7: Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse
+	(*RegisterDeploymentRequest)(nil),                       // 8: Cratis.Chronicle.Contracts.EventStores.RegisterDeploymentRequest
+	(*ValidationResult)(nil),                                // 9: Cratis.Chronicle.Contracts.EventStores.ValidationResult
+	(*bcl.Guid)(nil),                                        // 10: bcl.Guid
+	(*emptypb.Empty)(nil),                                   // 11: google.protobuf.Empty
 }
 var file_eventstores_proto_depIdxs = []int32{
-	6, // 0: Cratis.Chronicle.Contracts.EventStores.CommandResult.CorrelationId:type_name -> bcl.Guid
-	5, // 1: Cratis.Chronicle.Contracts.EventStores.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventStores.ValidationResult
-	6, // 2: Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse.CorrelationId:type_name -> bcl.Guid
-	5, // 3: Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventStores.ValidationResult
-	3, // 4: Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse.Data:type_name -> Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse
-	0, // 5: Cratis.Chronicle.Contracts.EventStores.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.EventStores.ValidationResultSeverity
-	7, // 6: Cratis.Chronicle.Contracts.EventStores.EventStores.AllEventStores:input_type -> google.protobuf.Empty
-	2, // 7: Cratis.Chronicle.Contracts.EventStores.EventStores.EnsureEventStore:input_type -> Cratis.Chronicle.Contracts.EventStores.EnsureEventStoreRequest
-	7, // 8: Cratis.Chronicle.Contracts.EventStores.EventStores.ObserveEventStores:input_type -> google.protobuf.Empty
-	4, // 9: Cratis.Chronicle.Contracts.EventStores.EventStores.AllEventStores:output_type -> Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse
-	1, // 10: Cratis.Chronicle.Contracts.EventStores.EventStores.EnsureEventStore:output_type -> Cratis.Chronicle.Contracts.EventStores.CommandResult
-	4, // 11: Cratis.Chronicle.Contracts.EventStores.EventStores.ObserveEventStores:output_type -> Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse
-	9, // [9:12] is the sub-list for method output_type
-	6, // [6:9] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	10, // 0: Cratis.Chronicle.Contracts.EventStores.CommandResult.CorrelationId:type_name -> bcl.Guid
+	9,  // 1: Cratis.Chronicle.Contracts.EventStores.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventStores.ValidationResult
+	10, // 2: Cratis.Chronicle.Contracts.EventStores.QueryResult_EventStoreDeploymentResponse.CorrelationId:type_name -> bcl.Guid
+	9,  // 3: Cratis.Chronicle.Contracts.EventStores.QueryResult_EventStoreDeploymentResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventStores.ValidationResult
+	3,  // 4: Cratis.Chronicle.Contracts.EventStores.QueryResult_EventStoreDeploymentResponse.Data:type_name -> Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponse
+	10, // 5: Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse.CorrelationId:type_name -> bcl.Guid
+	9,  // 6: Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventStores.ValidationResult
+	4,  // 7: Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse.Data:type_name -> Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse
+	0,  // 8: Cratis.Chronicle.Contracts.EventStores.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.EventStores.ValidationResultSeverity
+	11, // 9: Cratis.Chronicle.Contracts.EventStores.EventStores.AllEventStores:input_type -> google.protobuf.Empty
+	2,  // 10: Cratis.Chronicle.Contracts.EventStores.EventStores.EnsureEventStore:input_type -> Cratis.Chronicle.Contracts.EventStores.EnsureEventStoreRequest
+	5,  // 11: Cratis.Chronicle.Contracts.EventStores.EventStores.GetEventStoreDeployment:input_type -> Cratis.Chronicle.Contracts.EventStores.GetEventStoreDeploymentRequest
+	11, // 12: Cratis.Chronicle.Contracts.EventStores.EventStores.ObserveEventStores:input_type -> google.protobuf.Empty
+	8,  // 13: Cratis.Chronicle.Contracts.EventStores.EventStores.RegisterDeployment:input_type -> Cratis.Chronicle.Contracts.EventStores.RegisterDeploymentRequest
+	7,  // 14: Cratis.Chronicle.Contracts.EventStores.EventStores.AllEventStores:output_type -> Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse
+	1,  // 15: Cratis.Chronicle.Contracts.EventStores.EventStores.EnsureEventStore:output_type -> Cratis.Chronicle.Contracts.EventStores.CommandResult
+	6,  // 16: Cratis.Chronicle.Contracts.EventStores.EventStores.GetEventStoreDeployment:output_type -> Cratis.Chronicle.Contracts.EventStores.QueryResult_EventStoreDeploymentResponse
+	7,  // 17: Cratis.Chronicle.Contracts.EventStores.EventStores.ObserveEventStores:output_type -> Cratis.Chronicle.Contracts.EventStores.QueryResult_IEnumerable_EventStoreNamesResponse
+	1,  // 18: Cratis.Chronicle.Contracts.EventStores.EventStores.RegisterDeployment:output_type -> Cratis.Chronicle.Contracts.EventStores.CommandResult
+	14, // [14:19] is the sub-list for method output_type
+	9,  // [9:14] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_eventstores_proto_init() }
@@ -493,7 +770,7 @@ func file_eventstores_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_eventstores_proto_rawDesc), len(file_eventstores_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   5,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

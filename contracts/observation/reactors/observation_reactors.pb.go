@@ -117,12 +117,68 @@ func (EventObservationState) EnumDescriptor() ([]byte, []int) {
 	return file_observation_reactors_proto_rawDescGZIP(), []int{1}
 }
 
+type ObservationOrigin int32
+
+const (
+	ObservationOrigin_Unknown    ObservationOrigin = 0
+	ObservationOrigin_Live       ObservationOrigin = 1
+	ObservationOrigin_CatchingUp ObservationOrigin = 2
+	ObservationOrigin_Replaying  ObservationOrigin = 3
+	ObservationOrigin_Retrying   ObservationOrigin = 4
+)
+
+// Enum value maps for ObservationOrigin.
+var (
+	ObservationOrigin_name = map[int32]string{
+		0: "Unknown",
+		1: "Live",
+		2: "CatchingUp",
+		3: "Replaying",
+		4: "Retrying",
+	}
+	ObservationOrigin_value = map[string]int32{
+		"Unknown":    0,
+		"Live":       1,
+		"CatchingUp": 2,
+		"Replaying":  3,
+		"Retrying":   4,
+	}
+)
+
+func (x ObservationOrigin) Enum() *ObservationOrigin {
+	p := new(ObservationOrigin)
+	*p = x
+	return p
+}
+
+func (x ObservationOrigin) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ObservationOrigin) Descriptor() protoreflect.EnumDescriptor {
+	return file_observation_reactors_proto_enumTypes[2].Descriptor()
+}
+
+func (ObservationOrigin) Type() protoreflect.EnumType {
+	return &file_observation_reactors_proto_enumTypes[2]
+}
+
+func (x ObservationOrigin) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ObservationOrigin.Descriptor instead.
+func (ObservationOrigin) EnumDescriptor() ([]byte, []int) {
+	return file_observation_reactors_proto_rawDescGZIP(), []int{2}
+}
+
 type ObservationState int32
 
 const (
 	ObservationState_OBSERVATION_STATE_None ObservationState = 0
 	ObservationState_Success                ObservationState = 1
 	ObservationState_Failed                 ObservationState = 2
+	ObservationState_Deferred               ObservationState = 3
 )
 
 // Enum value maps for ObservationState.
@@ -131,11 +187,13 @@ var (
 		0: "OBSERVATION_STATE_None",
 		1: "Success",
 		2: "Failed",
+		3: "Deferred",
 	}
 	ObservationState_value = map[string]int32{
 		"OBSERVATION_STATE_None": 0,
 		"Success":                1,
 		"Failed":                 2,
+		"Deferred":               3,
 	}
 )
 
@@ -150,11 +208,11 @@ func (x ObservationState) String() string {
 }
 
 func (ObservationState) Descriptor() protoreflect.EnumDescriptor {
-	return file_observation_reactors_proto_enumTypes[2].Descriptor()
+	return file_observation_reactors_proto_enumTypes[3].Descriptor()
 }
 
 func (ObservationState) Type() protoreflect.EnumType {
-	return &file_observation_reactors_proto_enumTypes[2]
+	return &file_observation_reactors_proto_enumTypes[3]
 }
 
 func (x ObservationState) Number() protoreflect.EnumNumber {
@@ -163,7 +221,7 @@ func (x ObservationState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ObservationState.Descriptor instead.
 func (ObservationState) EnumDescriptor() ([]byte, []int) {
-	return file_observation_reactors_proto_rawDescGZIP(), []int{2}
+	return file_observation_reactors_proto_rawDescGZIP(), []int{3}
 }
 
 type ReplayState int32
@@ -205,11 +263,11 @@ func (x ReplayState) String() string {
 }
 
 func (ReplayState) Descriptor() protoreflect.EnumDescriptor {
-	return file_observation_reactors_proto_enumTypes[3].Descriptor()
+	return file_observation_reactors_proto_enumTypes[4].Descriptor()
 }
 
 func (ReplayState) Type() protoreflect.EnumType {
-	return &file_observation_reactors_proto_enumTypes[3]
+	return &file_observation_reactors_proto_enumTypes[4]
 }
 
 func (x ReplayState) Number() protoreflect.EnumNumber {
@@ -218,7 +276,7 @@ func (x ReplayState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ReplayState.Descriptor instead.
 func (ReplayState) EnumDescriptor() ([]byte, []int) {
-	return file_observation_reactors_proto_rawDescGZIP(), []int{3}
+	return file_observation_reactors_proto_rawDescGZIP(), []int{4}
 }
 
 type AppendedEvent struct {
@@ -734,12 +792,16 @@ func (x *EventTypeWithKeyExpression) GetKey() string {
 }
 
 type EventsToObserve struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Partition     string                 `protobuf:"bytes,1,opt,name=Partition,proto3" json:"Partition,omitempty"`
-	Events        []*AppendedEvent       `protobuf:"bytes,2,rep,name=Events,proto3" json:"Events,omitempty"`
-	ReplayState   ReplayState            `protobuf:"varint,3,opt,name=ReplayState,proto3,enum=Cratis.Chronicle.Contracts.Observation.Reactors.ReplayState" json:"ReplayState,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Partition                 string                 `protobuf:"bytes,1,opt,name=Partition,proto3" json:"Partition,omitempty"`
+	Events                    []*AppendedEvent       `protobuf:"bytes,2,rep,name=Events,proto3" json:"Events,omitempty"`
+	ReplayState               ReplayState            `protobuf:"varint,3,opt,name=ReplayState,proto3,enum=Cratis.Chronicle.Contracts.Observation.Reactors.ReplayState" json:"ReplayState,omitempty"`
+	DeliveryId                uint64                 `protobuf:"varint,4,opt,name=DeliveryId,proto3" json:"DeliveryId,omitempty"`
+	DeliverWithinMilliseconds uint64                 `protobuf:"varint,5,opt,name=DeliverWithinMilliseconds,proto3" json:"DeliverWithinMilliseconds,omitempty"`
+	Partitions                []*PartitionEvents     `protobuf:"bytes,6,rep,name=Partitions,proto3" json:"Partitions,omitempty"`
+	Origin                    ObservationOrigin      `protobuf:"varint,7,opt,name=Origin,proto3,enum=Cratis.Chronicle.Contracts.Observation.Reactors.ObservationOrigin" json:"Origin,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *EventsToObserve) Reset() {
@@ -791,6 +853,34 @@ func (x *EventsToObserve) GetReplayState() ReplayState {
 		return x.ReplayState
 	}
 	return ReplayState_REPLAY_STATE_None
+}
+
+func (x *EventsToObserve) GetDeliveryId() uint64 {
+	if x != nil {
+		return x.DeliveryId
+	}
+	return 0
+}
+
+func (x *EventsToObserve) GetDeliverWithinMilliseconds() uint64 {
+	if x != nil {
+		return x.DeliverWithinMilliseconds
+	}
+	return 0
+}
+
+func (x *EventsToObserve) GetPartitions() []*PartitionEvents {
+	if x != nil {
+		return x.Partitions
+	}
+	return nil
+}
+
+func (x *EventsToObserve) GetOrigin() ObservationOrigin {
+	if x != nil {
+		return x.Origin
+	}
+	return ObservationOrigin_Unknown
 }
 
 type HasReactorRequest struct {
@@ -1137,6 +1227,218 @@ func (x *OneOf_RegisterReactor_ReactorResult) GetValue1() *ReactorResult {
 	return nil
 }
 
+type PageDelivery struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Enabled              bool                   `protobuf:"varint,1,opt,name=Enabled,proto3" json:"Enabled,omitempty"`
+	MaxEventsPerPage     uint32                 `protobuf:"varint,2,opt,name=MaxEventsPerPage,proto3" json:"MaxEventsPerPage,omitempty"`
+	MaxBytesPerPage      uint32                 `protobuf:"varint,3,opt,name=MaxBytesPerPage,proto3" json:"MaxBytesPerPage,omitempty"`
+	MaxDelayMilliseconds uint32                 `protobuf:"varint,4,opt,name=MaxDelayMilliseconds,proto3" json:"MaxDelayMilliseconds,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *PageDelivery) Reset() {
+	*x = PageDelivery{}
+	mi := &file_observation_reactors_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PageDelivery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PageDelivery) ProtoMessage() {}
+
+func (x *PageDelivery) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_reactors_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PageDelivery.ProtoReflect.Descriptor instead.
+func (*PageDelivery) Descriptor() ([]byte, []int) {
+	return file_observation_reactors_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *PageDelivery) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *PageDelivery) GetMaxEventsPerPage() uint32 {
+	if x != nil {
+		return x.MaxEventsPerPage
+	}
+	return 0
+}
+
+func (x *PageDelivery) GetMaxBytesPerPage() uint32 {
+	if x != nil {
+		return x.MaxBytesPerPage
+	}
+	return 0
+}
+
+func (x *PageDelivery) GetMaxDelayMilliseconds() uint32 {
+	if x != nil {
+		return x.MaxDelayMilliseconds
+	}
+	return 0
+}
+
+type PartitionEvents struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Partition     string                 `protobuf:"bytes,1,opt,name=Partition,proto3" json:"Partition,omitempty"`
+	Events        []*AppendedEvent       `protobuf:"bytes,2,rep,name=Events,proto3" json:"Events,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PartitionEvents) Reset() {
+	*x = PartitionEvents{}
+	mi := &file_observation_reactors_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PartitionEvents) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PartitionEvents) ProtoMessage() {}
+
+func (x *PartitionEvents) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_reactors_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PartitionEvents.ProtoReflect.Descriptor instead.
+func (*PartitionEvents) Descriptor() ([]byte, []int) {
+	return file_observation_reactors_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *PartitionEvents) GetPartition() string {
+	if x != nil {
+		return x.Partition
+	}
+	return ""
+}
+
+func (x *PartitionEvents) GetEvents() []*AppendedEvent {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+type PartitionResult struct {
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Partition                 string                 `protobuf:"bytes,1,opt,name=Partition,proto3" json:"Partition,omitempty"`
+	State                     ObservationState       `protobuf:"varint,2,opt,name=State,proto3,enum=Cratis.Chronicle.Contracts.Observation.Reactors.ObservationState" json:"State,omitempty"`
+	LastSuccessfulObservation uint64                 `protobuf:"varint,3,opt,name=LastSuccessfulObservation,proto3" json:"LastSuccessfulObservation,omitempty"`
+	ExceptionMessages         []string               `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace       string                 `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	RetryAfterMilliseconds    uint64                 `protobuf:"varint,6,opt,name=RetryAfterMilliseconds,proto3" json:"RetryAfterMilliseconds,omitempty"`
+	ReadModelState            string                 `protobuf:"bytes,7,opt,name=ReadModelState,proto3" json:"ReadModelState,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *PartitionResult) Reset() {
+	*x = PartitionResult{}
+	mi := &file_observation_reactors_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PartitionResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PartitionResult) ProtoMessage() {}
+
+func (x *PartitionResult) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_reactors_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PartitionResult.ProtoReflect.Descriptor instead.
+func (*PartitionResult) Descriptor() ([]byte, []int) {
+	return file_observation_reactors_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *PartitionResult) GetPartition() string {
+	if x != nil {
+		return x.Partition
+	}
+	return ""
+}
+
+func (x *PartitionResult) GetState() ObservationState {
+	if x != nil {
+		return x.State
+	}
+	return ObservationState_OBSERVATION_STATE_None
+}
+
+func (x *PartitionResult) GetLastSuccessfulObservation() uint64 {
+	if x != nil {
+		return x.LastSuccessfulObservation
+	}
+	return 0
+}
+
+func (x *PartitionResult) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *PartitionResult) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *PartitionResult) GetRetryAfterMilliseconds() uint64 {
+	if x != nil {
+		return x.RetryAfterMilliseconds
+	}
+	return 0
+}
+
+func (x *PartitionResult) GetReadModelState() string {
+	if x != nil {
+		return x.ReadModelState
+	}
+	return ""
+}
+
 type ReactorDefinition struct {
 	state              protoimpl.MessageState        `protogen:"open.v1"`
 	ReactorId          string                        `protobuf:"bytes,1,opt,name=ReactorId,proto3" json:"ReactorId,omitempty"`
@@ -1154,7 +1456,7 @@ type ReactorDefinition struct {
 
 func (x *ReactorDefinition) Reset() {
 	*x = ReactorDefinition{}
-	mi := &file_observation_reactors_proto_msgTypes[13]
+	mi := &file_observation_reactors_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1166,7 +1468,7 @@ func (x *ReactorDefinition) String() string {
 func (*ReactorDefinition) ProtoMessage() {}
 
 func (x *ReactorDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_reactors_proto_msgTypes[13]
+	mi := &file_observation_reactors_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1179,7 +1481,7 @@ func (x *ReactorDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReactorDefinition.ProtoReflect.Descriptor instead.
 func (*ReactorDefinition) Descriptor() ([]byte, []int) {
-	return file_observation_reactors_proto_rawDescGZIP(), []int{13}
+	return file_observation_reactors_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ReactorDefinition) GetReactorId() string {
@@ -1254,7 +1556,7 @@ type ReactorMessage struct {
 
 func (x *ReactorMessage) Reset() {
 	*x = ReactorMessage{}
-	mi := &file_observation_reactors_proto_msgTypes[14]
+	mi := &file_observation_reactors_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1266,7 +1568,7 @@ func (x *ReactorMessage) String() string {
 func (*ReactorMessage) ProtoMessage() {}
 
 func (x *ReactorMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_reactors_proto_msgTypes[14]
+	mi := &file_observation_reactors_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1279,7 +1581,7 @@ func (x *ReactorMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReactorMessage.ProtoReflect.Descriptor instead.
 func (*ReactorMessage) Descriptor() ([]byte, []int) {
-	return file_observation_reactors_proto_rawDescGZIP(), []int{14}
+	return file_observation_reactors_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ReactorMessage) GetContent() *OneOf_RegisterReactor_ReactorResult {
@@ -1296,13 +1598,16 @@ type ReactorResult struct {
 	LastSuccessfulObservation uint64                 `protobuf:"varint,3,opt,name=LastSuccessfulObservation,proto3" json:"LastSuccessfulObservation,omitempty"`
 	ExceptionMessages         []string               `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
 	ExceptionStackTrace       string                 `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	DeliveryId                uint64                 `protobuf:"varint,6,opt,name=DeliveryId,proto3" json:"DeliveryId,omitempty"`
+	RetryAfterMilliseconds    uint64                 `protobuf:"varint,7,opt,name=RetryAfterMilliseconds,proto3" json:"RetryAfterMilliseconds,omitempty"`
+	Partitions                []*PartitionResult     `protobuf:"bytes,8,rep,name=Partitions,proto3" json:"Partitions,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *ReactorResult) Reset() {
 	*x = ReactorResult{}
-	mi := &file_observation_reactors_proto_msgTypes[15]
+	mi := &file_observation_reactors_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1314,7 +1619,7 @@ func (x *ReactorResult) String() string {
 func (*ReactorResult) ProtoMessage() {}
 
 func (x *ReactorResult) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_reactors_proto_msgTypes[15]
+	mi := &file_observation_reactors_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1327,7 +1632,7 @@ func (x *ReactorResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReactorResult.ProtoReflect.Descriptor instead.
 func (*ReactorResult) Descriptor() ([]byte, []int) {
-	return file_observation_reactors_proto_rawDescGZIP(), []int{15}
+	return file_observation_reactors_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ReactorResult) GetPartition() string {
@@ -1365,19 +1670,41 @@ func (x *ReactorResult) GetExceptionStackTrace() string {
 	return ""
 }
 
+func (x *ReactorResult) GetDeliveryId() uint64 {
+	if x != nil {
+		return x.DeliveryId
+	}
+	return 0
+}
+
+func (x *ReactorResult) GetRetryAfterMilliseconds() uint64 {
+	if x != nil {
+		return x.RetryAfterMilliseconds
+	}
+	return 0
+}
+
+func (x *ReactorResult) GetPartitions() []*PartitionResult {
+	if x != nil {
+		return x.Partitions
+	}
+	return nil
+}
+
 type RegisterReactor struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ConnectionId  string                 `protobuf:"bytes,1,opt,name=ConnectionId,proto3" json:"ConnectionId,omitempty"`
 	EventStore    string                 `protobuf:"bytes,2,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
 	Namespace     string                 `protobuf:"bytes,3,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
 	Reactor       *ReactorDefinition     `protobuf:"bytes,4,opt,name=Reactor,proto3" json:"Reactor,omitempty"`
+	PageDelivery  *PageDelivery          `protobuf:"bytes,5,opt,name=PageDelivery,proto3" json:"PageDelivery,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterReactor) Reset() {
 	*x = RegisterReactor{}
-	mi := &file_observation_reactors_proto_msgTypes[16]
+	mi := &file_observation_reactors_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1389,7 +1716,7 @@ func (x *RegisterReactor) String() string {
 func (*RegisterReactor) ProtoMessage() {}
 
 func (x *RegisterReactor) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_reactors_proto_msgTypes[16]
+	mi := &file_observation_reactors_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1402,7 +1729,7 @@ func (x *RegisterReactor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterReactor.ProtoReflect.Descriptor instead.
 func (*RegisterReactor) Descriptor() ([]byte, []int) {
-	return file_observation_reactors_proto_rawDescGZIP(), []int{16}
+	return file_observation_reactors_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *RegisterReactor) GetConnectionId() string {
@@ -1433,6 +1760,13 @@ func (x *RegisterReactor) GetReactor() *ReactorDefinition {
 	return nil
 }
 
+func (x *RegisterReactor) GetPageDelivery() *PageDelivery {
+	if x != nil {
+		return x.PageDelivery
+	}
+	return nil
+}
+
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 type SerializableDateTimeOffset struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1443,7 +1777,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_observation_reactors_proto_msgTypes[17]
+	mi := &file_observation_reactors_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1455,7 +1789,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_reactors_proto_msgTypes[17]
+	mi := &file_observation_reactors_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1468,7 +1802,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_observation_reactors_proto_rawDescGZIP(), []int{17}
+	return file_observation_reactors_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -1540,11 +1874,19 @@ const file_observation_reactors_proto_rawDesc = "" +
 	"\tTombstone\x18\x03 \x01(\bR\tTombstone\"\x88\x01\n" +
 	"\x1aEventTypeWithKeyExpression\x12X\n" +
 	"\tEventType\x18\x01 \x01(\v2:.Cratis.Chronicle.Contracts.Observation.Reactors.EventTypeR\tEventType\x12\x10\n" +
-	"\x03Key\x18\x02 \x01(\tR\x03Key\"\xe7\x01\n" +
+	"\x03Key\x18\x02 \x01(\tR\x03Key\"\x83\x04\n" +
 	"\x0fEventsToObserve\x12\x1c\n" +
 	"\tPartition\x18\x01 \x01(\tR\tPartition\x12V\n" +
 	"\x06Events\x18\x02 \x03(\v2>.Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEventR\x06Events\x12^\n" +
-	"\vReplayState\x18\x03 \x01(\x0e2<.Cratis.Chronicle.Contracts.Observation.Reactors.ReplayStateR\vReplayState\"o\n" +
+	"\vReplayState\x18\x03 \x01(\x0e2<.Cratis.Chronicle.Contracts.Observation.Reactors.ReplayStateR\vReplayState\x12\x1e\n" +
+	"\n" +
+	"DeliveryId\x18\x04 \x01(\x04R\n" +
+	"DeliveryId\x12<\n" +
+	"\x19DeliverWithinMilliseconds\x18\x05 \x01(\x04R\x19DeliverWithinMilliseconds\x12`\n" +
+	"\n" +
+	"Partitions\x18\x06 \x03(\v2@.Cratis.Chronicle.Contracts.Observation.Reactors.PartitionEventsR\n" +
+	"Partitions\x12Z\n" +
+	"\x06Origin\x18\a \x01(\x0e2B.Cratis.Chronicle.Contracts.Observation.Reactors.ObservationOriginR\x06Origin\"o\n" +
 	"\x11HasReactorRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1572,7 +1914,23 @@ const file_observation_reactors_proto_rawDesc = "" +
 	"\x0fEventStreamType\x18\x03 \x01(\tR\x0fEventStreamType\"\xd7\x01\n" +
 	"#OneOf_RegisterReactor_ReactorResult\x12X\n" +
 	"\x06Value0\x18\x01 \x01(\v2@.Cratis.Chronicle.Contracts.Observation.Reactors.RegisterReactorR\x06Value0\x12V\n" +
-	"\x06Value1\x18\x02 \x01(\v2>.Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResultR\x06Value1\"\xa2\x04\n" +
+	"\x06Value1\x18\x02 \x01(\v2>.Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResultR\x06Value1\"\xb2\x01\n" +
+	"\fPageDelivery\x12\x18\n" +
+	"\aEnabled\x18\x01 \x01(\bR\aEnabled\x12*\n" +
+	"\x10MaxEventsPerPage\x18\x02 \x01(\rR\x10MaxEventsPerPage\x12(\n" +
+	"\x0fMaxBytesPerPage\x18\x03 \x01(\rR\x0fMaxBytesPerPage\x122\n" +
+	"\x14MaxDelayMilliseconds\x18\x04 \x01(\rR\x14MaxDelayMilliseconds\"\x87\x01\n" +
+	"\x0fPartitionEvents\x12\x1c\n" +
+	"\tPartition\x18\x01 \x01(\tR\tPartition\x12V\n" +
+	"\x06Events\x18\x02 \x03(\v2>.Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEventR\x06Events\"\x86\x03\n" +
+	"\x0fPartitionResult\x12\x1c\n" +
+	"\tPartition\x18\x01 \x01(\tR\tPartition\x12W\n" +
+	"\x05State\x18\x02 \x01(\x0e2A.Cratis.Chronicle.Contracts.Observation.Reactors.ObservationStateR\x05State\x12<\n" +
+	"\x19LastSuccessfulObservation\x18\x03 \x01(\x04R\x19LastSuccessfulObservation\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x126\n" +
+	"\x16RetryAfterMilliseconds\x18\x06 \x01(\x04R\x16RetryAfterMilliseconds\x12&\n" +
+	"\x0eReadModelState\x18\a \x01(\tR\x0eReadModelState\"\xa2\x04\n" +
 	"\x11ReactorDefinition\x12\x1c\n" +
 	"\tReactorId\x18\x01 \x01(\tR\tReactorId\x12(\n" +
 	"\x0fEventSequenceId\x18\x02 \x01(\tR\x0fEventSequenceId\x12k\n" +
@@ -1586,20 +1944,28 @@ const file_observation_reactors_proto_rawDesc = "" +
 	"\x12GenerationDelivery\x18\b \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Reactors.EventGenerationDeliveryR\x12GenerationDelivery\x12 \n" +
 	"\vStartAtTail\x18\t \x01(\bR\vStartAtTail\"\x80\x01\n" +
 	"\x0eReactorMessage\x12n\n" +
-	"\aContent\x18\x01 \x01(\v2T.Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResultR\aContent\"\xa4\x02\n" +
+	"\aContent\x18\x01 \x01(\v2T.Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResultR\aContent\"\xde\x03\n" +
 	"\rReactorResult\x12\x1c\n" +
 	"\tPartition\x18\x01 \x01(\tR\tPartition\x12W\n" +
 	"\x05State\x18\x02 \x01(\x0e2A.Cratis.Chronicle.Contracts.Observation.Reactors.ObservationStateR\x05State\x12<\n" +
 	"\x19LastSuccessfulObservation\x18\x03 \x01(\x04R\x19LastSuccessfulObservation\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
-	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\"\xd1\x01\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12\x1e\n" +
+	"\n" +
+	"DeliveryId\x18\x06 \x01(\x04R\n" +
+	"DeliveryId\x126\n" +
+	"\x16RetryAfterMilliseconds\x18\a \x01(\x04R\x16RetryAfterMilliseconds\x12`\n" +
+	"\n" +
+	"Partitions\x18\b \x03(\v2@.Cratis.Chronicle.Contracts.Observation.Reactors.PartitionResultR\n" +
+	"Partitions\"\xb4\x02\n" +
 	"\x0fRegisterReactor\x12\"\n" +
 	"\fConnectionId\x18\x01 \x01(\tR\fConnectionId\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x02 \x01(\tR\n" +
 	"EventStore\x12\x1c\n" +
 	"\tNamespace\x18\x03 \x01(\tR\tNamespace\x12\\\n" +
-	"\aReactor\x18\x04 \x01(\v2B.Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinitionR\aReactor\"2\n" +
+	"\aReactor\x18\x04 \x01(\v2B.Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinitionR\aReactor\x12a\n" +
+	"\fPageDelivery\x18\x05 \x01(\v2=.Cratis.Chronicle.Contracts.Observation.Reactors.PageDeliveryR\fPageDelivery\"2\n" +
 	"\x1aSerializableDateTimeOffset\x12\x14\n" +
 	"\x05Value\x18\x01 \x01(\tR\x05Value*8\n" +
 	"\x17EventGenerationDelivery\x12\x11\n" +
@@ -1610,12 +1976,20 @@ const file_observation_reactors_proto_rawDesc = "" +
 	"\x1cEVENT_OBSERVATION_STATE_None\x10\x00\x12\v\n" +
 	"\aInitial\x10\x01\x12\n" +
 	"\n" +
-	"\x06Replay\x10\x02*G\n" +
+	"\x06Replay\x10\x02*W\n" +
+	"\x11ObservationOrigin\x12\v\n" +
+	"\aUnknown\x10\x00\x12\b\n" +
+	"\x04Live\x10\x01\x12\x0e\n" +
+	"\n" +
+	"CatchingUp\x10\x02\x12\r\n" +
+	"\tReplaying\x10\x03\x12\f\n" +
+	"\bRetrying\x10\x04*U\n" +
 	"\x10ObservationState\x12\x1a\n" +
 	"\x16OBSERVATION_STATE_None\x10\x00\x12\v\n" +
 	"\aSuccess\x10\x01\x12\n" +
 	"\n" +
-	"\x06Failed\x10\x02*v\n" +
+	"\x06Failed\x10\x02\x12\f\n" +
+	"\bDeferred\x10\x03*v\n" +
 	"\vReplayState\x12\x15\n" +
 	"\x11REPLAY_STATE_None\x10\x00\x12\x0f\n" +
 	"\vBeginReplay\x10\x01\x12\r\n" +
@@ -1640,71 +2014,81 @@ func file_observation_reactors_proto_rawDescGZIP() []byte {
 	return file_observation_reactors_proto_rawDescData
 }
 
-var file_observation_reactors_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_observation_reactors_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_observation_reactors_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_observation_reactors_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_observation_reactors_proto_goTypes = []any{
 	(EventGenerationDelivery)(0),                // 0: Cratis.Chronicle.Contracts.Observation.Reactors.EventGenerationDelivery
 	(EventObservationState)(0),                  // 1: Cratis.Chronicle.Contracts.Observation.Reactors.EventObservationState
-	(ObservationState)(0),                       // 2: Cratis.Chronicle.Contracts.Observation.Reactors.ObservationState
-	(ReplayState)(0),                            // 3: Cratis.Chronicle.Contracts.Observation.Reactors.ReplayState
-	(*AppendedEvent)(nil),                       // 4: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent
-	(*Causation)(nil),                           // 5: Cratis.Chronicle.Contracts.Observation.Reactors.Causation
-	(*EventContext)(nil),                        // 6: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext
-	(*EventRevision)(nil),                       // 7: Cratis.Chronicle.Contracts.Observation.Reactors.EventRevision
-	(*EventType)(nil),                           // 8: Cratis.Chronicle.Contracts.Observation.Reactors.EventType
-	(*EventTypeWithKeyExpression)(nil),          // 9: Cratis.Chronicle.Contracts.Observation.Reactors.EventTypeWithKeyExpression
-	(*EventsToObserve)(nil),                     // 10: Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve
-	(*HasReactorRequest)(nil),                   // 11: Cratis.Chronicle.Contracts.Observation.Reactors.HasReactorRequest
-	(*HasReactorResponse)(nil),                  // 12: Cratis.Chronicle.Contracts.Observation.Reactors.HasReactorResponse
-	(*Identity)(nil),                            // 13: Cratis.Chronicle.Contracts.Observation.Reactors.Identity
-	(*NamedTag)(nil),                            // 14: Cratis.Chronicle.Contracts.Observation.Reactors.NamedTag
-	(*ObserverFilters)(nil),                     // 15: Cratis.Chronicle.Contracts.Observation.Reactors.ObserverFilters
-	(*OneOf_RegisterReactor_ReactorResult)(nil), // 16: Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResult
-	(*ReactorDefinition)(nil),                   // 17: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition
-	(*ReactorMessage)(nil),                      // 18: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorMessage
-	(*ReactorResult)(nil),                       // 19: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResult
-	(*RegisterReactor)(nil),                     // 20: Cratis.Chronicle.Contracts.Observation.Reactors.RegisterReactor
-	(*SerializableDateTimeOffset)(nil),          // 21: Cratis.Chronicle.Contracts.Observation.Reactors.SerializableDateTimeOffset
-	nil,                                         // 22: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.GenerationalContentEntry
-	nil,                                         // 23: Cratis.Chronicle.Contracts.Observation.Reactors.Causation.PropertiesEntry
-	(*bcl.Guid)(nil),                            // 24: bcl.Guid
+	(ObservationOrigin)(0),                      // 2: Cratis.Chronicle.Contracts.Observation.Reactors.ObservationOrigin
+	(ObservationState)(0),                       // 3: Cratis.Chronicle.Contracts.Observation.Reactors.ObservationState
+	(ReplayState)(0),                            // 4: Cratis.Chronicle.Contracts.Observation.Reactors.ReplayState
+	(*AppendedEvent)(nil),                       // 5: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent
+	(*Causation)(nil),                           // 6: Cratis.Chronicle.Contracts.Observation.Reactors.Causation
+	(*EventContext)(nil),                        // 7: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext
+	(*EventRevision)(nil),                       // 8: Cratis.Chronicle.Contracts.Observation.Reactors.EventRevision
+	(*EventType)(nil),                           // 9: Cratis.Chronicle.Contracts.Observation.Reactors.EventType
+	(*EventTypeWithKeyExpression)(nil),          // 10: Cratis.Chronicle.Contracts.Observation.Reactors.EventTypeWithKeyExpression
+	(*EventsToObserve)(nil),                     // 11: Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve
+	(*HasReactorRequest)(nil),                   // 12: Cratis.Chronicle.Contracts.Observation.Reactors.HasReactorRequest
+	(*HasReactorResponse)(nil),                  // 13: Cratis.Chronicle.Contracts.Observation.Reactors.HasReactorResponse
+	(*Identity)(nil),                            // 14: Cratis.Chronicle.Contracts.Observation.Reactors.Identity
+	(*NamedTag)(nil),                            // 15: Cratis.Chronicle.Contracts.Observation.Reactors.NamedTag
+	(*ObserverFilters)(nil),                     // 16: Cratis.Chronicle.Contracts.Observation.Reactors.ObserverFilters
+	(*OneOf_RegisterReactor_ReactorResult)(nil), // 17: Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResult
+	(*PageDelivery)(nil),                        // 18: Cratis.Chronicle.Contracts.Observation.Reactors.PageDelivery
+	(*PartitionEvents)(nil),                     // 19: Cratis.Chronicle.Contracts.Observation.Reactors.PartitionEvents
+	(*PartitionResult)(nil),                     // 20: Cratis.Chronicle.Contracts.Observation.Reactors.PartitionResult
+	(*ReactorDefinition)(nil),                   // 21: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition
+	(*ReactorMessage)(nil),                      // 22: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorMessage
+	(*ReactorResult)(nil),                       // 23: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResult
+	(*RegisterReactor)(nil),                     // 24: Cratis.Chronicle.Contracts.Observation.Reactors.RegisterReactor
+	(*SerializableDateTimeOffset)(nil),          // 25: Cratis.Chronicle.Contracts.Observation.Reactors.SerializableDateTimeOffset
+	nil,                                         // 26: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.GenerationalContentEntry
+	nil,                                         // 27: Cratis.Chronicle.Contracts.Observation.Reactors.Causation.PropertiesEntry
+	(*bcl.Guid)(nil),                            // 28: bcl.Guid
 }
 var file_observation_reactors_proto_depIdxs = []int32{
-	6,  // 0: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.Context:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventContext
-	7,  // 1: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.Revisions:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventRevision
-	22, // 2: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.GenerationalContent:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.GenerationalContentEntry
-	21, // 3: Cratis.Chronicle.Contracts.Observation.Reactors.Causation.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.SerializableDateTimeOffset
-	23, // 4: Cratis.Chronicle.Contracts.Observation.Reactors.Causation.Properties:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Causation.PropertiesEntry
-	8,  // 5: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.EventType:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventType
-	21, // 6: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.SerializableDateTimeOffset
-	24, // 7: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.CorrelationId:type_name -> bcl.Guid
-	5,  // 8: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.Causation:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Causation
-	13, // 9: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.CausedBy:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Identity
+	7,  // 0: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.Context:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventContext
+	8,  // 1: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.Revisions:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventRevision
+	26, // 2: Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.GenerationalContent:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent.GenerationalContentEntry
+	25, // 3: Cratis.Chronicle.Contracts.Observation.Reactors.Causation.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.SerializableDateTimeOffset
+	27, // 4: Cratis.Chronicle.Contracts.Observation.Reactors.Causation.Properties:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Causation.PropertiesEntry
+	9,  // 5: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.EventType:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventType
+	25, // 6: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.SerializableDateTimeOffset
+	28, // 7: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.CorrelationId:type_name -> bcl.Guid
+	6,  // 8: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.Causation:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Causation
+	14, // 9: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.CausedBy:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Identity
 	1,  // 10: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.ObservationState:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventObservationState
-	14, // 11: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.NamedTags:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.NamedTag
-	13, // 12: Cratis.Chronicle.Contracts.Observation.Reactors.EventRevision.CausedBy:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Identity
-	21, // 13: Cratis.Chronicle.Contracts.Observation.Reactors.EventRevision.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.SerializableDateTimeOffset
-	8,  // 14: Cratis.Chronicle.Contracts.Observation.Reactors.EventTypeWithKeyExpression.EventType:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventType
-	4,  // 15: Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve.Events:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent
-	3,  // 16: Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve.ReplayState:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ReplayState
-	13, // 17: Cratis.Chronicle.Contracts.Observation.Reactors.Identity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Identity
-	20, // 18: Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResult.Value0:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.RegisterReactor
-	19, // 19: Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResult.Value1:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResult
-	9,  // 20: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventTypeWithKeyExpression
-	15, // 21: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition.Filters:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ObserverFilters
-	0,  // 22: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventGenerationDelivery
-	16, // 23: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorMessage.Content:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResult
-	2,  // 24: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResult.State:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ObservationState
-	17, // 25: Cratis.Chronicle.Contracts.Observation.Reactors.RegisterReactor.Reactor:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition
-	11, // 26: Cratis.Chronicle.Contracts.Observation.Reactors.Reactors.HasReactor:input_type -> Cratis.Chronicle.Contracts.Observation.Reactors.HasReactorRequest
-	18, // 27: Cratis.Chronicle.Contracts.Observation.Reactors.Reactors.Observe:input_type -> Cratis.Chronicle.Contracts.Observation.Reactors.ReactorMessage
-	12, // 28: Cratis.Chronicle.Contracts.Observation.Reactors.Reactors.HasReactor:output_type -> Cratis.Chronicle.Contracts.Observation.Reactors.HasReactorResponse
-	10, // 29: Cratis.Chronicle.Contracts.Observation.Reactors.Reactors.Observe:output_type -> Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve
-	28, // [28:30] is the sub-list for method output_type
-	26, // [26:28] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	15, // 11: Cratis.Chronicle.Contracts.Observation.Reactors.EventContext.NamedTags:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.NamedTag
+	14, // 12: Cratis.Chronicle.Contracts.Observation.Reactors.EventRevision.CausedBy:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Identity
+	25, // 13: Cratis.Chronicle.Contracts.Observation.Reactors.EventRevision.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.SerializableDateTimeOffset
+	9,  // 14: Cratis.Chronicle.Contracts.Observation.Reactors.EventTypeWithKeyExpression.EventType:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventType
+	5,  // 15: Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve.Events:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent
+	4,  // 16: Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve.ReplayState:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ReplayState
+	19, // 17: Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve.Partitions:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.PartitionEvents
+	2,  // 18: Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve.Origin:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ObservationOrigin
+	14, // 19: Cratis.Chronicle.Contracts.Observation.Reactors.Identity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.Identity
+	24, // 20: Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResult.Value0:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.RegisterReactor
+	23, // 21: Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResult.Value1:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResult
+	5,  // 22: Cratis.Chronicle.Contracts.Observation.Reactors.PartitionEvents.Events:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.AppendedEvent
+	3,  // 23: Cratis.Chronicle.Contracts.Observation.Reactors.PartitionResult.State:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ObservationState
+	10, // 24: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventTypeWithKeyExpression
+	16, // 25: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition.Filters:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ObserverFilters
+	0,  // 26: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.EventGenerationDelivery
+	17, // 27: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorMessage.Content:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.OneOf_RegisterReactor_ReactorResult
+	3,  // 28: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResult.State:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ObservationState
+	20, // 29: Cratis.Chronicle.Contracts.Observation.Reactors.ReactorResult.Partitions:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.PartitionResult
+	21, // 30: Cratis.Chronicle.Contracts.Observation.Reactors.RegisterReactor.Reactor:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.ReactorDefinition
+	18, // 31: Cratis.Chronicle.Contracts.Observation.Reactors.RegisterReactor.PageDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Reactors.PageDelivery
+	12, // 32: Cratis.Chronicle.Contracts.Observation.Reactors.Reactors.HasReactor:input_type -> Cratis.Chronicle.Contracts.Observation.Reactors.HasReactorRequest
+	22, // 33: Cratis.Chronicle.Contracts.Observation.Reactors.Reactors.Observe:input_type -> Cratis.Chronicle.Contracts.Observation.Reactors.ReactorMessage
+	13, // 34: Cratis.Chronicle.Contracts.Observation.Reactors.Reactors.HasReactor:output_type -> Cratis.Chronicle.Contracts.Observation.Reactors.HasReactorResponse
+	11, // 35: Cratis.Chronicle.Contracts.Observation.Reactors.Reactors.Observe:output_type -> Cratis.Chronicle.Contracts.Observation.Reactors.EventsToObserve
+	34, // [34:36] is the sub-list for method output_type
+	32, // [32:34] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_observation_reactors_proto_init() }
@@ -1717,8 +2101,8 @@ func file_observation_reactors_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_observation_reactors_proto_rawDesc), len(file_observation_reactors_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   20,
+			NumEnums:      5,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

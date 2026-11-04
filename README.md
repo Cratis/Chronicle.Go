@@ -17,23 +17,19 @@ Requires Go **1.26 or later**. Experimental tags exist, including [v0.11.1](http
 go get github.com/cratis/chronicle.go@latest
 ```
 
-Current source contracts are pinned to Chronicle **19.70.0**; integration CI is configured with **19.70.0-development**. Neither pin establishes a whole-client supported kernel range or a passing runtime result. Generated contracts are public packages in this same module, with no .NET or sibling checkout needed.
+Contracts are pinned to Chronicle **19.123.0**; real-kernel tests use **19.123.0-development**. The pin is not a supported kernel range: decision reads require this exact version (see the capability summary). Generated contracts are public packages in this same module, with no .NET or sibling checkout needed.
 
 ## Quick start
 
-Read the [getting-started environment boundary](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/clients/go/getting-started.md) before a live append. A validated replacement local recipe for the current source is still needed; do not substitute a CI image tag and assume it works.
-
-### Historical development kernel recipe
-
-The following older recipe is retained for context, not as a current setup recommendation. Its `https://localhost:35000/health` endpoint reporting `Healthy` establishes process health, not feature compatibility. **19.32.3-development cannot satisfy current decision-read admission.**
+Start the development kernel and wait for `https://localhost:35000/health` to report `Healthy`. Health establishes process health, not feature compatibility; read the [getting-started environment notes](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/clients/go/getting-started.md) before relying on a feature:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.32.3-development
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.123.0-development
 ```
 
 ### Normal-client append example
 
-The maintained program is available as `go run ./examples/getting-started` in a checkout. A live run requires a compatible endpoint. It owns a normal client, including its keep-alive worker; it is not a runnable skipped-session job example. Read [short-lived clients and process ownership](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/connection-strings/lifecycle.md#short-lived-clients-and-process-ownership) before choosing `WithSkipKeepAlive`:
+The maintained program is available as `go run ./examples/getting-started` in a checkout against that kernel. It owns a normal client, including its keep-alive worker; it is not a runnable skipped-session job example. Read [short-lived clients and process ownership](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/connection-strings/lifecycle.md#short-lived-clients-and-process-ownership) before choosing `WithSkipKeepAlive`:
 
 ```go
 package main

@@ -55,7 +55,7 @@ Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Wor
 
 ## Contracts and kernel integration
 
-Contracts live in this module under public `contracts/` packages. `contracts-source.json` pins Chronicle 19.70.0 at an immutable commit, input hashes and generator versions. Install Buf 1.73.0; Python 3 and Go are the other prerequisites. Generation installs its pinned Go plugins into isolated staging, fetches canonical upstream inputs and promotes only generator-owned files:
+Contracts live in this module under public `contracts/` packages. `contracts-source.json` pins Chronicle 19.123.0 at an immutable commit, input hashes and generator versions. Install Buf 1.73.0; Python 3 and Go are the other prerequisites. Generation installs its pinned Go plugins into isolated staging, fetches canonical upstream inputs and promotes only generator-owned files:
 
 ```sh
 go generate ./...
@@ -64,10 +64,10 @@ python3 scripts/generate-contracts.py --check
 
 The check also detects stale or unexpected generated files; it does not require .NET, protoc, a sibling checkout or a running kernel. Builds consume checked-in output and do not generate on demand. Review source pins, managed package mappings and generated diffs together when upgrading contracts. Never generate duplicate BCL/protocol packages in downstream clients.
 
-The following **historical recipe is not a current setup recommendation**. Its 19.32.3-development image does not match the current 19.70.0 contract pin and cannot meet current decision-read admission. Integration CI is configured with 19.70.0-development, but that configuration does not validate a replacement local recipe. A validated current recipe remains outstanding; do not substitute the CI image tag and assume the setup or suite succeeds:
+Run the real-kernel tests against the development image matching the contract release:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.32.3-development
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.123.0-development
 # In another terminal, after https://localhost:35000/health reports Healthy:
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
 CHRONICLE_INTEGRATION_CONTAINER=chronicle-go \

@@ -210,6 +210,58 @@ func (x *CommandResult) GetAuthorizationFailureReason() string {
 	return ""
 }
 
+type GetIgnoredRecommendationsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetIgnoredRecommendationsRequest) Reset() {
+	*x = GetIgnoredRecommendationsRequest{}
+	mi := &file_recommendations_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetIgnoredRecommendationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetIgnoredRecommendationsRequest) ProtoMessage() {}
+
+func (x *GetIgnoredRecommendationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_recommendations_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetIgnoredRecommendationsRequest.ProtoReflect.Descriptor instead.
+func (*GetIgnoredRecommendationsRequest) Descriptor() ([]byte, []int) {
+	return file_recommendations_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetIgnoredRecommendationsRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *GetIgnoredRecommendationsRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
 type GetRecommendationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -220,7 +272,7 @@ type GetRecommendationsRequest struct {
 
 func (x *GetRecommendationsRequest) Reset() {
 	*x = GetRecommendationsRequest{}
-	mi := &file_recommendations_proto_msgTypes[2]
+	mi := &file_recommendations_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -232,7 +284,7 @@ func (x *GetRecommendationsRequest) String() string {
 func (*GetRecommendationsRequest) ProtoMessage() {}
 
 func (x *GetRecommendationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_recommendations_proto_msgTypes[2]
+	mi := &file_recommendations_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -245,7 +297,7 @@ func (x *GetRecommendationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRecommendationsRequest.ProtoReflect.Descriptor instead.
 func (*GetRecommendationsRequest) Descriptor() ([]byte, []int) {
-	return file_recommendations_proto_rawDescGZIP(), []int{2}
+	return file_recommendations_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetRecommendationsRequest) GetEventStore() string {
@@ -273,7 +325,7 @@ type IgnoreRecommendationRequest struct {
 
 func (x *IgnoreRecommendationRequest) Reset() {
 	*x = IgnoreRecommendationRequest{}
-	mi := &file_recommendations_proto_msgTypes[3]
+	mi := &file_recommendations_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -285,7 +337,7 @@ func (x *IgnoreRecommendationRequest) String() string {
 func (*IgnoreRecommendationRequest) ProtoMessage() {}
 
 func (x *IgnoreRecommendationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_recommendations_proto_msgTypes[3]
+	mi := &file_recommendations_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -298,7 +350,7 @@ func (x *IgnoreRecommendationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IgnoreRecommendationRequest.ProtoReflect.Descriptor instead.
 func (*IgnoreRecommendationRequest) Descriptor() ([]byte, []int) {
-	return file_recommendations_proto_rawDescGZIP(), []int{3}
+	return file_recommendations_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *IgnoreRecommendationRequest) GetEventStore() string {
@@ -322,6 +374,58 @@ func (x *IgnoreRecommendationRequest) GetRecommendationId() *bcl.Guid {
 	return nil
 }
 
+type IgnoredRecommendationsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IgnoredRecommendationsRequest) Reset() {
+	*x = IgnoredRecommendationsRequest{}
+	mi := &file_recommendations_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IgnoredRecommendationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IgnoredRecommendationsRequest) ProtoMessage() {}
+
+func (x *IgnoredRecommendationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_recommendations_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IgnoredRecommendationsRequest.ProtoReflect.Descriptor instead.
+func (*IgnoredRecommendationsRequest) Descriptor() ([]byte, []int) {
+	return file_recommendations_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *IgnoredRecommendationsRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *IgnoredRecommendationsRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
 type PerformRecommendationRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	EventStore       string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -333,7 +437,7 @@ type PerformRecommendationRequest struct {
 
 func (x *PerformRecommendationRequest) Reset() {
 	*x = PerformRecommendationRequest{}
-	mi := &file_recommendations_proto_msgTypes[4]
+	mi := &file_recommendations_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -345,7 +449,7 @@ func (x *PerformRecommendationRequest) String() string {
 func (*PerformRecommendationRequest) ProtoMessage() {}
 
 func (x *PerformRecommendationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_recommendations_proto_msgTypes[4]
+	mi := &file_recommendations_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -358,7 +462,7 @@ func (x *PerformRecommendationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PerformRecommendationRequest.ProtoReflect.Descriptor instead.
 func (*PerformRecommendationRequest) Descriptor() ([]byte, []int) {
-	return file_recommendations_proto_rawDescGZIP(), []int{4}
+	return file_recommendations_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PerformRecommendationRequest) GetEventStore() string {
@@ -396,7 +500,7 @@ type QueryResult_IEnumerable_RecommendationDetailsResponse struct {
 
 func (x *QueryResult_IEnumerable_RecommendationDetailsResponse) Reset() {
 	*x = QueryResult_IEnumerable_RecommendationDetailsResponse{}
-	mi := &file_recommendations_proto_msgTypes[5]
+	mi := &file_recommendations_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -408,7 +512,7 @@ func (x *QueryResult_IEnumerable_RecommendationDetailsResponse) String() string 
 func (*QueryResult_IEnumerable_RecommendationDetailsResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_RecommendationDetailsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_recommendations_proto_msgTypes[5]
+	mi := &file_recommendations_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -421,7 +525,7 @@ func (x *QueryResult_IEnumerable_RecommendationDetailsResponse) ProtoReflect() p
 
 // Deprecated: Use QueryResult_IEnumerable_RecommendationDetailsResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_RecommendationDetailsResponse) Descriptor() ([]byte, []int) {
-	return file_recommendations_proto_rawDescGZIP(), []int{5}
+	return file_recommendations_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *QueryResult_IEnumerable_RecommendationDetailsResponse) GetCorrelationId() *bcl.Guid {
@@ -479,7 +583,7 @@ type RecommendationDetailsResponse struct {
 
 func (x *RecommendationDetailsResponse) Reset() {
 	*x = RecommendationDetailsResponse{}
-	mi := &file_recommendations_proto_msgTypes[6]
+	mi := &file_recommendations_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -491,7 +595,7 @@ func (x *RecommendationDetailsResponse) String() string {
 func (*RecommendationDetailsResponse) ProtoMessage() {}
 
 func (x *RecommendationDetailsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_recommendations_proto_msgTypes[6]
+	mi := &file_recommendations_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -504,7 +608,7 @@ func (x *RecommendationDetailsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecommendationDetailsResponse.ProtoReflect.Descriptor instead.
 func (*RecommendationDetailsResponse) Descriptor() ([]byte, []int) {
-	return file_recommendations_proto_rawDescGZIP(), []int{6}
+	return file_recommendations_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RecommendationDetailsResponse) GetId() *bcl.Guid {
@@ -552,7 +656,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_recommendations_proto_msgTypes[7]
+	mi := &file_recommendations_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -564,7 +668,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_recommendations_proto_msgTypes[7]
+	mi := &file_recommendations_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -577,7 +681,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_recommendations_proto_rawDescGZIP(), []int{7}
+	return file_recommendations_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -585,6 +689,66 @@ func (x *SerializableDateTimeOffset) GetValue() string {
 		return x.Value
 	}
 	return ""
+}
+
+type UnignoreRecommendationRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	EventStore       string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace        string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	RecommendationId *bcl.Guid              `protobuf:"bytes,3,opt,name=RecommendationId,proto3" json:"RecommendationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *UnignoreRecommendationRequest) Reset() {
+	*x = UnignoreRecommendationRequest{}
+	mi := &file_recommendations_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnignoreRecommendationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnignoreRecommendationRequest) ProtoMessage() {}
+
+func (x *UnignoreRecommendationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_recommendations_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnignoreRecommendationRequest.ProtoReflect.Descriptor instead.
+func (*UnignoreRecommendationRequest) Descriptor() ([]byte, []int) {
+	return file_recommendations_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *UnignoreRecommendationRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *UnignoreRecommendationRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *UnignoreRecommendationRequest) GetRecommendationId() *bcl.Guid {
+	if x != nil {
+		return x.RecommendationId
+	}
+	return nil
 }
 
 type ValidationResult struct {
@@ -598,7 +762,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_recommendations_proto_msgTypes[8]
+	mi := &file_recommendations_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -610,7 +774,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_recommendations_proto_msgTypes[8]
+	mi := &file_recommendations_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -623,7 +787,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_recommendations_proto_rawDescGZIP(), []int{8}
+	return file_recommendations_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -663,7 +827,12 @@ const file_recommendations_proto_rawDesc = "" +
 	"\x11ValidationResults\x18\x03 \x03(\v2<.Cratis.Chronicle.Contracts.Recommendations.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
-	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"Y\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"`\n" +
+	" GetIgnoredRecommendationsRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x02 \x01(\tR\tNamespace\"Y\n" +
 	"\x19GetRecommendationsRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -674,7 +843,12 @@ const file_recommendations_proto_rawDesc = "" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12\x1c\n" +
 	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x125\n" +
-	"\x10RecommendationId\x18\x03 \x01(\v2\t.bcl.GuidR\x10RecommendationId\"\x93\x01\n" +
+	"\x10RecommendationId\x18\x03 \x01(\v2\t.bcl.GuidR\x10RecommendationId\"]\n" +
+	"\x1dIgnoredRecommendationsRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x02 \x01(\tR\tNamespace\"\x93\x01\n" +
 	"\x1cPerformRecommendationRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -695,7 +869,13 @@ const file_recommendations_proto_rawDesc = "" +
 	"\x04Type\x18\x04 \x01(\tR\x04Type\x12b\n" +
 	"\bOccurred\x18\x05 \x01(\v2F.Cratis.Chronicle.Contracts.Recommendations.SerializableDateTimeOffsetR\bOccurred\"2\n" +
 	"\x1aSerializableDateTimeOffset\x12\x14\n" +
-	"\x05Value\x18\x01 \x01(\tR\x05Value\"\xa8\x01\n" +
+	"\x05Value\x18\x01 \x01(\tR\x05Value\"\x94\x01\n" +
+	"\x1dUnignoreRecommendationRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x125\n" +
+	"\x10RecommendationId\x18\x03 \x01(\v2\t.bcl.GuidR\x10RecommendationId\"\xa8\x01\n" +
 	"\x10ValidationResult\x12`\n" +
 	"\bSeverity\x18\x01 \x01(\x0e2D.Cratis.Chronicle.Contracts.Recommendations.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
@@ -704,12 +884,16 @@ const file_recommendations_proto_rawDesc = "" +
 	"\aUnknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\xd1\x05\n" +
+	"\x05Error\x10\x032\x8c\n" +
+	"\n" +
 	"\x0fRecommendations\x12\xc0\x01\n" +
-	"\x12AllRecommendations\x12E.Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest\x1aa.Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse0\x01\x12\xbe\x01\n" +
-	"\x12GetRecommendations\x12E.Cratis.Chronicle.Contracts.Recommendations.GetRecommendationsRequest\x1aa.Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse\x12\x9a\x01\n" +
+	"\x12AllRecommendations\x12E.Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest\x1aa.Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse0\x01\x12\xcc\x01\n" +
+	"\x19GetIgnoredRecommendations\x12L.Cratis.Chronicle.Contracts.Recommendations.GetIgnoredRecommendationsRequest\x1aa.Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse\x12\xbe\x01\n" +
+	"\x12GetRecommendations\x12E.Cratis.Chronicle.Contracts.Recommendations.GetRecommendationsRequest\x1aa.Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse\x12\xc8\x01\n" +
+	"\x16IgnoredRecommendations\x12I.Cratis.Chronicle.Contracts.Recommendations.IgnoredRecommendationsRequest\x1aa.Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse0\x01\x12\x9a\x01\n" +
 	"\x14IgnoreRecommendation\x12G.Cratis.Chronicle.Contracts.Recommendations.IgnoreRecommendationRequest\x1a9.Cratis.Chronicle.Contracts.Recommendations.CommandResult\x12\x9c\x01\n" +
-	"\x15PerformRecommendation\x12H.Cratis.Chronicle.Contracts.Recommendations.PerformRecommendationRequest\x1a9.Cratis.Chronicle.Contracts.Recommendations.CommandResultB\xcc\x02\n" +
+	"\x15PerformRecommendation\x12H.Cratis.Chronicle.Contracts.Recommendations.PerformRecommendationRequest\x1a9.Cratis.Chronicle.Contracts.Recommendations.CommandResult\x12\x9e\x01\n" +
+	"\x16UnignoreRecommendation\x12I.Cratis.Chronicle.Contracts.Recommendations.UnignoreRecommendationRequest\x1a9.Cratis.Chronicle.Contracts.Recommendations.CommandResultB\xcc\x02\n" +
 	".com.Cratis.Chronicle.Contracts.RecommendationsB\x14RecommendationsProtoP\x01Z8github.com/cratis/chronicle.go/contracts/recommendations\xa2\x02\x04CCCR\xaa\x02*Cratis.Chronicle.Contracts.Recommendations\xca\x02*Cratis\\Chronicle\\Contracts\\Recommendations\xe2\x026Cratis\\Chronicle\\Contracts\\Recommendations\\GPBMetadata\xea\x02-Cratis::Chronicle::Contracts::Recommendationsb\x06proto3"
 
 var (
@@ -725,44 +909,54 @@ func file_recommendations_proto_rawDescGZIP() []byte {
 }
 
 var file_recommendations_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_recommendations_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_recommendations_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_recommendations_proto_goTypes = []any{
 	(ValidationResultSeverity)(0),                                 // 0: Cratis.Chronicle.Contracts.Recommendations.ValidationResultSeverity
 	(*AllRecommendationsRequest)(nil),                             // 1: Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest
 	(*CommandResult)(nil),                                         // 2: Cratis.Chronicle.Contracts.Recommendations.CommandResult
-	(*GetRecommendationsRequest)(nil),                             // 3: Cratis.Chronicle.Contracts.Recommendations.GetRecommendationsRequest
-	(*IgnoreRecommendationRequest)(nil),                           // 4: Cratis.Chronicle.Contracts.Recommendations.IgnoreRecommendationRequest
-	(*PerformRecommendationRequest)(nil),                          // 5: Cratis.Chronicle.Contracts.Recommendations.PerformRecommendationRequest
-	(*QueryResult_IEnumerable_RecommendationDetailsResponse)(nil), // 6: Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse
-	(*RecommendationDetailsResponse)(nil),                         // 7: Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse
-	(*SerializableDateTimeOffset)(nil),                            // 8: Cratis.Chronicle.Contracts.Recommendations.SerializableDateTimeOffset
-	(*ValidationResult)(nil),                                      // 9: Cratis.Chronicle.Contracts.Recommendations.ValidationResult
-	(*bcl.Guid)(nil),                                              // 10: bcl.Guid
+	(*GetIgnoredRecommendationsRequest)(nil),                      // 3: Cratis.Chronicle.Contracts.Recommendations.GetIgnoredRecommendationsRequest
+	(*GetRecommendationsRequest)(nil),                             // 4: Cratis.Chronicle.Contracts.Recommendations.GetRecommendationsRequest
+	(*IgnoreRecommendationRequest)(nil),                           // 5: Cratis.Chronicle.Contracts.Recommendations.IgnoreRecommendationRequest
+	(*IgnoredRecommendationsRequest)(nil),                         // 6: Cratis.Chronicle.Contracts.Recommendations.IgnoredRecommendationsRequest
+	(*PerformRecommendationRequest)(nil),                          // 7: Cratis.Chronicle.Contracts.Recommendations.PerformRecommendationRequest
+	(*QueryResult_IEnumerable_RecommendationDetailsResponse)(nil), // 8: Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse
+	(*RecommendationDetailsResponse)(nil),                         // 9: Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse
+	(*SerializableDateTimeOffset)(nil),                            // 10: Cratis.Chronicle.Contracts.Recommendations.SerializableDateTimeOffset
+	(*UnignoreRecommendationRequest)(nil),                         // 11: Cratis.Chronicle.Contracts.Recommendations.UnignoreRecommendationRequest
+	(*ValidationResult)(nil),                                      // 12: Cratis.Chronicle.Contracts.Recommendations.ValidationResult
+	(*bcl.Guid)(nil),                                              // 13: bcl.Guid
 }
 var file_recommendations_proto_depIdxs = []int32{
-	10, // 0: Cratis.Chronicle.Contracts.Recommendations.CommandResult.CorrelationId:type_name -> bcl.Guid
-	9,  // 1: Cratis.Chronicle.Contracts.Recommendations.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Recommendations.ValidationResult
-	10, // 2: Cratis.Chronicle.Contracts.Recommendations.IgnoreRecommendationRequest.RecommendationId:type_name -> bcl.Guid
-	10, // 3: Cratis.Chronicle.Contracts.Recommendations.PerformRecommendationRequest.RecommendationId:type_name -> bcl.Guid
-	10, // 4: Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse.CorrelationId:type_name -> bcl.Guid
-	9,  // 5: Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Recommendations.ValidationResult
-	7,  // 6: Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse
-	10, // 7: Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse.Id:type_name -> bcl.Guid
-	8,  // 8: Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Recommendations.SerializableDateTimeOffset
-	0,  // 9: Cratis.Chronicle.Contracts.Recommendations.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Recommendations.ValidationResultSeverity
-	1,  // 10: Cratis.Chronicle.Contracts.Recommendations.Recommendations.AllRecommendations:input_type -> Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest
-	3,  // 11: Cratis.Chronicle.Contracts.Recommendations.Recommendations.GetRecommendations:input_type -> Cratis.Chronicle.Contracts.Recommendations.GetRecommendationsRequest
-	4,  // 12: Cratis.Chronicle.Contracts.Recommendations.Recommendations.IgnoreRecommendation:input_type -> Cratis.Chronicle.Contracts.Recommendations.IgnoreRecommendationRequest
-	5,  // 13: Cratis.Chronicle.Contracts.Recommendations.Recommendations.PerformRecommendation:input_type -> Cratis.Chronicle.Contracts.Recommendations.PerformRecommendationRequest
-	6,  // 14: Cratis.Chronicle.Contracts.Recommendations.Recommendations.AllRecommendations:output_type -> Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse
-	6,  // 15: Cratis.Chronicle.Contracts.Recommendations.Recommendations.GetRecommendations:output_type -> Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse
-	2,  // 16: Cratis.Chronicle.Contracts.Recommendations.Recommendations.IgnoreRecommendation:output_type -> Cratis.Chronicle.Contracts.Recommendations.CommandResult
-	2,  // 17: Cratis.Chronicle.Contracts.Recommendations.Recommendations.PerformRecommendation:output_type -> Cratis.Chronicle.Contracts.Recommendations.CommandResult
-	14, // [14:18] is the sub-list for method output_type
-	10, // [10:14] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	13, // 0: Cratis.Chronicle.Contracts.Recommendations.CommandResult.CorrelationId:type_name -> bcl.Guid
+	12, // 1: Cratis.Chronicle.Contracts.Recommendations.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Recommendations.ValidationResult
+	13, // 2: Cratis.Chronicle.Contracts.Recommendations.IgnoreRecommendationRequest.RecommendationId:type_name -> bcl.Guid
+	13, // 3: Cratis.Chronicle.Contracts.Recommendations.PerformRecommendationRequest.RecommendationId:type_name -> bcl.Guid
+	13, // 4: Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse.CorrelationId:type_name -> bcl.Guid
+	12, // 5: Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Recommendations.ValidationResult
+	9,  // 6: Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse
+	13, // 7: Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse.Id:type_name -> bcl.Guid
+	10, // 8: Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Recommendations.SerializableDateTimeOffset
+	13, // 9: Cratis.Chronicle.Contracts.Recommendations.UnignoreRecommendationRequest.RecommendationId:type_name -> bcl.Guid
+	0,  // 10: Cratis.Chronicle.Contracts.Recommendations.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Recommendations.ValidationResultSeverity
+	1,  // 11: Cratis.Chronicle.Contracts.Recommendations.Recommendations.AllRecommendations:input_type -> Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest
+	3,  // 12: Cratis.Chronicle.Contracts.Recommendations.Recommendations.GetIgnoredRecommendations:input_type -> Cratis.Chronicle.Contracts.Recommendations.GetIgnoredRecommendationsRequest
+	4,  // 13: Cratis.Chronicle.Contracts.Recommendations.Recommendations.GetRecommendations:input_type -> Cratis.Chronicle.Contracts.Recommendations.GetRecommendationsRequest
+	6,  // 14: Cratis.Chronicle.Contracts.Recommendations.Recommendations.IgnoredRecommendations:input_type -> Cratis.Chronicle.Contracts.Recommendations.IgnoredRecommendationsRequest
+	5,  // 15: Cratis.Chronicle.Contracts.Recommendations.Recommendations.IgnoreRecommendation:input_type -> Cratis.Chronicle.Contracts.Recommendations.IgnoreRecommendationRequest
+	7,  // 16: Cratis.Chronicle.Contracts.Recommendations.Recommendations.PerformRecommendation:input_type -> Cratis.Chronicle.Contracts.Recommendations.PerformRecommendationRequest
+	11, // 17: Cratis.Chronicle.Contracts.Recommendations.Recommendations.UnignoreRecommendation:input_type -> Cratis.Chronicle.Contracts.Recommendations.UnignoreRecommendationRequest
+	8,  // 18: Cratis.Chronicle.Contracts.Recommendations.Recommendations.AllRecommendations:output_type -> Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse
+	8,  // 19: Cratis.Chronicle.Contracts.Recommendations.Recommendations.GetIgnoredRecommendations:output_type -> Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse
+	8,  // 20: Cratis.Chronicle.Contracts.Recommendations.Recommendations.GetRecommendations:output_type -> Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse
+	8,  // 21: Cratis.Chronicle.Contracts.Recommendations.Recommendations.IgnoredRecommendations:output_type -> Cratis.Chronicle.Contracts.Recommendations.QueryResult_IEnumerable_RecommendationDetailsResponse
+	2,  // 22: Cratis.Chronicle.Contracts.Recommendations.Recommendations.IgnoreRecommendation:output_type -> Cratis.Chronicle.Contracts.Recommendations.CommandResult
+	2,  // 23: Cratis.Chronicle.Contracts.Recommendations.Recommendations.PerformRecommendation:output_type -> Cratis.Chronicle.Contracts.Recommendations.CommandResult
+	2,  // 24: Cratis.Chronicle.Contracts.Recommendations.Recommendations.UnignoreRecommendation:output_type -> Cratis.Chronicle.Contracts.Recommendations.CommandResult
+	18, // [18:25] is the sub-list for method output_type
+	11, // [11:18] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_recommendations_proto_init() }
@@ -776,7 +970,7 @@ func file_recommendations_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_recommendations_proto_rawDesc), len(file_recommendations_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

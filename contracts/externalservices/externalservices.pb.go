@@ -25,10 +25,11 @@ const (
 type AuthorizationType int32
 
 const (
-	AuthorizationType_None   AuthorizationType = 0
-	AuthorizationType_Basic  AuthorizationType = 1
-	AuthorizationType_Bearer AuthorizationType = 2
-	AuthorizationType_OAuth  AuthorizationType = 3
+	AuthorizationType_None            AuthorizationType = 0
+	AuthorizationType_Basic           AuthorizationType = 1
+	AuthorizationType_Bearer          AuthorizationType = 2
+	AuthorizationType_OAuth           AuthorizationType = 3
+	AuthorizationType_ManagedIdentity AuthorizationType = 4
 )
 
 // Enum value maps for AuthorizationType.
@@ -38,12 +39,14 @@ var (
 		1: "Basic",
 		2: "Bearer",
 		3: "OAuth",
+		4: "ManagedIdentity",
 	}
 	AuthorizationType_value = map[string]int32{
-		"None":   0,
-		"Basic":  1,
-		"Bearer": 2,
-		"OAuth":  3,
+		"None":            0,
+		"Basic":           1,
+		"Bearer":          2,
+		"OAuth":           3,
+		"ManagedIdentity": 4,
 	}
 )
 
@@ -196,6 +199,7 @@ type AddExternalServiceRequest struct {
 	Username          string                      `protobuf:"bytes,17,opt,name=Username,proto3" json:"Username,omitempty"`
 	Password          string                      `protobuf:"bytes,18,opt,name=Password,proto3" json:"Password,omitempty"`
 	Options           map[string]string           `protobuf:"bytes,19,rep,name=Options,proto3" json:"Options,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	OAuthScope        string                      `protobuf:"bytes,20,opt,name=OAuthScope,proto3" json:"OAuthScope,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -361,6 +365,13 @@ func (x *AddExternalServiceRequest) GetOptions() map[string]string {
 		return x.Options
 	}
 	return nil
+}
+
+func (x *AddExternalServiceRequest) GetOAuthScope() string {
+	if x != nil {
+		return x.OAuthScope
+	}
+	return ""
 }
 
 type AddExternalServicesRequest struct {
@@ -1032,6 +1043,7 @@ type OAuthAuthorization struct {
 	Authority     string                 `protobuf:"bytes,1,opt,name=Authority,proto3" json:"Authority,omitempty"`
 	ClientId      string                 `protobuf:"bytes,2,opt,name=ClientId,proto3" json:"ClientId,omitempty"`
 	ClientSecret  string                 `protobuf:"bytes,3,opt,name=ClientSecret,proto3" json:"ClientSecret,omitempty"`
+	Scope         string                 `protobuf:"bytes,4,opt,name=Scope,proto3" json:"Scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1083,6 +1095,13 @@ func (x *OAuthAuthorization) GetClientId() string {
 func (x *OAuthAuthorization) GetClientSecret() string {
 	if x != nil {
 		return x.ClientSecret
+	}
+	return ""
+}
+
+func (x *OAuthAuthorization) GetScope() string {
+	if x != nil {
+		return x.Scope
 	}
 	return ""
 }
@@ -1443,7 +1462,7 @@ var File_externalservices_proto protoreflect.FileDescriptor
 
 const file_externalservices_proto_rawDesc = "" +
 	"\n" +
-	"\x16externalservices.proto\x12+Cratis.Chronicle.Contracts.ExternalServices\x1a\x16protobuf-net/bcl.proto\"\x89\b\n" +
+	"\x16externalservices.proto\x12+Cratis.Chronicle.Contracts.ExternalServices\x1a\x16protobuf-net/bcl.proto\"\xa9\b\n" +
 	"\x19AddExternalServiceRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1466,7 +1485,10 @@ const file_externalservices_proto_rawDesc = "" +
 	"\bDatabase\x18\x10 \x01(\tR\bDatabase\x12\x1a\n" +
 	"\bUsername\x18\x11 \x01(\tR\bUsername\x12\x1a\n" +
 	"\bPassword\x18\x12 \x01(\tR\bPassword\x12m\n" +
-	"\aOptions\x18\x13 \x03(\v2S.Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest.OptionsEntryR\aOptions\x1a:\n" +
+	"\aOptions\x18\x13 \x03(\v2S.Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest.OptionsEntryR\aOptions\x12\x1e\n" +
+	"\n" +
+	"OAuthScope\x18\x14 \x01(\tR\n" +
+	"OAuthScope\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a:\n" +
@@ -1537,11 +1559,12 @@ const file_externalservices_proto_rawDesc = "" +
 	"\aHeaders\x18\x03 \x03(\v2S.Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfiguration.HeadersEntryR\aHeaders\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"r\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x88\x01\n" +
 	"\x12OAuthAuthorization\x12\x1c\n" +
 	"\tAuthority\x18\x01 \x01(\tR\tAuthority\x12\x1a\n" +
 	"\bClientId\x18\x02 \x01(\tR\bClientId\x12\"\n" +
-	"\fClientSecret\x18\x03 \x01(\tR\fClientSecret\"@\n" +
+	"\fClientSecret\x18\x03 \x01(\tR\fClientSecret\x12\x14\n" +
+	"\x05Scope\x18\x04 \x01(\tR\x05Scope\"@\n" +
 	"\x1eObserveExternalServicesRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1570,13 +1593,14 @@ const file_externalservices_proto_rawDesc = "" +
 	"\x10ValidationResult\x12a\n" +
 	"\bSeverity\x18\x01 \x01(\x0e2E.Cratis.Chronicle.Contracts.ExternalServices.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
-	"\aMembers\x18\x03 \x03(\tR\aMembers*?\n" +
+	"\aMembers\x18\x03 \x03(\tR\aMembers*T\n" +
 	"\x11AuthorizationType\x12\b\n" +
 	"\x04None\x10\x00\x12\t\n" +
 	"\x05Basic\x10\x01\x12\n" +
 	"\n" +
 	"\x06Bearer\x10\x02\x12\t\n" +
-	"\x05OAuth\x10\x03*B\n" +
+	"\x05OAuth\x10\x03\x12\x13\n" +
+	"\x0fManagedIdentity\x10\x04*B\n" +
 	"\x1bExternalServiceEndpointType\x12\b\n" +
 	"\x04Http\x10\x00\x12\t\n" +
 	"\x05MsSql\x10\x01\x12\x0e\n" +

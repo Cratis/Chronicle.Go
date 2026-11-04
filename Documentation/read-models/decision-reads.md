@@ -5,7 +5,7 @@ description: Read admitted projection state and reject stale decisions in one at
 
 Use a decision read when events depend on projection state that must not become stale before the append. Enroll the read in a [unit of work](../events/unit-of-work.md), stage the resulting events, and let its owner commit once. A competing matching append rejects the entire batch, including events for other sources.
 
-This API is experimental in the v0.x SDK. It implements **client-issued optimistic guards, not signed or server-authenticated read proofs**. The client requires server version exactly **19.70.0** or **19.70.0-development**, **and protocol exactly 19.70.0**, after successful compatibility preflight. This is an exact allowlist, not a minimum version or a whole-client support range. Other versions return `chronicle.ErrUnsupported`; structural compatibility alone does not establish session reads, explicit no-match scopes or eventless plain-batch validation. `WithSkipCompatibilityCheck` leaves decision reads disabled. See the [capability summary](../parity.md#experimental-v0-capabilities-and-limits) for other source APIs and their limits.
+This API is experimental in the v0.x SDK. It implements **client-issued optimistic guards, not signed or server-authenticated read proofs**. The client requires server version exactly **19.123.0** or **19.123.0-development**, **and protocol exactly 19.123.0**, after successful compatibility preflight. This is an exact allowlist, not a minimum version or a whole-client support range. Other versions return `chronicle.ErrUnsupported`; structural compatibility alone does not establish session reads, explicit no-match scopes or eventless plain-batch validation. `WithSkipCompatibilityCheck` leaves decision reads disabled. See the [capability summary](../parity.md#experimental-v0-capabilities-and-limits) for other source APIs and their limits.
 
 ## Read, decide and commit
 
@@ -25,7 +25,7 @@ if err != nil {
 }
 ```
 
-`read.Instance` is an `Instance[Account]`, and the successful call has already enrolled its token. The example creates an account from an absent decision, then reads the same name and completes an eventless decision. Before running it, provide an endpoint that meets the exact server/protocol gate above and the admitted projection requirements below. The historical 19.32.3 recipe in [getting started](../clients/go/getting-started.md) cannot meet this gate. From the repository checkout:
+`read.Instance` is an `Instance[Account]`, and the successful call has already enrolled its token. The example creates an account from an absent decision, then reads the same name and completes an eventless decision. Before running it, provide an endpoint that meets the exact server/protocol gate above and the admitted projection requirements below. The development kernel in [getting started](../clients/go/getting-started.md) meets this gate. From the repository checkout:
 
 ```sh
 go run ./examples/decisions

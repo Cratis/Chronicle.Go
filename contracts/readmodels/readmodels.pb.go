@@ -1114,6 +1114,7 @@ func (x *GetOccurrencesResponse) GetOccurrences() []*ReadModelOccurrence {
 type IndexDefinition struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PropertyPath  string                 `protobuf:"bytes,1,opt,name=PropertyPath,proto3" json:"PropertyPath,omitempty"`
+	Properties    []*IndexProperty       `protobuf:"bytes,2,rep,name=Properties,proto3" json:"Properties,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1155,6 +1156,65 @@ func (x *IndexDefinition) GetPropertyPath() string {
 	return ""
 }
 
+func (x *IndexDefinition) GetProperties() []*IndexProperty {
+	if x != nil {
+		return x.Properties
+	}
+	return nil
+}
+
+type IndexProperty struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=Path,proto3" json:"Path,omitempty"`
+	Descending    bool                   `protobuf:"varint,2,opt,name=Descending,proto3" json:"Descending,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IndexProperty) Reset() {
+	*x = IndexProperty{}
+	mi := &file_readmodels_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IndexProperty) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IndexProperty) ProtoMessage() {}
+
+func (x *IndexProperty) ProtoReflect() protoreflect.Message {
+	mi := &file_readmodels_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IndexProperty.ProtoReflect.Descriptor instead.
+func (*IndexProperty) Descriptor() ([]byte, []int) {
+	return file_readmodels_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *IndexProperty) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *IndexProperty) GetDescending() bool {
+	if x != nil {
+		return x.Descending
+	}
+	return false
+}
+
 type ObserveInstancesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -1169,7 +1229,7 @@ type ObserveInstancesRequest struct {
 
 func (x *ObserveInstancesRequest) Reset() {
 	*x = ObserveInstancesRequest{}
-	mi := &file_readmodels_proto_msgTypes[14]
+	mi := &file_readmodels_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1181,7 +1241,7 @@ func (x *ObserveInstancesRequest) String() string {
 func (*ObserveInstancesRequest) ProtoMessage() {}
 
 func (x *ObserveInstancesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[14]
+	mi := &file_readmodels_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1194,7 +1254,7 @@ func (x *ObserveInstancesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObserveInstancesRequest.ProtoReflect.Descriptor instead.
 func (*ObserveInstancesRequest) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{14}
+	return file_readmodels_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ObserveInstancesRequest) GetEventStore() string {
@@ -1251,7 +1311,7 @@ type ObserveInstancesResponse struct {
 
 func (x *ObserveInstancesResponse) Reset() {
 	*x = ObserveInstancesResponse{}
-	mi := &file_readmodels_proto_msgTypes[15]
+	mi := &file_readmodels_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1263,7 +1323,7 @@ func (x *ObserveInstancesResponse) String() string {
 func (*ObserveInstancesResponse) ProtoMessage() {}
 
 func (x *ObserveInstancesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[15]
+	mi := &file_readmodels_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1276,7 +1336,7 @@ func (x *ObserveInstancesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObserveInstancesResponse.ProtoReflect.Descriptor instead.
 func (*ObserveInstancesResponse) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{15}
+	return file_readmodels_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ObserveInstancesResponse) GetInstances() []string {
@@ -1324,7 +1384,7 @@ type ReadModelChangeset struct {
 
 func (x *ReadModelChangeset) Reset() {
 	*x = ReadModelChangeset{}
-	mi := &file_readmodels_proto_msgTypes[16]
+	mi := &file_readmodels_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1336,7 +1396,7 @@ func (x *ReadModelChangeset) String() string {
 func (*ReadModelChangeset) ProtoMessage() {}
 
 func (x *ReadModelChangeset) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[16]
+	mi := &file_readmodels_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1349,7 +1409,7 @@ func (x *ReadModelChangeset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadModelChangeset.ProtoReflect.Descriptor instead.
 func (*ReadModelChangeset) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{16}
+	return file_readmodels_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ReadModelChangeset) GetNamespace() string {
@@ -1433,7 +1493,7 @@ type ReadModelDefinition struct {
 
 func (x *ReadModelDefinition) Reset() {
 	*x = ReadModelDefinition{}
-	mi := &file_readmodels_proto_msgTypes[17]
+	mi := &file_readmodels_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1445,7 +1505,7 @@ func (x *ReadModelDefinition) String() string {
 func (*ReadModelDefinition) ProtoMessage() {}
 
 func (x *ReadModelDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[17]
+	mi := &file_readmodels_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1458,7 +1518,7 @@ func (x *ReadModelDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadModelDefinition.ProtoReflect.Descriptor instead.
 func (*ReadModelDefinition) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{17}
+	return file_readmodels_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ReadModelDefinition) GetType() *ReadModelType {
@@ -1544,7 +1604,7 @@ type ReadModelOccurrence struct {
 
 func (x *ReadModelOccurrence) Reset() {
 	*x = ReadModelOccurrence{}
-	mi := &file_readmodels_proto_msgTypes[18]
+	mi := &file_readmodels_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1556,7 +1616,7 @@ func (x *ReadModelOccurrence) String() string {
 func (*ReadModelOccurrence) ProtoMessage() {}
 
 func (x *ReadModelOccurrence) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[18]
+	mi := &file_readmodels_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1569,7 +1629,7 @@ func (x *ReadModelOccurrence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadModelOccurrence.ProtoReflect.Descriptor instead.
 func (*ReadModelOccurrence) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{18}
+	return file_readmodels_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ReadModelOccurrence) GetObserverId() string {
@@ -1617,7 +1677,7 @@ type ReadModelType struct {
 
 func (x *ReadModelType) Reset() {
 	*x = ReadModelType{}
-	mi := &file_readmodels_proto_msgTypes[19]
+	mi := &file_readmodels_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1629,7 +1689,7 @@ func (x *ReadModelType) String() string {
 func (*ReadModelType) ProtoMessage() {}
 
 func (x *ReadModelType) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[19]
+	mi := &file_readmodels_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1642,7 +1702,7 @@ func (x *ReadModelType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadModelType.ProtoReflect.Descriptor instead.
 func (*ReadModelType) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{19}
+	return file_readmodels_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ReadModelType) GetIdentifier() string {
@@ -1671,7 +1731,7 @@ type RegisterManyRequest struct {
 
 func (x *RegisterManyRequest) Reset() {
 	*x = RegisterManyRequest{}
-	mi := &file_readmodels_proto_msgTypes[20]
+	mi := &file_readmodels_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1683,7 +1743,7 @@ func (x *RegisterManyRequest) String() string {
 func (*RegisterManyRequest) ProtoMessage() {}
 
 func (x *RegisterManyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[20]
+	mi := &file_readmodels_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1696,7 +1756,7 @@ func (x *RegisterManyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterManyRequest.ProtoReflect.Descriptor instead.
 func (*RegisterManyRequest) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{20}
+	return file_readmodels_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RegisterManyRequest) GetEventStore() string {
@@ -1739,7 +1799,7 @@ type RegisterSingleRequest struct {
 
 func (x *RegisterSingleRequest) Reset() {
 	*x = RegisterSingleRequest{}
-	mi := &file_readmodels_proto_msgTypes[21]
+	mi := &file_readmodels_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1751,7 +1811,7 @@ func (x *RegisterSingleRequest) String() string {
 func (*RegisterSingleRequest) ProtoMessage() {}
 
 func (x *RegisterSingleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[21]
+	mi := &file_readmodels_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1764,7 +1824,7 @@ func (x *RegisterSingleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterSingleRequest.ProtoReflect.Descriptor instead.
 func (*RegisterSingleRequest) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{21}
+	return file_readmodels_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RegisterSingleRequest) GetEventStore() string {
@@ -1805,7 +1865,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_readmodels_proto_msgTypes[22]
+	mi := &file_readmodels_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1817,7 +1877,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[22]
+	mi := &file_readmodels_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1830,7 +1890,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{22}
+	return file_readmodels_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -1851,7 +1911,7 @@ type SinkDefinition struct {
 
 func (x *SinkDefinition) Reset() {
 	*x = SinkDefinition{}
-	mi := &file_readmodels_proto_msgTypes[23]
+	mi := &file_readmodels_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1863,7 +1923,7 @@ func (x *SinkDefinition) String() string {
 func (*SinkDefinition) ProtoMessage() {}
 
 func (x *SinkDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[23]
+	mi := &file_readmodels_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1876,7 +1936,7 @@ func (x *SinkDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SinkDefinition.ProtoReflect.Descriptor instead.
 func (*SinkDefinition) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{23}
+	return file_readmodels_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *SinkDefinition) GetConfigurationId() *bcl.Guid {
@@ -1901,16 +1961,17 @@ func (x *SinkDefinition) GetEventSequence() *EventSequenceSinkConfiguration {
 }
 
 type UpdateDefinitionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
-	ReadModel     *ReadModelDefinition   `protobuf:"bytes,2,opt,name=ReadModel,proto3" json:"ReadModel,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EventStore     string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	ReadModel      *ReadModelDefinition   `protobuf:"bytes,2,opt,name=ReadModel,proto3" json:"ReadModel,omitempty"`
+	ReplaceIndexes bool                   `protobuf:"varint,3,opt,name=ReplaceIndexes,proto3" json:"ReplaceIndexes,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateDefinitionRequest) Reset() {
 	*x = UpdateDefinitionRequest{}
-	mi := &file_readmodels_proto_msgTypes[24]
+	mi := &file_readmodels_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1922,7 +1983,7 @@ func (x *UpdateDefinitionRequest) String() string {
 func (*UpdateDefinitionRequest) ProtoMessage() {}
 
 func (x *UpdateDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[24]
+	mi := &file_readmodels_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1935,7 +1996,7 @@ func (x *UpdateDefinitionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDefinitionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDefinitionRequest) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{24}
+	return file_readmodels_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *UpdateDefinitionRequest) GetEventStore() string {
@@ -1952,6 +2013,13 @@ func (x *UpdateDefinitionRequest) GetReadModel() *ReadModelDefinition {
 	return nil
 }
 
+func (x *UpdateDefinitionRequest) GetReplaceIndexes() bool {
+	if x != nil {
+		return x.ReplaceIndexes
+	}
+	return false
+}
+
 type WatchRequest struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	EventStore          string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -1964,7 +2032,7 @@ type WatchRequest struct {
 
 func (x *WatchRequest) Reset() {
 	*x = WatchRequest{}
-	mi := &file_readmodels_proto_msgTypes[25]
+	mi := &file_readmodels_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1976,7 +2044,7 @@ func (x *WatchRequest) String() string {
 func (*WatchRequest) ProtoMessage() {}
 
 func (x *WatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_readmodels_proto_msgTypes[25]
+	mi := &file_readmodels_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1989,7 +2057,7 @@ func (x *WatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchRequest.ProtoReflect.Descriptor instead.
 func (*WatchRequest) Descriptor() ([]byte, []int) {
-	return file_readmodels_proto_rawDescGZIP(), []int{25}
+	return file_readmodels_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *WatchRequest) GetEventStore() string {
@@ -2114,9 +2182,17 @@ const file_readmodels_proto_rawDesc = "" +
 	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12H\n" +
 	"\x04Type\x18\x03 \x01(\v24.Cratis.Chronicle.Contracts.ReadModels.ReadModelTypeR\x04Type\"v\n" +
 	"\x16GetOccurrencesResponse\x12\\\n" +
-	"\vOccurrences\x18\x01 \x03(\v2:.Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrenceR\vOccurrences\"5\n" +
+	"\vOccurrences\x18\x01 \x03(\v2:.Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrenceR\vOccurrences\"\x8b\x01\n" +
 	"\x0fIndexDefinition\x12\"\n" +
-	"\fPropertyPath\x18\x01 \x01(\tR\fPropertyPath\"\xc5\x01\n" +
+	"\fPropertyPath\x18\x01 \x01(\tR\fPropertyPath\x12T\n" +
+	"\n" +
+	"Properties\x18\x02 \x03(\v24.Cratis.Chronicle.Contracts.ReadModels.IndexPropertyR\n" +
+	"Properties\"C\n" +
+	"\rIndexProperty\x12\x12\n" +
+	"\x04Path\x18\x01 \x01(\tR\x04Path\x12\x1e\n" +
+	"\n" +
+	"Descending\x18\x02 \x01(\bR\n" +
+	"Descending\"\xc5\x01\n" +
 	"\x17ObserveInstancesRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -2197,12 +2273,13 @@ const file_readmodels_proto_rawDesc = "" +
 	"\x0eSinkDefinition\x123\n" +
 	"\x0fConfigurationId\x18\x01 \x01(\v2\t.bcl.GuidR\x0fConfigurationId\x12\x16\n" +
 	"\x06TypeId\x18\x02 \x01(\tR\x06TypeId\x12k\n" +
-	"\rEventSequence\x18\x03 \x01(\v2E.Cratis.Chronicle.Contracts.ReadModels.EventSequenceSinkConfigurationR\rEventSequence\"\x93\x01\n" +
+	"\rEventSequence\x18\x03 \x01(\v2E.Cratis.Chronicle.Contracts.ReadModels.EventSequenceSinkConfigurationR\rEventSequence\"\xbb\x01\n" +
 	"\x17UpdateDefinitionRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12X\n" +
-	"\tReadModel\x18\x02 \x01(\v2:.Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinitionR\tReadModel\"\xa8\x01\n" +
+	"\tReadModel\x18\x02 \x01(\v2:.Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinitionR\tReadModel\x12&\n" +
+	"\x0eReplaceIndexes\x18\x03 \x01(\bR\x0eReplaceIndexes\"\xa8\x01\n" +
 	"\fWatchRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -2260,7 +2337,7 @@ func file_readmodels_proto_rawDescGZIP() []byte {
 }
 
 var file_readmodels_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_readmodels_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_readmodels_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_readmodels_proto_goTypes = []any{
 	(ReadModelChangeType)(0),               // 0: Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeType
 	(ReadModelObserverType)(0),             // 1: Cratis.Chronicle.Contracts.ReadModels.ReadModelObserverType
@@ -2280,75 +2357,77 @@ var file_readmodels_proto_goTypes = []any{
 	(*GetOccurrencesRequest)(nil),          // 15: Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesRequest
 	(*GetOccurrencesResponse)(nil),         // 16: Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesResponse
 	(*IndexDefinition)(nil),                // 17: Cratis.Chronicle.Contracts.ReadModels.IndexDefinition
-	(*ObserveInstancesRequest)(nil),        // 18: Cratis.Chronicle.Contracts.ReadModels.ObserveInstancesRequest
-	(*ObserveInstancesResponse)(nil),       // 19: Cratis.Chronicle.Contracts.ReadModels.ObserveInstancesResponse
-	(*ReadModelChangeset)(nil),             // 20: Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset
-	(*ReadModelDefinition)(nil),            // 21: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
-	(*ReadModelOccurrence)(nil),            // 22: Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrence
-	(*ReadModelType)(nil),                  // 23: Cratis.Chronicle.Contracts.ReadModels.ReadModelType
-	(*RegisterManyRequest)(nil),            // 24: Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest
-	(*RegisterSingleRequest)(nil),          // 25: Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest
-	(*SerializableDateTimeOffset)(nil),     // 26: Cratis.Chronicle.Contracts.ReadModels.SerializableDateTimeOffset
-	(*SinkDefinition)(nil),                 // 27: Cratis.Chronicle.Contracts.ReadModels.SinkDefinition
-	(*UpdateDefinitionRequest)(nil),        // 28: Cratis.Chronicle.Contracts.ReadModels.UpdateDefinitionRequest
-	(*WatchRequest)(nil),                   // 29: Cratis.Chronicle.Contracts.ReadModels.WatchRequest
-	(*bcl.Guid)(nil),                       // 30: bcl.Guid
-	(*emptypb.Empty)(nil),                  // 31: google.protobuf.Empty
+	(*IndexProperty)(nil),                  // 18: Cratis.Chronicle.Contracts.ReadModels.IndexProperty
+	(*ObserveInstancesRequest)(nil),        // 19: Cratis.Chronicle.Contracts.ReadModels.ObserveInstancesRequest
+	(*ObserveInstancesResponse)(nil),       // 20: Cratis.Chronicle.Contracts.ReadModels.ObserveInstancesResponse
+	(*ReadModelChangeset)(nil),             // 21: Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset
+	(*ReadModelDefinition)(nil),            // 22: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
+	(*ReadModelOccurrence)(nil),            // 23: Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrence
+	(*ReadModelType)(nil),                  // 24: Cratis.Chronicle.Contracts.ReadModels.ReadModelType
+	(*RegisterManyRequest)(nil),            // 25: Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest
+	(*RegisterSingleRequest)(nil),          // 26: Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest
+	(*SerializableDateTimeOffset)(nil),     // 27: Cratis.Chronicle.Contracts.ReadModels.SerializableDateTimeOffset
+	(*SinkDefinition)(nil),                 // 28: Cratis.Chronicle.Contracts.ReadModels.SinkDefinition
+	(*UpdateDefinitionRequest)(nil),        // 29: Cratis.Chronicle.Contracts.ReadModels.UpdateDefinitionRequest
+	(*WatchRequest)(nil),                   // 30: Cratis.Chronicle.Contracts.ReadModels.WatchRequest
+	(*bcl.Guid)(nil),                       // 31: bcl.Guid
+	(*emptypb.Empty)(nil),                  // 32: google.protobuf.Empty
 }
 var file_readmodels_proto_depIdxs = []int32{
 	6,  // 0: Cratis.Chronicle.Contracts.ReadModels.EventSequenceSinkConfiguration.EventType:type_name -> Cratis.Chronicle.Contracts.ReadModels.EventType
-	21, // 1: Cratis.Chronicle.Contracts.ReadModels.GetDefinitionsResponse.ReadModels:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
-	23, // 2: Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesRequest.Type:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelType
-	22, // 3: Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesResponse.Occurrences:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrence
-	0,  // 4: Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset.ChangeType:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeType
-	26, // 5: Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset.Occurred:type_name -> Cratis.Chronicle.Contracts.ReadModels.SerializableDateTimeOffset
-	30, // 6: Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset.CorrelationId:type_name -> bcl.Guid
-	23, // 7: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Type:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelType
-	27, // 8: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Sink:type_name -> Cratis.Chronicle.Contracts.ReadModels.SinkDefinition
-	17, // 9: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Indexes:type_name -> Cratis.Chronicle.Contracts.ReadModels.IndexDefinition
-	1,  // 10: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.ObserverType:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelObserverType
-	2,  // 11: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Owner:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelOwner
-	3,  // 12: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Source:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelSource
-	26, // 13: Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrence.Occurred:type_name -> Cratis.Chronicle.Contracts.ReadModels.SerializableDateTimeOffset
-	23, // 14: Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrence.Type:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelType
-	2,  // 15: Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest.Owner:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelOwner
-	21, // 16: Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest.ReadModels:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
-	3,  // 17: Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest.Source:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelSource
-	2,  // 18: Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest.Owner:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelOwner
-	21, // 19: Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest.ReadModel:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
-	3,  // 20: Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest.Source:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelSource
-	30, // 21: Cratis.Chronicle.Contracts.ReadModels.SinkDefinition.ConfigurationId:type_name -> bcl.Guid
-	5,  // 22: Cratis.Chronicle.Contracts.ReadModels.SinkDefinition.EventSequence:type_name -> Cratis.Chronicle.Contracts.ReadModels.EventSequenceSinkConfiguration
-	21, // 23: Cratis.Chronicle.Contracts.ReadModels.UpdateDefinitionRequest.ReadModel:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
-	13, // 24: Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModels.GetInstances:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstancesRequest
-	18, // 25: Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModels.ObserveInstances:input_type -> Cratis.Chronicle.Contracts.ReadModels.ObserveInstancesRequest
-	4,  // 26: Cratis.Chronicle.Contracts.ReadModels.ReadModels.DehydrateSession:input_type -> Cratis.Chronicle.Contracts.ReadModels.DehydrateSessionRequest
-	7,  // 27: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetAllInstances:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetAllInstancesRequest
-	9,  // 28: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetDefinitions:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetDefinitionsRequest
-	11, // 29: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetInstanceByKey:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstanceByKeyRequest
-	13, // 30: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetInstances:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstancesRequest
-	15, // 31: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetOccurrences:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesRequest
-	24, // 32: Cratis.Chronicle.Contracts.ReadModels.ReadModels.RegisterMany:input_type -> Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest
-	25, // 33: Cratis.Chronicle.Contracts.ReadModels.ReadModels.RegisterSingle:input_type -> Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest
-	28, // 34: Cratis.Chronicle.Contracts.ReadModels.ReadModels.UpdateDefinition:input_type -> Cratis.Chronicle.Contracts.ReadModels.UpdateDefinitionRequest
-	29, // 35: Cratis.Chronicle.Contracts.ReadModels.ReadModels.Watch:input_type -> Cratis.Chronicle.Contracts.ReadModels.WatchRequest
-	14, // 36: Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModels.GetInstances:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstancesResponse
-	19, // 37: Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModels.ObserveInstances:output_type -> Cratis.Chronicle.Contracts.ReadModels.ObserveInstancesResponse
-	31, // 38: Cratis.Chronicle.Contracts.ReadModels.ReadModels.DehydrateSession:output_type -> google.protobuf.Empty
-	8,  // 39: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetAllInstances:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetAllInstancesResponse
-	10, // 40: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetDefinitions:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetDefinitionsResponse
-	12, // 41: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetInstanceByKey:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstanceByKeyResponse
-	14, // 42: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetInstances:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstancesResponse
-	16, // 43: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetOccurrences:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesResponse
-	31, // 44: Cratis.Chronicle.Contracts.ReadModels.ReadModels.RegisterMany:output_type -> google.protobuf.Empty
-	31, // 45: Cratis.Chronicle.Contracts.ReadModels.ReadModels.RegisterSingle:output_type -> google.protobuf.Empty
-	31, // 46: Cratis.Chronicle.Contracts.ReadModels.ReadModels.UpdateDefinition:output_type -> google.protobuf.Empty
-	20, // 47: Cratis.Chronicle.Contracts.ReadModels.ReadModels.Watch:output_type -> Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset
-	36, // [36:48] is the sub-list for method output_type
-	24, // [24:36] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	22, // 1: Cratis.Chronicle.Contracts.ReadModels.GetDefinitionsResponse.ReadModels:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
+	24, // 2: Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesRequest.Type:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelType
+	23, // 3: Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesResponse.Occurrences:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrence
+	18, // 4: Cratis.Chronicle.Contracts.ReadModels.IndexDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.ReadModels.IndexProperty
+	0,  // 5: Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset.ChangeType:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeType
+	27, // 6: Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset.Occurred:type_name -> Cratis.Chronicle.Contracts.ReadModels.SerializableDateTimeOffset
+	31, // 7: Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset.CorrelationId:type_name -> bcl.Guid
+	24, // 8: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Type:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelType
+	28, // 9: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Sink:type_name -> Cratis.Chronicle.Contracts.ReadModels.SinkDefinition
+	17, // 10: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Indexes:type_name -> Cratis.Chronicle.Contracts.ReadModels.IndexDefinition
+	1,  // 11: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.ObserverType:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelObserverType
+	2,  // 12: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Owner:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelOwner
+	3,  // 13: Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition.Source:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelSource
+	27, // 14: Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrence.Occurred:type_name -> Cratis.Chronicle.Contracts.ReadModels.SerializableDateTimeOffset
+	24, // 15: Cratis.Chronicle.Contracts.ReadModels.ReadModelOccurrence.Type:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelType
+	2,  // 16: Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest.Owner:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelOwner
+	22, // 17: Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest.ReadModels:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
+	3,  // 18: Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest.Source:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelSource
+	2,  // 19: Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest.Owner:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelOwner
+	22, // 20: Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest.ReadModel:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
+	3,  // 21: Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest.Source:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelSource
+	31, // 22: Cratis.Chronicle.Contracts.ReadModels.SinkDefinition.ConfigurationId:type_name -> bcl.Guid
+	5,  // 23: Cratis.Chronicle.Contracts.ReadModels.SinkDefinition.EventSequence:type_name -> Cratis.Chronicle.Contracts.ReadModels.EventSequenceSinkConfiguration
+	22, // 24: Cratis.Chronicle.Contracts.ReadModels.UpdateDefinitionRequest.ReadModel:type_name -> Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinition
+	13, // 25: Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModels.GetInstances:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstancesRequest
+	19, // 26: Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModels.ObserveInstances:input_type -> Cratis.Chronicle.Contracts.ReadModels.ObserveInstancesRequest
+	4,  // 27: Cratis.Chronicle.Contracts.ReadModels.ReadModels.DehydrateSession:input_type -> Cratis.Chronicle.Contracts.ReadModels.DehydrateSessionRequest
+	7,  // 28: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetAllInstances:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetAllInstancesRequest
+	9,  // 29: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetDefinitions:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetDefinitionsRequest
+	11, // 30: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetInstanceByKey:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstanceByKeyRequest
+	13, // 31: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetInstances:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstancesRequest
+	15, // 32: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetOccurrences:input_type -> Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesRequest
+	25, // 33: Cratis.Chronicle.Contracts.ReadModels.ReadModels.RegisterMany:input_type -> Cratis.Chronicle.Contracts.ReadModels.RegisterManyRequest
+	26, // 34: Cratis.Chronicle.Contracts.ReadModels.ReadModels.RegisterSingle:input_type -> Cratis.Chronicle.Contracts.ReadModels.RegisterSingleRequest
+	29, // 35: Cratis.Chronicle.Contracts.ReadModels.ReadModels.UpdateDefinition:input_type -> Cratis.Chronicle.Contracts.ReadModels.UpdateDefinitionRequest
+	30, // 36: Cratis.Chronicle.Contracts.ReadModels.ReadModels.Watch:input_type -> Cratis.Chronicle.Contracts.ReadModels.WatchRequest
+	14, // 37: Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModels.GetInstances:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstancesResponse
+	20, // 38: Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModels.ObserveInstances:output_type -> Cratis.Chronicle.Contracts.ReadModels.ObserveInstancesResponse
+	32, // 39: Cratis.Chronicle.Contracts.ReadModels.ReadModels.DehydrateSession:output_type -> google.protobuf.Empty
+	8,  // 40: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetAllInstances:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetAllInstancesResponse
+	10, // 41: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetDefinitions:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetDefinitionsResponse
+	12, // 42: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetInstanceByKey:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstanceByKeyResponse
+	14, // 43: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetInstances:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetInstancesResponse
+	16, // 44: Cratis.Chronicle.Contracts.ReadModels.ReadModels.GetOccurrences:output_type -> Cratis.Chronicle.Contracts.ReadModels.GetOccurrencesResponse
+	32, // 45: Cratis.Chronicle.Contracts.ReadModels.ReadModels.RegisterMany:output_type -> google.protobuf.Empty
+	32, // 46: Cratis.Chronicle.Contracts.ReadModels.ReadModels.RegisterSingle:output_type -> google.protobuf.Empty
+	32, // 47: Cratis.Chronicle.Contracts.ReadModels.ReadModels.UpdateDefinition:output_type -> google.protobuf.Empty
+	21, // 48: Cratis.Chronicle.Contracts.ReadModels.ReadModels.Watch:output_type -> Cratis.Chronicle.Contracts.ReadModels.ReadModelChangeset
+	37, // [37:49] is the sub-list for method output_type
+	25, // [25:37] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_readmodels_proto_init() }
@@ -2362,7 +2441,7 @@ func file_readmodels_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_readmodels_proto_rawDesc), len(file_readmodels_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   26,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   2,
 		},
