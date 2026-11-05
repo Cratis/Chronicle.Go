@@ -32,4 +32,4 @@ For short-lived producers or on-demand operations, read [one-shot and process ow
 - [Parity and limitations](parity.md): executable evidence and deliberate C# differences.
 - [Release policy](releases.md): module versioning and experimental compatibility.
 
-Contracts target Chronicle 19.123.0 and real-kernel tests run against 19.123.0-development. The pin is not a supported kernel range. The [capability summary](parity.md#experimental-v0-capabilities-and-limits) gives the exact decision-read gate and other conditions. [Release policy](releases.md) distinguishes source, tagged modules and documentation publication; this repository owns the product pages.
+Contracts target Chronicle 19.125.2 and real-kernel tests run against 19.125.2-development. The pin is not a supported kernel range. The [capability summary](parity.md#experimental-v0-capabilities-and-limits) gives the exact decision-read gate and other conditions. [Release policy](releases.md) distinguishes source, tagged modules and documentation publication; this repository owns the product pages.

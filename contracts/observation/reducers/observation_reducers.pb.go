@@ -436,6 +436,7 @@ type EventContext struct {
 	NamedTags          []*NamedTag                 `protobuf:"bytes,17,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
 	EventSource        string                      `protobuf:"bytes,18,opt,name=EventSource,proto3" json:"EventSource,omitempty"`
 	AppendedGeneration uint32                      `protobuf:"varint,19,opt,name=AppendedGeneration,proto3" json:"AppendedGeneration,omitempty"`
+	CompensationFor    uint64                      `protobuf:"varint,20,opt,name=CompensationFor,proto3" json:"CompensationFor,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -599,6 +600,13 @@ func (x *EventContext) GetEventSource() string {
 func (x *EventContext) GetAppendedGeneration() uint32 {
 	if x != nil {
 		return x.AppendedGeneration
+	}
+	return 0
+}
+
+func (x *EventContext) GetCompensationFor() uint64 {
+	if x != nil {
+		return x.CompensationFor
 	}
 	return 0
 }
@@ -1746,7 +1754,7 @@ const file_observation_reducers_proto_rawDesc = "" +
 	"Properties\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9a\b\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc4\b\n" +
 	"\fEventContext\x12X\n" +
 	"\tEventType\x18\x01 \x01(\v2:.Cratis.Chronicle.Contracts.Observation.Reducers.EventTypeR\tEventType\x12(\n" +
 	"\x0fEventSourceType\x18\x02 \x01(\tR\x0fEventSourceType\x12$\n" +
@@ -1769,7 +1777,8 @@ const file_observation_reducers_proto_rawDesc = "" +
 	"\aSubject\x18\x10 \x01(\tR\aSubject\x12W\n" +
 	"\tNamedTags\x18\x11 \x03(\v29.Cratis.Chronicle.Contracts.Observation.Reducers.NamedTagR\tNamedTags\x12 \n" +
 	"\vEventSource\x18\x12 \x01(\tR\vEventSource\x12.\n" +
-	"\x12AppendedGeneration\x18\x13 \x01(\rR\x12AppendedGeneration\"\xaf\x02\n" +
+	"\x12AppendedGeneration\x18\x13 \x01(\rR\x12AppendedGeneration\x12(\n" +
+	"\x0fCompensationFor\x18\x14 \x01(\x04R\x0fCompensationFor\"\xaf\x02\n" +
 	"\rEventRevision\x12\x1e\n" +
 	"\n" +
 	"Generation\x18\x01 \x01(\rR\n" +

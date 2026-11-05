@@ -125,27 +125,13 @@ func (s *Sequence) dispatchSingle(ctx context.Context, request *sequences.Append
 	} else {
 		envelope, err = s.service.AppendWithNamedTags(ctx, namedRequest(request, named))
 	}
+	var sent bool
+	result, sent, err = s.envelopeResult(envelope, err, ref)
+	if !sent {
+		dispatched = false
+	}
 	if err != nil {
-		var local *faults.BeforeDispatch
-		if errors.As(err, &local) {
-			dispatched = false
-			return AppendResult{}, local.Cause
-		}
-		return AppendResult{}, &OutcomeUnknownError{Cause: err}
-	}
-	if err = wire.CheckEnvelope(envelope); err != nil {
-		var rejected *wire.EnvelopeError
-		if errors.As(err, &rejected) && len(rejected.ExceptionMessages) == 0 {
-			return AppendResult{Disposition: Rejected, CorrelationID: wire.Correlation(envelope.CorrelationId)}, err
-		}
-		return AppendResult{}, &OutcomeUnknownError{Cause: err}
-	}
-	if err = wire.RequireMessage(envelope, "Response"); err != nil {
-		return AppendResult{}, &OutcomeUnknownError{Cause: err}
-	}
-	result, err = s.result(envelope.Response, ref)
-	if err != nil {
-		return AppendResult{}, &OutcomeUnknownError{Cause: err}
+		return result, err
 	}
 	protected := request.ConcurrencyScope.ExpectsNoMatchingEvent || request.ConcurrencyScope.SequenceNumber != uint64(events.Unavailable)
 	if protected && result.Disposition == Committed && !result.ConcurrencyCheckPerformed {
@@ -155,6 +141,34 @@ func (s *Sequence) dispatchSingle(ctx context.Context, request *sequences.Append
 		return result, result.Err()
 	}
 	return result, nil
+}
+
+// envelopeResult converts one append-shaped kernel reply into a result. A refusal
+// before dispatch is returned bare with sent false; a failure after dispatch is an
+// OutcomeUnknownError; a known rejection envelope is a Rejected result.
+func (s *Sequence) envelopeResult(envelope *sequences.CommandResult_AppendResponse, err error, ref events.TypeRef) (result AppendResult, sent bool, _ error) {
+	if err != nil {
+		var local *faults.BeforeDispatch
+		if errors.As(err, &local) {
+			return AppendResult{}, false, local.Cause
+		}
+		return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
+	}
+	if err = wire.CheckEnvelope(envelope); err != nil {
+		var rejected *wire.EnvelopeError
+		if errors.As(err, &rejected) && len(rejected.ExceptionMessages) == 0 {
+			return AppendResult{Disposition: Rejected, CorrelationID: wire.Correlation(envelope.CorrelationId)}, true, err
+		}
+		return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
+	}
+	if err = wire.RequireMessage(envelope, "Response"); err != nil {
+		return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
+	}
+	result, err = s.result(envelope.Response, ref)
+	if err != nil {
+		return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
+	}
+	return result, true, nil
 }
 
 func (s *Sequence) request(ctx context.Context, source events.SourceID, descriptor events.Descriptor, content string, config appendConfig) (*sequences.AppendRequest, error) {

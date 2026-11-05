@@ -102,7 +102,7 @@ func TestDecisionDerivedDecodeFailureIssuesNoModelOrToken(t *testing.T) {
 			}
 			kernel := &supervisedKernel{}
 			client, ctx := supervisionClient(t, kernel, WithRegistry(registry))
-			raw := &decisionCodecConn{ClientConnInterface: &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.123.0", protocol: "19.123.0"}, document: document}
+			raw := &decisionCodecConn{ClientConnInterface: &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.125.2", protocol: "19.125.2"}, document: document}
 			client.config.borrowed = raw
 			store, err := client.EventStore(ctx, "store")
 			if err != nil {

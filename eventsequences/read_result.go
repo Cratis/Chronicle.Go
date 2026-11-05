@@ -82,7 +82,7 @@ func (s *Sequence) appended(event *sequences.AppendedEventResponse) (events.Appe
 	result := events.Appended{ID: event.Id, Context: events.Context{Store: s.store, Namespace: s.namespace, Sequence: s.id,
 		EventType: events.TypeRef{ID: events.TypeID(ctx.EventType.Id), Generation: events.Generation(ctx.EventType.Generation)}, Tombstone: ctx.EventType.Tombstone,
 		SourceID: events.SourceID(ctx.EventSourceId), SourceType: events.SourceType(ctx.EventSourceType), StreamType: events.StreamType(ctx.EventStreamType), StreamID: events.StreamID(ctx.EventStreamId), SequenceNumber: events.SequenceNumber(ctx.SequenceNumber), Occurred: occurred,
-		CorrelationID: wire.Correlation(ctx.CorrelationId), CausedBy: readIdentity(ctx.CausedBy), Hash: ctx.Hash, ObservationState: events.ObservationState(ctx.ObservationState), Subject: events.Subject(ctx.Subject)}}
+		CorrelationID: wire.Correlation(ctx.CorrelationId), CausedBy: readIdentity(ctx.CausedBy), Hash: ctx.Hash, ObservationState: events.ObservationState(ctx.ObservationState), CompensationFor: events.CompensationTarget(ctx.CompensationFor), Subject: events.Subject(ctx.Subject)}}
 	if result.Context.Subject == "" {
 		result.Context.Subject = events.Subject(ctx.EventSourceId)
 	}

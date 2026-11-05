@@ -70,6 +70,21 @@ type Context struct {
 	Hash string
 	// ObservationState preserves the wire state, including future values.
 	ObservationState ObservationState
+	// CompensationFor is the position of the event this event compensates for.
+	// It is nil for an ordinary event. The wire carries a plain unsigned value in
+	// which zero means "none", so a compensation of the event at position zero
+	// cannot be told apart from an ordinary event and reads as nil.
+	CompensationFor *SequenceNumber
+}
+
+// CompensationTarget converts the wire's compensation position to its optional
+// form; see Context.CompensationFor for the zero-valued limitation.
+func CompensationTarget(wire uint64) *SequenceNumber {
+	if wire == 0 {
+		return nil
+	}
+	target := SequenceNumber(wire)
+	return &target
 }
 
 // ObservationState is the kernel's observation classification.
