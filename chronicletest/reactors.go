@@ -11,10 +11,12 @@ import (
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
+	reactorcontracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
 	"github.com/cratis/chronicle.go/internal/observerruntime"
 	"github.com/cratis/chronicle.go/internal/reactoreffects"
+	"github.com/cratis/chronicle.go/observation"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 )
@@ -195,6 +197,9 @@ func (s *ReactorScenario[R]) Produced() []any { return s.recorder.Produced() }
 
 // Given invokes handlers in order. Returned errors/panics/cleanup failures surface
 // immediately; earlier external handler actions and recordings are not rolled back.
+// For a reactor with batch methods the values form one live page for source: each
+// batch method is called once and per-event handlers run after it. A failed
+// partition returns its error and a deferred one an *observation.DeferredError.
 func (s *ReactorScenario[R]) Given(ctx context.Context, source events.SourceID, values ...any) (err error) {
 	if s.closed {
 		return chronicle.ErrClosed
@@ -206,6 +211,9 @@ func (s *ReactorScenario[R]) Given(ctx context.Context, source events.SourceID, 
 		return err
 	}
 	ctx = reactors.WithBatch(ctx, reactors.Batch{Reactor: s.plan.Identifier(), Store: s.config.Store, Namespace: s.config.Namespace, Sequence: s.plan.EventSequence()})
+	if len(s.plan.BatchMethods()) > 0 {
+		return s.givenPage(ctx, source, values)
+	}
 	var lease *reactors.Lease
 	defer func() {
 		if lease != nil {
@@ -258,6 +266,49 @@ func (s *ReactorScenario[R]) Given(ctx context.Context, source events.SourceID, 
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+// givenPage delivers all values as one live page, as a kernel that delivers pages
+// would, so batch methods receive them in one call. A failed or deferred partition
+// surfaces as its error; a deferral as *observation.DeferredError.
+func (s *ReactorScenario[R]) givenPage(ctx context.Context, source events.SourceID, values []any) error {
+	partition := observerruntime.PagePartition{Partition: string(source)}
+	for _, value := range values {
+		if s.next >= events.Unavailable-2 {
+			return chronicle.ErrProtocol
+		}
+		descriptor, ok := s.artifacts.Events.Lookup(value)
+		if !ok {
+			return chronicle.ErrNotRegistered
+		}
+		number := s.next
+		s.next++
+		if _, subscribed := s.plan.Descriptor(descriptor.Ref().ID); !subscribed {
+			continue
+		}
+		data, err := descriptor.Marshal(value)
+		if err != nil {
+			return err
+		}
+		ec, content, err := observerruntime.DecodeContent(descriptor, synthetic(s.config, s.plan.EventSequence(), descriptor, source, number), data, nil)
+		if err != nil {
+			return err
+		}
+		partition.Events = append(partition.Events, observerruntime.PageEvent{Content: content, Context: ec})
+	}
+	if len(partition.Events) == 0 {
+		return nil
+	}
+	page := []observerruntime.PagePartition{partition}
+	batchContext := observerruntime.NewBatchContext(string(s.plan.Identifier()), s.config.Store, s.config.Namespace, s.plan.EventSequence(), observation.OriginLive, page, 0, true)
+	outcome := observerruntime.DispatchReactorPage(ctx, s.plan, page, batchContext, recordingRuntime[R]{s})[0]
+	switch outcome.State {
+	case reactorcontracts.ObservationState_Deferred:
+		return &observation.DeferredError{Partition: source, RetryAfter: outcome.RetryAfter}
+	case reactorcontracts.ObservationState_Failed:
+		return outcome.Err
 	}
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"reflect"
 	"slices"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/discovery"
+	"github.com/cratis/chronicle.go/observation"
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
@@ -56,6 +58,7 @@ type Plan struct {
 	shadows        []Shadow
 	catalog        *events.Catalog
 	sideEffects    []SideEffectHandler
+	batches        []batchCall
 }
 
 // Logger returns the frozen borrowed diagnostic logger. Chronicle never closes it.
@@ -147,6 +150,7 @@ func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readm
 		return nil, &DeclarationError{Reactor: d.Identifier(), Method: method, Parameter: t, Cause: err}
 	}
 	selected := map[string]bool{}
+	batchSelected := map[string]bool{}
 	if !d.explicit {
 		factory, err := compileConstructor(d.typ, d.factory, services)
 		if err != nil {
@@ -155,6 +159,17 @@ func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readm
 		p.factory = factory
 		for _, method := range discovery.Methods(d.typ) {
 			t := method.Type
+			if index, ok := takesBatch(t, true); ok {
+				batch, matching, err := compileBatch(method.Name, method.Func, true, d.config.batchMethods[method.Name], catalog, models, services)
+				if err == nil {
+					err = p.bindBatch(batch, matching)
+				}
+				if err != nil {
+					return fail(method.Name, t.In(index), err)
+				}
+				batchSelected[method.Name] = true
+				continue
+			}
 			first := 1
 			if t.NumIn() > first && t.In(first) == contextType {
 				first++
@@ -196,8 +211,26 @@ func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readm
 			return fail(name, nil, invalid("policy must select a discovered exported event handler"))
 		}
 	}
+	for _, name := range slices.Sorted(maps.Keys(d.config.batchMethods)) {
+		if !batchSelected[name] {
+			return fail(name, nil, observation.ErrObservesOnlyOnBatchMethods)
+		}
+	}
 	for i, explicit := range d.config.handlers {
 		name := fmt.Sprintf("callback[%d]", i)
+		if explicit.batch {
+			if nilLike(explicit.function) {
+				return fail(name, nil, invalid("nil callback"))
+			}
+			batch, matching, err := compileBatch(name, reflect.ValueOf(explicit.function), false, explicit.observes, catalog, models, services)
+			if err == nil {
+				err = p.bindBatch(batch, matching)
+			}
+			if err != nil {
+				return fail(name, eventBatchPointerType, err)
+			}
+			continue
+		}
 		if nilLike(explicit.function) || explicit.event == nil {
 			return fail(name, nil, invalid("nil callback"))
 		}
@@ -225,6 +258,9 @@ func CompileWithExtensions(d Declaration, catalog *events.Catalog, models *readm
 			handlers[id] = handler
 			p.descriptors[id] = descriptor
 		}
+	}
+	if err := p.checkExclusive(); err != nil {
+		return fail("", nil, err)
 	}
 	if len(p.descriptors) == 0 {
 		return fail("", nil, invalid("no registered event handlers"))
@@ -274,6 +310,9 @@ func compileCall(name string, fn reflect.Value, receiver bool, catalog *events.C
 	for i := first + 1; i < t.NumIn(); i++ {
 		typ := t.In(i)
 		arg := argument{typ: typ}
+		if typ == batchContextType {
+			return c, observation.ErrBatchContextOnlyForBatchMethods
+		}
 		if typ != eventContextType && typ != deliveryType {
 			if model, ok := models.LookupType(typ); ok {
 				arg.model = model

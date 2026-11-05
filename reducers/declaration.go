@@ -18,6 +18,7 @@ import (
 	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/observation"
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
@@ -50,6 +51,8 @@ type configuration struct {
 	sourceType       events.SourceType
 	streamType       events.StreamType
 	handlers         []Handler
+	batchMethods     map[string][]observation.Observed
+	maxConcurrency   int
 	replay           ReplayCallbacks
 	logger           *slog.Logger
 	loggerSet        bool
@@ -132,13 +135,15 @@ func WithHandler(handler Handler) Option {
 type Handler struct {
 	function     any
 	event, model reflect.Type
+	batch        bool
+	observes     []observation.Observed
 }
 
 // On declares a fold. Nil current means absent; nil result deletes. On error no
 // partial state is published. Captured collaborators remain caller-owned. Calls
 // are serial per operation, but separate stores/reads can invoke concurrently.
 func On[E, M any](handler func(context.Context, E, *M, events.Context) (*M, error)) Handler {
-	return Handler{handler, reflect.TypeFor[E](), reflect.TypeFor[M]()}
+	return Handler{function: handler, event: reflect.TypeFor[E](), model: reflect.TypeFor[M]()}
 }
 
 // Define admits an artifact without executing its constructor. R must be a named

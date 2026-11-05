@@ -238,3 +238,10 @@ log-and-ignore activation failure, Go fails closed so a missed start cannot be
 silently followed by continued processing. Unknown future notification states
 also fail before activation rather than folding or reporting successful completion.
 Bump `WithVersion` when lifecycle implementation changes, as for folds.
+
+## Fold an event source in one call
+
+A reducer can fold each event source's events with one batch method instead of
+one method per event, and the event sources of a delivered page fold in parallel
+up to `reducers.WithMaxConcurrency`. [Handle events in batches](observer-batches.md)
+shows the signature and how `Fail` and `Defer` affect the stored state.

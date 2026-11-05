@@ -15,6 +15,7 @@ import (
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/observation"
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
@@ -46,6 +47,7 @@ type configuration struct {
 	sideEffects      []SideEffectHandler
 	middlewares      []any
 	handlers         []Handler
+	batchMethods     map[string][]observation.Observed
 	key              func(context.Context, any, events.Context) (readmodels.Key, error)
 	logger           *slog.Logger
 	loggerSet        bool
@@ -182,6 +184,8 @@ type Handler struct {
 	event    reflect.Type
 	replay   bool
 	onceOnly bool
+	batch    bool
+	observes []observation.Observed
 }
 
 // On declares an error-returning callback. Capture explicitly owned collaborators
