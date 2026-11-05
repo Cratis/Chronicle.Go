@@ -9,7 +9,7 @@ an actor, correlation, and causation from the **current call**, not a context
 captured when the client was constructed. These APIs do not authenticate callers.
 
 The deployment example in
-[`example_enrichment_test.go`](../../example_enrichment_test.go) fills the declared recordedBy property from the selected actor.
+[`example_enrichment_test.go`](https://github.com/Cratis/Chronicle.Go/blob/main/example_enrichment_test.go) fills the declared recordedBy property from the selected actor.
 It shows immediate append and owner-controlled unit-of-work staging: staging
 enriches once, and commit reuses that snapshot. The original Go event remains unchanged.
 

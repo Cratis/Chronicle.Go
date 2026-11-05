@@ -32,7 +32,7 @@ tracked in [Arc.Go #29](https://github.com/Cratis/Arc.Go/issues/29).
    consumers that read catalogs, connecting, or obtaining store handles.
 6. Use the returned client normally. It is exactly the identity from `p.Client()`.
 
-The [executable example](../services/example_preparation_test.go) runs this complete
+The [executable example](https://github.com/Cratis/Chronicle.Go/blob/main/services/example_preparation_test.go) runs this complete
 sequence with a provider-backed seeder and an offline catalog read:
 
 ```sh
@@ -235,7 +235,7 @@ responsibility. This contract does not redact returned error graphs, explicit
 The option configures SDK diagnostics, not constructor dependency injection.
 If a factory needs `*slog.Logger`, capture it in a closure or bind it explicitly
 in your provider; the container-free resolver does not fabricate a zero logger.
-The [compiled worker example](../example_logging_test.go) uses a constructor
+The [compiled worker example](https://github.com/Cratis/Chronicle.Go/blob/main/example_logging_test.go) uses a constructor
 closure and one logger without a container. Run it with:
 
 ```sh
@@ -272,7 +272,7 @@ returns that same, now-closed identity. Operational calls return `ErrClosed`, wh
 
 ## Scoped binding example and qualification
 
-The [source example](../services/example_bindings_test.go) shows both provider and
+The [source example](https://github.com/Cratis/Chronicle.Go/blob/main/services/example_bindings_test.go) shows both provider and
 plain store access, application-owned `SourceStoreMetadata`, append-origin options
 captured before preparation, and a metadata/principal guard. `ExampleBindEventStore`
 compiles as part of the unit suite; direct execution needs a development kernel.

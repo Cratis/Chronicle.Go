@@ -8,13 +8,13 @@ The [capability and limits summary](parity.md#experimental-v0-capabilities-and-l
 
 Every PR has exactly one of `major`, `minor`, `patch`, or `no-release`. While v0.x, use minor for breaking experimental API changes and patch for compatible fixes. Describe breaking changes explicitly in the release notes. Dependabot PRs use `no-release`; a dependency change that needs publication requires a deliberate release-bound maintainer change.
 
-The merged PR body becomes the GitHub Release notes verbatim. Use the [contribution guide](../CONTRIBUTING.md) and PR template, and keep verification and review notes in a PR comment.
+The merged PR body becomes the GitHub Release notes verbatim. Use the [contribution guide](https://github.com/Cratis/Chronicle.Go/blob/main/CONTRIBUTING.md) and PR template, and keep verification and review notes in a PR comment.
 
 ## Publication
 
 A push to main runs the Go and Markdown gates before preparing a release. The release action creates the immutable `vX.Y.Z` tag and GitHub Release only after its job succeeds. Dependent jobs read back the release and tag target, fetch the exact version through `proxy.golang.org`, verify the module archive, and request its pkg.go.dev page. Documentation rendering is asynchronous.
 
-There is no separate registry upload or Go publishing credential. GitHub tags are Go module versions; the workflow uses its scoped `GITHUB_TOKEN` for GitHub writes. Keep one runtime root module and the canonical lowercase module path. The [module manifest](../.github/go-modules.json) currently lists only that root; [module policy](module-policy.md) permits real future nested modules with independent gates. Unpublished tools may preview fetchable pushed root commits without replacements before the first root release; this is source testing, not package publication. Publication-eligible nested modules must instead pin a stable, publicly fetchable root tag. Release source must build without a developer workspace, sibling checkout, secrets, or local replacements.
+There is no separate registry upload or Go publishing credential. GitHub tags are Go module versions; the workflow uses its scoped `GITHUB_TOKEN` for GitHub writes. Keep one runtime root module and the canonical lowercase module path. The [module manifest](https://github.com/Cratis/Chronicle.Go/blob/main/.github/go-modules.json) currently lists only that root; [module policy](module-policy.md) permits real future nested modules with independent gates. Unpublished tools may preview fetchable pushed root commits without replacements before the first root release; this is source testing, not package publication. Publication-eligible nested modules must instead pin a stable, publicly fetchable root tag. Release source must build without a developer workspace, sibling checkout, secrets, or local replacements.
 
 Wait for Publish to finish before merging another release-bound PR: GitHub concurrency can replace a pending run even when running jobs are not cancelled.
 

@@ -15,7 +15,7 @@ initial model state and artifact metadata.
 
 ## Model-bound declarations
 
-These declarations come from the [runnable example](../../examples/projections/main.go).
+These declarations come from the [runnable example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/projections/main.go).
 They use `chronicle`, `events`, `projections`, `readmodels`, and standard `time`
 imports. Call `declarations()` before constructing the client.
 

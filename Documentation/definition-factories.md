@@ -14,7 +14,7 @@ explicit borrowed client identity; automatic facade bindings are not provided.
 Register the event and read model first, then declare the projection's identity
 and model before supplying its constructor. The constructor needs no container.
 This excerpt uses `registry`, `opened`, `model`, and `projectionSettings` from the
-[complete executable example](../example_definition_factories_test.go).
+[complete executable example](https://github.com/Cratis/Chronicle.Go/blob/main/example_definition_factories_test.go).
 
 ```go
 settings := projectionSettings{Label: "orders"}

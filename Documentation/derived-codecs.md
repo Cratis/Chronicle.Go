@@ -16,7 +16,7 @@ stable discriminator. Register the same codec set on every event and model that
 uses the family. No global registry, type scanning or registration callback runs.
 
 This excerpt uses the `Actor`, `Human`, `Robot`, `ActorsChanged` and `ActorView`
-types from the executable [example](../serialization/example_derived_test.go).
+types from the executable [example](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/example_derived_test.go).
 
 ```go
 codecs, err := serialization.NewCodecs(
@@ -149,7 +149,7 @@ family has exactly one registered derivative, `children` resolves that concrete
 type and writes its discriminator on every child `From`; the C# client stamps
 only the `[ChildrenFrom]` creator for a collection with one `[DerivedType]`
 implementation. These declarations come from the executable
-[example](../projections/example_derived_children_test.go):
+[example](https://github.com/Cratis/Chronicle.Go/blob/main/projections/example_derived_children_test.go):
 
 ```go
 type Parcel interface{ parcel() }

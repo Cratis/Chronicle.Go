@@ -48,7 +48,7 @@ if len(history) != 1 {
 `New*` helpers accept `testing.TB`, call `t.Helper()` and register cleanup.
 `Open*` constructors instead return `(scenario, error)` and require `Close`; use
 these outside tests and benchmarks.
-[Complete compiling examples](../chronicletest/example_test.go) include all domain
+[Complete compiling examples](https://github.com/Cratis/Chronicle.Go/blob/main/chronicletest/example_test.go) include all domain
 types, registrations and imports for each scenario kind.
 
 `Given` appends in order using the production client. An error stops seeding;
@@ -235,7 +235,7 @@ durable storage, retries/quarantine or multi-node semantics. Even a real-kernel
 projection replay is not evidence that a live observer caught up. Projection
 fixtures also report delivery metadata and effect acceptance as unavailable: they
 neither receive reactor deliveries nor execute returned effects. The
-[kernel-backed siblings](../chronicletest/kernel_integration_test.go) separately
+[kernel-backed siblings](https://github.com/Cratis/Chronicle.Go/blob/main/chronicletest/kernel_integration_test.go) separately
 exercise projection replay, constraint rejection and live reactor lifecycle. Full
 protected-data scenario coverage awaits the SDK's compliance surface; see the
 [scenario parity map](parity.md#scenario-testing).
@@ -246,7 +246,7 @@ Opt in when seeding an unrelated registered event should reveal a test mistake:
 
 This excerpt assumes your registry contains the `ProjectedAccount` projection and
 `AccountOpened`, and `kernelConfig` selects your isolated kernel store. The
-[compiling strict-subscription example](../chronicletest/example_test.go) shows
+[compiling strict-subscription example](https://github.com/Cratis/Chronicle.Go/blob/main/chronicletest/example_test.go) shows
 registration and checks `errors.Is(err, chronicletest.ErrUnsubscribedEventSeeded)`.
 
 The default is `false`: unrelated registered seeds are still appended and ignored

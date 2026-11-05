@@ -191,7 +191,7 @@ Namespace/global confidentiality can release without a subject. See [compliance 
 
 ## Run the example
 
-The [read-model example](../../examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.125.2-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
+The [read-model example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.125.2-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
 
 ```sh
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
@@ -207,7 +207,7 @@ Example.InventoryItem registered; item-1 exists: false
 Optional next step: use [watch changes](#watch-changes) or [materialized windows](#materialized-windows) when you need those routes.
 
 For watches, projection-backed callbacks and an initial materialized window,
-run the [watch example](../../examples/watches/main.go):
+run the [watch example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/watches/main.go):
 
 ```sh
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \

@@ -8,7 +8,7 @@ an artifact for organization; they **never select or filter events**.
 
 ## Declare initial state
 
-This declaration comes from the [compiling stock example](../../examples/projections/defaults.go).
+This declaration comes from the [compiling stock example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/projections/defaults.go).
 It uses `chronicle`, `projections`, and `readmodels`. Call `stockDeclarations()`
 before constructing your client; register and read it as shown in the
 [projection guide](index.md#run-and-read-the-model).

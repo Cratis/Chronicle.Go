@@ -7,7 +7,7 @@ description: Module allow-list grammar, independent Go gates, unpublished previe
 <!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
 
 Keep optional tooling and ecosystem dependencies out of the Chronicle runtime.
-The checked-in [module manifest](../.github/go-modules.json) currently lists only
+The checked-in [module manifest](https://github.com/Cratis/Chronicle.Go/blob/main/.github/go-modules.json) currently lists only
 `github.com/cratis/chronicle.go`. It does not create or publish tools, integrations,
 or recipes. Use this reference when adding a real, independently compiled module.
 
@@ -122,7 +122,7 @@ forbidden in every listed module, including unpublished previews and recipes:
 they must not hide packages from the native gates. Go 1.26/1.27 Linux and Go 1.27
 macOS/Windows lanes and the root's required check names are unchanged.
 
-Run the [contribution guide's gates](../CONTRIBUTING.md) inside each listed module;
+Run the [contribution guide's gates](https://github.com/Cratis/Chronicle.Go/blob/main/CONTRIBUTING.md) inside each listed module;
 root `go test ./...` does not visit nested modules. Each module owns its own
 checksums. `go mod tidy -diff` verifies without writing manifests. Formatting
 partitions Git-visible Go files by owning module and preserves formatter errors.

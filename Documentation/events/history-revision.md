@@ -54,7 +54,7 @@ if err := sequence.Redact(ctx, 12, "approved removal"); err != nil {
 }
 ```
 
-The [executable example](../../eventsequences/example_history_test.go) also shows
+The [executable example](https://github.com/Cratis/Chronicle.Go/blob/main/eventsequences/example_history_test.go) also shows
 revision, filtered source redaction and completion. Run it without a kernel or a
 container:
 

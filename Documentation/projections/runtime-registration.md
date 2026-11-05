@@ -10,7 +10,7 @@ and its new read model after obtaining an `EventStore`. The declaration uses the
 same `readmodels.Define`, model-bound tags and projection builders as startup.
 Its exact event generations must already belong to the selected store.
 
-The [compiling external-caller example](../../example_runtime_projection_test.go)
+The [compiling external-caller example](https://github.com/Cratis/Chronicle.Go/blob/main/example_runtime_projection_test.go)
 shows declaration, registration, append and a typed reader. It requires a local
 development kernel. The kernel integration test exercises eventual typed
 materialization, preservation of earlier definitions, reconnect and acquisition

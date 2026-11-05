@@ -54,7 +54,7 @@ An empty unit is different from a scope-only unit. Staging explicit scopes witho
 
 ## Run the example
 
-The [unit-of-work program](../../examples/unitofwork/main.go) stages A1, joins a nested participant for B1, stages A2, commits once, and verifies the persisted order. With a disposable development kernel running as described in [getting started](../clients/go/getting-started.md), run from the repository root:
+The [unit-of-work program](https://github.com/Cratis/Chronicle.Go/blob/main/examples/unitofwork/main.go) stages A1, joins a nested participant for B1, stages A2, commits once, and verifies the persisted order. With a disposable development kernel running as described in [getting started](../clients/go/getting-started.md), run from the repository root:
 
 ```sh
 go run ./examples/unitofwork

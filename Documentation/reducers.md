@@ -13,7 +13,7 @@ Choose authoring style and active or passive behavior separately. The [callback 
 
 ## Plain Go first
 
-The [complete example](../examples/reducers/main.go) folds adjustments into a
+The [complete example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reducers/main.go) folds adjustments into a
 balance. Recovering a negative balance credits half a positive adjustment, so a
 simple projection counter cannot express the rule. No container or DI import is
 required.
@@ -91,7 +91,7 @@ go run ./examples/reducers
 
 Register a reducer type and exactly one read model; Chronicle discovers its
 exported methods when `NewClient` freezes the registry. Both authoring paths use
-one fold plan. The [compiled convention example](../examples/reducers/convention.go)
+one fold plan. The [compiled convention example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reducers/convention.go)
 uses the same events, model and fold function as the plain-Go example:
 
 ```go

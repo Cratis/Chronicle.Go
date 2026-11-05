@@ -15,7 +15,7 @@ This API is experimental in the v0.x SDK. It implements **client-issued optimist
 4. Call the decision reader's `Get(ctx, key)`. It returns `DecisionRead[T]` and automatically enrolls its token into the participant. Missing participants return `ErrDecisionRequiresUnitOfWork`; no implicit unit or successor is created.
 5. Inspect `read.Instance.Exists` before using `Value`. Stage events through `unit.Stage`. Call `owner.Commit(ctx)`, check the operation error, then `result.Err()` and the disposition. Never blindly retry a completed owner or an ambiguous write.
 
-This excerpt from the [typed example's `rename` function](../../examples/decisions/main.go) uses its existing `ctx`, `unit`, `store`, `model`, `key` and named `result` return value:
+This excerpt from the [typed example's `rename` function](https://github.com/Cratis/Chronicle.Go/blob/main/examples/decisions/main.go) uses its existing `ctx`, `unit`, `store`, `model`, `key` and named `result` return value:
 
 ```go
 reader := readmodels.DecisionsFor(store.ReadModels(), model)

@@ -60,7 +60,7 @@ already at registration. Errors are inspectable with
 `errors.As(err, &declaration)` for `*declarations.DeclarationError`; default error
 text omits literal contents.
 
-From `AccountRegistered` in the [executable example](../../example_declarations_test.go):
+From `AccountRegistered` in the [executable example](https://github.com/Cratis/Chronicle.Go/blob/main/example_declarations_test.go):
 
 ```go
 type AccountRegistered struct {
