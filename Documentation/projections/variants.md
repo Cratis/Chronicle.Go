@@ -8,6 +8,8 @@ be a backlog item or a pull request, rather than one model with many nullable
 fields. Each variant has its own read model. Entering one removes the same event
 source from its siblings. A normal update cannot create an inactive variant.
 
+Other starting points in this chapter are [recursive children](#recursive-children) for finite nested structures and [source stores and ad-hoc queries](#source-stores-and-ad-hoc-queries) for event-origin selection or one-off PDL exploration. These are separate choices, not steps after defining lifecycle variants.
+
 ## Model-bound variants
 
 Register the events and the two read models below before constructing the client.
@@ -16,7 +18,7 @@ mappings, not a separately registered read model.
 
 These snippets use `events`, `projections` and `readmodels` from
 `github.com/cratis/chronicle.go`. The complete registration and equivalent fluent
-example are in [variants.go](../../examples/projections/variants.go).
+example are in [variants.go](https://github.com/Cratis/Chronicle.Go/blob/main/examples/projections/variants.go).
 
 ```go
 type WorkItem struct{}
@@ -144,7 +146,7 @@ node, its own creator remains subscribed. Ancestor creators are excluded;
 keyed update subscriptions propagate only when they also specify a parent key.
 Each node keeps its own AutoMap exclusions and identity mapping. Fluent authoring
 spells out the finite child structure and its identity mappings explicitly.
-The [kernel fixture](../../internal/integration/projection_recursive_test.go)
+The [kernel fixture](https://github.com/Cratis/Chronicle.Go/blob/main/internal/integration/projection_recursive_test.go)
 shows a tree, branch and child with keyed updates.
 
 Serialization uses schema references, rejects cyclic values, and bounds JSON

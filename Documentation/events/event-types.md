@@ -53,14 +53,14 @@ Like the C# client, kernel schema/generation validation is **disabled by default
 
 ## Model-bound event metadata
 
-These declarations are experimental in the v0.x SDK. Register event structs normally;
+These declarations may change in the v0.x SDK. Register event structs normally;
 `NewClient` compiles their metadata before connecting, independently for each store
 registry. Syntax, unsupported directives and ignored-field declarations can fail
 already at registration. Errors are inspectable with
 `errors.As(err, &declaration)` for `*declarations.DeclarationError`; default error
 text omits literal contents.
 
-From `AccountRegistered` in the [executable example](../../example_declarations_test.go):
+From `AccountRegistered` in the [executable example](https://github.com/Cratis/Chronicle.Go/blob/main/example_declarations_test.go):
 
 ```go
 type AccountRegistered struct {

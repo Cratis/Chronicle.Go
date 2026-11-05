@@ -4,26 +4,17 @@ description: Register closures or convention-based reactors, return events, and 
 ---
 
 Use a reactor to call an external service or append a follow-up event. Use a
-projection to populate a read model instead. This experimental API supports
+projection to populate a read model instead. This API supports
 convention discovery, replay policies, returned effects and scoped activation.
 [The parity map](parity.md#reactors-part-2) identifies the remaining gaps.
 
+For the basic path, use the [plain closure](#plain-go-first), then follow [connection, delivery and shutdown](#delivery-failure-and-shutdown). Before running the example, read its development-only settings and the [version-specific first-append limits](#wait-for-observers-before-the-first-append). [Convention discovery](#convention-based-reactors) and [dependency injection](#dependency-injection-is-opt-in) are optional alternatives, not additional setup steps.
+
 ## Plain Go first
 
-The [complete program](../examples/reactors/main.go) registers `OrderPlaced`,
+The [complete program](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/main.go) registers `OrderPlaced`,
 registers a typed closure, connects, appends an order and waits for its reactor.
 It imports neither a container nor the dependency-injection package.
-
-With a development kernel listening on localhost:35000, run:
-
-```sh
-go run ./examples/reactors
-```
-
-The program prints `Handled order for Chronicle`. It uses development TLS and
-credentials, creates a new namespace under `plain-go-reactors` on each run, and
-leaves its persisted events there. Do not use its development connection settings
-in production.
 
 The registration entry point is:
 
@@ -41,6 +32,114 @@ use `reactors.WithHandler(reactors.On(...))`; a typed returned-event callback us
 `reactors.WithHandler(reactors.Returning(...))`. To register only returned-event
 callbacks, use `chronicle.RegisterReactorHandlers(registry, id, []reactors.Handler{...})`.
 
+## Delivery, failure and shutdown
+
+After checking registration errors, the [complete program](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/main.go) constructs a client with the registry, opens its event store, appends an order, checks the append result, waits for the handler's signal and closes the client. Use [lifecycle/readiness](connection-strings/lifecycle.md) for connection choices; keep the registration-sent and kernel-version limits below in view before appending.
+
+Event types and read models register before constraints/projections; reactor
+streams start after that registration pass succeeds. The duplex protocol has no
+registration acknowledgement: a successful store/readiness call means reactor
+registration was **sent**, not that a handler has caught up. A caller's deadline
+bounds this readiness wait, not the subscription lifetime. Failed stream opens
+retry independently; unregistering during an open releases readiness waiters.
+
+### Wait for observers before the first append
+
+`EventStore` and `WaitForRegistration` mean registration was sent, not that the
+kernel has subscribed your observers. From Chronicle **19.32.3** you no longer
+need to wait before appending: an observer that subscribes after events exist for
+a key catches that partition up without dropping later live events for other
+observers.
+
+Kernels before 19.32.3, including 19.29.4, have an upstream defect
+([Chronicle#4558](https://github.com/Cratis/Chronicle/issues/4558)): the late
+subscription starts a catch-up for that partition, and events appended to the same
+key during the catch-up can be dropped for other observers, including
+projections. The client cannot repair it.
+
+On those older kernels, wait until your observers are subscribed and `Active`
+before the first append whose live delivery matters, using a bounded context:
+
+```go
+func awaitObserversActive(ctx context.Context, store *chronicle.EventStore, ids ...observation.ID) error {
+    ticker := time.NewTicker(50 * time.Millisecond)
+    defer ticker.Stop()
+    for _, id := range ids {
+        for {
+            info, err := store.Observers().Get(ctx, id, events.EventLog)
+            if err != nil {
+                return err
+            }
+            if info != nil && info.IsSubscribed() && info.RunningState() == observation.Active {
+                break
+            }
+            select {
+            case <-ctx.Done():
+                return fmt.Errorf("observer %s is not subscribed and active: %w", id, ctx.Err())
+            case <-ticker.C:
+            }
+        }
+    }
+    return nil
+}
+```
+
+Pass the IDs of every observer on the event log involved: each reactor, each
+reducer and each projection. A projection's observer ID is its model or projection
+identifier (for example `model.Identifier()`). Always include the kernel's
+event-log observers `$system.statistics.event-types` and
+`$system.statistics.event-types.global`, as the integration tests do.
+
+This only helps when the observers have nothing to catch up, for example before
+any events exist for the keys involved. `observation.Active` means the observer is
+active, not necessarily caught up. The wait does not protect observers added later
+or after a reconnect.
+
+Events execute in received order, with no application queue. A failed event stops
+the batch; the result names only the last successful sequence number, or
+`events.Unavailable` when none succeeded. The kernel owns partition recovery and
+quarantine. The client never retries an effect by itself.
+
+Cleanup completes before acknowledgement. Unlike C#'s swallowed disposal errors,
+a cleanup failure fails the batch; with a batch scope, its successful position
+resets to unavailable. **Effects may already have happened and can repeat on
+kernel recovery.** Make them idempotent. Middleware activation also fails closed,
+rather than C#'s log-and-skip policy.
+
+When a reactor stream fails or completes, only that reactor resubscribes after
+two seconds on the same connection. This does not cancel unrelated appends or
+observers. Unregister and shutdown cancel the retry delay. The keep-alive
+watchdog owns recovery from actual connection loss: a new generation re-registers
+frozen plans without waiting for old handlers to finish. The kernel retains
+progress; the client does not invent a resume position.
+`store.UnregisterReactor(ctx, id)` cancels and joins a local reactor, retaining its
+removal across reconnect. It does not delete kernel state. Do not synchronously
+unregister a reactor from its own handler.
+
+`Close` cancels and joins workers, including observers from retired generations.
+Old owned channels close only after their observers finish. A handler that
+ignores cancellation cannot block reconnection or unrelated RPCs, but it can
+outlive its generation and overlap delivery on the new one. Honor cancellation
+and make effects idempotent. `CloseContext` bounds the caller's wait when user
+code ignores cancellation; a timeout means cleanup is still incomplete.
+Read-model reactors (`Added`/`Modified`/`Removed` watches) remain with
+[#33](https://github.com/Cratis/Chronicle.Go/issues/33). Observer administration,
+completion/tail waits and local append-result notifications remain in the
+observer follow-up (#13 of the plan). Historical payload selection works for the
+one registered descriptor per ID; simultaneous historical codecs remain with
+[#32](https://github.com/Cratis/Chronicle.Go/issues/32).
+
+The program prints `Handled order for Chronicle`. It uses development TLS and
+credentials, creates a new namespace under `plain-go-reactors` on each run, and
+leaves its persisted events there. Do not use its development connection settings
+in production.
+
+With a development kernel listening on localhost:35000, run:
+
+```sh
+go run ./examples/reactors
+```
+
 ## Convention-based reactors
 
 Register a type explicitly, then let Chronicle discover its exported methods.
@@ -48,7 +147,7 @@ Method names are descriptive, not reserved: an optional leading `context.Context
 is followed by a registered event, a pointer to one, or a nonempty interface
 implemented by registered events. An unconstrained `any` is not a handler.
 
-The following excerpt comes from the [compiling convention example](../examples/reactors/convention.go).
+The following excerpt comes from the [compiling convention example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/convention.go).
 `OrderPlaced` is the event above; `ReservationGateway` is an application-owned
 interface with `Reserve(context.Context, string, string) error`, where the last
 argument is an idempotency key. Call `registerConfirmOrders` with an empty registry
@@ -142,7 +241,7 @@ Empty collections are no-ops; nil elements and unregistered values fail handling
 An empty concurrency batch still needs a protected scope. Classification precedes
 writes and the append APIs validate/serialize the complete event batch before I/O.
 Constraint, concurrency, authorization and transport failures prevent acknowledgement.
-No client effect retry is added. See the [compiled effects example](../examples/reactors/effects.go).
+No client effect retry is added. See the [compiled effects example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/effects.go).
 
 ### Replay without repeating external effects
 
@@ -262,7 +361,7 @@ between an external effect and a Chronicle append.
 Register a `reactors.SideEffectHandler` with
 `chronicle.RegisterReactorSideEffectHandler(registry, handler)` **before**
 `NewClient`, or use `reactors.WithSideEffectHandlers(...)` on one reactor.
-The [compiled command adapter](../examples/reactors/effects.go) demonstrates the
+The [compiled command adapter](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/effects.go) demonstrates the
 extension without an Arc dependency. Arc can resolve its pipeline from the
 borrowed batch scope and return validation/authorization failures as errors.
 Do not execute returned commands in `After`: those errors are intentionally logged
@@ -294,98 +393,3 @@ To do the work in bulk, declare a batch method that takes
 `*observation.EventBatch` and name its event types with
 `reactors.WithBatchMethod`. [Handle events in batches](observer-batches.md)
 covers batch methods, ordering, `Fail`, `Defer` and the registration rules.
-
-## Delivery, failure and shutdown
-
-Event types and read models register before constraints/projections; reactor
-streams start after that registration pass succeeds. The duplex protocol has no
-registration acknowledgement: a successful store/readiness call means reactor
-registration was **sent**, not that a handler has caught up. A caller's deadline
-bounds this readiness wait, not the subscription lifetime. Failed stream opens
-retry independently; unregistering during an open releases readiness waiters.
-
-### Wait for observers before the first append
-
-`EventStore` and `WaitForRegistration` mean registration was sent, not that the
-kernel has subscribed your observers. From Chronicle **19.32.3** you no longer
-need to wait before appending: an observer that subscribes after events exist for
-a key catches that partition up without dropping later live events for other
-observers.
-
-Kernels before 19.32.3, including 19.29.4, have an upstream defect
-([Chronicle#4558](https://github.com/Cratis/Chronicle/issues/4558)): the late
-subscription starts a catch-up for that partition, and events appended to the same
-key during the catch-up can be dropped for other observers, including
-projections. The client cannot repair it.
-
-On those older kernels, wait until your observers are subscribed and `Active`
-before the first append whose live delivery matters, using a bounded context:
-
-```go
-func awaitObserversActive(ctx context.Context, store *chronicle.EventStore, ids ...observation.ID) error {
-    ticker := time.NewTicker(50 * time.Millisecond)
-    defer ticker.Stop()
-    for _, id := range ids {
-        for {
-            info, err := store.Observers().Get(ctx, id, events.EventLog)
-            if err != nil {
-                return err
-            }
-            if info != nil && info.IsSubscribed() && info.RunningState() == observation.Active {
-                break
-            }
-            select {
-            case <-ctx.Done():
-                return fmt.Errorf("observer %s is not subscribed and active: %w", id, ctx.Err())
-            case <-ticker.C:
-            }
-        }
-    }
-    return nil
-}
-```
-
-Pass the IDs of every observer on the event log involved: each reactor, each
-reducer and each projection. A projection's observer ID is its model or projection
-identifier (for example `model.Identifier()`). Always include the kernel's
-event-log observers `$system.statistics.event-types` and
-`$system.statistics.event-types.global`, as the integration tests do.
-
-This only helps when the observers have nothing to catch up, for example before
-any events exist for the keys involved. `observation.Active` means the observer is
-active, not necessarily caught up. The wait does not protect observers added later
-or after a reconnect.
-
-Events execute in received order, with no application queue. A failed event stops
-the batch; the result names only the last successful sequence number, or
-`events.Unavailable` when none succeeded. The kernel owns partition recovery and
-quarantine. The client never retries an effect by itself.
-
-Cleanup completes before acknowledgement. Unlike C#'s swallowed disposal errors,
-a cleanup failure fails the batch; with a batch scope, its successful position
-resets to unavailable. **Effects may already have happened and can repeat on
-kernel recovery.** Make them idempotent. Middleware activation also fails closed,
-rather than C#'s log-and-skip policy.
-
-When a reactor stream fails or completes, only that reactor resubscribes after
-two seconds on the same connection. This does not cancel unrelated appends or
-observers. Unregister and shutdown cancel the retry delay. The keep-alive
-watchdog owns recovery from actual connection loss: a new generation re-registers
-frozen plans without waiting for old handlers to finish. The kernel retains
-progress; the client does not invent a resume position.
-`store.UnregisterReactor(ctx, id)` cancels and joins a local reactor, retaining its
-removal across reconnect. It does not delete kernel state. Do not synchronously
-unregister a reactor from its own handler.
-
-`Close` cancels and joins workers, including observers from retired generations.
-Old owned channels close only after their observers finish. A handler that
-ignores cancellation cannot block reconnection or unrelated RPCs, but it can
-outlive its generation and overlap delivery on the new one. Honor cancellation
-and make effects idempotent. `CloseContext` bounds the caller's wait when user
-code ignores cancellation; a timeout means cleanup is still incomplete.
-Read-model reactors (`Added`/`Modified`/`Removed` watches) remain with
-[#33](https://github.com/Cratis/Chronicle.Go/issues/33). Observer administration,
-completion/tail waits and local append-result notifications remain in the
-observer follow-up (#13 of the plan). Historical payload selection works for the
-one registered descriptor per ID; simultaneous historical codecs remain with
-[#32](https://github.com/Cratis/Chronicle.Go/issues/32).

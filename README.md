@@ -9,9 +9,9 @@ The Go client for [Cratis Chronicle](https://github.com/Cratis/Chronicle), the e
 
 ## Status and installation
 
-**Experimental, v0.x.** The source includes appends, reads, observers, projections and normal-session recovery, with feature-specific restrictions. Start with the single [capability and limits summary](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md#experimental-v0-capabilities-and-limits), then the detailed [parity and limitations](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md). Source API presence is not production readiness or a compatibility guarantee for a selected release.
+**v0.x.** The source includes appends, reads, observers, projections and normal-session recovery, with feature-specific restrictions. Start with the single [capability and limits summary](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md#v0-capabilities-and-limits), then the detailed [parity and limitations](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/parity.md). Source API presence is not production readiness or a compatibility guarantee for a selected release.
 
-Requires Go **1.26 or later**. Experimental tags exist, including [v0.11.1](https://github.com/Cratis/Chronicle.Go/releases/tag/v0.11.1). Consult the [release policy](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/releases.md) before selecting a version; current main source and a tagged module can differ. The install command asks Go to resolve the latest module version:
+Requires Go **1.26 or later**. v0.x tags exist, including [v0.11.1](https://github.com/Cratis/Chronicle.Go/releases/tag/v0.11.1). Consult the [release policy](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/releases.md) before selecting a version; current main source and a tagged module can differ. The install command asks Go to resolve the latest module version:
 
 ```sh
 go get github.com/cratis/chronicle.go@latest
@@ -24,7 +24,7 @@ Contracts are pinned to Chronicle **19.125.2**; real-kernel tests use **19.125.2
 Start the development kernel and wait for `https://localhost:35000/health` to report `Healthy`. Health establishes process health, not feature compatibility; read the [getting-started environment notes](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/clients/go/getting-started.md) before relying on a feature:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.125.2-development
+docker run --rm --name chronicle-go -p 127.0.0.1:35000:35000 cratis/chronicle:19.125.2-development
 ```
 
 ### Normal-client append example

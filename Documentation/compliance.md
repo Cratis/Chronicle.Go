@@ -171,7 +171,7 @@ nor erasure removes copies exported outside Chronicle, including logs and backup
 
 ## Run the example
 
-The [compiling example](../examples/compliance/main.go) creates a unique store and
+The [compiling example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/compliance/main.go) creates a unique store and
 random subject, erases synthetic personal data, verifies confidentiality survives,
 checks write refusal and explicitly reauthorizes. It prints no values or keys.
 Use a disposable 19.125.2 development kernel with an encryption certificate.

@@ -6,14 +6,14 @@ not an event-sourced application or a port of the Chronicle kernel.
 
 ## Required guidance
 
-For all Go/module work, read [Go rules](../.cratis/ai/rules/go.md) and
-[Cratis parity rules](../.cratis/ai/rules/go-cratis-parity.md). Load the relevant
+For all Go/module work, read [Go rules](https://github.com/Cratis/Chronicle.Go/blob/main/.cratis/ai/rules/go.md) and
+[Cratis parity rules](https://github.com/Cratis/Chronicle.Go/blob/main/.cratis/ai/rules/go-cratis-parity.md). Load the relevant
 skills under `.cratis/ai/skills/`: `go-library-api-design`, `go-testing`,
 `go-errors-and-context`, `go-concurrency`, `go-release-modules`, and
 `go-grpc-client`. Apply Go conventions over C# syntax/layout/test conventions;
 organization security and release gates still apply.
 
-Optional [third-party Go skills](../.cratis/ai/rules/project/third-party-go-skills.md)
+Optional [third-party Go skills](https://github.com/Cratis/Chronicle.Go/blob/main/.cratis/ai/rules/project/third-party-go-skills.md)
 provide pinned JetBrains, spf13, GitHub Copilot and Samber references. Load by task,
 not all at once; read their local qualifications. Repository Go/parity rules take
 precedence. Each vendored folder retains its license and `UPSTREAM.md`; these are
@@ -39,7 +39,7 @@ unmanaged local additions shared with Arc.Go, not installer-managed files.
 
 Keep one runtime root module, public packages grouped by capability,
 implementation-only helpers under `internal/`, and co-located `_test.go` files.
-The [explicit module allow-list](../.github/go-modules.json) currently lists only
+The [explicit module allow-list](https://github.com/Cratis/Chronicle.Go/blob/main/.github/go-modules.json) currently lists only
 the root. Add real nested tooling, integrations or unpublished recipes only under
 [the module policy](module-policy.md), independently gated without runtime
 optional dependencies or a workspace. Add directories only
@@ -70,7 +70,7 @@ each listed module; root commands do not visit nested modules. Unpublished tool
 previews can pin fetchable pushed root pseudo-versions without replacements;
 publication requires a stable released root dependency and a separate reviewed
 publisher. The exact required gates and tool pins are in
-[CONTRIBUTING](../CONTRIBUTING.md) and `.github/workflows/`; these quick commands
+[CONTRIBUTING](https://github.com/Cratis/Chronicle.Go/blob/main/CONTRIBUTING.md) and `.github/workflows/`; these quick commands
 do not replace them.
 
 ## Release policy

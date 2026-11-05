@@ -7,6 +7,8 @@ Chronicle.Go compiles property names, schemas and JSON from one immutable plan.
 The default now preserves Go field spelling, matching the C# client's
 `DefaultNamingPolicy`. This changes untagged fields from earlier Go versions.
 
+For an existing Go store, start with [upgrade guidance](#upgrade-an-existing-go-store-safely). For other tasks, use [property naming](#property-naming-reference), [shared scalars and concepts](#fundamentalsgo-scalars-and-concepts), [binary values](#binary-values), or [correlation context](#shared-correlation-context). These are reference choices, not a new setup sequence.
+
 For explicitly registered interface implementations, see
 [unprotected derived codecs](derived-codecs.md). Their immediate property names
 have a C# camelCase exception, while nested ordinary objects retain the policy
@@ -30,7 +32,7 @@ construction before network I/O. Repeated policy options are last-wins.
 Explicit `json` tags always win, including inside nested structs and collections.
 For a shared C# `Id` / Go `ID` property, use `json:"Id"`; preserving spelling does
 not translate different source-language names. The executable
-[`ExampleNamingPolicy`](../serialization/example_test.go) shows all three policies.
+[`ExampleNamingPolicy`](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/example_test.go) shows all three policies.
 
 Container naming is separate: read-model containers remain case-preserving,
 pluralized names unless explicitly overridden. Property policies do not change
@@ -113,6 +115,8 @@ not supported by this slice.
 
 ## Binary values
 
+Before declaring a binary field, check [admitted shapes](#admitted-binary-shapes) and [refusals](#refused-binary-shapes). For specific checks, use [reads and capability limits](#binary-reads-and-capability-limits), [property names](#names-in-binary-containing-graphs), and [generations and captured evidence](#generations-and-captured-evidence).
+
 Use `[]byte` for binary content. No codec declaration is needed. Named slice types
 whose element is the built-in `byte` have the same representation, provided they
 have no custom JSON/text marshaler. Fixed `[N]byte` arrays remain integer arrays.
@@ -155,6 +159,8 @@ neither introduces a new kernel shape.
 The remaining capability refusals are listed below; captured collection/map
 controls do not expand admission.
 
+### Binary reads and capability limits
+
 Missing or null non-pointer binary properties decode as owned, non-nil empty slices, including
 on event reads. Nullable pointers remain nil; present strings decode to fresh
 storage. Absent embedded pointers stay absent: an empty binary default never
@@ -191,6 +197,8 @@ conversion, initial values, literals, arithmetic, identities, keys, joins,
 projection variants and runtime ordinary-scalar profiles are unsupported. Read-model identity and subject
 fallback properties cannot be binary, even without a projection. This includes
 all case variants of serialized `id` and the MongoDB `_id` property.
+
+### Names in binary-containing graphs
 
 If a type graph contains binary anywhere, **every serialized property name** in
 that graph must be an ASCII, case-insensitively unique, non-reserved segment.
@@ -247,6 +255,8 @@ checks all candidates of its generated source and target paths. Whole-model
 initial values inspect actual root ownership, including properties whose JSON
 names contain dots.
 
+### Generations and captured evidence
+
 Event migrations involving either binary-containing endpoint are refused by
 `DefineMigration` and catalog `WithMigrations` before I/O. This includes nullable
 and nested binary fields, identity migrations, rename, default, split, combine
@@ -257,7 +267,7 @@ Keep binary-bearing generations without migrations until such a path is qualifie
 Snapshot naming rebinds retain the binary representation and do not decode or
 reinterpret bytes; their destination plan must pass the same property-name rule.
 
-The [packaged binary capture](../serialization/testdata/binary/README.md) records
+The [packaged binary capture](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/testdata/binary/README.md) records
 Chronicle 19.29.4, Fundamentals 7.19.6 and both schema generator APIs. Class
 properties in C# have no required list; its record control requires `Payload`.
 Go retains its existing field-required rules: slice and pointer properties are
