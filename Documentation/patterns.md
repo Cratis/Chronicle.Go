@@ -6,7 +6,7 @@ description: Ask contextual and usual-action questions without inventing behavio
 Use `store.Patterns()` to ask what a scope usually does. Answers are server
 inference from established behavior, **not promises of future actions**. An empty
 answer means nothing is established for that question; do not fill it with local
-inference. This experimental v0.x API starts no miner, training runtime or scheduler.
+inference. This v0.x API starts no miner, training runtime or scheduler.
 
 This reference assumes a connected `*chronicle.EventStore`; see
 [Get started](clients/go/getting-started.md) for connection setup. The facade

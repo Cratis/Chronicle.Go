@@ -5,11 +5,11 @@ description: Implemented Go client contracts, executable evidence and deliberate
 
 Use this reference when moving a C# Chronicle workflow to Go: find the matching API, its executable evidence and the differences your application must handle. Chronicle.Go uses explicit ownership, contexts and typed registration. The implemented subsets below are **not overall client parity or production lifecycle completeness**.
 
-Start with the [experimental v0 capabilities and limits](#experimental-v0-capabilities-and-limits), then [baselines and evidence](#baselines-and-evidence) for the detailed comparisons. Migration guidance covers [connections](#connection-api-and-default-comparison), [constraints](#constraint-api-translation) and [read models](#read-model-migration); [remaining work](#next-slices) separates gaps from delivered APIs.
+Start with the [v0 capabilities and limits](#v0-capabilities-and-limits), then [baselines and evidence](#baselines-and-evidence) for the detailed comparisons. Migration guidance covers [connections](#connection-api-and-default-comparison), [constraints](#constraint-api-translation) and [read models](#read-model-migration); [remaining work](#next-slices) separates gaps from delivered APIs.
 
-## Experimental v0 capabilities and limits
+## v0 capabilities and limits
 
-Chronicle.Go is an experimental v0.x client for Chronicle, a component of Cratis Platform. You can adopt Chronicle independently of the other Platform components. This summary describes the repository's source APIs and enforced conditions; it does not establish production readiness, a whole-client kernel compatibility range or the contents of a particular published module. [Release policy](releases.md) separates source, release and module availability.
+Chronicle.Go is a v0.x client for Chronicle, a component of Cratis Platform. You can adopt Chronicle independently of the other Platform components. This summary describes the repository's source APIs and enforced conditions; it does not establish production readiness, a whole-client kernel compatibility range or the contents of a particular published module. [Release policy](releases.md) separates source, release and module availability.
 
 **Available in source** means the API exists; **conditional/restricted** means its admission or usable shapes are bounded; **unavailable/refused** means the named operation is not admitted. The detailed tables below retain their historical kernel versions and test witnesses. A test's presence or a configured CI image is not a passing runtime result for another version.
 

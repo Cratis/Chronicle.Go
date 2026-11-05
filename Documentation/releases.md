@@ -1,12 +1,12 @@
 # Go releases
 
-Chronicle.Go has experimental v0.x releases, including [v0.11.1](https://github.com/Cratis/Chronicle.Go/releases/tag/v0.11.1). Experimental releases remain v0.x until an approved stable launch. A release/tag establishes a source version; its existence alone does not establish module archive contents, consumer usability or kernel compatibility.
+Chronicle.Go has v0.x releases, including [v0.11.1](https://github.com/Cratis/Chronicle.Go/releases/tag/v0.11.1). Releases remain v0.x until a stable launch is approved. A release/tag establishes a source version; its existence alone does not establish module archive contents, consumer usability or kernel compatibility.
 
-The [capability and limits summary](parity.md#experimental-v0-capabilities-and-limits) describes current repository source. Use the selected version's release notes and source when evaluating a tagged module; current main features must not be assumed present in that module. Chronicle is independently adoptable within Cratis Platform, not a requirement to adopt its other components.
+The [capability and limits summary](parity.md#v0-capabilities-and-limits) describes current repository source. Use the selected version's release notes and source when evaluating a tagged module; current main features must not be assumed present in that module. Chronicle is independently adoptable within Cratis Platform, not a requirement to adopt its other components.
 
 ## Release intent
 
-Every PR has exactly one of `major`, `minor`, `patch`, or `no-release`. While v0.x, use minor for breaking experimental API changes and patch for compatible fixes. Describe breaking changes explicitly in the release notes. Dependabot PRs use `no-release`; a dependency change that needs publication requires a deliberate release-bound maintainer change.
+Every PR has exactly one of `major`, `minor`, `patch`, or `no-release`. While v0.x, use minor for breaking API changes and patch for compatible fixes. Describe breaking changes explicitly in the release notes. Dependabot PRs use `no-release`; a dependency change that needs publication requires a deliberate release-bound maintainer change.
 
 The merged PR body becomes the GitHub Release notes verbatim. Use the [contribution guide](https://github.com/Cratis/Chronicle.Go/blob/main/CONTRIBUTING.md) and PR template, and keep verification and review notes in a PR comment.
 

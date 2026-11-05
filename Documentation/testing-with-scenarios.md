@@ -4,7 +4,7 @@ description: Test events, read models and reactors through production Go client 
 ---
 
 Use `github.com/cratis/chronicle.go/chronicletest` to arrange events and assert
-read-model state or reactor results in ordinary Go tests. This experimental kit
+read-model state or reactor results in ordinary Go tests. This kit
 uses the same registered-type discovery, serialization, fold plans and invoker as
 the client. It needs neither a dependency-injection container nor testify.
 
