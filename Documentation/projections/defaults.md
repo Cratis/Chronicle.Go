@@ -93,10 +93,13 @@ including explicit null, when its schema carries PII or confidentiality metadata
 Omitting that root is allowed. This conservative boundary also covers protected
 nested values and collections; it does not promise encrypted default support.
 
+Choose the workflow for your task: [read-model scenarios](../testing-with-scenarios.md#assert-a-read-model) assert read-model results; [observer administration](../operations.md#replay-recovery-and-removal) requests replay of an existing observer. Keep the different fidelity and completion limits below with either choice.
+
 The pinned kernel's all-instance replay used by `ReadModelScenario` omits initial
 state. Scenarios with nonempty projection defaults fail with
 `ErrFidelityUnavailable`; use production materialized reads instead. Scenario
 support remains a [#38 follow-up](https://github.com/Cratis/Chronicle.Go/issues/38).
+
 Explicit observer replay is separate from that scenario endpoint. An accepted replay
 request or disappeared job does not prove completion, and unchanged materialized
 read-back may still be pre-replay state. The kernel witness requires successful

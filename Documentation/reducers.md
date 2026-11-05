@@ -9,23 +9,14 @@ updates, start with a projection. This experimental reducer API supports active
 materialization and passive reads; [the parity map](parity.md#reducers) lists the
 remaining boundaries.
 
+Choose authoring style and active or passive behavior separately. The [callback example](#plain-go-first) below is passive and its run shows the folded balance; the [convention example](#convention-based-reducers) is an active alternative, not a second registration step. Before running either, read [failure and shutdown](#failure-and-shutdown), including the registration-sent, kernel-version and cancellation limits.
+
 ## Plain Go first
 
 The [complete example](../examples/reducers/main.go) folds adjustments into a
 balance. Recovering a negative balance credits half a positive adjustment, so a
 simple projection counter cannot express the rule. No container or DI import is
 required.
-
-With a development kernel on localhost:35000:
-
-```sh
-go run ./examples/reducers
-```
-
-It prints `Balance: -6`. The example uses development TLS/credentials and creates
-a new namespace in `plain-go-reducers` each run, leaving its events there.
-`CHRONICLE_CONNECTION_STRING` overrides the local endpoint. Do not use its
-connection settings in production.
 
 This excerpt assumes the example's registered events, model and `fold` function:
 
@@ -45,6 +36,56 @@ absent; a non-nil zero-valued model is present. Return nil to delete, or return
 current unchanged to ignore an event. An error discards the operation's state and
 stops later events. Captured collaborators remain yours to close; callbacks can
 run concurrently for different reads, stores or connection generations.
+
+`reducers.Passive()` or `readmodels.Passive()` on a reducer's registered model
+selects on-demand local folding and no sink. An unseeded/deleted model returns
+`Exists=false`. Each `Reader.Get` reads source/type history and folds it in one
+scope, then releases supported protected values before returning. It is not a
+snapshot or concurrency token. Like C#, passive source/type reads do not apply
+the active observer's metadata filters. `WithActive(false)` alone only stops
+materialization; it does not turn reads into passive folds.
+
+## Failure and shutdown
+
+A reducer that subscribes after events were appended to a key can trigger a kernel
+catch-up that drops later same-key events for other observers on the pinned
+kernel. See [Wait for observers before the first append](reactors.md#wait-for-observers-before-the-first-append).
+
+Folds execute in event order. Failure returns no partial state and reports the
+last successful sequence position; cleanup failure resets it to unavailable.
+The kernel owns partition recovery. Generation-specific payloads are selected
+when supplied, otherwise C#'s current-content fallback applies. Historical codec
+registration and migration authoring are not implemented.
+
+Registration sends the frozen plan after event/model registration. It is not a
+kernel acceptance or caught-up acknowledgement. Stream errors and normal EOF
+resubscribe only that reducer after two seconds; C# reconnects on errors but has
+no normal-completion handler. No reducer retry replays an application-side effect.
+
+`store.UnregisterReducer(ctx, id)` cancels and joins local streams, including
+retired generations, and retains removal across reconnect. It does not delete
+kernel state or disable passive reads. Never call it synchronously from that
+reducer's fold or lifecycle callback. `Client.Close` joins all workers; do not
+call it synchronously from its own callback. A callback can call
+`CloseContext(ctx)` with its operation context: cancellation releases that wait,
+which returns an incomplete-cleanup error; an external later `Close` joins cleanup.
+`CloseContext` bounds the wait, not a callback that ignores cancellation. Retired callbacks can overlap a new
+generation until they honor cancellation, as with reactors.
+
+Snapshots and bounded historical folds remain in #33; these replay callbacks do
+not complete all of #31. Local watch notifications use successful folds, not
+lifecycle callbacks. Reducer sessions remain unsupported.
+
+It prints `Balance: -6`. The example uses development TLS/credentials and creates
+a new namespace in `plain-go-reducers` each run, leaving its events there.
+`CHRONICLE_CONNECTION_STRING` overrides the local endpoint. Do not use its
+connection settings in production.
+
+With a development kernel on localhost:35000:
+
+```sh
+go run ./examples/reducers
+```
 
 ## Convention-based reducers
 
@@ -71,7 +112,8 @@ func registerConvention(registry *chronicle.Registry, model readmodels.Model[Bal
 ```
 
 Register the events and model first, then call `registerConvention` instead of
-`registerPlain`. Unlike the passive callback example, this registration is active:
+`registerPlain`. This is an alternative registration, not another step. It is
+active; the callback example above is passive.
 `readmodels.For(store.ReadModels(), model).Get(ctx, key)` reads eventually
 consistent kernel-materialized state.
 
@@ -110,14 +152,6 @@ Equivalent explicit and discovered signatures produce the same default hash.
 **Bump the version when method bodies, helpers or captured rules change.** Go
 cannot hash executable IL like C#: the deterministic default detects shape
 changes, not implementation-only changes. Generated source versions remain future work.
-
-`reducers.Passive()` or `readmodels.Passive()` on a reducer's registered model
-selects on-demand local folding and no sink. An unseeded/deleted model returns
-`Exists=false`. Each `Reader.Get` reads source/type history and folds it in one
-scope, then releases supported protected values before returning. It is not a
-snapshot or concurrency token. Like C#, passive source/type reads do not apply
-the active observer's metadata filters. `WithActive(false)` alone only stops
-materialization; it does not turn reads into passive folds.
 
 `WithEventTagFilter` accepts any matching appended tag; `WithEventSourceType` and
 `WithEventStreamType` filter appended metadata. `WithTags` labels the reducer and
@@ -204,34 +238,3 @@ log-and-ignore activation failure, Go fails closed so a missed start cannot be
 silently followed by continued processing. Unknown future notification states
 also fail before activation rather than folding or reporting successful completion.
 Bump `WithVersion` when lifecycle implementation changes, as for folds.
-
-## Failure and shutdown
-
-A reducer that subscribes after events were appended to a key can trigger a kernel
-catch-up that drops later same-key events for other observers on the pinned
-kernel. See [Wait for observers before the first append](reactors.md#wait-for-observers-before-the-first-append).
-
-Folds execute in event order. Failure returns no partial state and reports the
-last successful sequence position; cleanup failure resets it to unavailable.
-The kernel owns partition recovery. Generation-specific payloads are selected
-when supplied, otherwise C#'s current-content fallback applies. Historical codec
-registration and migration authoring are not implemented.
-
-Registration sends the frozen plan after event/model registration. It is not a
-kernel acceptance or caught-up acknowledgement. Stream errors and normal EOF
-resubscribe only that reducer after two seconds; C# reconnects on errors but has
-no normal-completion handler. No reducer retry replays an application-side effect.
-
-`store.UnregisterReducer(ctx, id)` cancels and joins local streams, including
-retired generations, and retains removal across reconnect. It does not delete
-kernel state or disable passive reads. Never call it synchronously from that
-reducer's fold or lifecycle callback. `Client.Close` joins all workers; do not
-call it synchronously from its own callback. A callback can call
-`CloseContext(ctx)` with its operation context: cancellation releases that wait,
-which returns an incomplete-cleanup error; an external later `Close` joins cleanup.
-`CloseContext` bounds the wait, not a callback that ignores cancellation. Retired callbacks can overlap a new
-generation until they honor cancellation, as with reactors.
-
-Snapshots and bounded historical folds remain in #33; these replay callbacks do
-not complete all of #31. Local watch notifications use successful folds, not
-lifecycle callbacks. Reducer sessions remain unsupported.

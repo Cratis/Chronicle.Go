@@ -16,6 +16,21 @@ end-to-end external polling/delivery claim is made by the SDK.
 
 ## Author a declaration
 
+For this API declaration, register the referenced external service and events before validation or saving; preparation itself is offline.
+
+Unlike C# `AppendBuilder<TEvent>`, which uses the CLR simple type name, Go uses the
+registered **persisted event ID**. The pinned Screenplay 4.16.0 parser requires a
+single identifier starting with an uppercase ASCII letter, followed by word
+characters (letters, decimal digits, underscores and other Unicode connectors or
+nonspacing marks in the basic multilingual plane). Lowercase-leading, dotted, hyphenated and slash-separated IDs
+fail with `chronicle.ErrUnsupported`; they are never silently renamed. Capture
+names are single identifiers beginning with an ASCII letter or underscore. Use a
+compatible persisted ID from the beginning, not a rename of an already persisted
+event solely for a capture.
+
+Model-bound capture tags and automatic activation are not implemented. Configure
+outbound API credentials on the referenced external service, not on its capture.
+
 The complete container-free example is in
 [`examples/integrations`](https://github.com/Cratis/Chronicle.Go/blob/develop/examples/integrations/main.go).
 Given a registered `events.Type[OrderPlaced]` named `placed`:
@@ -37,6 +52,34 @@ The mutable builder belongs to one authoring operation, not concurrent callers.
 `captures.Capturer` is the explicit equivalent of C# `ICapturer`: implement
 `Define(*captures.Builder) error` and call `captures.Prepare(name, capturer)`.
 Preparation invokes it once without discovery, activation scopes or I/O.
+
+## Validate and save
+
+For a definition with source authorization, both `Validate` and `Save` return
+`chronicle.ErrUnsupported` before any RPC, even if the context is canceled or its
+deadline has expired. No authorized definition is persisted. CDL has no credential
+fields; the capture contracts carry CDL only and cannot retain source
+authorization. [Chronicle#4591: capture authorization transport and kernel
+boundary](https://github.com/Cratis/Chronicle/issues/4591) tracks the missing
+submission/enforcement path and unsafe converter fallback. Do not remove
+credentials to make submission succeed.
+
+For a definition without source authorization, behavior is unchanged. On a
+registered store, first register the referenced external service and events,
+then call `store.Captures().Validate(ctx, definition)`. Validation checks both
+syntax and runtime support without saving or activating anything.
+
+`store.Captures().Save(ctx, definition)` saves the definition under its UUID. The
+kernel can persist a stopped definition **and then return capability messages**.
+Go returns `*captures.ValidationError` for those messages even if the outer command
+envelope succeeded. Retain `definition.ID()` when correcting or administratively
+removing that definition. A successful save is not evidence of activation or
+successful polling. Kernel administration through the existing capture contracts
+or operator tooling remains separate.
+
+`ValidationError.Error()` is deliberately generic. Its `Messages` may include
+mapping literals or other sensitive input; inspect them intentionally rather than
+logging every field. Transport and command-envelope failures remain inspectable.
 
 ## Authoring reference
 
@@ -68,19 +111,6 @@ Translation targets are unquoted, nonempty CDL word tokens, such as `open` or
 `Open_2`. Spaces, punctuation and dotted paths cannot be represented and fail with
 `chronicle.ErrUnsupported`. Map targets and child collection names must be single
 identifiers beginning with a lowercase ASCII letter or underscore.
-
-Unlike C# `AppendBuilder<TEvent>`, which uses the CLR simple type name, Go uses the
-registered **persisted event ID**. The pinned Screenplay 4.16.0 parser requires a
-single identifier starting with an uppercase ASCII letter, followed by word
-characters (letters, decimal digits, underscores and other Unicode connectors or
-nonspacing marks in the basic multilingual plane). Lowercase-leading, dotted, hyphenated and slash-separated IDs
-fail with `chronicle.ErrUnsupported`; they are never silently renamed. Capture
-names are single identifiers beginning with an ASCII letter or underscore. Use a
-compatible persisted ID from the beginning, not a rename of an already persisted
-event solely for a capture.
-
-Model-bound capture tags and automatic activation are not implemented. Configure
-outbound API credentials on the referenced external service, not on its capture.
 
 ## Author inbound webhook authorization
 
@@ -127,31 +157,3 @@ values must adapt to the new signature.
 The [actual-package authentication observations](authentication-evidence.md)
 compare the internal converter representation with C# and explain why Go provides
 no decoder. They do not establish live authentication support.
-
-## Validate and save
-
-For a definition with source authorization, both `Validate` and `Save` return
-`chronicle.ErrUnsupported` before any RPC, even if the context is canceled or its
-deadline has expired. No authorized definition is persisted. CDL has no credential
-fields; the capture contracts carry CDL only and cannot retain source
-authorization. [Chronicle#4591: capture authorization transport and kernel
-boundary](https://github.com/Cratis/Chronicle/issues/4591) tracks the missing
-submission/enforcement path and unsafe converter fallback. Do not remove
-credentials to make submission succeed.
-
-For a definition without source authorization, behavior is unchanged. On a
-registered store, first register the referenced external service and events,
-then call `store.Captures().Validate(ctx, definition)`. Validation checks both
-syntax and runtime support without saving or activating anything.
-
-`store.Captures().Save(ctx, definition)` saves the definition under its UUID. The
-kernel can persist a stopped definition **and then return capability messages**.
-Go returns `*captures.ValidationError` for those messages even if the outer command
-envelope succeeded. Retain `definition.ID()` when correcting or administratively
-removing that definition. A successful save is not evidence of activation or
-successful polling. Kernel administration through the existing capture contracts
-or operator tooling remains separate.
-
-`ValidationError.Error()` is deliberately generic. Its `Messages` may include
-mapping literals or other sensitive input; inspect them intentionally rather than
-logging every field. Transport and command-envelope failures remain inspectable.

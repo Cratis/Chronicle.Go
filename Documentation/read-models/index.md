@@ -204,6 +204,8 @@ Expected output:
 Example.InventoryItem registered; item-1 exists: false
 ```
 
+Optional next step: use [watch changes](#watch-changes) or [materialized windows](#materialized-windows) when you need those routes.
+
 For watches, projection-backed callbacks and an initial materialized window,
 run the [watch example](../../examples/watches/main.go):
 

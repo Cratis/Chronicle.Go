@@ -8,9 +8,10 @@ before an append snapshot is created. Use the three metadata providers to select
 an actor, correlation, and causation from the **current call**, not a context
 captured when the client was constructed. These APIs do not authenticate callers.
 
-The compiled external examples in
-[`example_enrichment_test.go`](../../example_enrichment_test.go) show immediate
-append and owner-controlled unit-of-work staging.
+The deployment example in
+[`example_enrichment_test.go`](../../example_enrichment_test.go) fills the declared recordedBy property from the selected actor.
+It shows immediate append and owner-controlled unit-of-work staging: staging
+enriches once, and commit reuses that snapshot. The original Go event remains unchanged.
 
 ## Client options
 

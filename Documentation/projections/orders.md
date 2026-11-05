@@ -173,5 +173,7 @@ explicit `AutoMap()` or `NoAutoMap()` overrides inheritance. Exclusions remain l
   children. Avoid these shapes; successful definition registration is not evidence
   they will materialize.
 
+Continue with [variants, recursive children and queries](variants.md) for the chapter guidance.
+
 Recursive and polymorphic child schemas, variants and derivative groups remain
 in [part 3](https://github.com/Cratis/Chronicle.Go/issues/27).
