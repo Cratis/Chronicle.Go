@@ -4,7 +4,7 @@ description: Register closures or convention-based reactors, return events, and 
 ---
 
 Use a reactor to call an external service or append a follow-up event. Use a
-projection to populate a read model instead. This experimental API supports
+projection to populate a read model instead. This API supports
 convention discovery, replay policies, returned effects and scoped activation.
 [The parity map](parity.md#reactors-part-2) identifies the remaining gaps.
 

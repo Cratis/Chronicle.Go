@@ -4,7 +4,7 @@ description: Request one namespace-scoped name update and distinguish acknowledg
 ---
 
 Use `store.Identities().Rename` to change a stored identity's display name without
-changing its opaque subject or username. This experimental v0.x workflow performs
+changing its opaque subject or username. This v0.x workflow performs
 one pre-list, one rename command, and one post-list. It does not register an
 identity: ordinary actor appends establish identities first.
 

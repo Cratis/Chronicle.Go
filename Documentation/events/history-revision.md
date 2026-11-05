@@ -6,7 +6,7 @@ description: Explicit history operations, audit metadata, asynchronous outcomes,
 Use revision to correct recorded content, redaction to remove it, and stream
 completion to refuse future appends to a specific stream. These are explicit
 administrative operations, not ordinary domain compensation. This surface remains
-experimental in the v0.x SDK.
+subject to change in the v0.x SDK.
 
 **Authorize and approve every operation in your application.** A selected store,
 namespace, source, or `metadata.WithIdentity` is not authorization. Check retention

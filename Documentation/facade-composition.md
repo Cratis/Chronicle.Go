@@ -7,7 +7,7 @@ Start with [ordinary client construction](clients/go/getting-started.md) and [li
 
 Use captured preparation when one shared provider must contain the client identity
 and supply services needed to prepare that same client's definitions. This
-experimental v0.x workflow uses the optional `services` adapter to bind borrowed
+v0.x workflow uses the optional `services` adapter to bind borrowed
 client, store and facade instances. Root Chronicle packages remain independent of
 dependency injection. For ordinary clients, keep using `NewClient` or
 `NewClientContext`; they capture and prepare in one call.

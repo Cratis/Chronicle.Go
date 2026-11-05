@@ -7,7 +7,7 @@ Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Chronicle 
 
 ## Start here
 
-Requires Go 1.26 or newer. The API remains experimental in the v0.x release series. First check the [capability and limits summary](parity.md#experimental-v0-capabilities-and-limits), then follow the [first-append source example](clients/go/getting-started.md).
+Requires Go 1.26 or newer. The API may change in v0.x releases. First check the [capability and limits summary](parity.md#v0-capabilities-and-limits), then follow the [first-append source example](clients/go/getting-started.md).
 
 For short-lived producers or on-demand operations, read [one-shot and process ownership](connection-strings/lifecycle.md#short-lived-clients-and-process-ownership). Observer runtimes need normal logical sessions; registration sent does not prove subscription or catch-up.
 
@@ -30,6 +30,6 @@ For short-lived producers or on-demand operations, read [one-shot and process ow
 - [Read-model reactors](read-model-reactors.md): Added/Modified/Removed callbacks with scoped effects.
 - [Patterns](patterns.md): contextual and usual-action questions with honest empty answers.
 - [Parity and limitations](parity.md): executable evidence and deliberate C# differences.
-- [Release policy](releases.md): module versioning and experimental compatibility.
+- [Release policy](releases.md): module versioning and compatibility.
 
-Contracts target Chronicle 19.125.2 and real-kernel tests run against 19.125.2-development. The pin is not a supported kernel range. The [capability summary](parity.md#experimental-v0-capabilities-and-limits) gives the exact decision-read gate and other conditions. [Release policy](releases.md) distinguishes source, tagged modules and documentation publication; this repository owns the product pages.
+Contracts target Chronicle 19.125.2 and real-kernel tests run against 19.125.2-development. The pin is not a supported kernel range. The [capability summary](parity.md#v0-capabilities-and-limits) gives the exact decision-read gate and other conditions. [Release policy](releases.md) distinguishes source, tagged modules and documentation publication; this repository owns the product pages.

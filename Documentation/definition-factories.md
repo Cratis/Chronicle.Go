@@ -5,7 +5,7 @@ description: Build immutable projections, constraints and event migrations with 
 
 Use a definition factory when configuration or an application service supplies a
 projection, constraint, or migration definition. Keep direct declarations when no
-construction is needed. This experimental v0.x API supports configuration-only
+construction is needed. This v0.x API supports configuration-only
 dependencies. [Captured client preparation](facade-composition.md) supports an
 explicit borrowed client identity; automatic facade bindings are not provided.
 
