@@ -42,7 +42,11 @@ func TestKernelReactorRichEffects(t *testing.T) {
 	for _, mode := range []string{"bare", "targeted", "mixed", "scoped"} {
 		appendSuccessfully(t, f.ctx, store, events.SourceID(mode), KernelEffectTrigger{Mode: mode})
 	}
-	ctx, cancel := context.WithTimeout(f.ctx, 15*time.Second)
+	// 30s, not 15s: a transient reconnect here forces a fresh registration pass
+	// for this reactor, and the kernel's observers.maxConcurrentRegistrations
+	// throttle (Chronicle 19.124.0+) can queue that pass behind the suite's many
+	// other concurrently registering stores.
+	ctx, cancel := context.WithTimeout(f.ctx, 30*time.Second)
 	defer cancel()
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
