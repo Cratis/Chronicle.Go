@@ -28,6 +28,8 @@
       href: events/reading-events.md
     - name: Revise, redact, and close history
       href: events/history-revision.md
+    - name: Compensate for events
+      href: events/compensation.md
     - name: Seeding events
       href: events/seeding.md
     - name: Unit of work

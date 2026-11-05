@@ -32,6 +32,7 @@ const (
 	EventSequences_AppendOnceWithNamedTags_FullMethodName                = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendOnceWithNamedTags"
 	EventSequences_AppendWithNamedTags_FullMethodName                    = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/AppendWithNamedTags"
 	EventSequences_ClosedStreams_FullMethodName                          = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/ClosedStreams"
+	EventSequences_Compensate_FullMethodName                             = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/Compensate"
 	EventSequences_CompleteStream_FullMethodName                         = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CompleteStream"
 	EventSequences_CompleteStreamScope_FullMethodName                    = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CompleteStreamScope"
 	EventSequences_CopyEventsForEventSource_FullMethodName               = "/Cratis.Chronicle.Contracts.Sequences.EventSequences/CopyEventsForEventSource"
@@ -74,6 +75,7 @@ type EventSequencesClient interface {
 	AppendOnceWithNamedTags(ctx context.Context, in *AppendOnceWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendOnceResponse, error)
 	AppendWithNamedTags(ctx context.Context, in *AppendWithNamedTagsRequest, opts ...grpc.CallOption) (*CommandResult_AppendResponse, error)
 	ClosedStreams(ctx context.Context, in *ClosedStreamsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_ClosedStreamResponse, error)
+	Compensate(ctx context.Context, in *CompensateRequest, opts ...grpc.CallOption) (*CommandResult_AppendResponse, error)
 	CompleteStream(ctx context.Context, in *CompleteStreamRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error)
 	CompleteStreamScope(ctx context.Context, in *CompleteStreamScopeRequest, opts ...grpc.CallOption) (*CommandResult_CompleteStreamResponse, error)
 	CopyEventsForEventSource(ctx context.Context, in *CopyEventsForEventSourceRequest, opts ...grpc.CallOption) (*CommandResult_Guid, error)
@@ -231,6 +233,16 @@ func (c *eventSequencesClient) ClosedStreams(ctx context.Context, in *ClosedStre
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryResult_IEnumerable_ClosedStreamResponse)
 	err := c.cc.Invoke(ctx, EventSequences_ClosedStreams_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventSequencesClient) Compensate(ctx context.Context, in *CompensateRequest, opts ...grpc.CallOption) (*CommandResult_AppendResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_AppendResponse)
+	err := c.cc.Invoke(ctx, EventSequences_Compensate_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -484,6 +496,7 @@ type EventSequencesServer interface {
 	AppendOnceWithNamedTags(context.Context, *AppendOnceWithNamedTagsRequest) (*CommandResult_AppendOnceResponse, error)
 	AppendWithNamedTags(context.Context, *AppendWithNamedTagsRequest) (*CommandResult_AppendResponse, error)
 	ClosedStreams(context.Context, *ClosedStreamsRequest) (*QueryResult_IEnumerable_ClosedStreamResponse, error)
+	Compensate(context.Context, *CompensateRequest) (*CommandResult_AppendResponse, error)
 	CompleteStream(context.Context, *CompleteStreamRequest) (*CommandResult_CompleteStreamResponse, error)
 	CompleteStreamScope(context.Context, *CompleteStreamScopeRequest) (*CommandResult_CompleteStreamResponse, error)
 	CopyEventsForEventSource(context.Context, *CopyEventsForEventSourceRequest) (*CommandResult_Guid, error)
@@ -555,6 +568,9 @@ func (UnimplementedEventSequencesServer) AppendWithNamedTags(context.Context, *A
 }
 func (UnimplementedEventSequencesServer) ClosedStreams(context.Context, *ClosedStreamsRequest) (*QueryResult_IEnumerable_ClosedStreamResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ClosedStreams not implemented")
+}
+func (UnimplementedEventSequencesServer) Compensate(context.Context, *CompensateRequest) (*CommandResult_AppendResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Compensate not implemented")
 }
 func (UnimplementedEventSequencesServer) CompleteStream(context.Context, *CompleteStreamRequest) (*CommandResult_CompleteStreamResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompleteStream not implemented")
@@ -876,6 +892,24 @@ func _EventSequences_ClosedStreams_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EventSequencesServer).ClosedStreams(ctx, req.(*ClosedStreamsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventSequences_Compensate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompensateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventSequencesServer).Compensate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventSequences_Compensate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventSequencesServer).Compensate(ctx, req.(*CompensateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1352,6 +1386,10 @@ var EventSequences_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClosedStreams",
 			Handler:    _EventSequences_ClosedStreams_Handler,
+		},
+		{
+			MethodName: "Compensate",
+			Handler:    _EventSequences_Compensate_Handler,
 		},
 		{
 			MethodName: "CompleteStream",
