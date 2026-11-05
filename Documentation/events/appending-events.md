@@ -102,7 +102,7 @@ errors. Reject negative signed input **before** converting it to uint64; C#'s
 negative-int unchecked wrapping is not replicated. Raw Go arithmetic does not
 provide these guarantees.
 
-[ExampleSequenceNumber_Next](../../events/example_sequence_number_test.go)
+[ExampleSequenceNumber_Next](https://github.com/Cratis/Chronicle.Go/blob/main/events/example_sequence_number_test.go)
 shows the complete local workflow and error inspection without a server.
 `sequence.Next(ctx)` is different: it queries the server tail and returns a
 candidate (zero when empty), which a concurrent writer may immediately consume.
@@ -215,7 +215,7 @@ than `WithOrigin`, configure the shared client with
 callback reads the **current append context**, not a captured request context.
 Chronicle does not depend on Arc or replace the operation context: cancellation,
 deadlines, application values, actor, causation and wire metadata remain intact.
-See the executable [ExampleWithAppendOriginResolver](../../append_origin_resolver_test.go).
+See the executable [ExampleWithAppendOriginResolver](https://github.com/Cratis/Chronicle.Go/blob/main/append_origin_resolver_test.go).
 
 The callback returns `(Origin, handled bool, error)`:
 
@@ -283,6 +283,6 @@ writes, unsubscribe before the transaction owner commits and inspect its retaine
 result separately, as C# Arc does. Subscribe to each explicitly used sequence;
 there is no process-wide interception.
 
-[ExampleSequence_OnAppend](../../eventsequences/example_notifications_test.go)
+[ExampleSequence_OnAppend](https://github.com/Cratis/Chronicle.Go/blob/main/eventsequences/example_notifications_test.go)
 is an executable command-scoped example with a lost acknowledgment. Run it without
 a kernel using `go test ./eventsequences -run '^ExampleSequence_OnAppend$'`.

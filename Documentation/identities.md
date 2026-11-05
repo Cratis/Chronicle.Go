@@ -20,7 +20,7 @@ identity: ordinary actor appends establish identities first.
 - Supply your own context deadline. There is no default timeout, retry, polling,
   compensation, or timeout extension.
 
-The [compiling external example](../example_identity_rename_test.go) shows the
+The [compiling external example](https://github.com/Cratis/Chronicle.Go/blob/main/example_identity_rename_test.go) shows the
 public workflow and error handling. With an acquired ready `store` and `ctx`:
 
 ```go

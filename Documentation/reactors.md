@@ -12,7 +12,7 @@ For the basic path, use the [plain closure](#plain-go-first), then follow [conne
 
 ## Plain Go first
 
-The [complete program](../examples/reactors/main.go) registers `OrderPlaced`,
+The [complete program](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/main.go) registers `OrderPlaced`,
 registers a typed closure, connects, appends an order and waits for its reactor.
 It imports neither a container nor the dependency-injection package.
 
@@ -34,7 +34,7 @@ callbacks, use `chronicle.RegisterReactorHandlers(registry, id, []reactors.Handl
 
 ## Delivery, failure and shutdown
 
-After checking registration errors, the [complete program](../examples/reactors/main.go) constructs a client with the registry, opens its event store, appends an order, checks the append result, waits for the handler's signal and closes the client. Use [lifecycle/readiness](connection-strings/lifecycle.md) for connection choices; keep the registration-sent and kernel-version limits below in view before appending.
+After checking registration errors, the [complete program](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/main.go) constructs a client with the registry, opens its event store, appends an order, checks the append result, waits for the handler's signal and closes the client. Use [lifecycle/readiness](connection-strings/lifecycle.md) for connection choices; keep the registration-sent and kernel-version limits below in view before appending.
 
 Event types and read models register before constraints/projections; reactor
 streams start after that registration pass succeeds. The duplex protocol has no
@@ -147,7 +147,7 @@ Method names are descriptive, not reserved: an optional leading `context.Context
 is followed by a registered event, a pointer to one, or a nonempty interface
 implemented by registered events. An unconstrained `any` is not a handler.
 
-The following excerpt comes from the [compiling convention example](../examples/reactors/convention.go).
+The following excerpt comes from the [compiling convention example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/convention.go).
 `OrderPlaced` is the event above; `ReservationGateway` is an application-owned
 interface with `Reserve(context.Context, string, string) error`, where the last
 argument is an idempotency key. Call `registerConfirmOrders` with an empty registry
@@ -241,7 +241,7 @@ Empty collections are no-ops; nil elements and unregistered values fail handling
 An empty concurrency batch still needs a protected scope. Classification precedes
 writes and the append APIs validate/serialize the complete event batch before I/O.
 Constraint, concurrency, authorization and transport failures prevent acknowledgement.
-No client effect retry is added. See the [compiled effects example](../examples/reactors/effects.go).
+No client effect retry is added. See the [compiled effects example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/effects.go).
 
 ### Replay without repeating external effects
 
@@ -361,7 +361,7 @@ between an external effect and a Chronicle append.
 Register a `reactors.SideEffectHandler` with
 `chronicle.RegisterReactorSideEffectHandler(registry, handler)` **before**
 `NewClient`, or use `reactors.WithSideEffectHandlers(...)` on one reactor.
-The [compiled command adapter](../examples/reactors/effects.go) demonstrates the
+The [compiled command adapter](https://github.com/Cratis/Chronicle.Go/blob/main/examples/reactors/effects.go) demonstrates the
 extension without an Arc dependency. Arc can resolve its pipeline from the
 borrowed batch scope and return validation/authorization failures as errors.
 Do not execute returned commands in `After`: those errors are intentionally logged

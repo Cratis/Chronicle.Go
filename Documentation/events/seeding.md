@@ -14,7 +14,7 @@ has a [known kernel limitation](../parity.md#event-seeding).
 
 ## Declare and register seeds
 
-This excerpt comes from the [runnable example](../../examples/seeding/main.go).
+This excerpt comes from the [runnable example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/seeding/main.go).
 It uses the root `chronicle` package and the `events` and `seeding` packages under
 `github.com/cratis/chronicle.go`.
 

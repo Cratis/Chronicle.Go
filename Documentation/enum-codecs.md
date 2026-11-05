@@ -11,7 +11,7 @@ Unregistered named integers retain their ordinary integer behavior.
 ## Declare the member table
 
 This declaration uses the same API as the executable
-[`ExampleEnum`](../serialization/example_enum_test.go):
+[`ExampleEnum`](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/example_enum_test.go):
 
 ```go
 type ApprovalStatus int32
@@ -158,7 +158,7 @@ in every decoded document; the SDK does not invoke C# constructor defaults.
 
 The owning profile is Chronicle **19.29.4**, Fundamentals **7.19.6**, and
 .NET/System.Text.Json **10.0.12**. The immutable
-[package capture](../serialization/testdata/enum/README.md) executes the actual
+[package capture](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/testdata/enum/README.md) executes the actual
 client options initializer, `EventSerializer`, both schema APIs and in-memory
 Expando conversion. It is not interchangeable with the historical 236-case
 Fundamentals source corpus or the newer `e8ac1ec` mask fix.
@@ -172,7 +172,7 @@ unknown values, and it is not a default string-enum serializer.
 
 `TestEnumPackagedProfileRegression` covers all scalar/nullable/array observations
 for the five admitted Int32 declarations under both policies. The supplemental
-[typed .NET decoder](../serialization/testdata/enum-roundtrip/README.md) checks
+[typed .NET decoder](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/testdata/enum-roundtrip/README.md) checks
 Go payloads without modifying the raw capture. `TestKernelDeclaredInt32EnumProfile`
 checks numeric event history and named Mongo-backed model reads from both captured
 C# and Go writes, including signed limits, declared composites, `All=-1`, arrays,

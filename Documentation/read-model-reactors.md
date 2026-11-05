@@ -11,7 +11,7 @@ changes have no durable cursor, checkpoint or retry guarantee.
 ## Register a convention-based reactor
 
 Register the model and its contributing events, then explicitly admit the reactor
-type before `NewClient`. The [watch example](../examples/watches/main.go) provides
+type before `NewClient`. The [watch example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/watches/main.go) provides
 a complete, runnable projection-backed workflow without a dependency container.
 Its registration has this shape (`registry`, `model` and `names` are created there):
 

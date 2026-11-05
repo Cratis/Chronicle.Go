@@ -14,7 +14,7 @@ the event rather than maintaining unnecessary migrations.
 
 ## Keep the previous shape
 
-The [complete example](../../examples/evolution/main.go) defines
+The [complete example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/evolution/main.go) defines
 `CustomerRegisteredV1` with `Name` and numeric `Status`, and the current
 `CustomerRegistered` with `FirstName`, `LastName`, `Status` and `Kind`.
 Its explicit JSON tags keep shared wire names stable.

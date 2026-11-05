@@ -27,7 +27,7 @@ For the repository source example, use `go run ./examples/getting-started` from 
 
 ## Append your first event
 
-This program is maintained as [the getting-started example](../../../examples/getting-started/main.go). It uses a bounded operation context, a normal client and explicit cleanup; it is not a runnable `WithSkipKeepAlive` function/job example. The source ID is event metadata, not a payload property.
+This program is maintained as [the getting-started example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/getting-started/main.go). It uses a bounded operation context, a normal client and explicit cleanup; it is not a runnable `WithSkipKeepAlive` function/job example. The source ID is event metadata, not a payload property.
 
 ```go
 package main

@@ -32,7 +32,7 @@ construction before network I/O. Repeated policy options are last-wins.
 Explicit `json` tags always win, including inside nested structs and collections.
 For a shared C# `Id` / Go `ID` property, use `json:"Id"`; preserving spelling does
 not translate different source-language names. The executable
-[`ExampleNamingPolicy`](../serialization/example_test.go) shows all three policies.
+[`ExampleNamingPolicy`](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/example_test.go) shows all three policies.
 
 Container naming is separate: read-model containers remain case-preserving,
 pluralized names unless explicitly overridden. Property policies do not change
@@ -267,7 +267,7 @@ Keep binary-bearing generations without migrations until such a path is qualifie
 Snapshot naming rebinds retain the binary representation and do not decode or
 reinterpret bytes; their destination plan must pass the same property-name rule.
 
-The [packaged binary capture](../serialization/testdata/binary/README.md) records
+The [packaged binary capture](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/testdata/binary/README.md) records
 Chronicle 19.29.4, Fundamentals 7.19.6 and both schema generator APIs. Class
 properties in C# have no required list; its record control requires `Payload`.
 Go retains its existing field-required rules: slice and pointer properties are

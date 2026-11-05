@@ -40,7 +40,7 @@ A transport failure, malformed response, or execution exception is also an `Outc
 
 ## Run the example
 
-The [batches program](../../examples/batches/main.go) loads source A, protects that exact history, then appends A1, B1, A2 in one batch and reads A back. With a local development kernel running as described in [getting started](../clients/go/getting-started.md), run from the repository root:
+The [batches program](https://github.com/Cratis/Chronicle.Go/blob/main/examples/batches/main.go) loads source A, protects that exact history, then appends A1, B1, A2 in one batch and reads A back. With a local development kernel running as described in [getting started](../clients/go/getting-started.md), run from the repository root:
 
 ```sh
 go run ./examples/batches
