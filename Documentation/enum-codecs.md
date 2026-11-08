@@ -1,6 +1,6 @@
 ---
 title: Declare Int32 enum codecs
-description: Keep your named Go enums while sharing declared numeric values and read-model names with Chronicle.
+description: Keep your named Go enums while sharing declared numeric values and read-model names with Chronicle, so stored data stays stable as code evolves.
 ---
 
 Use this **partial, opt-in profile** when a C# Int32 enum must keep the same

@@ -1,6 +1,6 @@
 ---
 title: Revise, redact, and close event history
-description: Explicit history operations, audit metadata, asynchronous outcomes, and irreversible effects.
+description: Run explicit history operations, attach audit metadata, handle asynchronous outcomes and understand which revision effects are irreversible.
 ---
 
 Use revision to correct recorded content, redaction to remove it, and stream

@@ -1,6 +1,6 @@
 ---
 title: External integrations
-description: Declare cross-store subscriptions, outgoing webhooks and external HTTP or database services.
+description: Declare cross-store subscriptions, outgoing webhooks and external HTTP or database services from Go, and choose the right integration for each need.
 ---
 
 Use store subscriptions to consume another store's outbox, webhooks to declare

@@ -1,6 +1,6 @@
 ---
 title: Testing with scenarios
-description: Test events, read models and reactors through production Go client conventions, with explicit fidelity boundaries.
+description: Test events, read models and reactors through production Go client conventions in scenarios, and know where the fidelity of in-memory tests ends.
 ---
 
 Use `github.com/cratis/chronicle.go/chronicletest` to arrange events and assert

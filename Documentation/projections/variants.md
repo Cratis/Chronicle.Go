@@ -1,6 +1,6 @@
 ---
 title: Projection variants
-description: Model mutually exclusive lifecycle shapes with entering events and shared handlers.
+description: Model mutually exclusive lifecycle shapes in a projection using entering events and shared handlers, so each read model instance has one valid form.
 ---
 
 Use variants when an entity changes shape during its lifecycle: a work item can

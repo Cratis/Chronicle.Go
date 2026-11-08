@@ -1,6 +1,6 @@
 ---
 title: Evolve stored events
-description: Keep historical Go event shapes and register adjacent, bidirectional kernel migrations.
+description: Keep historical Go event shapes and register adjacent, bidirectional kernel migrations so old and new event generations stay readable together.
 ---
 
 When an event already has persisted history, keep its old shape and add a new

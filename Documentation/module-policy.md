@@ -1,6 +1,6 @@
 ---
 title: Module policy
-description: Module allow-list grammar, independent Go gates, unpublished previews and publication boundaries.
+description: Learn the module allow-list grammar, how the independent Go gates apply, and where the boundary lies between internal modules and published ones.
 ---
 
 <!-- Copyright (c) Cratis. All rights reserved. -->

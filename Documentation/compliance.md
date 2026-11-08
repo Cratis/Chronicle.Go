@@ -1,6 +1,6 @@
 ---
 title: Protect and erase personal data
-description: Declare PII and confidentiality metadata, release protected values and manage subject-key erasure.
+description: Declare PII and confidentiality metadata on events, release protected values to authorized readers and manage subject-key erasure for data subjects.
 ---
 
 Mark personal data with `chronicle:"pii"` and use

@@ -1,6 +1,6 @@
 ---
 title: Chronicle for Go
-description: Register typed events and append them securely to Cratis Chronicle from Go.
+description: "Start with the Go client for Cratis Chronicle: register typed events, append them securely and find guides for projections, reducers and reactors."
 ---
 
 Chronicle.Go is the Go client SDK for Cratis Chronicle's event store. Chronicle is part of Cratis Platform and can be adopted independently of its other components. Without the client, you manage OAuth, structural compatibility, schemas and RPC envelopes yourself; with it, you register event structs and append facts through context-aware store handles.

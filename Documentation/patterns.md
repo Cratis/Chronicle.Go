@@ -1,6 +1,6 @@
 ---
 title: Query established behavior
-description: Ask contextual and usual-action questions without inventing behavior when Chronicle has no answer.
+description: Ask contextual and usual-action questions of Chronicle, and handle the case where it has no answer instead of inventing behavior in your code.
 ---
 
 Use `store.Patterns()` to ask what a scope usually does. Answers are server

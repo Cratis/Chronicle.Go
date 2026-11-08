@@ -1,6 +1,6 @@
 ---
 title: Projection initial values and labels
-description: Supply initial read-model state and label the projection artifact.
+description: Supply initial read-model state for new projection instances and label the projection artifact so it is easy to identify in Chronicle tooling.
 ---
 
 Use initial values for state that an event mapping does not supply. Labels describe

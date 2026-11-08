@@ -1,6 +1,6 @@
 ---
 title: JSON naming and shared scalar values
-description: Choose stable Chronicle property names and serialize Fundamentals.Go concepts without changing their wire types.
+description: Choose stable Chronicle property names and serialize Fundamentals.Go concepts, such as value wrappers, without changing their wire types.
 ---
 
 Chronicle.Go compiles property names, schemas and JSON from one immutable plan.

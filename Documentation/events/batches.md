@@ -1,6 +1,6 @@
 ---
 title: Append atomic batches
-description: Append ordered events across sources with independent concurrency checks and complete outcomes.
+description: Append ordered events across several event sources in one call, with independent concurrency checks per source and a complete outcome for each.
 ---
 
 Use `Sequence.AppendMany` for one source or `Sequence.AppendBatch` for ordered events across sources. Both submit one atomic append within one store, namespace and sequence. A known rejection commits none of the events. These APIs remain experimental in the v0.x SDK.

@@ -1,6 +1,6 @@
 ---
 title: Register unprotected derived types
-description: Serialize explicitly registered interface families with stable Chronicle discriminators and fail-closed validation.
+description: Serialize explicitly registered interface families with stable Chronicle discriminators, and see how fail-closed validation rejects unknown types.
 ---
 
 Use derived codecs when an event or read model contains an interface with a

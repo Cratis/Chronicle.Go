@@ -1,6 +1,6 @@
 ---
 title: Project orders with children and joins
-description: Combine model-bound child collections, numeric totals and event joins, or use the equivalent fluent declarations.
+description: Combine model-bound child collections, numeric totals and event joins in an order example, or use the equivalent fluent projection declarations.
 ---
 
 Use child projections for an order's lines, arithmetic for its running total, and

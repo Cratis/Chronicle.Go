@@ -1,6 +1,6 @@
 ---
 title: Capture declarations
-description: Prepare, validate and save explicit capture declarations without claiming automatic activation.
+description: Prepare, validate and save explicit capture declarations in Go, and learn why saving a declaration does not by itself activate automatic capture.
 ---
 
 Capture declarations describe how changes in external data become events. Go

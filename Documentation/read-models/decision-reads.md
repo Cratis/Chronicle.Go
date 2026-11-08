@@ -1,6 +1,6 @@
 ---
 title: Guard decisions with an owned commit
-description: Read admitted projection state and reject stale decisions in one atomic event batch.
+description: Read admitted projection state, then reject stale decisions by appending the resulting events in one atomic batch guarded by what you read.
 ---
 
 Use a decision read when events depend on projection state that must not become stale before the append. Enroll the read in a [unit of work](../events/unit-of-work.md), stage the resulting events, and let its owner commit once. A competing matching append rejects the entire batch, including events for other sources.
