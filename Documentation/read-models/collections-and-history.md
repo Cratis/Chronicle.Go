@@ -1,6 +1,6 @@
 ---
 title: Read-model collections and history
-description: Read all model instances or correlation-grouped projection snapshots with explicit event-count and fidelity limits.
+description: Read all model instances or correlation-grouped projection snapshots, with explicit event-count limits and fidelity caveats for historical views.
 ---
 
 Use `reader.GetAll(ctx, count)` for a complete collection and

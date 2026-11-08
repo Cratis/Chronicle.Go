@@ -1,6 +1,6 @@
 ---
 title: Webhook authentication evidence
-description: Distinguish capture-source representation, outgoing registration requests and live authentication behavior.
+description: Distinguish how capture sources represent authentication, what outgoing registration requests send and which behavior is observed on live connections.
 ---
 
 Inbound capture sources and outgoing webhooks use different authorization

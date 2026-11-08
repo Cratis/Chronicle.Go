@@ -1,6 +1,6 @@
 ---
 title: Prepare definitions from configuration
-description: Build immutable projections, constraints and event migrations with plain constructors or borrowed service providers.
+description: Build immutable projections, constraints and event migrations with plain constructors or borrowed service providers, and keep definitions testable.
 ---
 
 Use a definition factory when configuration or an application service supplies a

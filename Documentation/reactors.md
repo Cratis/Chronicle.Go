@@ -1,6 +1,6 @@
 ---
 title: React to events from Go
-description: Register closures or convention-based reactors, return events, and optionally use shared service scopes.
+description: Register closure or convention-based reactors that observe events, return follow-up events and optionally use shared service scopes in Go.
 ---
 
 Use a reactor to call an external service or append a follow-up event. Use a

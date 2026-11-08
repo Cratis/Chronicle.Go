@@ -1,6 +1,6 @@
 ---
 title: Connection lifecycle and readiness
-description: Understand automatic recovery, registration outcomes and bounded Go client shutdown.
+description: Understand automatic connection recovery, registration outcomes and how to shut the Go client down within a bounded time so work is not lost.
 ---
 
 With normal logical sessions, keep your client and store handles across transient outages. The client replaces failed connection generations, refreshes endpoint discovery and OAuth, and replays the frozen registrations before admitting writes through those handles. It does not replay application operations. [Clients without a logical session](#short-lived-clients-and-process-ownership) have different loss detection and replay limits.

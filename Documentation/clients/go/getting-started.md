@@ -1,6 +1,6 @@
 ---
 title: Get started with Chronicle for Go
-description: Register a typed event and append it to a local Chronicle kernel.
+description: Install the Go client, register a typed event and append it to a local Chronicle kernel, then confirm the append outcome in your own first program.
 ---
 
 The maintained Go example below registers a typed customer event, appends it and prints its sequence position on success. A live run needs the development kernel started below. Begin with the [capability and limits summary](../../parity.md#v0-capabilities-and-limits), especially before using observers or decision reads. Chronicle.Go handles OAuth, compatibility, registration and transport; you supply the event facts and their source identity.

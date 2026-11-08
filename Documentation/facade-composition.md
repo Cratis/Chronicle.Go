@@ -1,6 +1,6 @@
 ---
 title: Prepare a client with a shared provider
-description: Bind one borrowed client identity before preparing Chronicle definitions with Fundamentals.Go scopes.
+description: Bind one borrowed client identity first, then prepare Chronicle definitions with Fundamentals.Go scopes so composed facades share one consistent setup.
 ---
 
 Start with [ordinary client construction](clients/go/getting-started.md) and [lifecycle/readiness](connection-strings/lifecycle.md). Continue here only for the optional shared-provider preparation task; this is not another setup step for every client.

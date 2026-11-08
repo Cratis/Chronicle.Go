@@ -1,6 +1,6 @@
 ---
 title: Observer and job administration
-description: Inspect failures, request replay and distinguish accepted work from actual processing completion.
+description: Inspect failed work, request a replay and distinguish accepted requests from confirmed processing completion when operating Chronicle from Go.
 ---
 
 Use `store.Observers()` to inspect observer state and failures, and `store.Jobs()`

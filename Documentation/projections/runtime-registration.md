@@ -1,6 +1,6 @@
 ---
 title: Add a projection to an existing store
-description: Register a new ordinary read model and projection while retaining existing readers and truthful registration outcomes.
+description: Register a new ordinary read model and projection at runtime while existing readers keep working, and interpret the registration outcome accurately.
 ---
 
 For declarations prepared before client construction, start with the [startup projection guide](index.md#model-bound-declarations). This page covers the separate store-level addition workflow.

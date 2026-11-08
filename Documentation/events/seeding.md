@@ -1,6 +1,6 @@
 ---
 title: Seed reference events
-description: Register global and namespace-specific seeds without duplicate startup appends.
+description: Register global and namespace-specific event seeds so initial data is appended once at startup, without creating duplicate events on restart.
 ---
 
 Use event seeding for stable reference data that should exist when your application

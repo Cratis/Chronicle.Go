@@ -1,6 +1,6 @@
 ---
 title: Chronicle.Go parity
-description: Implemented Go client contracts, executable evidence and deliberate C# differences.
+description: See which Go client contracts are implemented, the executable evidence behind each claim and where the Go client deliberately differs from the C# one.
 ---
 
 Use this reference when moving a C# Chronicle workflow to Go: find the matching API, its executable evidence and the differences your application must handle. Chronicle.Go uses explicit ownership, contexts and typed registration. The implemented subsets below are **not overall client parity or production lifecycle completeness**.

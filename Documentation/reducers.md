@@ -1,6 +1,6 @@
 ---
 title: Fold a read model in Go
-description: Use plain callbacks or discovered reducer methods, nullable state, passive reads and optional service scopes.
+description: Write reducers as plain callbacks or discovered methods, work with nullable state and passive reads, and optionally use shared service scopes.
 ---
 
 Use a reducer when the next state needs control flow that neither model-bound nor

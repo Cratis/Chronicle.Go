@@ -1,6 +1,6 @@
 ---
 title: Projections
-description: Declare model-bound or fluent mappings and read kernel-materialized state.
+description: Declare projections with model-bound or fluent mappings from events to read models, and read the state the Chronicle kernel materializes for you.
 ---
 
 Use a projection to populate a read model from events. Chronicle runs the mappings;

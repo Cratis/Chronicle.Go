@@ -1,6 +1,6 @@
 ---
 title: Rename a stored identity display name
-description: Request one namespace-scoped name update and distinguish acknowledgment from observed storage state.
+description: Request a namespace-scoped identity name update and learn to tell an acknowledged request apart from the storage state you actually observe later.
 ---
 
 Use `store.Identities().Rename` to change a stored identity's display name without

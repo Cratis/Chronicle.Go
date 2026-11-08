@@ -1,6 +1,6 @@
 ---
 title: Enforce unique event constraints
-description: Declare unique values and event-type lifecycles, release claims, and inspect append-time violations.
+description: Declare unique-value and event-type lifecycle constraints, release claims when no longer needed, and inspect violations reported at append time.
 ---
 
 Use constraints when a value or event lifecycle must remain unique even when writers race. Chronicle checks the rule inside the append; a client-side lookup cannot replace it. Constraint APIs are experimental in the v0.x Go SDK.

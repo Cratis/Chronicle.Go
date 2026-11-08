@@ -1,6 +1,6 @@
 ---
 title: Read-model reactors
-description: React to best-effort model changes with Added, Modified and Removed conventions.
+description: React to best-effort read-model changes using the Added, Modified and Removed conventions, and learn what delivery guarantees to expect from them.
 ---
 
 Use a read-model reactor for a side effect triggered by changes to a projection

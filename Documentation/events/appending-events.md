@@ -1,6 +1,6 @@
 ---
 title: Append events
-description: Inspect append outcomes and select explicit, optimistic or protected-empty concurrency scopes.
+description: Inspect append outcomes and choose between explicit, optimistic or protected-empty concurrency scopes when appending events to an event source.
 ---
 
 Use `store.EventLog().Append(ctx, sourceID, event, options...)` to persist one registered fact. A sequence position is unsigned and sequence-wide, not a source revision; the first position is zero. `EventSequence(id)` returns the cached handle for that store/namespace/sequence and a construction error for a blank ID. The event log is the same sequence implementation.

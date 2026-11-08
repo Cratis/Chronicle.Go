@@ -1,6 +1,6 @@
 ---
 title: Compensate for recorded events
-description: Append a compensating event that corrects an earlier event without changing it.
+description: Append a compensating event that corrects an earlier event without changing it, keeping the event log append-only and the history auditable.
 ---
 
 A compensating event records a correction as a new fact. The original event stays

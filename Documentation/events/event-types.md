@@ -1,6 +1,6 @@
 ---
 title: Define event types
-description: Register Go structs with stable event identities and matching JSON schemas.
+description: Register Go structs as event types with stable identities and matching JSON schemas, so Chronicle can store, validate and read them reliably.
 ---
 
 Events are past-tense facts. Keep source identity in event metadata, and give each event one purpose. Explicit root registration replaces assembly scanning; field tags and typed options carry model-bound declarations. There are no package-global registrations or `init` hooks.
