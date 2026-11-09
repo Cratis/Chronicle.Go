@@ -377,3 +377,16 @@ func TestDefinitionPropertiesDoNotShareState(t *testing.T) {
 		t.Fatalf("zero declaration: %v", err)
 	}
 }
+
+func TestPointerTypesDeclareTheStructTheyPointTo(t *testing.T) {
+	f := newFixture(t, serialization.PreservePropertyNames)
+	node := graphs.NewNode[*Person]().From(f.registered, graphs.UsingKey("personId"))
+	edge := graphs.NewEdge[*Knows](node, node).From(f.addedType, graphs.UsingSourceKey("personId"), graphs.UsingTargetKey("groupId"))
+	definition, err := compile(t, graphs.New("Social", node, edge), f, serialization.PreservePropertyNames)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nodes, edges := definition.Nodes(), definition.Edges(); len(nodes) != 1 || nodes[0] != "Person" || len(edges) != 1 || edges[0] != "Knows" {
+		t.Fatalf("elements = %v %v", nodes, edges)
+	}
+}

@@ -14,12 +14,10 @@ import (
 
 // property is a top-level property of a node or an edge, as the graph names it.
 type property struct {
-	name     string
-	scalar   serialization.Scalar
-	list     bool
-	schema   json.RawMessage
-	keyed    bool
-	nullable bool
+	name   string
+	scalar serialization.Scalar
+	list   bool
+	schema json.RawMessage
 }
 
 // shape is what the graph knows about a node or an edge type: its properties, in
@@ -63,13 +61,12 @@ func analyze(graph, element string, typ reflect.Type, policy serialization.Namin
 		if field.Scalar == serialization.Binary {
 			return nil, refuse(graph, element, ErrInvalidGraph, "property %s of %s is binary, which a graph cannot store", field.Name, typ)
 		}
-		entry := property{name: field.Name, scalar: field.Scalar, list: list, schema: raw, nullable: field.Nullable}
+		entry := property{name: field.Name, scalar: field.Scalar, list: list, schema: raw}
 		if list {
 			entry.scalar = serialization.NotScalar
 		}
 		for _, directive := range strings.Split(field.Tag, ";") {
 			if strings.TrimSpace(directive) == "key" {
-				entry.keyed = true
 				result.keys = append(result.keys, field.Name)
 			}
 		}

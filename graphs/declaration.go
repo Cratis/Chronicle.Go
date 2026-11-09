@@ -16,6 +16,15 @@ type Event interface {
 	Descriptor() events.Descriptor
 }
 
+// structType is T, or the struct a pointer type T points to.
+func structType[T any]() reflect.Type {
+	typ := reflect.TypeFor[T]()
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	return typ
+}
+
 // Element is a node or an edge, accepted by New.
 type Element interface{ element() }
 
@@ -33,11 +42,11 @@ type Node struct {
 
 func (*Node) element() {}
 
-// NewNode declares T, a struct, as a node type. The label of the node is the name
+// NewNode declares T, a struct or a pointer to one, as a node type. The label of the node is the name
 // of T unless Labeled says otherwise. The key is the one field of T that carries
 // `chronicle:"key"`, unless IdentifiedBy names another one.
 func NewNode[T any]() *Node {
-	typ := reflect.TypeFor[T]()
+	typ := structType[T]()
 	return &Node{typ: typ, label: typ.Name()}
 }
 
@@ -107,7 +116,7 @@ func (*Edge) element() {}
 // otherwise. T holds the properties of the edge; the end nodes are not properties.
 // T can be an empty struct for an edge without properties.
 func NewEdge[T any](source, target *Node) *Edge {
-	typ := reflect.TypeFor[T]()
+	typ := structType[T]()
 	return &Edge{typ: typ, name: typ.Name(), source: source, target: target}
 }
 
