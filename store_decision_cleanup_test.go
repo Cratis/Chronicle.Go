@@ -110,7 +110,7 @@ func TestDecisionSessionCleanupDispatchesAfterCallerCancellationOrPublication(t 
 			client, ctx := supervisionClient(t, kernel, WithRegistry(registry), WithTokenSource(decisionTokenSource(func(context.Context) (Token, error) {
 				return Token{AccessToken: "fixture-auth"}, nil
 			})))
-			raw := &decisionSessionConn{decisionProfileConn: decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.148.0+projection-reducer-parity.993c3d2", protocol: "19.148.0+projection-reducer-parity.993c3d2"}}
+			raw := &decisionSessionConn{decisionProfileConn: decisionProfileConn{ClientConnInterface: client.config.borrowed, version: pinnedProtocol, protocol: pinnedProtocol}}
 			client.config.borrowed = raw
 			store, err := client.EventStore(ctx, "store", WithNamespace("tenant"))
 			if err != nil {

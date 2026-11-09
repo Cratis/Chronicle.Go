@@ -55,7 +55,7 @@ Hosted CI also runs the ordinary build, vet, and tests on macOS and Windows. Wor
 
 ## Contracts and kernel integration
 
-Contracts live in this module under public `contracts/` packages. `contracts-source.json` pins Chronicle 19.129.0 at an immutable commit, input hashes and generator versions. Install Buf 1.73.0; Python 3 and Go are the other prerequisites. Generation installs its pinned Go plugins into isolated staging, fetches canonical upstream inputs and promotes only generator-owned files:
+Contracts live in this module under public `contracts/` packages. `contracts-source.json` is the single contracts pin: a Chronicle version at an immutable commit, input hashes and generator versions. Install Buf 1.73.0; Python 3 and Go are the other prerequisites. Generation installs its pinned Go plugins into isolated staging, fetches canonical upstream inputs and promotes only generator-owned files:
 
 ```sh
 go generate ./...
