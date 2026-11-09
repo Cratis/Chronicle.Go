@@ -17,6 +17,7 @@ Chronicle.Go is a v0.x client for Chronicle, a component of Cratis Platform. You
 | --- | --- | --- |
 | Typed events, history and appends | **Available in source**: explicit registration, typed handles, single and atomic batch appends | Check transport errors and append outcomes. Lost acknowledgments can leave writes ambiguous; do not blindly retry. See [append outcomes](events/appending-events.md#inspect-both-errors-and-results). |
 | Reactors, reducers and projections | **Conditional/restricted**: event reactors, local/passive reducer folds, kernel materialization and bounded projection authoring | Handler effects can repeat after a retry: make them idempotent. Reducer body changes need an explicit `WithVersion`; no C# IL-hash equivalence is implied. Use the [reactor](#reactors-part-1), [reducer](#reducers) and projection profiles below, not a blanket parity claim. |
+| Graph projections | **Conditional/restricted**: declaration, validation and registration of nodes and edges; the kernel runs the observer and stores the graph | The client has no graph read API and no model-bound tag form; read the graph with the database tooling. Neo4j needs kernel-side configuration; the in-memory graph sink needs none. See [graph projections](projections/graphs.md) and the [parity map](#graph-projections) |
 | Read-model watches | **Conditional/restricted** for unclassified models; classified projection and local-reducer Watch are **unavailable/refused** | Watch readiness is not a current snapshot; interruptions are terminal. See [watch contracts and protection limits](#read-model-watches-and-reactions). Classified decision admission does not enable classified Watch. |
 | Decision reads and owned commits | **Conditional/restricted**: server version exactly `19.129.0` or `19.129.0-development`, **and** protocol exactly `19.129.0`, plus admitted projection shape and ownership | This is an exact allowlist, not a minimum version. Skipped compatibility cannot enable decisions. Guards are optimistic SDK evidence, not authenticated read proofs. See [decision prerequisites and limits](read-models/decision-reads.md). |
 | Normal-session recovery | **Available in source**: generation replacement and registration replay for normal logical sessions | Registration sent is not observer attachment or catch-up, and a generation can fail later. Recovery does not replay ambiguous appends. See [lifecycle and readiness](connection-strings/lifecycle.md). |
@@ -1090,6 +1091,38 @@ remain unchanged. Use [registered derived codecs](#registered-derived-codecs)
 for admitted unprotected families; those codecs do not implement derived-child
 lowering. Subscription provisioning is covered under
 [external integrations](#external-integrations).
+
+## Graph projections
+
+Authority: C# `Source/Clients/DotNET/Projections/Graphs/` (`GraphDefinitionBuilder`,
+`GraphSchemaWriter`, the node and edge builders and the validation exceptions),
+the Elixir client `lib/chronicle/graphs/`, the kernel contracts
+`Source/Kernel/Contracts/Projections/Graph*.cs` (`ProjectionDefinition.Graph`,
+proto member 22) and `Source/Kernel/Concepts/Graphs/GraphDefinition.cs`, which reads
+the `x-graph-*` schema annotations. Generated contracts were bumped to Chronicle
+19.129.0, the first release that carries the graph messages. Graph definitions are
+**hand-derived from the C# builders**, not captured from a .NET runtime.
+
+| C# surface | Go surface and status | Evidence and difference |
+| --- | --- | --- |
+| `[Node]`, `[Key]` | **Implemented**: `graphs.NewNode[T]()`; the key is the field tagged `chronicle:"key"`, or `IdentifiedBy`; the label is the type name, or `Labeled` | `TestOrganizationGraphWireDefinition`, `TestNodeCanBeIdentifiedWithoutATag`; `NodeMustHaveExactlyOneKey` is `ErrNodeKey` |
+| `[Edge]`, `[Source<T>]`, `[Target<T>]` | **Go-specific**: `graphs.NewEdge[T](source, target)` takes the end nodes as arguments, so the edge struct holds properties only. A struct field cannot name a Go type in a tag | `TestDeclarationsAreRefusedBeforeTheClientConnects`; `EdgeMustHaveOneSourceAndOneTarget` is `ErrEdgeEndpoints`, `EdgeCanHaveOnlyOneIdentifyingKey` is `ErrEdgeIdentity` |
+| `[FromEvent<T>]`, `[RemovedWith<T>]`, `Detach`, `[EdgeFrom<T>]`, `[EdgeRemovedWith<T>]` | **Implemented** as `From` and `RemovedWith` on nodes and edges, with `UsingKey`, `UsingSourceKey`, `UsingTargetKey`, `UsingIdentity`, `OnlyWhenExisting` and `Detach` | Wire golden in `TestOrganizationGraphWireDefinition`; an edge cannot detach by construction |
+| `SetFrom`, `SetFromContext`, `SetValue`, `AddFrom`, `SubtractFrom`, `Increment`, `Decrement`, `Count` | **Implemented**: `Set`, `SetFromContext`, `SetFromEventSourceID`, `SetValue`, `Add`, `Subtract`, `Increment`, `Decrement`, `Count`, `Clear` | `TestMappingsEncodeLikeTheOtherClients`. Go additionally checks the event property, the node property and their scalar representations, and refuses literals outside the kernel grammar |
+| Fluent `IGraphProjection` | **Go-specific**: the builder chain is the fluent form. There is **no model-bound tag form** for mappings, because Go tags cannot carry event types; mappings are options on `From` | Documented difference. Tag-level mapping remains unimplemented |
+| `NestedObjectInGraph` | **Implemented** as `ErrNestedObject`, also for lists of objects | `TestDeclarationsAreRefusedBeforeTheClientConnects` |
+| `UnknownGraphEventProperty` | **Implemented** as `ErrUnknownProperty`, reported with the located graph and element | `TestMappingsAreValidatedAgainstTheRegisteredTypes` |
+| `GraphElementCannotBeReadModel` | **Implemented** as `ErrElementIsReadModel`; a graph name that collides with a read model, projection, reactor or reducer is refused too | `TestGraphAdmissionFailsBeforeConnecting` |
+| `GraphHasConflictingSinks`, `[Sink]` name | **Not applicable / unavailable**: a graph names one sink, `UsingSink`, so conflicts cannot occur. The sink configuration name is not in the 19.129.0 contract | Neo4j and InMemoryGraph accepted; `WithDefaultGraphSinkType` is the client default, like `DefaultGraphSinkTypeId` |
+| `GraphSchemaWriter` | **Implemented**: the read-model schema carries `x-graph`, `x-graph-kind`, `x-graph-key`, `x-graph-source`, `x-graph-target` and `x-graph-identity`. Property types come from the Go serialization plan, so number formats can differ from the CLR ones the kernel ignores | `TestGraphSchemaAnnotations` |
+| Registration | **Implemented**: the graph is registered as a read model in the read-model stage and as a projection in the full-set projection request, after event types | `TestGraphIsRegisteredAsReadModelAndProjectionBesideOrdinaryOnes`, `TestGraphAloneIsRegisteredWithoutOrdinaryReadModels`, `TestGraphsPerStoreRegistryAreKeptApart` |
+| Runtime registration of a graph | **Not implemented**: `RegisterProjection` adds ordinary projections only, and a runtime addition sends no graph | Graphs are part of the startup registry, like other definition families |
+| Kernel observation | **Partial** backend qualification on `19.129.0-development` with the in-memory graph sink | `TestKernelGraphProjectionRegistersAndObservesEvents`: stored definitions carry the graph, and the observer handles every event without a failed partition. The stored graph is not read back, and Neo4j is not provisioned by this fixture |
+
+The [graph projection guide](projections/graphs.md) and its compiling example are
+tied together by `TestGraphProjectionSnippetsMatchCompiledExample`. The kernel
+reads a graph's events from its own event log; an event type declared with a source
+store is refused with `ErrUnsupported`.
 
 ## Reactors part 1
 
