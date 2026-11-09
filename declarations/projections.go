@@ -13,6 +13,10 @@ func projectionArgument(operation string, a Argument) bool {
 		return operation == "children" && a.Value.Kind == Name && Path(a.Value.Text)
 	case "key":
 		return (operation == "children" || operation == "remove" || operation == "remove-join" || operation == "increment" || operation == "decrement" || operation == "count") && keyExpression(a.Value)
+	case "prepend":
+		return operation == "children" && a.Value.Kind == Boolean
+	case "order-by", "order-by-descending":
+		return operation == "children" && a.Value.Kind == Name && Path(a.Value.Text)
 	case "parent-key":
 		return (operation == "children" || operation == "remove") && keyExpression(a.Value)
 	default:

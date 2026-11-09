@@ -99,6 +99,9 @@ func (c *compiler) addChildCreator(bc *boundChildContext, directive declarations
 	if err := bc.setIdentity(directive); err != nil {
 		return err
 	}
+	if err := bc.setOrdering(directive); err != nil {
+		return err
+	}
 	bc.creators = append(bc.creators, s)
 	return nil
 }

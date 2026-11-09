@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	contracts "github.com/cratis/chronicle.go/contracts/projections"
+	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -76,4 +77,35 @@ func (o *childOrdering) encode() *contracts.ChildrenOrderingDefinition {
 		return nil
 	}
 	return &contracts.ChildrenOrderingDefinition{Placement: o.placement, SortBy: o.sortBy, Direction: o.direction}
+}
+
+// setOrdering applies the prepend, order-by or order-by-descending argument of a
+// model-bound children directive. Several directives on one field must agree.
+func (bc *boundChildContext) setOrdering(directive declarations.Directive) error {
+	var ordering *childOrdering
+	for _, name := range []string{"prepend", "order-by", "order-by-descending"} {
+		a, ok := argument(directive, name)
+		if !ok || name == "prepend" && a.Text != "true" {
+			continue
+		}
+		if ordering != nil {
+			return invalid("children declare more than one ordering")
+		}
+		switch name {
+		case "prepend":
+			ordering = &childOrdering{placement: contracts.ChildrenPlacement_Prepend}
+		case "order-by":
+			ordering = &childOrdering{placement: contracts.ChildrenPlacement_Sorted, sortBy: a.Text, direction: contracts.SortDirection_Ascending}
+		default:
+			ordering = &childOrdering{placement: contracts.ChildrenPlacement_Sorted, sortBy: a.Text, direction: contracts.SortDirection_Descending}
+		}
+	}
+	if ordering == nil {
+		return nil
+	}
+	if bc.child.ordering != nil && *bc.child.ordering != *ordering {
+		return invalid("children disagree on ordering")
+	}
+	bc.child.ordering = ordering
+	return nil
 }
