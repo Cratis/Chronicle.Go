@@ -17,14 +17,14 @@ Requires Go **1.26 or later**. v0.x tags exist, including [v0.11.1](https://gith
 go get github.com/cratis/chronicle.go@latest
 ```
 
-Contracts are pinned to Chronicle **19.129.0**; real-kernel tests use **19.129.0-development**. The pin is not a supported kernel range: decision reads require this exact version (see the capability summary). Generated contracts are public packages in this same module, with no .NET or sibling checkout needed.
+Contracts are pinned to Chronicle **19.150.0**; real-kernel tests use **19.150.0-development**. The pin is not a supported kernel range: decision reads require this exact version (see the capability summary). Generated contracts are public packages in this same module, with no .NET or sibling checkout needed.
 
 ## Quick start
 
 Start the development kernel and wait for `https://localhost:35000/health` to report `Healthy`. Health establishes process health, not feature compatibility; read the [getting-started environment notes](https://github.com/Cratis/Chronicle.Go/blob/main/Documentation/clients/go/getting-started.md) before relying on a feature:
 
 ```sh
-docker run --rm --name chronicle-go -p 127.0.0.1:35000:35000 cratis/chronicle:19.129.0-development
+docker run --rm --name chronicle-go -p 127.0.0.1:35000:35000 cratis/chronicle:19.150.0-development
 ```
 
 ### Normal-client append example

@@ -6,8 +6,8 @@ description: Key read-model dictionary entries by event content, context or the 
 Chronicle can maintain a `map[string]V` property one entry at a time, keep the
 first value it saw for a property, and insert children at a chosen position. The
 kernel does this work during projection; your Go code only declares it. These
-operations need a Chronicle kernel that includes
-[Cratis/Chronicle#5775](https://github.com/Cratis/Chronicle/pull/5775).
+operations need Chronicle 19.150.0 or later
+([Cratis/Chronicle#5775](https://github.com/Cratis/Chronicle/pull/5775)).
 
 The examples use these events:
 
