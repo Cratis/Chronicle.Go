@@ -1,8 +1,7 @@
 {
   "repository": "Cratis/Chronicle",
-  "version": "19.148.0+projection-reducer-parity.993c3d2",
-  "commit": "993c3d2c1497b078bec2a7ed651be7665ce70bec",
-  "pinNote": "TEMPORARY: unreleased Chronicle commit (feature/projection-reducer-parity). Before release set version and commit to the Chronicle release containing it, then run scripts/generate-contracts.py.",
+  "version": "19.150.0",
+  "commit": "aa5f2be03b60d3e91918be25d58400bc23ee9bd9",
   "sourcePath": "Source/Kernel/Protobuf",
   "tools": {
     "buf": "1.73.0",
