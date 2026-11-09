@@ -1056,6 +1056,28 @@ have a snippet-equality test. The example explicitly maps fluent identity and
 checks that its only wire difference is the child's Inherit versus model-bound
 Enabled AutoMap default.
 
+## Projection dictionaries, set-once and child ordering
+
+References: Chronicle `993c3d2c1497b078bec2a7ed651be7665ce70bec`
+([Cratis/Chronicle#5775](https://github.com/Cratis/Chronicle/pull/5775), unreleased),
+`Source/Clients/DotNET/{WellKnownExpressions,Projections/ReadModelPropertiesBuilder,Projections/ChildrenBuilder,Projections/ModelBound/ChildrenFromAttribute,Projections/ModelBound/SetFromAttribute}.cs`
+and `Source/Kernel/Protobuf/projections.proto`. Expected strings are derived from
+the C# builders and the kernel generator specification
+`with_set_once_key_removal_and_ordered_children`, not captured from a .NET run.
+
+| C# surface | Go status | Evidence |
+| --- | --- | --- |
+| `Set/Add/Subtract/Increment/Decrement/Count(dictionary, event key)` (`$eventContent`) | **Implemented**: `Entry(field, KeyFromEvent(...))` with every write builder; key must be a scalar property of the projected event | `TestDictionaryEntriesEmitDynamicKeyPaths`, `TestDictionaryEntriesRejectInvalidTargetsAndKeys` |
+| Dictionary keys from `EventContext` (`$eventContext`) | **Implemented**: `KeyFromContext(path)`, also in Every/All | `TestDictionaryEntriesWithDifferentKeySourcesCoexist`, `TestEveryAndAllSupportSetOnceCausedByAndContextKeyedEntries` |
+| `$causedBy` keys and values | **Go addition over C# builders** (kernel-supported): `KeyFromCausedBy`, `CausedBy`, `CausedByOnce`, `EveryCausedBy` | Same tests |
+| `RemoveKey(dictionary, key)` (`$remove`) | **Implemented**: `RemoveKey(from, Entry(...))`; non-entry targets fail | `TestDictionaryEntriesEmitDynamicKeyPaths` |
+| `SetOnce(...)` on From/Join, FromEvery/FromAll; `[SetFrom(SetOnce)]`, `[SetFromContext(SetOnce)]` | **Implemented**: `MapOnce`, `MapAsOnce`, `ContextOnce`, `EventSourceIDOnce`, `ValueOnce`, `EveryMapOnce`, `EveryContextOnce`; tags `once=true` on `set`, `context` and `value`; null rejected | `TestSetOnceWrapsEveryEventValueProvider`, `TestModelBoundSetOnceAndChildrenOrdering` |
+| `Prepend()`, `OrderBy`, `OrderByDescending`; `[ChildrenFrom(Prepend/OrderBy/OrderByDescending)]` | **Implemented**: `Prepend()`, `OrderBy`, `OrderByDescending` child options; tags `prepend=true`, `order-by=`, `order-by-descending=`; a second or disagreeing ordering fails | `TestChildrenOrderingEncodesPlacementAndSort`, `TestChildrenOrderingRejectsInvalidDeclarations`, `TestModelBoundOrderingAndOnceRejectInvalidDeclarations` |
+| Model-bound dictionary keys | **Not applicable**: C# has no attribute for them; Go keeps them fluent-only | — |
+
+Rebinding to another naming policy renames dictionary, event-content key and sort
+paths (`TestRebindRenamesDictionaryKeysAndSortProperties`).
+
 ## Projections part 3
 
 References: Chronicle `2e31b0dfba489159b3db323238f16d0f277056b4`,

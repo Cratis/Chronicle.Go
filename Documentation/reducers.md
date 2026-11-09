@@ -5,7 +5,8 @@ description: Write reducers as plain callbacks or discovered methods, work with 
 
 Use a reducer when the next state needs control flow that neither model-bound nor
 fluent projections can express. For field mappings, counters and collection
-updates, start with a projection. This reducer API supports active
+updates, start with a projection; [projection or reducer?](projections/dictionaries-and-ordering.md#projection-or-reducer)
+compares them. This reducer API supports active
 materialization and passive reads; [the parity map](parity.md#reducers) lists the
 remaining boundaries.
 

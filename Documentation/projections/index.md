@@ -13,6 +13,8 @@ mutually exclusive lifecycle shapes, shared handlers, recursive children and
 ad-hoc projection queries. See [initial values and labels](defaults.md) for
 initial model state and artifact metadata. See [graph projections](graphs.md) to
 project events into nodes and edges instead of a read-model document.
+See [dictionaries, set-once and child ordering](dictionaries-and-ordering.md) to
+maintain keyed map entries, keep first values and insert children in order.
 
 ## Model-bound declarations
 
