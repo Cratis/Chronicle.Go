@@ -8,6 +8,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -29,6 +30,8 @@ type Artifacts struct {
 	Reducers []*reducers.Plan
 	// Constraints contains the naming-bound append constraints.
 	Constraints []constraints.Definition
+	// Graphs contains the compiled graph projection definitions.
+	Graphs []graphs.Definition
 }
 
 // Artifacts returns the same frozen plans used by runtime registration and
@@ -46,7 +49,7 @@ func (c *Client) Artifacts(store StoreName) (Artifacts, error) {
 	}
 	reactorPlans := snapshot.reactors
 	reducerPlans := snapshot.reducers
-	return Artifacts{snapshot.events, snapshot.models, slices.Clone(snapshot.projections), slices.Clone(reactorPlans), slices.Clone(reducerPlans), slices.Clone(snapshot.constraints)}, nil
+	return Artifacts{snapshot.events, snapshot.models, slices.Clone(snapshot.projections), slices.Clone(reactorPlans), slices.Clone(reducerPlans), slices.Clone(snapshot.constraints), slices.Clone(snapshot.graphs)}, nil
 }
 
 // WithProjection returns a detached registry with a replacement producer for the
@@ -73,8 +76,8 @@ func (r *Registry) WithProjection(declaration projections.Declaration) (*Registr
 		constraintFactories: slices.Clone(r.constraintFactories), migrationFactories: slices.Clone(r.migrationFactories),
 		descriptors: slices.Clone(r.descriptors), constraints: slices.Clone(r.constraints), readModels: slices.Clone(r.readModels),
 		constraintCompositions: slices.Clone(r.constraintCompositions), migrations: slices.Clone(r.migrations), seeders: slices.Clone(r.seeders),
-		readModelReactors: slices.Clone(r.readModelReactors),
-		reactors:          slices.Clone(r.reactors), reactorMiddlewares: slices.Clone(r.reactorMiddlewares), reactorSideEffects: slices.Clone(r.reactorSideEffects),
+		readModelReactors: slices.Clone(r.readModelReactors), graphs: slices.Clone(r.graphs),
+		reactors: slices.Clone(r.reactors), reactorMiddlewares: slices.Clone(r.reactorMiddlewares), reactorSideEffects: slices.Clone(r.reactorSideEffects),
 	}
 	for _, existing := range r.projections {
 		if existing.Model().GoType() != declaration.Model().GoType() {

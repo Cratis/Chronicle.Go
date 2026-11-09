@@ -8,6 +8,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -17,6 +18,9 @@ import (
 type registrySchemas struct {
 	events *events.Catalog
 	models *readmodels.Catalog
+	// policy and graphSink are what graph definitions compile against.
+	policy    serialization.NamingPolicy
+	graphSink graphs.SinkType
 }
 
 // registryAuthoringOutput retains original descriptor identities and finalized
@@ -50,6 +54,7 @@ func (output *registryPreparationOutput) compose() registrySnapshot {
 	snapshot := output.frozen
 	snapshot.constraints = slices.Clone(snapshot.constraints)
 	snapshot.projections = slices.Clone(snapshot.projections)
+	snapshot.graphs = slices.Clone(snapshot.graphs)
 	snapshot.reactors = slices.Clone(snapshot.reactors)
 	snapshot.reducers = slices.Clone(snapshot.reducers)
 	snapshot.readModelReactors = slices.Clone(snapshot.readModelReactors)
@@ -113,6 +118,7 @@ func prepareRegistrySchemas(captured *registryDeclarations, policy serialization
 }
 
 func prepareRegistrySchemasWithSink(captured *registryDeclarations, policy serialization.NamingPolicy, sink readmodels.SinkType) (schemas registrySchemas, err error) {
+	schemas.policy, schemas.graphSink = policy, graphs.Neo4j
 	err = artifacts.Protect("registry", "schemas", func() error {
 		eventTypes := make([]events.Descriptor, len(captured.descriptors))
 		for i, event := range captured.descriptors {

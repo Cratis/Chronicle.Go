@@ -13,6 +13,7 @@ import (
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -26,7 +27,7 @@ func TestCaptureRegistryClonesEveryDeclarationCollectionWithoutCallbacks(t *test
 		projectionFactories: []projectionFactoryDeclaration{{}}, constraintFactories: []constraintFactoryDeclaration{{}}, migrationFactories: []migrationFactoryDeclaration{{}},
 		descriptors: []events.Descriptor{{}}, migrations: []events.MigrationDeclaration{{}},
 		constraints: []constraints.Definition{{}}, constraintCompositions: []constraintComposition{{configure: func(*constraints.Builder) { t.Fatal("capture invoked composition") }}},
-		readModels: []readmodels.Descriptor{{}}, projections: []projections.Declaration{{}},
+		readModels: []readmodels.Descriptor{{}}, projections: []projections.Declaration{{}}, graphs: []graphs.Declaration{{}},
 		reactors: []reactorDeclaration{{}}, readModelReactors: []reactors.ReadModelDeclaration{{}},
 		reducers: []reducers.Declaration{{}}, seeders: []seederDeclaration{{instance: seeding.Func(func(*seeding.Builder) error { t.Fatal("capture invoked seeder"); return nil })}},
 		reactorMiddlewares: []any{"middleware"}, reactorSideEffects: []reactorSideEffectHandler{nil},
