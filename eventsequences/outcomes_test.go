@@ -22,7 +22,10 @@ func TestAppendFailureDispositionAndErrorIdentity(t *testing.T) {
 				constraints bool
 				concurrency bool
 				diagnostics []string
+				refused     bool
 			}{
+				{name: "index rebuilding", diagnostics: []string{"ConstraintIndexUnavailable"}, refused: true},
+				{name: "index rebuilding with another code", diagnostics: []string{"ConstraintIndexUnavailable", "FutureCode"}},
 				{name: "errors only", diagnostics: []string{"commit acknowledgment lost", "FutureCode"}},
 				{name: "constraints", constraints: true},
 				{name: "constraints with errors", constraints: true, diagnostics: []string{"FutureCode"}},
@@ -72,7 +75,7 @@ func TestAppendFailureDispositionAndErrorIdentity(t *testing.T) {
 						}
 					}
 					want := eventsequences.Unknown
-					if test.constraints || test.concurrency {
+					if test.constraints || test.concurrency || test.refused {
 						want = eventsequences.Rejected
 					}
 					if disposition != want || calls.Load() != 1 || (operationErr != nil) != (want == eventsequences.Unknown) {

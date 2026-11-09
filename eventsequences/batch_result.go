@@ -69,7 +69,7 @@ func (s *Sequence) batchResult(response *sequences.AppendManyResponse, refs []ev
 	for _, err := range response.Errors {
 		result.Errors = append(result.Errors, AppendError(err))
 	}
-	if constraintsPresent || concurrencyPresent {
+	if constraintsPresent || concurrencyPresent || (!response.IsSuccess && refusedWithoutStoring(result.Errors)) {
 		result.Disposition = Rejected
 	}
 	if !response.IsSuccess {
