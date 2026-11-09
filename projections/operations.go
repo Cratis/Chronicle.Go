@@ -74,11 +74,16 @@ func global[M any](b *Builder[M], all bool, define func(*EveryBuilder[M])) {
 // EveryMap maps an exact serialized payload path. Events lacking that property
 // retain the kernel's missing-value behavior; no new event type is subscribed.
 func EveryMap[M, V any](b *EveryBuilder[M], target Field[M, V], source string) {
-	b.writes = append(b.writes, write{path: target.path, targetType: reflect.TypeFor[V](), expression: expression{kind: pathExpression, text: source}, provenance: Provenance{FrontEnd: "fluent", Path: target.path, Directive: "every", Offset: -1}})
+	b.add(target.path, reflect.TypeFor[V](), expression{kind: pathExpression, text: source})
 }
 
 // EveryContext maps an admitted kernel EventContext property for Every or All.
 // Whole Tags supports string slices; correlation keys remain scalar-only.
 func EveryContext[M, V any](b *EveryBuilder[M], target Field[M, V], path string) {
-	b.writes = append(b.writes, write{path: target.path, targetType: reflect.TypeFor[V](), expression: expression{kind: contextExpression, text: path}, provenance: Provenance{FrontEnd: "fluent", Path: target.path, Directive: "every", Offset: -1}})
+	b.add(target.path, reflect.TypeFor[V](), expression{kind: contextExpression, text: path})
+}
+
+func (b *EveryBuilder[M]) add(path string, target reflect.Type, expression expression) {
+	field, entry := splitEntry(path)
+	b.writes = append(b.writes, write{path: field, entry: entry, targetType: target, expression: expression, provenance: Provenance{FrontEnd: "fluent", Path: path, Directive: "every", Offset: -1}})
 }
