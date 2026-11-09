@@ -143,7 +143,7 @@ func TestDecisionCodecsRunAfterCleanupWithoutCountingShutdownWork(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
-			raw := &decisionCodecConn{ClientConnInterface: &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.129.0", protocol: "19.129.0"}, document: `{"id":"source","name":` + string(value) + `}`}
+			raw := &decisionCodecConn{ClientConnInterface: &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.148.0+projection-reducer-parity.993c3d2", protocol: "19.148.0+projection-reducer-parity.993c3d2"}, document: `{"id":"source","name":` + string(value) + `}`}
 			client.config.borrowed = raw
 			store, err := client.EventStore(ctx, "store")
 			if err != nil {
