@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/internal/clientoptions"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/internal/outgoing"
@@ -68,6 +69,7 @@ type clientConfig struct {
 	rootCausation                                   *metadata.RootCausation
 	naming                                          serialization.NamingPolicy
 	defaultSinkType                                 readmodels.SinkType
+	defaultGraphSinkType                            graphs.SinkType
 	registry                                        *Registry
 	stores                                          map[StoreName]*Registry
 	reactorServices                                 reactorScopeFactory

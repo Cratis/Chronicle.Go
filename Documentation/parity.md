@@ -17,14 +17,15 @@ Chronicle.Go is a v0.x client for Chronicle, a component of Cratis Platform. You
 | --- | --- | --- |
 | Typed events, history and appends | **Available in source**: explicit registration, typed handles, single and atomic batch appends | Check transport errors and append outcomes. Lost acknowledgments can leave writes ambiguous; do not blindly retry. See [append outcomes](events/appending-events.md#inspect-both-errors-and-results). |
 | Reactors, reducers and projections | **Conditional/restricted**: event reactors, local/passive reducer folds, kernel materialization and bounded projection authoring | Handler effects can repeat after a retry: make them idempotent. Reducer body changes need an explicit `WithVersion`; no C# IL-hash equivalence is implied. Use the [reactor](#reactors-part-1), [reducer](#reducers) and projection profiles below, not a blanket parity claim. |
+| Graph projections | **Conditional/restricted**: declaration, validation and registration of nodes and edges; the kernel runs the observer and stores the graph | The client has no graph read API and no model-bound tag form; read the graph with the database tooling. Neo4j needs kernel-side configuration; the in-memory graph sink needs none. See [graph projections](projections/graphs.md) and the [parity map](#graph-projections) |
 | Read-model watches | **Conditional/restricted** for unclassified models; classified projection and local-reducer Watch are **unavailable/refused** | Watch readiness is not a current snapshot; interruptions are terminal. See [watch contracts and protection limits](#read-model-watches-and-reactions). Classified decision admission does not enable classified Watch. |
-| Decision reads and owned commits | **Conditional/restricted**: server version exactly `19.125.2` or `19.125.2-development`, **and** protocol exactly `19.125.2`, plus admitted projection shape and ownership | This is an exact allowlist, not a minimum version. Skipped compatibility cannot enable decisions. Guards are optimistic SDK evidence, not authenticated read proofs. See [decision prerequisites and limits](read-models/decision-reads.md). |
+| Decision reads and owned commits | **Conditional/restricted**: server version exactly `19.129.0` or `19.129.0-development`, **and** protocol exactly `19.129.0`, plus admitted projection shape and ownership | This is an exact allowlist, not a minimum version. Skipped compatibility cannot enable decisions. Guards are optimistic SDK evidence, not authenticated read proofs. See [decision prerequisites and limits](read-models/decision-reads.md). |
 | Normal-session recovery | **Available in source**: generation replacement and registration replay for normal logical sessions | Registration sent is not observer attachment or catch-up, and a generation can fail later. Recovery does not replay ambiguous appends. See [lifecycle and readiness](connection-strings/lifecycle.md). |
 | Short-lived clients without a logical session | **Conditional/restricted**: `WithSkipKeepAlive` omits the application session, heartbeat and watchdog | Configured reactors, all reducers including passive reducers, read-model reactors and explicit keepalive timeout are refused. Transport reconnection alone does not guarantee registration replay. See [one-shot and process ownership](connection-strings/lifecycle.md#short-lived-clients-and-process-ownership). |
 | Protected data and event evolution | **Conditional/restricted** to the documented route and generation profiles | Classified Watch, protected child shapes and other-generation protected reads must not inherit support from an unrelated successful route. In particular, the protected-generation profile still records a missing SDK guard under #90. See [compliance](#compliance-and-confidentiality) and [event evolution](#event-evolution). |
 | Sequence numbers | **Available in source**: unsigned values, reserved sentinels and checked pure arithmetic | Sentinels are not actual positions; retain range checks instead of narrowing values to signed integers. See the sequence-number row in [baselines and evidence](#baselines-and-evidence). |
 
-Generated contracts come from Chronicle **19.125.2**, and real-kernel tests run against **19.125.2-development**. That pin is not a supported kernel range. To start a kernel, see [getting started](clients/go/getting-started.md). The normal-client example there is not a runnable `WithSkipKeepAlive` example.
+Generated contracts come from Chronicle **19.129.0**, and real-kernel tests run against **19.129.0-development**. That pin is not a supported kernel range. To start a kernel, see [getting started](clients/go/getting-started.md). The normal-client example there is not a runnable `WithSkipKeepAlive` example.
 
 ## Identity display-name observation
 
@@ -138,7 +139,7 @@ interceptors, retries or stronger write-outcome guarantees are added. The pinned
 
 ## Baselines and evidence
 
-C# reference: `Cratis/Chronicle` revision `2e31b0dfba489159b3db323238f16d0f277056b4`, paths below relative to `Source/Clients/`. Generated contracts independently pin Chronicle **19.125.2**, commit `79d0f673200f02582436221144b9d1224179fef3`. They include generated `contracts/alerts` and `contracts/eventsources` packages and `EventSource` fields on append requests and event contexts; the SDK has no public surface for alerts or event-source registration yet and leaves `EventSource` unset. Real-kernel tests run against **19.125.2-development**, including test-owned TLS/TCP connection interruption and recovery against a running kernel. Whole-kernel restart and a real multi-node deployment remain unverified. SDK release numbers are independent of protocol versions.
+C# reference: `Cratis/Chronicle` revision `2e31b0dfba489159b3db323238f16d0f277056b4`, paths below relative to `Source/Clients/`. Generated contracts independently pin Chronicle **19.129.0**, commit `79d0f673200f02582436221144b9d1224179fef3`. They include generated `contracts/alerts` and `contracts/eventsources` packages and `EventSource` fields on append requests and event contexts; the SDK has no public surface for alerts or event-source registration yet and leaves `EventSource` unset. Real-kernel tests run against **19.129.0-development**, including test-owned TLS/TCP connection interruption and recovery against a running kernel. Whole-kernel restart and a real multi-node deployment remain unverified. SDK release numbers are independent of protocol versions.
 
 Registration, namespace, serialization and concurrency corrections follow **v19.29.4** (`ae5e00a8`): `Source/Clients/DotNET/Events/EventTypes.cs`, `Source/Clients/DotNET/EventStoreNamespaceName.cs`, `Source/Infrastructure/Schemas/{TypeFormats,JsonSchemaExtensions}.cs`, `Source/Infrastructure/Json/ExpandoObjectConverter.cs`, `Source/Kernel/Storage.MongoDB/ExpandoObjectConverter.cs`, and `Source/Kernel/Core/{EventTypes/EventTypeRegistrar,EventSequences/Concurrency/ConcurrencyValidator}.cs` (repository-root paths).
 
@@ -435,7 +436,7 @@ server encryption certificate; ordinary Go tests remain container-free.
 
 This section records feature-specific admission and historical fix profiles, not a whole-client minimum kernel version.
 
-Decision reads require server version exactly `19.125.2` or `19.125.2-development` and protocol exactly `19.125.2`, after successful compatibility preflight. `WithSkipCompatibilityCheck` leaves them disabled. This gate is separate from the historical per-route fix profiles below; neither is a whole-client support matrix.
+Decision reads require server version exactly `19.129.0` or `19.129.0-development` and protocol exactly `19.129.0`, after successful compatibility preflight. `WithSkipCompatibilityCheck` leaves them disabled. This gate is separate from the historical per-route fix profiles below; neither is a whole-client support matrix.
 
 Historical Chronicle 19.32.0 through 19.32.3 share wire contracts, so compatibility alone
 does not show which kernel fixes are present. The client records them from the
@@ -474,7 +475,7 @@ kernel; call it again (`TestProtectedReviseOnIncapableKernelRefusesBeforeProvide
 | Revising an event with a protected replacement | 19.32.2 | [Chronicle#4525](https://github.com/Cratis/Chronicle/issues/4525) |
 | Classified models on projection replay, history, hydration sessions and immediate reads | 19.32.2 | [Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561) |
 | Registering protection beneath maps or on list- or map-valued array elements | 19.32.2 | [Chronicle#4551](https://github.com/Cratis/Chronicle/issues/4551), [Chronicle#4552](https://github.com/Cratis/Chronicle/issues/4552) |
-| Decision reads (admitted models only) | Server exactly 19.125.2 or 19.125.2-development AND protocol exactly 19.125.2 | Current enforced admission; see [decision prerequisites](read-models/decision-reads.md) |
+| Decision reads (admitted models only) | Server exactly 19.129.0 or 19.129.0-development AND protocol exactly 19.129.0 | Current enforced admission; see [decision prerequisites](read-models/decision-reads.md) |
 
 ## Definition factories
 
@@ -1091,6 +1092,38 @@ for admitted unprotected families; those codecs do not implement derived-child
 lowering. Subscription provisioning is covered under
 [external integrations](#external-integrations).
 
+## Graph projections
+
+Authority: C# `Source/Clients/DotNET/Projections/Graphs/` (`GraphDefinitionBuilder`,
+`GraphSchemaWriter`, the node and edge builders and the validation exceptions),
+the Elixir client `lib/chronicle/graphs/`, the kernel contracts
+`Source/Kernel/Contracts/Projections/Graph*.cs` (`ProjectionDefinition.Graph`,
+proto member 22) and `Source/Kernel/Concepts/Graphs/GraphDefinition.cs`, which reads
+the `x-graph-*` schema annotations. Generated contracts were bumped to Chronicle
+19.129.0, the first release that carries the graph messages. Graph definitions are
+**hand-derived from the C# builders**, not captured from a .NET runtime.
+
+| C# surface | Go surface and status | Evidence and difference |
+| --- | --- | --- |
+| `[Node]`, `[Key]` | **Implemented**: `graphs.NewNode[T]()`; the key is the field tagged `chronicle:"key"`, or `IdentifiedBy`; the label is the type name, or `Labeled` | `TestOrganizationGraphWireDefinition`, `TestNodeCanBeIdentifiedWithoutATag`; `NodeMustHaveExactlyOneKey` is `ErrNodeKey` |
+| `[Edge]`, `[Source<T>]`, `[Target<T>]` | **Go-specific**: `graphs.NewEdge[T](source, target)` takes the end nodes as arguments, so the edge struct holds properties only. A struct field cannot name a Go type in a tag | `TestDeclarationsAreRefusedBeforeTheClientConnects`; `EdgeMustHaveOneSourceAndOneTarget` is `ErrEdgeEndpoints`, `EdgeCanHaveOnlyOneIdentifyingKey` is `ErrEdgeIdentity` |
+| `[FromEvent<T>]`, `[RemovedWith<T>]`, `Detach`, `[EdgeFrom<T>]`, `[EdgeRemovedWith<T>]` | **Implemented** as `From` and `RemovedWith` on nodes and edges, with `UsingKey`, `UsingSourceKey`, `UsingTargetKey`, `UsingIdentity`, `OnlyWhenExisting` and `Detach` | Wire golden in `TestOrganizationGraphWireDefinition`; an edge cannot detach by construction |
+| `SetFrom`, `SetFromContext`, `SetValue`, `AddFrom`, `SubtractFrom`, `Increment`, `Decrement`, `Count` | **Implemented**: `Set`, `SetFromContext`, `SetFromEventSourceID`, `SetValue`, `Add`, `Subtract`, `Increment`, `Decrement`, `Count`, `Clear` | `TestMappingsEncodeLikeTheOtherClients`. Go additionally checks the event property, the node property and their scalar representations, and refuses literals outside the kernel grammar |
+| Fluent `IGraphProjection` | **Go-specific**: the builder chain is the fluent form. There is **no model-bound tag form** for mappings, because Go tags cannot carry event types; mappings are options on `From` | Documented difference. Tag-level mapping remains unimplemented |
+| `NestedObjectInGraph` | **Implemented** as `ErrNestedObject`, also for lists of objects | `TestDeclarationsAreRefusedBeforeTheClientConnects` |
+| `UnknownGraphEventProperty` | **Implemented** as `ErrUnknownProperty`, reported with the located graph and element | `TestMappingsAreValidatedAgainstTheRegisteredTypes` |
+| `GraphElementCannotBeReadModel` | **Implemented** as `ErrElementIsReadModel`; a graph name that collides with a read model, projection, reactor or reducer is refused too | `TestGraphAdmissionFailsBeforeConnecting` |
+| `GraphHasConflictingSinks`, `[Sink]` name | **Not applicable / unavailable**: a graph names one sink, `UsingSink`, so conflicts cannot occur. The sink configuration name is not in the 19.129.0 contract | Neo4j and InMemoryGraph accepted; `WithDefaultGraphSinkType` is the client default, like `DefaultGraphSinkTypeId` |
+| `GraphSchemaWriter` | **Implemented**: the read-model schema carries `x-graph`, `x-graph-kind`, `x-graph-key`, `x-graph-source`, `x-graph-target` and `x-graph-identity`. Property types come from the Go serialization plan, so number formats can differ from the CLR ones the kernel ignores | `TestGraphSchemaAnnotations` |
+| Registration | **Implemented**: the graph is registered as a read model in the read-model stage and as a projection in the full-set projection request, after event types | `TestGraphIsRegisteredAsReadModelAndProjectionBesideOrdinaryOnes`, `TestGraphAloneIsRegisteredWithoutOrdinaryReadModels`, `TestGraphsPerStoreRegistryAreKeptApart` |
+| Runtime registration of a graph | **Not implemented**: `RegisterProjection` adds ordinary projections only, and a runtime addition sends no graph | Graphs are part of the startup registry, like other definition families |
+| Kernel observation | **Partial** backend qualification on `19.129.0-development` with the in-memory graph sink | `TestKernelGraphProjectionRegistersAndObservesEvents`: stored definitions carry the graph, and the observer handles every event without a failed partition. The stored graph is not read back, and Neo4j is not provisioned by this fixture |
+
+The [graph projection guide](projections/graphs.md) and its compiling example are
+tied together by `TestGraphProjectionSnippetsMatchCompiledExample`. The kernel
+reads a graph's events from its own event log; an event type declared with a source
+store is refused with `ErrUnsupported`.
+
 ## Reactors part 1
 
 References in this section use C# `2e31b0dfba489159b3db323238f16d0f277056b4`, relative to `Source/Clients/DotNET` unless marked kernel. Scope agreements follow Fundamentals.Go#9; the optional adapter pins Fundamentals.Go `0fd6b51d12e47b1ecd1d7c9b5524d0350d01c216`. The [reactor guide](reactors.md) leads with plain closures, then convention discovery and optional services.
@@ -1231,7 +1264,7 @@ drives the production observer runtime with protocol messages, not a kernel.
 
 References below are `Source/Clients/Testing/` and `Testing.Specs/` at Chronicle
 `2e31b0dfba489159b3db323238f16d0f277056b4`. Kernel sibling cases use
-`cratis/chronicle:19.125.2-development`. The Go fixture package is
+`cratis/chronicle:19.129.0-development`. The Go fixture package is
 [`chronicletest`](testing-with-scenarios.md); these rows do not claim that a Go
 substitute executes C# kernel code. Root admission remains explicit; all registered
 conventions use the production compilation pipeline.

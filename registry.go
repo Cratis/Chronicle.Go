@@ -10,6 +10,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -30,6 +31,7 @@ type Registry struct {
 	constraintCompositions []constraintComposition
 	readModels             []readmodels.Descriptor
 	projections            []projections.Declaration
+	graphs                 []graphs.Declaration
 	reactors               []reactorDeclaration
 	readModelReactors      []reactors.ReadModelDeclaration
 	reducers               []reducers.Declaration
@@ -51,6 +53,7 @@ type registryDeclarations struct {
 	constraintCompositions []constraintComposition
 	readModels             []readmodels.Descriptor
 	projections            []projections.Declaration
+	graphs                 []graphs.Declaration
 	reactors               []reactorDeclaration
 	readModelReactors      []reactors.ReadModelDeclaration
 	reducers               []reducers.Declaration
@@ -69,7 +72,7 @@ func captureRegistry(registry *Registry) *registryDeclarations {
 		projectionFactories: slices.Clone(registry.projectionFactories), constraintFactories: slices.Clone(registry.constraintFactories), migrationFactories: slices.Clone(registry.migrationFactories),
 		descriptors: slices.Clone(registry.descriptors), migrations: slices.Clone(registry.migrations),
 		constraints: slices.Clone(registry.constraints), constraintCompositions: slices.Clone(registry.constraintCompositions),
-		readModels: slices.Clone(registry.readModels), projections: slices.Clone(registry.projections),
+		readModels: slices.Clone(registry.readModels), projections: slices.Clone(registry.projections), graphs: slices.Clone(registry.graphs),
 		reactors: slices.Clone(registry.reactors), readModelReactors: slices.Clone(registry.readModelReactors),
 		reducers: slices.Clone(registry.reducers), seeders: slices.Clone(registry.seeders),
 		reactorMiddlewares: slices.Clone(registry.reactorMiddlewares), reactorSideEffects: slices.Clone(registry.reactorSideEffects),

@@ -187,7 +187,7 @@ empty acknowledgement messages cannot establish more than their wire contract:
 for example a default removal outcome represents `Removed`, and an empty partition
 replay acknowledgement carries no completion evidence.
 
-The pinned 19.125.2-development kernel supports the replay/job, failure-diagnostic
+The pinned 19.129.0-development kernel supports the replay/job, failure-diagnostic
 and blocked-versus-completed processing workflows above. Replay jobs can disappear
 before a terminal snapshot is read. Observed against 19.32.3-development: kernel 19.32.3 fixes the
 [reducer recovery](https://github.com/Cratis/Chronicle/issues/4540) and

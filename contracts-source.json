@@ -1,7 +1,7 @@
 {
   "repository": "Cratis/Chronicle",
-  "version": "19.125.2",
-  "commit": "79d0f673200f02582436221144b9d1224179fef3",
+  "version": "19.129.0",
+  "commit": "e9b84622a51d37d62bcc46e0ee35133bcaf91d43",
   "sourcePath": "Source/Kernel/Protobuf",
   "tools": {
     "buf": "1.73.0",
@@ -20,7 +20,7 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/captures"
     },
     "chronicle.desc": {
-      "sha256": "6517c50efbe2dc7b0d7e1aed9039be1cbc6249d666d5478976d36f32635b000e"
+      "sha256": "33f27efb4c854af814c2886365dd50d5f0a15829858ee914a2161a660be8cdda"
     },
     "clients.proto": {
       "sha256": "8a6fa07a9b7f7ff38bd5c9cce541f794499b50d59f73bd1b057209db8b5ecb25",
@@ -123,7 +123,7 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/projectioneditor"
     },
     "projections.proto": {
-      "sha256": "2c5bc948bd847de4ef6d8148ad61031ce8b08c09eda4c6a08ce0b59186accc7a",
+      "sha256": "205c47186ea7122e40b77acdae9b1151f9ceeef7632b9e6dbeae5f18e3f6a7fe",
       "package": "Cratis.Chronicle.Contracts.Projections",
       "goPackage": "github.com/cratis/chronicle.go/contracts/projections"
     },

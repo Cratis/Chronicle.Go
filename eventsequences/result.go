@@ -8,6 +8,7 @@ package eventsequences
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
@@ -31,6 +32,19 @@ const (
 
 // AppendError preserves a kernel error code verbatim, including future codes.
 type AppendError string
+
+// ConstraintIndexUnavailable means the kernel refused the append because a unique
+// constraint index that governs it is rebuilding. Nothing was stored, so the
+// result is Rejected, and retrying the unchanged append after a delay is safe.
+// Kernels from 19.126 refuse governed appends for the whole rebuild.
+const ConstraintIndexUnavailable AppendError = "ConstraintIndexUnavailable"
+
+// refusedWithoutStoring reports whether every error code is one the kernel
+// documents as a refusal that stored nothing. Any other code, including a future
+// one, leaves the outcome unknown.
+func refusedWithoutStoring(errs []AppendError) bool {
+	return len(errs) > 0 && !slices.ContainsFunc(errs, func(err AppendError) bool { return err != ConstraintIndexUnavailable })
+}
 
 func (e AppendError) Error() string { return string(e) }
 

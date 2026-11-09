@@ -11,7 +11,8 @@ joins, nested objects and removals. See [orders with children and joins](orders.
 for their model-bound and fluent equivalents. See [variants](variants.md) for
 mutually exclusive lifecycle shapes, shared handlers, recursive children and
 ad-hoc projection queries. See [initial values and labels](defaults.md) for
-initial model state and artifact metadata.
+initial model state and artifact metadata. See [graph projections](graphs.md) to
+project events into nodes and edges instead of a read-model document.
 
 ## Model-bound declarations
 

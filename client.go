@@ -12,6 +12,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -59,6 +60,8 @@ type Client struct {
 	readModelCatalogs map[StoreName]*readmodels.Catalog
 	projections       []projections.Definition
 	storeProjections  map[StoreName][]projections.Definition
+	graphs            []graphs.Definition
+	storeGraphs       map[StoreName][]graphs.Definition
 	reactors          reactorCatalogs
 	reducers          reducerCatalogs
 	seeds             seeding.Definition
