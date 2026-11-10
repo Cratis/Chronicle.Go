@@ -153,13 +153,16 @@ func compileOrdinary(declaration Declaration, catalog *events.Catalog) (Definiti
 }
 
 func addWrite(d *definition, from *fromDefinition, w write, modelFields, eventFields []serialization.Field, overwrite bool) error {
-	target, ok := binaryMappingField(modelFields, w.path)
-	if !ok {
-		return declarationFailure(d.id, w.provenance, invalid("unknown serialized model property"))
+	target, err := resolveWriteTarget(modelFields, w, eventFields, false)
+	if err != nil {
+		return declarationFailure(d.id, w.provenance, err)
 	}
 	w.provenance.GoField = target.GoField
 	if err := validateTarget(target, w.targetType); err != nil {
 		return declarationFailure(d.id, w.provenance, err)
+	}
+	if w.expression.kind == removeExpression {
+		return mergeWrite(d, &from.writes, w, overwrite)
 	}
 	if err := validateExpression(w.expression, target, modelFields, eventFields, w.sourceType); err != nil {
 		return declarationFailure(d.id, w.provenance, err)
@@ -169,7 +172,7 @@ func addWrite(d *definition, from *fromDefinition, w write, modelFields, eventFi
 
 func mergeWrite(d *definition, writes *[]write, w write, overwrite bool) error {
 	for i, previous := range *writes {
-		if previous.path != w.path {
+		if previous.path != w.path || previous.entry != w.entry {
 			continue
 		}
 		if !overwrite {

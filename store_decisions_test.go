@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/cratis/chronicle.go/contracts"
 	"github.com/cratis/chronicle.go/contracts/clients"
 	"github.com/cratis/chronicle.go/contracts/sequences"
 	"github.com/cratis/chronicle.go/events"
@@ -19,6 +20,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// pinnedProtocol is the contracts pin from contracts-source.json, so tests follow
+// a contracts bump without editing version literals.
+const pinnedProtocol = contracts.ProtocolVersion
 
 type decisionProfileConn struct {
 	grpc.ClientConnInterface
@@ -44,13 +49,13 @@ func TestDecisionCapabilitiesRequireVerifiedVersionAndPreflight(t *testing.T) {
 		name, version, protocol string
 		skip, supported         bool
 	}{
-		{"pinned", "19.129.0", "19.129.0", false, true},
-		{"development", "19.129.0-development", "19.129.0", false, true},
+		{"pinned", pinnedProtocol, pinnedProtocol, false, true},
+		{"development", pinnedProtocol + "-development", pinnedProtocol, false, true},
 		{"old-compatible", "19.28.0", "19.28.0", false, false},
-		{"future-compatible", "20.0.0", "19.129.0", false, false},
-		{"unknown", "", "19.129.0", false, false},
-		{"wrong-protocol", "19.129.0", "19.28.0", false, false},
-		{"skip", "19.129.0", "19.129.0", true, false},
+		{"future-compatible", "20.0.0", pinnedProtocol, false, false},
+		{"unknown", "", pinnedProtocol, false, false},
+		{"wrong-protocol", pinnedProtocol, "19.28.0", false, false},
+		{"skip", pinnedProtocol, pinnedProtocol, true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			kernel := &supervisedKernel{}
@@ -105,7 +110,7 @@ func (f decisionTokenSource) Token(ctx context.Context) (Token, error) { return 
 func TestDecisionEpochIsCheckedAfterAuthorizationBeforeDispatch(t *testing.T) {
 	kernel := &supervisedKernel{}
 	client, ctx := supervisionClient(t, kernel)
-	raw := &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.129.0", protocol: "19.129.0"}
+	raw := &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: pinnedProtocol, protocol: pinnedProtocol}
 	client.config.borrowed = raw
 	var invalidate atomic.Bool
 	var catalog *decision.Catalog
@@ -143,7 +148,7 @@ func TestDecisionEpochIsCheckedAfterAuthorizationBeforeDispatch(t *testing.T) {
 func TestDecisionLeaseCannotSpliceRPCsAcrossGenerationLoss(t *testing.T) {
 	kernel := &supervisedKernel{}
 	client, ctx := supervisionClient(t, kernel)
-	client.config.borrowed = &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: "19.129.0", protocol: "19.129.0"}
+	client.config.borrowed = &decisionProfileConn{ClientConnInterface: client.config.borrowed, version: pinnedProtocol, protocol: pinnedProtocol}
 	store, err := client.EventStore(ctx, "store")
 	if err != nil {
 		t.Fatal(err)

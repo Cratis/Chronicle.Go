@@ -20,18 +20,26 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Administrators_AllAdministrators_FullMethodName   = "/Cratis.Chronicle.Contracts.Security.Administrators/AllAdministrators"
-	Administrators_GrantAdministrator_FullMethodName  = "/Cratis.Chronicle.Contracts.Security.Administrators/GrantAdministrator"
-	Administrators_RevokeAdministrator_FullMethodName = "/Cratis.Chronicle.Contracts.Security.Administrators/RevokeAdministrator"
+	Administrators_All_FullMethodName                    = "/Cratis.Chronicle.Contracts.Security.Administrators/All"
+	Administrators_AllAdministrators_FullMethodName      = "/Cratis.Chronicle.Contracts.Security.Administrators/AllAdministrators"
+	Administrators_GrantAdministrator_FullMethodName     = "/Cratis.Chronicle.Contracts.Security.Administrators/GrantAdministrator"
+	Administrators_GrantEventStoreAccess_FullMethodName  = "/Cratis.Chronicle.Contracts.Security.Administrators/GrantEventStoreAccess"
+	Administrators_RevokeAdministrator_FullMethodName    = "/Cratis.Chronicle.Contracts.Security.Administrators/RevokeAdministrator"
+	Administrators_RevokeEventStoreAccess_FullMethodName = "/Cratis.Chronicle.Contracts.Security.Administrators/RevokeEventStoreAccess"
+	Administrators_Uncovered_FullMethodName              = "/Cratis.Chronicle.Contracts.Security.Administrators/Uncovered"
 )
 
 // AdministratorsClient is the client API for Administrators service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AdministratorsClient interface {
+	All(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventStoreAccessGrantsResponse, error)
 	AllAdministrators(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AdministratorResponse, error)
 	GrantAdministrator(ctx context.Context, in *GrantAdministratorRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	GrantEventStoreAccess(ctx context.Context, in *GrantEventStoreAccessRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	RevokeAdministrator(ctx context.Context, in *RevokeAdministratorRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	RevokeEventStoreAccess(ctx context.Context, in *RevokeEventStoreAccessRequest, opts ...grpc.CallOption) (*CommandResult_Boolean, error)
+	Uncovered(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventStoreAccessPreflightResponse, error)
 }
 
 type administratorsClient struct {
@@ -40,6 +48,16 @@ type administratorsClient struct {
 
 func NewAdministratorsClient(cc grpc.ClientConnInterface) AdministratorsClient {
 	return &administratorsClient{cc}
+}
+
+func (c *administratorsClient) All(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventStoreAccessGrantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_IEnumerable_EventStoreAccessGrantsResponse)
+	err := c.cc.Invoke(ctx, Administrators_All_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *administratorsClient) AllAdministrators(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_IEnumerable_AdministratorResponse, error) {
@@ -62,6 +80,16 @@ func (c *administratorsClient) GrantAdministrator(ctx context.Context, in *Grant
 	return out, nil
 }
 
+func (c *administratorsClient) GrantEventStoreAccess(ctx context.Context, in *GrantEventStoreAccessRequest, opts ...grpc.CallOption) (*CommandResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult)
+	err := c.cc.Invoke(ctx, Administrators_GrantEventStoreAccess_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *administratorsClient) RevokeAdministrator(ctx context.Context, in *RevokeAdministratorRequest, opts ...grpc.CallOption) (*CommandResult, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CommandResult)
@@ -72,13 +100,37 @@ func (c *administratorsClient) RevokeAdministrator(ctx context.Context, in *Revo
 	return out, nil
 }
 
+func (c *administratorsClient) RevokeEventStoreAccess(ctx context.Context, in *RevokeEventStoreAccessRequest, opts ...grpc.CallOption) (*CommandResult_Boolean, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_Boolean)
+	err := c.cc.Invoke(ctx, Administrators_RevokeEventStoreAccess_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *administratorsClient) Uncovered(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventStoreAccessPreflightResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_IEnumerable_EventStoreAccessPreflightResponse)
+	err := c.cc.Invoke(ctx, Administrators_Uncovered_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdministratorsServer is the server API for Administrators service.
 // All implementations must embed UnimplementedAdministratorsServer
 // for forward compatibility.
 type AdministratorsServer interface {
+	All(context.Context, *emptypb.Empty) (*QueryResult_IEnumerable_EventStoreAccessGrantsResponse, error)
 	AllAdministrators(context.Context, *emptypb.Empty) (*QueryResult_IEnumerable_AdministratorResponse, error)
 	GrantAdministrator(context.Context, *GrantAdministratorRequest) (*CommandResult, error)
+	GrantEventStoreAccess(context.Context, *GrantEventStoreAccessRequest) (*CommandResult, error)
 	RevokeAdministrator(context.Context, *RevokeAdministratorRequest) (*CommandResult, error)
+	RevokeEventStoreAccess(context.Context, *RevokeEventStoreAccessRequest) (*CommandResult_Boolean, error)
+	Uncovered(context.Context, *emptypb.Empty) (*QueryResult_IEnumerable_EventStoreAccessPreflightResponse, error)
 	mustEmbedUnimplementedAdministratorsServer()
 }
 
@@ -89,14 +141,26 @@ type AdministratorsServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAdministratorsServer struct{}
 
+func (UnimplementedAdministratorsServer) All(context.Context, *emptypb.Empty) (*QueryResult_IEnumerable_EventStoreAccessGrantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method All not implemented")
+}
 func (UnimplementedAdministratorsServer) AllAdministrators(context.Context, *emptypb.Empty) (*QueryResult_IEnumerable_AdministratorResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AllAdministrators not implemented")
 }
 func (UnimplementedAdministratorsServer) GrantAdministrator(context.Context, *GrantAdministratorRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method GrantAdministrator not implemented")
 }
+func (UnimplementedAdministratorsServer) GrantEventStoreAccess(context.Context, *GrantEventStoreAccessRequest) (*CommandResult, error) {
+	return nil, status.Error(codes.Unimplemented, "method GrantEventStoreAccess not implemented")
+}
 func (UnimplementedAdministratorsServer) RevokeAdministrator(context.Context, *RevokeAdministratorRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeAdministrator not implemented")
+}
+func (UnimplementedAdministratorsServer) RevokeEventStoreAccess(context.Context, *RevokeEventStoreAccessRequest) (*CommandResult_Boolean, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeEventStoreAccess not implemented")
+}
+func (UnimplementedAdministratorsServer) Uncovered(context.Context, *emptypb.Empty) (*QueryResult_IEnumerable_EventStoreAccessPreflightResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Uncovered not implemented")
 }
 func (UnimplementedAdministratorsServer) mustEmbedUnimplementedAdministratorsServer() {}
 func (UnimplementedAdministratorsServer) testEmbeddedByValue()                        {}
@@ -117,6 +181,24 @@ func RegisterAdministratorsServer(s grpc.ServiceRegistrar, srv AdministratorsSer
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Administrators_ServiceDesc, srv)
+}
+
+func _Administrators_All_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdministratorsServer).All(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Administrators_All_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdministratorsServer).All(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Administrators_AllAdministrators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -155,6 +237,24 @@ func _Administrators_GrantAdministrator_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Administrators_GrantEventStoreAccess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantEventStoreAccessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdministratorsServer).GrantEventStoreAccess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Administrators_GrantEventStoreAccess_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdministratorsServer).GrantEventStoreAccess(ctx, req.(*GrantEventStoreAccessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Administrators_RevokeAdministrator_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RevokeAdministratorRequest)
 	if err := dec(in); err != nil {
@@ -173,6 +273,42 @@ func _Administrators_RevokeAdministrator_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Administrators_RevokeEventStoreAccess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeEventStoreAccessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdministratorsServer).RevokeEventStoreAccess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Administrators_RevokeEventStoreAccess_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdministratorsServer).RevokeEventStoreAccess(ctx, req.(*RevokeEventStoreAccessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Administrators_Uncovered_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdministratorsServer).Uncovered(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Administrators_Uncovered_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdministratorsServer).Uncovered(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Administrators_ServiceDesc is the grpc.ServiceDesc for Administrators service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -180,6 +316,10 @@ var Administrators_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Cratis.Chronicle.Contracts.Security.Administrators",
 	HandlerType: (*AdministratorsServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "All",
+			Handler:    _Administrators_All_Handler,
+		},
 		{
 			MethodName: "AllAdministrators",
 			Handler:    _Administrators_AllAdministrators_Handler,
@@ -189,8 +329,20 @@ var Administrators_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Administrators_GrantAdministrator_Handler,
 		},
 		{
+			MethodName: "GrantEventStoreAccess",
+			Handler:    _Administrators_GrantEventStoreAccess_Handler,
+		},
+		{
 			MethodName: "RevokeAdministrator",
 			Handler:    _Administrators_RevokeAdministrator_Handler,
+		},
+		{
+			MethodName: "RevokeEventStoreAccess",
+			Handler:    _Administrators_RevokeEventStoreAccess_Handler,
+		},
+		{
+			MethodName: "Uncovered",
+			Handler:    _Administrators_Uncovered_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

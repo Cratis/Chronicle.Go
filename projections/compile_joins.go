@@ -94,8 +94,11 @@ func (c *compiler) writeFailure(w write, err error) error {
 
 func (c *compiler) globalTarget(g globalDeclaration, fields []serialization.Field) (serialization.Field, error) {
 	w := g.write
-	target, ok := binaryMappingField(fields, w.path)
-	if !ok || validateTarget(target, w.targetType) != nil {
+	target, err := resolveWriteTarget(fields, w, nil, true)
+	if err != nil && w.entry.set() {
+		return target, c.writeFailure(w, err)
+	}
+	if err != nil || validateTarget(target, w.targetType) != nil {
 		return target, c.writeFailure(w, invalid("unknown global target field"))
 	}
 	if target.IsEnum() && g.all {

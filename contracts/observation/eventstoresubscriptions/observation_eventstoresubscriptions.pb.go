@@ -126,6 +126,7 @@ type EventStoreSubscriptionDefinition struct {
 	SourceEventStore   string                  `protobuf:"bytes,2,opt,name=SourceEventStore,proto3" json:"SourceEventStore,omitempty"`
 	EventTypes         []*EventType            `protobuf:"bytes,3,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
 	GenerationDelivery EventGenerationDelivery `protobuf:"varint,4,opt,name=GenerationDelivery,proto3,enum=Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventGenerationDelivery" json:"GenerationDelivery,omitempty"`
+	NamedTags          []*NamedTag             `protobuf:"bytes,5,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -186,6 +187,13 @@ func (x *EventStoreSubscriptionDefinition) GetGenerationDelivery() EventGenerati
 		return x.GenerationDelivery
 	}
 	return EventGenerationDelivery_Compatibility
+}
+
+func (x *EventStoreSubscriptionDefinition) GetNamedTags() []*NamedTag {
+	if x != nil {
+		return x.NamedTags
+	}
+	return nil
 }
 
 type EventType struct {
@@ -336,6 +344,58 @@ func (x *IEnumerable_EventStoreSubscriptionDefinition) GetItems() []*EventStoreS
 	return nil
 }
 
+type NamedTag struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=Name,proto3" json:"Name,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=Value,proto3" json:"Value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NamedTag) Reset() {
+	*x = NamedTag{}
+	mi := &file_observation_eventstoresubscriptions_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NamedTag) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NamedTag) ProtoMessage() {}
+
+func (x *NamedTag) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_eventstoresubscriptions_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NamedTag.ProtoReflect.Descriptor instead.
+func (*NamedTag) Descriptor() ([]byte, []int) {
+	return file_observation_eventstoresubscriptions_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *NamedTag) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *NamedTag) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
 type RemoveEventStoreSubscriptions struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	TargetEventStore string                 `protobuf:"bytes,1,opt,name=TargetEventStore,proto3" json:"TargetEventStore,omitempty"`
@@ -346,7 +406,7 @@ type RemoveEventStoreSubscriptions struct {
 
 func (x *RemoveEventStoreSubscriptions) Reset() {
 	*x = RemoveEventStoreSubscriptions{}
-	mi := &file_observation_eventstoresubscriptions_proto_msgTypes[5]
+	mi := &file_observation_eventstoresubscriptions_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -358,7 +418,7 @@ func (x *RemoveEventStoreSubscriptions) String() string {
 func (*RemoveEventStoreSubscriptions) ProtoMessage() {}
 
 func (x *RemoveEventStoreSubscriptions) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_eventstoresubscriptions_proto_msgTypes[5]
+	mi := &file_observation_eventstoresubscriptions_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -371,7 +431,7 @@ func (x *RemoveEventStoreSubscriptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveEventStoreSubscriptions.ProtoReflect.Descriptor instead.
 func (*RemoveEventStoreSubscriptions) Descriptor() ([]byte, []int) {
-	return file_observation_eventstoresubscriptions_proto_rawDescGZIP(), []int{5}
+	return file_observation_eventstoresubscriptions_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *RemoveEventStoreSubscriptions) GetTargetEventStore() string {
@@ -395,7 +455,7 @@ const file_observation_eventstoresubscriptions_proto_rawDesc = "" +
 	")observation_eventstoresubscriptions.proto\x12>Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions\x1a\x1bgoogle/protobuf/empty.proto\"\xd1\x01\n" +
 	"\x1aAddEventStoreSubscriptions\x12*\n" +
 	"\x10TargetEventStore\x18\x01 \x01(\tR\x10TargetEventStore\x12\x86\x01\n" +
-	"\rSubscriptions\x18\x02 \x03(\v2`.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinitionR\rSubscriptions\"\xe3\x02\n" +
+	"\rSubscriptions\x18\x02 \x03(\v2`.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinitionR\rSubscriptions\"\xcb\x03\n" +
 	" EventStoreSubscriptionDefinition\x12\x1e\n" +
 	"\n" +
 	"Identifier\x18\x01 \x01(\tR\n" +
@@ -404,7 +464,8 @@ const file_observation_eventstoresubscriptions_proto_rawDesc = "" +
 	"\n" +
 	"EventTypes\x18\x03 \x03(\v2I.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventTypeR\n" +
 	"EventTypes\x12\x87\x01\n" +
-	"\x12GenerationDelivery\x18\x04 \x01(\x0e2W.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventGenerationDeliveryR\x12GenerationDelivery\"Y\n" +
+	"\x12GenerationDelivery\x18\x04 \x01(\x0e2W.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventGenerationDeliveryR\x12GenerationDelivery\x12f\n" +
+	"\tNamedTags\x18\x05 \x03(\v2H.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.NamedTagR\tNamedTags\"Y\n" +
 	"\tEventType\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\tR\x02Id\x12\x1e\n" +
 	"\n" +
@@ -414,7 +475,10 @@ const file_observation_eventstoresubscriptions_proto_rawDesc = "" +
 	"!GetEventStoreSubscriptionsRequest\x12*\n" +
 	"\x10TargetEventStore\x18\x01 \x01(\tR\x10TargetEventStore\"\xa6\x01\n" +
 	",IEnumerable_EventStoreSubscriptionDefinition\x12v\n" +
-	"\x05items\x18\x01 \x03(\v2`.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinitionR\x05items\"u\n" +
+	"\x05items\x18\x01 \x03(\v2`.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinitionR\x05items\"4\n" +
+	"\bNamedTag\x12\x12\n" +
+	"\x04Name\x18\x01 \x01(\tR\x04Name\x12\x14\n" +
+	"\x05Value\x18\x02 \x01(\tR\x05Value\"u\n" +
 	"\x1dRemoveEventStoreSubscriptions\x12*\n" +
 	"\x10TargetEventStore\x18\x01 \x01(\tR\x10TargetEventStore\x12(\n" +
 	"\x0fSubscriptionIds\x18\x02 \x03(\tR\x0fSubscriptionIds*8\n" +
@@ -441,7 +505,7 @@ func file_observation_eventstoresubscriptions_proto_rawDescGZIP() []byte {
 }
 
 var file_observation_eventstoresubscriptions_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_observation_eventstoresubscriptions_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_observation_eventstoresubscriptions_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_observation_eventstoresubscriptions_proto_goTypes = []any{
 	(EventGenerationDelivery)(0),                         // 0: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventGenerationDelivery
 	(*AddEventStoreSubscriptions)(nil),                   // 1: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.AddEventStoreSubscriptions
@@ -449,25 +513,27 @@ var file_observation_eventstoresubscriptions_proto_goTypes = []any{
 	(*EventType)(nil),                                    // 3: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventType
 	(*GetEventStoreSubscriptionsRequest)(nil),            // 4: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.GetEventStoreSubscriptionsRequest
 	(*IEnumerable_EventStoreSubscriptionDefinition)(nil), // 5: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.IEnumerable_EventStoreSubscriptionDefinition
-	(*RemoveEventStoreSubscriptions)(nil),                // 6: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.RemoveEventStoreSubscriptions
-	(*emptypb.Empty)(nil),                                // 7: google.protobuf.Empty
+	(*NamedTag)(nil),                                     // 6: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.NamedTag
+	(*RemoveEventStoreSubscriptions)(nil),                // 7: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.RemoveEventStoreSubscriptions
+	(*emptypb.Empty)(nil),                                // 8: google.protobuf.Empty
 }
 var file_observation_eventstoresubscriptions_proto_depIdxs = []int32{
 	2, // 0: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.AddEventStoreSubscriptions.Subscriptions:type_name -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition
 	3, // 1: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventType
 	0, // 2: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventGenerationDelivery
-	2, // 3: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.IEnumerable_EventStoreSubscriptionDefinition.items:type_name -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition
-	1, // 4: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.Add:input_type -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.AddEventStoreSubscriptions
-	4, // 5: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.GetSubscriptions:input_type -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.GetEventStoreSubscriptionsRequest
-	6, // 6: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.Remove:input_type -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.RemoveEventStoreSubscriptions
-	7, // 7: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.Add:output_type -> google.protobuf.Empty
-	5, // 8: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.GetSubscriptions:output_type -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.IEnumerable_EventStoreSubscriptionDefinition
-	7, // 9: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.Remove:output_type -> google.protobuf.Empty
-	7, // [7:10] is the sub-list for method output_type
-	4, // [4:7] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	6, // 3: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition.NamedTags:type_name -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.NamedTag
+	2, // 4: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.IEnumerable_EventStoreSubscriptionDefinition.items:type_name -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition
+	1, // 5: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.Add:input_type -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.AddEventStoreSubscriptions
+	4, // 6: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.GetSubscriptions:input_type -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.GetEventStoreSubscriptionsRequest
+	7, // 7: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.Remove:input_type -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.RemoveEventStoreSubscriptions
+	8, // 8: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.Add:output_type -> google.protobuf.Empty
+	5, // 9: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.GetSubscriptions:output_type -> Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.IEnumerable_EventStoreSubscriptionDefinition
+	8, // 10: Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptions.Remove:output_type -> google.protobuf.Empty
+	8, // [8:11] is the sub-list for method output_type
+	5, // [5:8] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_observation_eventstoresubscriptions_proto_init() }
@@ -481,7 +547,7 @@ func file_observation_eventstoresubscriptions_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_observation_eventstoresubscriptions_proto_rawDesc), len(file_observation_eventstoresubscriptions_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

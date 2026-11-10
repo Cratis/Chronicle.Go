@@ -62,6 +62,8 @@
       href: projections/orders.md
     - name: Variants and shared handlers
       href: projections/variants.md
+    - name: Dictionaries, set-once and child ordering
+      href: projections/dictionaries-and-ordering.md
     - name: Graph projections
       href: projections/graphs.md
 - name: Reactors

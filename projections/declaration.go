@@ -61,6 +61,8 @@ type write struct {
 	// synthetic marks a convention write whose path is not a model field, such
 	// as the derived-child discriminator. Rebinding keeps its path unchanged.
 	synthetic bool
+	// entry addresses a dynamic dictionary key below path; zero targets path.
+	entry entryKey
 }
 
 // Option configures a declaration. Settings are last-wins; duplicate aliases and
