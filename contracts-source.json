@@ -1,7 +1,7 @@
 {
   "repository": "Cratis/Chronicle",
-  "version": "19.150.1",
-  "commit": "dd12d46eda596f7d4bae1880fecca2432d6cc7f6",
+  "version": "19.153.0",
+  "commit": "9157c14098688ac0c6946a335bfabf1f44220c7c",
   "sourcePath": "Source/Kernel/Protobuf",
   "tools": {
     "buf": "1.73.0",
@@ -20,7 +20,7 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/captures"
     },
     "chronicle.desc": {
-      "sha256": "f98eceed54bcd4828a09e8d5f21e4238c0d9a23735fb0132a0cad7435c788b8a"
+      "sha256": "5c836447653550e51f0b01fc55b2496e32824130c9b6ab963a3e55d62adcada5"
     },
     "clients.proto": {
       "sha256": "8a6fa07a9b7f7ff38bd5c9cce541f794499b50d59f73bd1b057209db8b5ecb25",
@@ -71,6 +71,11 @@
       "sha256": "f2f564e9a7760bc80f7202c595c4a39130b9d7a6df2afd6929806b9f00c23946",
       "package": "Cratis.Chronicle.Contracts.Identities",
       "goPackage": "github.com/cratis/chronicle.go/contracts/identities"
+    },
+    "imports.proto": {
+      "sha256": "455394546dd948df5258f02580dd1cf9002a249cf6498e160cfd9ab57b878543",
+      "package": "Cratis.Chronicle.Contracts.Imports",
+      "goPackage": "github.com/cratis/chronicle.go/contracts/imports"
     },
     "jobs.proto": {
       "sha256": "81c188219fa95162d8eaca53c590374be69c316e92381d8b867d4232e35e2fd4",
