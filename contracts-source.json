@@ -72,6 +72,11 @@
       "package": "Cratis.Chronicle.Contracts.Identities",
       "goPackage": "github.com/cratis/chronicle.go/contracts/identities"
     },
+    "imports.proto": {
+      "sha256": "455394546dd948df5258f02580dd1cf9002a249cf6498e160cfd9ab57b878543",
+      "package": "Cratis.Chronicle.Contracts.Imports",
+      "goPackage": "github.com/cratis/chronicle.go/contracts/imports"
+    },
     "jobs.proto": {
       "sha256": "81c188219fa95162d8eaca53c590374be69c316e92381d8b867d4232e35e2fd4",
       "package": "Cratis.Chronicle.Contracts.Jobs",

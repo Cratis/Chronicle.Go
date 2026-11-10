@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/identities"
 	"github.com/cratis/chronicle.go/internal/outgoing"
 	"github.com/cratis/chronicle.go/metadata"
 )
@@ -30,6 +31,30 @@ type Entry struct {
 	Subject *events.Subject
 	// Causation extends the context's chain for this entry only, in input order.
 	Causation []metadata.Causation
+
+	// The fields below carry what an imported event keeps from its source. Only
+	// Import and ImportSession honor them; Append, AppendMany, AppendBatch and
+	// units of work reject an entry that sets any of them.
+
+	// CorrelationID overrides the import's correlation for this entry when nonzero.
+	CorrelationID metadata.CorrelationID
+	// CausedBy overrides the acting identity for this entry when non-nil.
+	CausedBy *identities.Identity
+	// Generation is the schema generation the event was written in, when nonzero.
+	// The content is still encoded from the registered type; the kernel migrates
+	// it from this generation. Zero uses the registered generation.
+	Generation events.Generation
+	// SourceSequenceNumber is the event's position in its source when non-nil.
+	// The kernel records it in the event's causation, not as its new position.
+	SourceSequenceNumber *events.SequenceNumber
+	// IdempotencyKey deduplicates re-imports of the same event when nonblank.
+	IdempotencyKey IdempotencyKey
+}
+
+// importOnly reports whether the entry sets a field only imports honor.
+func (e *Entry) importOnly() bool {
+	return e.CorrelationID != (metadata.CorrelationID{}) || e.CausedBy != nil || e.Generation != 0 ||
+		e.SourceSequenceNumber != nil || e.IdempotencyKey != ""
 }
 
 // LabeledScope enrolls a concurrency check in the same atomic batch. Labels must

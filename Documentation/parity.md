@@ -646,6 +646,21 @@ assembly scanning or separate client-side migration engine is introduced. The
 broader enum schema/name-read conventions remain tracked by #19; this slice maps
 numeric enum values and does not claim that remaining serialization surface.
 
+## Event imports
+
+Reference: Chronicle decision `decisions/0023-bulk-event-import.md` points 6–8, the .NET client
+`Source/Clients/DotNET/{Imports/*,EventSequences/EventSequence.Imports.cs}` at `0378a563ba7e05be10ff090fd7a4fb1ddc3a844f`, and
+`Source/Kernel/Protobuf/imports.proto` at `e5d351cc406e98cce42f37ab04d74e93cc9116e6` (Cratis/Chronicle#5774), released unchanged in Chronicle 19.153.0 and generated into `contracts/imports`.
+
+| Surface | Status | Evidence and differences |
+| --- | --- | --- |
+| `IEventSequence.Import(IAsyncEnumerable<EventForEventSourceId>, ImportOptions, IProgress)` | **Implemented**: `Sequence.Import(ctx, iter.Seq2[Entry, error], ...ImportOption)` returning `(ImportResult, error)`, progress through `WithImportProgress` | `TestImportCutsChunksWithinTheKernelEventLimit`, `TestImportCutsChunksWithinTheKernelByteLimit`, `TestImportKeepsAtMostFourChunksInFlight`, `TestImportReadsLazily`, `TestImportStopsWhenTheContextIsCancelled`, `TestImportReportsProgress`, `TestImportWaitsForTheCommitUnlessToldNotTo`. `TestImportOverTheImportsService` drives the generated Imports service over gRPC. Cancellation is the context, not a token |
+| `IEventImport` (`BeginImport`, `BeginImport(ImportId)`, `Add`, `Complete`, `Abandon`, `Progress`) | **Implemented**: `BeginImport`, `ReattachImport`, `*ImportSession` with `Add`, `Complete`, `Abandon`, `Progress`, `ObserveProgress`, `EventsAcknowledged` | `TestImportReattachContinuesAfterAcknowledgedChunks`, `TestReattachRefusesUnknownImportsAndOtherSequences`, `TestAbandonStopsAnAddInProgress`. **Go-specific**: Go has no overloads, so reattach is `ReattachImport`. `Add` returns once its full chunks are acknowledged rather than once they are handed off, so no goroutine outlives a call and no request context is retained; pipelining (at most four chunks in flight) applies within each `Add`. A session needs no `Close`/`DisposeAsync`. `IObservable<ImportProgress>` becomes the blocking `ObserveProgress` callback. `Abandon` waits for in-flight chunks without a cancellation option |
+| `ImportOptions` | **Implemented** as options: `WithOnInvalid`, `WithImportID`, `WithMaxChunksInFlight` (4), `WithMaxEventsPerChunk`, `WithMaxChunkAttempts` (5), `WithoutWaitingForCommit` | `TestImportOptionsAreValidated`, `TestImportClientEventLimitAppliesBelowTheKernelLimit`, `TestImportRetriesTransientFailuresOnly`. Invalid values fail before any RPC instead of being clamped |
+| `ImportResult`, `ImportProgress`, `ImportRejection`, `ImportState`, `OnInvalidEvent`, `ImportId` | **Implemented**: same fields; `ImportID` is a UUID type with canonical text; absent sequence numbers are `events.Unavailable` | `TestImportReportsRejectionsAsAResult`, `TestImportIDUsesTheCanonicalUUIDText`. A failed import is a result, as in .NET. proto3 cannot mark `FirstSequenceNumber` present, so it is reported only when events were committed |
+| `ImportChunkRefused`, `ImportCouldNotBegin`, `ImportWasAbandoned`, `ImportsNotSupported` | **Implemented** as `*ImportChunkRefusedError`, `*ImportCouldNotBeginError` (wrapping `ErrImportNotFound` for unknown IDs), `ErrImportAbandoned`, and `ErrUnsupported` | `TestImportStopsOnARefusedChunk`, `TestImportsServiceMissingIsUnsupported` |
+| `EventForEventSourceId` import fields (`CorrelationId`, `CausedBy`, `Generation`, `SourceSequenceNumber`, `IdempotencyKey`) | **Implemented** on `eventsequences.Entry` | `TestImportCarriesWhatTheSourceSays`, `TestImportEventCarriesASourceSequenceNumberOfZero`, `TestAppendsRejectImportOnlyFields`. Appends, batches and units of work reject entries that set them instead of ignoring them. A source sequence number of zero is encoded explicitly, because protobuf-net reads the field as nullable and Go omits a zero proto3 scalar. `EventSource` (a .NET `Type`) has no Go counterpart |
+
 ## Deliberate differences and migration guidance
 
 1. **TLS validates by default.** C#'s local profile skips validation. Add `WithDevelopmentDefaults` only for development; configure real roots/client certificates with `WithTLS` for production. Explicit validating TLS wins over security opt-outs.
