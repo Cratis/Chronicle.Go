@@ -67,7 +67,7 @@ local tests of those plans, and a kernel event scenario for actual observers.
 
 Set `Engine: chronicletest.Kernel`, `ConnectionString` to your test server, and
 `Development: true` only for its self-signed development certificate. Tests use
-`cratis/chronicle:19.125.2-development`. The fixture does not start Docker or silently
+`cratis/chronicle:19.150.1-development`. The fixture does not start Docker or silently
 fall back to a fake.
 
 ```go

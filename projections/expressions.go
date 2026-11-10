@@ -34,6 +34,8 @@ const (
 	decrementExpression
 	countExpression
 	compositeExpression
+	causedByExpression
+	removeExpression
 )
 
 type expression struct {
@@ -41,6 +43,8 @@ type expression struct {
 	text        string
 	literalKind declarations.Kind
 	parts       []keyPart
+	// once wraps a set-family value in the kernel's $setOnce(...) expression.
+	once bool
 }
 
 type keyPart struct {
@@ -56,6 +60,11 @@ func literalValue(v declarations.Value) expression {
 	return expression{kind: literalExpression, text: v.Text, literalKind: v.Kind}
 }
 func (e expression) encode() string {
+	if e.once {
+		inner := e
+		inner.once = false
+		return "$setOnce(" + inner.encode() + ")"
+	}
 	switch e.kind {
 	case pathExpression:
 		return e.text
@@ -85,6 +94,10 @@ func (e expression) encode() string {
 		return "$decrement"
 	case countExpression:
 		return "$count"
+	case causedByExpression:
+		return "$causedBy(" + e.text + ")"
+	case removeExpression:
+		return "$remove"
 	case compositeExpression:
 		parts := make([]string, len(e.parts))
 		for i, part := range e.parts {
@@ -275,6 +288,12 @@ func indirectType(typ reflect.Type) reflect.Type {
 	return typ
 }
 func validateExpression(e expression, target serialization.Field, modelFields, eventFields []serialization.Field, sourceType reflect.Type) error {
+	if e.once {
+		if !settableOnce(e) {
+			return invalid("set once requires an event property, context, event source, caused-by or non-null literal value")
+		}
+		e.once = false
+	}
 	if binaryField(target) {
 		return binaryUnsupported("binary is only qualified for same-representation AutoMap")
 	}
@@ -325,6 +344,10 @@ func validateExpression(e expression, target serialization.Field, modelFields, e
 		}
 	case literalExpression, nullExpression:
 		return validateLiteral(e, target)
+	case causedByExpression:
+		return validateCausedBy(e.text, target)
+	case removeExpression:
+		return invalid("remove requires a dictionary entry target")
 	default:
 		return invalid("incomplete or unsupported expression")
 	}

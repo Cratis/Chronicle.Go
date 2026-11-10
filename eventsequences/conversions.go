@@ -68,7 +68,7 @@ func (s *Sequence) result(response *sequences.AppendResponse, eventType events.T
 	for _, err := range response.Errors {
 		result.Errors = append(result.Errors, AppendError(err))
 	}
-	if constraintsPresent || concurrencyPresent {
+	if constraintsPresent || concurrencyPresent || (!response.IsSuccess && refusedWithoutStoring(result.Errors)) {
 		result.Disposition = Rejected
 	}
 	if response.IsSuccess {

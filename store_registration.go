@@ -47,7 +47,7 @@ func (s *EventStore) registerStages(ctx context.Context, g *generation, root *de
 	}
 	// C# EventStore.RegisterAllArtifacts registers event types and read models
 	// first, then constraints and observers.
-	if len(root.snapshot.models.Descriptors()) > 0 {
+	if registersReadModels(root.snapshot) {
 		stages = append(stages, struct {
 			name string
 			run  func(context.Context) error
@@ -59,7 +59,7 @@ func (s *EventStore) registerStages(ctx context.Context, g *generation, root *de
 	}{"constraints", func(ctx context.Context) error {
 		return s.sharedStage(ctx, g, "constraints", func(ctx context.Context) error { return s.registerConstraints(ctx, g) })
 	}})
-	if len(root.snapshot.projections) > 0 {
+	if registersProjections(root.snapshot) {
 		stages = append(stages, struct {
 			name string
 			run  func(context.Context) error

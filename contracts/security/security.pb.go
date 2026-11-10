@@ -23,6 +23,104 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type EventStoreAccessGrantSource int32
+
+const (
+	EventStoreAccessGrantSource_Configuration EventStoreAccessGrantSource = 0
+	EventStoreAccessGrantSource_Command       EventStoreAccessGrantSource = 1
+)
+
+// Enum value maps for EventStoreAccessGrantSource.
+var (
+	EventStoreAccessGrantSource_name = map[int32]string{
+		0: "Configuration",
+		1: "Command",
+	}
+	EventStoreAccessGrantSource_value = map[string]int32{
+		"Configuration": 0,
+		"Command":       1,
+	}
+)
+
+func (x EventStoreAccessGrantSource) Enum() *EventStoreAccessGrantSource {
+	p := new(EventStoreAccessGrantSource)
+	*p = x
+	return p
+}
+
+func (x EventStoreAccessGrantSource) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventStoreAccessGrantSource) Descriptor() protoreflect.EnumDescriptor {
+	return file_security_proto_enumTypes[0].Descriptor()
+}
+
+func (EventStoreAccessGrantSource) Type() protoreflect.EnumType {
+	return &file_security_proto_enumTypes[0]
+}
+
+func (x EventStoreAccessGrantSource) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventStoreAccessGrantSource.Descriptor instead.
+func (EventStoreAccessGrantSource) EnumDescriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{0}
+}
+
+type StoreAccess int32
+
+const (
+	StoreAccess_None   StoreAccess = 0
+	StoreAccess_Read   StoreAccess = 1
+	StoreAccess_Append StoreAccess = 2
+	StoreAccess_Manage StoreAccess = 4
+)
+
+// Enum value maps for StoreAccess.
+var (
+	StoreAccess_name = map[int32]string{
+		0: "None",
+		1: "Read",
+		2: "Append",
+		4: "Manage",
+	}
+	StoreAccess_value = map[string]int32{
+		"None":   0,
+		"Read":   1,
+		"Append": 2,
+		"Manage": 4,
+	}
+)
+
+func (x StoreAccess) Enum() *StoreAccess {
+	p := new(StoreAccess)
+	*p = x
+	return p
+}
+
+func (x StoreAccess) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (StoreAccess) Descriptor() protoreflect.EnumDescriptor {
+	return file_security_proto_enumTypes[1].Descriptor()
+}
+
+func (StoreAccess) Type() protoreflect.EnumType {
+	return &file_security_proto_enumTypes[1]
+}
+
+func (x StoreAccess) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use StoreAccess.Descriptor instead.
+func (StoreAccess) EnumDescriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{1}
+}
+
 type ValidationResultSeverity int32
 
 const (
@@ -59,11 +157,11 @@ func (x ValidationResultSeverity) String() string {
 }
 
 func (ValidationResultSeverity) Descriptor() protoreflect.EnumDescriptor {
-	return file_security_proto_enumTypes[0].Descriptor()
+	return file_security_proto_enumTypes[2].Descriptor()
 }
 
 func (ValidationResultSeverity) Type() protoreflect.EnumType {
-	return &file_security_proto_enumTypes[0]
+	return &file_security_proto_enumTypes[2]
 }
 
 func (x ValidationResultSeverity) Number() protoreflect.EnumNumber {
@@ -72,7 +170,7 @@ func (x ValidationResultSeverity) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ValidationResultSeverity.Descriptor instead.
 func (ValidationResultSeverity) EnumDescriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{0}
+	return file_security_proto_rawDescGZIP(), []int{2}
 }
 
 type AddApplicationRequest struct {
@@ -595,6 +693,326 @@ func (x *CommandResult) GetAuthorizationFailureReason() string {
 	return ""
 }
 
+type CommandResult_Boolean struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	CorrelationId              *bcl.Guid              `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized               bool                   `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults          []*ValidationResult    `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages          []string               `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace        string                 `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	AuthorizationFailureReason string                 `protobuf:"bytes,6,opt,name=AuthorizationFailureReason,proto3" json:"AuthorizationFailureReason,omitempty"`
+	Response                   bool                   `protobuf:"varint,7,opt,name=Response,proto3" json:"Response,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CommandResult_Boolean) Reset() {
+	*x = CommandResult_Boolean{}
+	mi := &file_security_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandResult_Boolean) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandResult_Boolean) ProtoMessage() {}
+
+func (x *CommandResult_Boolean) ProtoReflect() protoreflect.Message {
+	mi := &file_security_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandResult_Boolean.ProtoReflect.Descriptor instead.
+func (*CommandResult_Boolean) Descriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CommandResult_Boolean) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *CommandResult_Boolean) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *CommandResult_Boolean) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *CommandResult_Boolean) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *CommandResult_Boolean) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *CommandResult_Boolean) GetAuthorizationFailureReason() string {
+	if x != nil {
+		return x.AuthorizationFailureReason
+	}
+	return ""
+}
+
+func (x *CommandResult_Boolean) GetResponse() bool {
+	if x != nil {
+		return x.Response
+	}
+	return false
+}
+
+type EventStoreAccessGrantsResponse struct {
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	EventStore    string                      `protobuf:"bytes,4,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace     string                      `protobuf:"bytes,5,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	Access        StoreAccess                 `protobuf:"varint,6,opt,name=Access,proto3,enum=Cratis.Chronicle.Contracts.Security.StoreAccess" json:"Access,omitempty"`
+	Source        EventStoreAccessGrantSource `protobuf:"varint,7,opt,name=Source,proto3,enum=Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantSource" json:"Source,omitempty"`
+	Holder        *EventStoreAccessHolder     `protobuf:"bytes,8,opt,name=Holder,proto3" json:"Holder,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventStoreAccessGrantsResponse) Reset() {
+	*x = EventStoreAccessGrantsResponse{}
+	mi := &file_security_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventStoreAccessGrantsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventStoreAccessGrantsResponse) ProtoMessage() {}
+
+func (x *EventStoreAccessGrantsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_security_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventStoreAccessGrantsResponse.ProtoReflect.Descriptor instead.
+func (*EventStoreAccessGrantsResponse) Descriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *EventStoreAccessGrantsResponse) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *EventStoreAccessGrantsResponse) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *EventStoreAccessGrantsResponse) GetAccess() StoreAccess {
+	if x != nil {
+		return x.Access
+	}
+	return StoreAccess_None
+}
+
+func (x *EventStoreAccessGrantsResponse) GetSource() EventStoreAccessGrantSource {
+	if x != nil {
+		return x.Source
+	}
+	return EventStoreAccessGrantSource_Configuration
+}
+
+func (x *EventStoreAccessGrantsResponse) GetHolder() *EventStoreAccessHolder {
+	if x != nil {
+		return x.Holder
+	}
+	return nil
+}
+
+type EventStoreAccessHolder struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Issuer        string                 `protobuf:"bytes,1,opt,name=Issuer,proto3" json:"Issuer,omitempty"`
+	Subject       string                 `protobuf:"bytes,2,opt,name=Subject,proto3" json:"Subject,omitempty"`
+	IsClient      bool                   `protobuf:"varint,3,opt,name=IsClient,proto3" json:"IsClient,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventStoreAccessHolder) Reset() {
+	*x = EventStoreAccessHolder{}
+	mi := &file_security_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventStoreAccessHolder) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventStoreAccessHolder) ProtoMessage() {}
+
+func (x *EventStoreAccessHolder) ProtoReflect() protoreflect.Message {
+	mi := &file_security_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventStoreAccessHolder.ProtoReflect.Descriptor instead.
+func (*EventStoreAccessHolder) Descriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *EventStoreAccessHolder) GetIssuer() string {
+	if x != nil {
+		return x.Issuer
+	}
+	return ""
+}
+
+func (x *EventStoreAccessHolder) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *EventStoreAccessHolder) GetIsClient() bool {
+	if x != nil {
+		return x.IsClient
+	}
+	return false
+}
+
+type EventStoreAccessPreflightResponse struct {
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	EventStore    string                      `protobuf:"bytes,4,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace     string                      `protobuf:"bytes,5,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	Access        StoreAccess                 `protobuf:"varint,6,opt,name=Access,proto3,enum=Cratis.Chronicle.Contracts.Security.StoreAccess" json:"Access,omitempty"`
+	FirstSeen     *SerializableDateTimeOffset `protobuf:"bytes,7,opt,name=FirstSeen,proto3" json:"FirstSeen,omitempty"`
+	LastSeen      *SerializableDateTimeOffset `protobuf:"bytes,8,opt,name=LastSeen,proto3" json:"LastSeen,omitempty"`
+	Count         int64                       `protobuf:"varint,9,opt,name=Count,proto3" json:"Count,omitempty"`
+	Holder        *EventStoreAccessHolder     `protobuf:"bytes,10,opt,name=Holder,proto3" json:"Holder,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventStoreAccessPreflightResponse) Reset() {
+	*x = EventStoreAccessPreflightResponse{}
+	mi := &file_security_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventStoreAccessPreflightResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventStoreAccessPreflightResponse) ProtoMessage() {}
+
+func (x *EventStoreAccessPreflightResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_security_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventStoreAccessPreflightResponse.ProtoReflect.Descriptor instead.
+func (*EventStoreAccessPreflightResponse) Descriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *EventStoreAccessPreflightResponse) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *EventStoreAccessPreflightResponse) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *EventStoreAccessPreflightResponse) GetAccess() StoreAccess {
+	if x != nil {
+		return x.Access
+	}
+	return StoreAccess_None
+}
+
+func (x *EventStoreAccessPreflightResponse) GetFirstSeen() *SerializableDateTimeOffset {
+	if x != nil {
+		return x.FirstSeen
+	}
+	return nil
+}
+
+func (x *EventStoreAccessPreflightResponse) GetLastSeen() *SerializableDateTimeOffset {
+	if x != nil {
+		return x.LastSeen
+	}
+	return nil
+}
+
+func (x *EventStoreAccessPreflightResponse) GetCount() int64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *EventStoreAccessPreflightResponse) GetHolder() *EventStoreAccessHolder {
+	if x != nil {
+		return x.Holder
+	}
+	return nil
+}
+
 type GrantAdministratorRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        *bcl.Guid              `protobuf:"bytes,1,opt,name=UserId,proto3" json:"UserId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -604,7 +1022,7 @@ type GrantAdministratorRequest struct {
 
 func (x *GrantAdministratorRequest) Reset() {
 	*x = GrantAdministratorRequest{}
-	mi := &file_security_proto_msgTypes[8]
+	mi := &file_security_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -616,7 +1034,7 @@ func (x *GrantAdministratorRequest) String() string {
 func (*GrantAdministratorRequest) ProtoMessage() {}
 
 func (x *GrantAdministratorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[8]
+	mi := &file_security_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -629,7 +1047,7 @@ func (x *GrantAdministratorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantAdministratorRequest.ProtoReflect.Descriptor instead.
 func (*GrantAdministratorRequest) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{8}
+	return file_security_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GrantAdministratorRequest) GetUserId() *bcl.Guid {
@@ -637,6 +1055,82 @@ func (x *GrantAdministratorRequest) GetUserId() *bcl.Guid {
 		return x.UserId
 	}
 	return nil
+}
+
+type GrantEventStoreAccessRequest struct {
+	state          protoimpl.MessageState  `protogen:"open.v1"`
+	EventStore     string                  `protobuf:"bytes,4,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace      string                  `protobuf:"bytes,5,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	Access         StoreAccess             `protobuf:"varint,6,opt,name=Access,proto3,enum=Cratis.Chronicle.Contracts.Security.StoreAccess" json:"Access,omitempty"`
+	Holder         *EventStoreAccessHolder `protobuf:"bytes,7,opt,name=Holder,proto3" json:"Holder,omitempty"`
+	AllEventStores bool                    `protobuf:"varint,8,opt,name=AllEventStores,proto3" json:"AllEventStores,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GrantEventStoreAccessRequest) Reset() {
+	*x = GrantEventStoreAccessRequest{}
+	mi := &file_security_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GrantEventStoreAccessRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GrantEventStoreAccessRequest) ProtoMessage() {}
+
+func (x *GrantEventStoreAccessRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_security_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GrantEventStoreAccessRequest.ProtoReflect.Descriptor instead.
+func (*GrantEventStoreAccessRequest) Descriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GrantEventStoreAccessRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *GrantEventStoreAccessRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *GrantEventStoreAccessRequest) GetAccess() StoreAccess {
+	if x != nil {
+		return x.Access
+	}
+	return StoreAccess_None
+}
+
+func (x *GrantEventStoreAccessRequest) GetHolder() *EventStoreAccessHolder {
+	if x != nil {
+		return x.Holder
+	}
+	return nil
+}
+
+func (x *GrantEventStoreAccessRequest) GetAllEventStores() bool {
+	if x != nil {
+		return x.AllEventStores
+	}
+	return false
 }
 
 type QueryResult_AdminPasswordStatusResponse struct {
@@ -653,7 +1147,7 @@ type QueryResult_AdminPasswordStatusResponse struct {
 
 func (x *QueryResult_AdminPasswordStatusResponse) Reset() {
 	*x = QueryResult_AdminPasswordStatusResponse{}
-	mi := &file_security_proto_msgTypes[9]
+	mi := &file_security_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -665,7 +1159,7 @@ func (x *QueryResult_AdminPasswordStatusResponse) String() string {
 func (*QueryResult_AdminPasswordStatusResponse) ProtoMessage() {}
 
 func (x *QueryResult_AdminPasswordStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[9]
+	mi := &file_security_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -678,7 +1172,7 @@ func (x *QueryResult_AdminPasswordStatusResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use QueryResult_AdminPasswordStatusResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_AdminPasswordStatusResponse) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{9}
+	return file_security_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *QueryResult_AdminPasswordStatusResponse) GetCorrelationId() *bcl.Guid {
@@ -737,7 +1231,7 @@ type QueryResult_IEnumerable_AdministratorResponse struct {
 
 func (x *QueryResult_IEnumerable_AdministratorResponse) Reset() {
 	*x = QueryResult_IEnumerable_AdministratorResponse{}
-	mi := &file_security_proto_msgTypes[10]
+	mi := &file_security_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -749,7 +1243,7 @@ func (x *QueryResult_IEnumerable_AdministratorResponse) String() string {
 func (*QueryResult_IEnumerable_AdministratorResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_AdministratorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[10]
+	mi := &file_security_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -762,7 +1256,7 @@ func (x *QueryResult_IEnumerable_AdministratorResponse) ProtoReflect() protorefl
 
 // Deprecated: Use QueryResult_IEnumerable_AdministratorResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_AdministratorResponse) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{10}
+	return file_security_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *QueryResult_IEnumerable_AdministratorResponse) GetCorrelationId() *bcl.Guid {
@@ -821,7 +1315,7 @@ type QueryResult_IEnumerable_ApplicationResponse struct {
 
 func (x *QueryResult_IEnumerable_ApplicationResponse) Reset() {
 	*x = QueryResult_IEnumerable_ApplicationResponse{}
-	mi := &file_security_proto_msgTypes[11]
+	mi := &file_security_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -833,7 +1327,7 @@ func (x *QueryResult_IEnumerable_ApplicationResponse) String() string {
 func (*QueryResult_IEnumerable_ApplicationResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_ApplicationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[11]
+	mi := &file_security_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -846,7 +1340,7 @@ func (x *QueryResult_IEnumerable_ApplicationResponse) ProtoReflect() protoreflec
 
 // Deprecated: Use QueryResult_IEnumerable_ApplicationResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_ApplicationResponse) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{11}
+	return file_security_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *QueryResult_IEnumerable_ApplicationResponse) GetCorrelationId() *bcl.Guid {
@@ -891,6 +1385,174 @@ func (x *QueryResult_IEnumerable_ApplicationResponse) GetData() []*ApplicationRe
 	return nil
 }
 
+type QueryResult_IEnumerable_EventStoreAccessGrantsResponse struct {
+	state               protoimpl.MessageState            `protogen:"open.v1"`
+	CorrelationId       *bcl.Guid                         `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized        bool                              `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults   []*ValidationResult               `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages   []string                          `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace string                            `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	Data                []*EventStoreAccessGrantsResponse `protobuf:"bytes,6,rep,name=Data,proto3" json:"Data,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessGrantsResponse) Reset() {
+	*x = QueryResult_IEnumerable_EventStoreAccessGrantsResponse{}
+	mi := &file_security_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessGrantsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryResult_IEnumerable_EventStoreAccessGrantsResponse) ProtoMessage() {}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessGrantsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_security_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryResult_IEnumerable_EventStoreAccessGrantsResponse.ProtoReflect.Descriptor instead.
+func (*QueryResult_IEnumerable_EventStoreAccessGrantsResponse) Descriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessGrantsResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessGrantsResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessGrantsResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessGrantsResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessGrantsResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessGrantsResponse) GetData() []*EventStoreAccessGrantsResponse {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type QueryResult_IEnumerable_EventStoreAccessPreflightResponse struct {
+	state               protoimpl.MessageState               `protogen:"open.v1"`
+	CorrelationId       *bcl.Guid                            `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized        bool                                 `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults   []*ValidationResult                  `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages   []string                             `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace string                               `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	Data                []*EventStoreAccessPreflightResponse `protobuf:"bytes,6,rep,name=Data,proto3" json:"Data,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessPreflightResponse) Reset() {
+	*x = QueryResult_IEnumerable_EventStoreAccessPreflightResponse{}
+	mi := &file_security_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessPreflightResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryResult_IEnumerable_EventStoreAccessPreflightResponse) ProtoMessage() {}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessPreflightResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_security_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryResult_IEnumerable_EventStoreAccessPreflightResponse.ProtoReflect.Descriptor instead.
+func (*QueryResult_IEnumerable_EventStoreAccessPreflightResponse) Descriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessPreflightResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessPreflightResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessPreflightResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessPreflightResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessPreflightResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *QueryResult_IEnumerable_EventStoreAccessPreflightResponse) GetData() []*EventStoreAccessPreflightResponse {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type QueryResult_IEnumerable_UserResponse struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	CorrelationId       *bcl.Guid              `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -905,7 +1567,7 @@ type QueryResult_IEnumerable_UserResponse struct {
 
 func (x *QueryResult_IEnumerable_UserResponse) Reset() {
 	*x = QueryResult_IEnumerable_UserResponse{}
-	mi := &file_security_proto_msgTypes[12]
+	mi := &file_security_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -917,7 +1579,7 @@ func (x *QueryResult_IEnumerable_UserResponse) String() string {
 func (*QueryResult_IEnumerable_UserResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_UserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[12]
+	mi := &file_security_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -930,7 +1592,7 @@ func (x *QueryResult_IEnumerable_UserResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use QueryResult_IEnumerable_UserResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_UserResponse) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{12}
+	return file_security_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *QueryResult_IEnumerable_UserResponse) GetCorrelationId() *bcl.Guid {
@@ -984,7 +1646,7 @@ type RemoveApplicationRequest struct {
 
 func (x *RemoveApplicationRequest) Reset() {
 	*x = RemoveApplicationRequest{}
-	mi := &file_security_proto_msgTypes[13]
+	mi := &file_security_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -996,7 +1658,7 @@ func (x *RemoveApplicationRequest) String() string {
 func (*RemoveApplicationRequest) ProtoMessage() {}
 
 func (x *RemoveApplicationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[13]
+	mi := &file_security_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1009,7 +1671,7 @@ func (x *RemoveApplicationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveApplicationRequest.ProtoReflect.Descriptor instead.
 func (*RemoveApplicationRequest) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{13}
+	return file_security_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *RemoveApplicationRequest) GetId() *bcl.Guid {
@@ -1028,7 +1690,7 @@ type RemoveUserRequest struct {
 
 func (x *RemoveUserRequest) Reset() {
 	*x = RemoveUserRequest{}
-	mi := &file_security_proto_msgTypes[14]
+	mi := &file_security_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1040,7 +1702,7 @@ func (x *RemoveUserRequest) String() string {
 func (*RemoveUserRequest) ProtoMessage() {}
 
 func (x *RemoveUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[14]
+	mi := &file_security_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1053,7 +1715,7 @@ func (x *RemoveUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveUserRequest.ProtoReflect.Descriptor instead.
 func (*RemoveUserRequest) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{14}
+	return file_security_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RemoveUserRequest) GetUserId() *bcl.Guid {
@@ -1072,7 +1734,7 @@ type RequirePasswordChangeRequest struct {
 
 func (x *RequirePasswordChangeRequest) Reset() {
 	*x = RequirePasswordChangeRequest{}
-	mi := &file_security_proto_msgTypes[15]
+	mi := &file_security_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1084,7 +1746,7 @@ func (x *RequirePasswordChangeRequest) String() string {
 func (*RequirePasswordChangeRequest) ProtoMessage() {}
 
 func (x *RequirePasswordChangeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[15]
+	mi := &file_security_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1097,7 +1759,7 @@ func (x *RequirePasswordChangeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequirePasswordChangeRequest.ProtoReflect.Descriptor instead.
 func (*RequirePasswordChangeRequest) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{15}
+	return file_security_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RequirePasswordChangeRequest) GetUserId() *bcl.Guid {
@@ -1117,7 +1779,7 @@ type RevokeAdministratorRequest struct {
 
 func (x *RevokeAdministratorRequest) Reset() {
 	*x = RevokeAdministratorRequest{}
-	mi := &file_security_proto_msgTypes[16]
+	mi := &file_security_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1129,7 +1791,7 @@ func (x *RevokeAdministratorRequest) String() string {
 func (*RevokeAdministratorRequest) ProtoMessage() {}
 
 func (x *RevokeAdministratorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[16]
+	mi := &file_security_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1142,7 +1804,7 @@ func (x *RevokeAdministratorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAdministratorRequest.ProtoReflect.Descriptor instead.
 func (*RevokeAdministratorRequest) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{16}
+	return file_security_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *RevokeAdministratorRequest) GetUserId() *bcl.Guid {
@@ -1159,6 +1821,74 @@ func (x *RevokeAdministratorRequest) GetReason() string {
 	return ""
 }
 
+type RevokeEventStoreAccessRequest struct {
+	state          protoimpl.MessageState  `protogen:"open.v1"`
+	EventStore     string                  `protobuf:"bytes,4,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Namespace      string                  `protobuf:"bytes,5,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
+	Holder         *EventStoreAccessHolder `protobuf:"bytes,6,opt,name=Holder,proto3" json:"Holder,omitempty"`
+	AllEventStores bool                    `protobuf:"varint,7,opt,name=AllEventStores,proto3" json:"AllEventStores,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RevokeEventStoreAccessRequest) Reset() {
+	*x = RevokeEventStoreAccessRequest{}
+	mi := &file_security_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeEventStoreAccessRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeEventStoreAccessRequest) ProtoMessage() {}
+
+func (x *RevokeEventStoreAccessRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_security_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeEventStoreAccessRequest.ProtoReflect.Descriptor instead.
+func (*RevokeEventStoreAccessRequest) Descriptor() ([]byte, []int) {
+	return file_security_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *RevokeEventStoreAccessRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *RevokeEventStoreAccessRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *RevokeEventStoreAccessRequest) GetHolder() *EventStoreAccessHolder {
+	if x != nil {
+		return x.Holder
+	}
+	return nil
+}
+
+func (x *RevokeEventStoreAccessRequest) GetAllEventStores() bool {
+	if x != nil {
+		return x.AllEventStores
+	}
+	return false
+}
+
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 type SerializableDateTimeOffset struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1169,7 +1899,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_security_proto_msgTypes[17]
+	mi := &file_security_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1181,7 +1911,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[17]
+	mi := &file_security_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1194,7 +1924,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{17}
+	return file_security_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -1216,7 +1946,7 @@ type SetInitialAdminPasswordRequest struct {
 
 func (x *SetInitialAdminPasswordRequest) Reset() {
 	*x = SetInitialAdminPasswordRequest{}
-	mi := &file_security_proto_msgTypes[18]
+	mi := &file_security_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1228,7 +1958,7 @@ func (x *SetInitialAdminPasswordRequest) String() string {
 func (*SetInitialAdminPasswordRequest) ProtoMessage() {}
 
 func (x *SetInitialAdminPasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[18]
+	mi := &file_security_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1241,7 +1971,7 @@ func (x *SetInitialAdminPasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetInitialAdminPasswordRequest.ProtoReflect.Descriptor instead.
 func (*SetInitialAdminPasswordRequest) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{18}
+	return file_security_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *SetInitialAdminPasswordRequest) GetUserId() *bcl.Guid {
@@ -1287,7 +2017,7 @@ type UserResponse struct {
 
 func (x *UserResponse) Reset() {
 	*x = UserResponse{}
-	mi := &file_security_proto_msgTypes[19]
+	mi := &file_security_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1299,7 +2029,7 @@ func (x *UserResponse) String() string {
 func (*UserResponse) ProtoMessage() {}
 
 func (x *UserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[19]
+	mi := &file_security_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1312,7 +2042,7 @@ func (x *UserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserResponse.ProtoReflect.Descriptor instead.
 func (*UserResponse) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{19}
+	return file_security_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UserResponse) GetId() *bcl.Guid {
@@ -1375,7 +2105,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_security_proto_msgTypes[20]
+	mi := &file_security_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1387,7 +2117,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_security_proto_msgTypes[20]
+	mi := &file_security_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1400,7 +2130,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_security_proto_rawDescGZIP(), []int{20}
+	return file_security_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -1467,9 +2197,48 @@ const file_security_proto_rawDesc = "" +
 	"\x11ValidationResults\x18\x03 \x03(\v25.Cratis.Chronicle.Contracts.Security.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
-	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\">\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"\x8d\x03\n" +
+	"\x15CommandResult_Boolean\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12c\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v25.Cratis.Chronicle.Contracts.Security.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\x12\x1a\n" +
+	"\bResponse\x18\a \x01(\bR\bResponse\"\xd7\x02\n" +
+	"\x1eEventStoreAccessGrantsResponse\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x04 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x05 \x01(\tR\tNamespace\x12H\n" +
+	"\x06Access\x18\x06 \x01(\x0e20.Cratis.Chronicle.Contracts.Security.StoreAccessR\x06Access\x12X\n" +
+	"\x06Source\x18\a \x01(\x0e2@.Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantSourceR\x06Source\x12S\n" +
+	"\x06Holder\x18\b \x01(\v2;.Cratis.Chronicle.Contracts.Security.EventStoreAccessHolderR\x06Holder\"f\n" +
+	"\x16EventStoreAccessHolder\x12\x16\n" +
+	"\x06Issuer\x18\x01 \x01(\tR\x06Issuer\x12\x18\n" +
+	"\aSubject\x18\x02 \x01(\tR\aSubject\x12\x1a\n" +
+	"\bIsClient\x18\x03 \x01(\bR\bIsClient\"\xd2\x03\n" +
+	"!EventStoreAccessPreflightResponse\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x04 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x05 \x01(\tR\tNamespace\x12H\n" +
+	"\x06Access\x18\x06 \x01(\x0e20.Cratis.Chronicle.Contracts.Security.StoreAccessR\x06Access\x12]\n" +
+	"\tFirstSeen\x18\a \x01(\v2?.Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffsetR\tFirstSeen\x12[\n" +
+	"\bLastSeen\x18\b \x01(\v2?.Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffsetR\bLastSeen\x12\x14\n" +
+	"\x05Count\x18\t \x01(\x03R\x05Count\x12S\n" +
+	"\x06Holder\x18\n" +
+	" \x01(\v2;.Cratis.Chronicle.Contracts.Security.EventStoreAccessHolderR\x06Holder\">\n" +
 	"\x19GrantAdministratorRequest\x12!\n" +
-	"\x06UserId\x18\x01 \x01(\v2\t.bcl.GuidR\x06UserId\"\x99\x03\n" +
+	"\x06UserId\x18\x01 \x01(\v2\t.bcl.GuidR\x06UserId\"\xa3\x02\n" +
+	"\x1cGrantEventStoreAccessRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x04 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x05 \x01(\tR\tNamespace\x12H\n" +
+	"\x06Access\x18\x06 \x01(\x0e20.Cratis.Chronicle.Contracts.Security.StoreAccessR\x06Access\x12S\n" +
+	"\x06Holder\x18\a \x01(\v2;.Cratis.Chronicle.Contracts.Security.EventStoreAccessHolderR\x06Holder\x12&\n" +
+	"\x0eAllEventStores\x18\b \x01(\bR\x0eAllEventStores\"\x99\x03\n" +
 	"'QueryResult_AdminPasswordStatusResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
 	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12c\n" +
@@ -1490,7 +2259,21 @@ const file_security_proto_rawDesc = "" +
 	"\x11ValidationResults\x18\x03 \x03(\v25.Cratis.Chronicle.Contracts.Security.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12L\n" +
-	"\x04Data\x18\x06 \x03(\v28.Cratis.Chronicle.Contracts.Security.ApplicationResponseR\x04Data\"\x87\x03\n" +
+	"\x04Data\x18\x06 \x03(\v28.Cratis.Chronicle.Contracts.Security.ApplicationResponseR\x04Data\"\xab\x03\n" +
+	"6QueryResult_IEnumerable_EventStoreAccessGrantsResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12c\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v25.Cratis.Chronicle.Contracts.Security.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12W\n" +
+	"\x04Data\x18\x06 \x03(\v2C.Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantsResponseR\x04Data\"\xb1\x03\n" +
+	"9QueryResult_IEnumerable_EventStoreAccessPreflightResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12c\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v25.Cratis.Chronicle.Contracts.Security.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12Z\n" +
+	"\x04Data\x18\x06 \x03(\v2F.Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponseR\x04Data\"\x87\x03\n" +
 	"$QueryResult_IEnumerable_UserResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
 	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12c\n" +
@@ -1506,7 +2289,14 @@ const file_security_proto_rawDesc = "" +
 	"\x06UserId\x18\x01 \x01(\v2\t.bcl.GuidR\x06UserId\"W\n" +
 	"\x1aRevokeAdministratorRequest\x12!\n" +
 	"\x06UserId\x18\x01 \x01(\v2\t.bcl.GuidR\x06UserId\x12\x16\n" +
-	"\x06Reason\x18\x02 \x01(\tR\x06Reason\"2\n" +
+	"\x06Reason\x18\x02 \x01(\tR\x06Reason\"\xda\x01\n" +
+	"\x1dRevokeEventStoreAccessRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x04 \x01(\tR\n" +
+	"EventStore\x12\x1c\n" +
+	"\tNamespace\x18\x05 \x01(\tR\tNamespace\x12S\n" +
+	"\x06Holder\x18\x06 \x01(\v2;.Cratis.Chronicle.Contracts.Security.EventStoreAccessHolderR\x06Holder\x12&\n" +
+	"\x0eAllEventStores\x18\a \x01(\bR\x0eAllEventStores\"2\n" +
 	"\x1aSerializableDateTimeOffset\x12\x14\n" +
 	"\x05Value\x18\x01 \x01(\tR\x05Value\"\xad\x01\n" +
 	"\x1eSetInitialAdminPasswordRequest\x12!\n" +
@@ -1527,16 +2317,30 @@ const file_security_proto_rawDesc = "" +
 	"\x10ValidationResult\x12Y\n" +
 	"\bSeverity\x18\x01 \x01(\x0e2=.Cratis.Chronicle.Contracts.Security.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
-	"\aMembers\x18\x03 \x03(\tR\aMembers*P\n" +
+	"\aMembers\x18\x03 \x03(\tR\aMembers*=\n" +
+	"\x1bEventStoreAccessGrantSource\x12\x11\n" +
+	"\rConfiguration\x10\x00\x12\v\n" +
+	"\aCommand\x10\x01*9\n" +
+	"\vStoreAccess\x12\b\n" +
+	"\x04None\x10\x00\x12\b\n" +
+	"\x04Read\x10\x01\x12\n" +
+	"\n" +
+	"\x06Append\x10\x02\x12\n" +
+	"\n" +
+	"\x06Manage\x10\x04*P\n" +
 	"\x18ValidationResultSeverity\x12\v\n" +
 	"\aUnknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\xa9\x03\n" +
-	"\x0eAdministrators\x12\x7f\n" +
+	"\x05Error\x10\x032\xd7\a\n" +
+	"\x0eAdministrators\x12z\n" +
+	"\x03All\x12\x16.google.protobuf.Empty\x1a[.Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessGrantsResponse\x12\x7f\n" +
 	"\x11AllAdministrators\x12\x16.google.protobuf.Empty\x1aR.Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse\x12\x88\x01\n" +
-	"\x12GrantAdministrator\x12>.Cratis.Chronicle.Contracts.Security.GrantAdministratorRequest\x1a2.Cratis.Chronicle.Contracts.Security.CommandResult\x12\x8a\x01\n" +
-	"\x13RevokeAdministrator\x12?.Cratis.Chronicle.Contracts.Security.RevokeAdministratorRequest\x1a2.Cratis.Chronicle.Contracts.Security.CommandResult2\xae\x04\n" +
+	"\x12GrantAdministrator\x12>.Cratis.Chronicle.Contracts.Security.GrantAdministratorRequest\x1a2.Cratis.Chronicle.Contracts.Security.CommandResult\x12\x8e\x01\n" +
+	"\x15GrantEventStoreAccess\x12A.Cratis.Chronicle.Contracts.Security.GrantEventStoreAccessRequest\x1a2.Cratis.Chronicle.Contracts.Security.CommandResult\x12\x8a\x01\n" +
+	"\x13RevokeAdministrator\x12?.Cratis.Chronicle.Contracts.Security.RevokeAdministratorRequest\x1a2.Cratis.Chronicle.Contracts.Security.CommandResult\x12\x98\x01\n" +
+	"\x16RevokeEventStoreAccess\x12B.Cratis.Chronicle.Contracts.Security.RevokeEventStoreAccessRequest\x1a:.Cratis.Chronicle.Contracts.Security.CommandResult_Boolean\x12\x83\x01\n" +
+	"\tUncovered\x12\x16.google.protobuf.Empty\x1a^.Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessPreflightResponse2\xae\x04\n" +
 	"\fApplications\x12\x80\x01\n" +
 	"\x0eAddApplication\x12:.Cratis.Chronicle.Contracts.Security.AddApplicationRequest\x1a2.Cratis.Chronicle.Contracts.Security.CommandResult\x12}\n" +
 	"\x0fAllApplications\x12\x16.google.protobuf.Empty\x1aP.Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse0\x01\x12\x92\x01\n" +
@@ -1565,101 +2369,137 @@ func file_security_proto_rawDescGZIP() []byte {
 	return file_security_proto_rawDescData
 }
 
-var file_security_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_security_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_security_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_security_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_security_proto_goTypes = []any{
-	(ValidationResultSeverity)(0),                         // 0: Cratis.Chronicle.Contracts.Security.ValidationResultSeverity
-	(*AddApplicationRequest)(nil),                         // 1: Cratis.Chronicle.Contracts.Security.AddApplicationRequest
-	(*AddUserRequest)(nil),                                // 2: Cratis.Chronicle.Contracts.Security.AddUserRequest
-	(*AdminPasswordStatusResponse)(nil),                   // 3: Cratis.Chronicle.Contracts.Security.AdminPasswordStatusResponse
-	(*AdministratorResponse)(nil),                         // 4: Cratis.Chronicle.Contracts.Security.AdministratorResponse
-	(*ApplicationResponse)(nil),                           // 5: Cratis.Chronicle.Contracts.Security.ApplicationResponse
-	(*ChangeApplicationSecretRequest)(nil),                // 6: Cratis.Chronicle.Contracts.Security.ChangeApplicationSecretRequest
-	(*ChangeUserPasswordRequest)(nil),                     // 7: Cratis.Chronicle.Contracts.Security.ChangeUserPasswordRequest
-	(*CommandResult)(nil),                                 // 8: Cratis.Chronicle.Contracts.Security.CommandResult
-	(*GrantAdministratorRequest)(nil),                     // 9: Cratis.Chronicle.Contracts.Security.GrantAdministratorRequest
-	(*QueryResult_AdminPasswordStatusResponse)(nil),       // 10: Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse
-	(*QueryResult_IEnumerable_AdministratorResponse)(nil), // 11: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse
-	(*QueryResult_IEnumerable_ApplicationResponse)(nil),   // 12: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse
-	(*QueryResult_IEnumerable_UserResponse)(nil),          // 13: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse
-	(*RemoveApplicationRequest)(nil),                      // 14: Cratis.Chronicle.Contracts.Security.RemoveApplicationRequest
-	(*RemoveUserRequest)(nil),                             // 15: Cratis.Chronicle.Contracts.Security.RemoveUserRequest
-	(*RequirePasswordChangeRequest)(nil),                  // 16: Cratis.Chronicle.Contracts.Security.RequirePasswordChangeRequest
-	(*RevokeAdministratorRequest)(nil),                    // 17: Cratis.Chronicle.Contracts.Security.RevokeAdministratorRequest
-	(*SerializableDateTimeOffset)(nil),                    // 18: Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
-	(*SetInitialAdminPasswordRequest)(nil),                // 19: Cratis.Chronicle.Contracts.Security.SetInitialAdminPasswordRequest
-	(*UserResponse)(nil),                                  // 20: Cratis.Chronicle.Contracts.Security.UserResponse
-	(*ValidationResult)(nil),                              // 21: Cratis.Chronicle.Contracts.Security.ValidationResult
-	(*bcl.Guid)(nil),                                      // 22: bcl.Guid
-	(*emptypb.Empty)(nil),                                 // 23: google.protobuf.Empty
+	(EventStoreAccessGrantSource)(0),                                  // 0: Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantSource
+	(StoreAccess)(0),                                                  // 1: Cratis.Chronicle.Contracts.Security.StoreAccess
+	(ValidationResultSeverity)(0),                                     // 2: Cratis.Chronicle.Contracts.Security.ValidationResultSeverity
+	(*AddApplicationRequest)(nil),                                     // 3: Cratis.Chronicle.Contracts.Security.AddApplicationRequest
+	(*AddUserRequest)(nil),                                            // 4: Cratis.Chronicle.Contracts.Security.AddUserRequest
+	(*AdminPasswordStatusResponse)(nil),                               // 5: Cratis.Chronicle.Contracts.Security.AdminPasswordStatusResponse
+	(*AdministratorResponse)(nil),                                     // 6: Cratis.Chronicle.Contracts.Security.AdministratorResponse
+	(*ApplicationResponse)(nil),                                       // 7: Cratis.Chronicle.Contracts.Security.ApplicationResponse
+	(*ChangeApplicationSecretRequest)(nil),                            // 8: Cratis.Chronicle.Contracts.Security.ChangeApplicationSecretRequest
+	(*ChangeUserPasswordRequest)(nil),                                 // 9: Cratis.Chronicle.Contracts.Security.ChangeUserPasswordRequest
+	(*CommandResult)(nil),                                             // 10: Cratis.Chronicle.Contracts.Security.CommandResult
+	(*CommandResult_Boolean)(nil),                                     // 11: Cratis.Chronicle.Contracts.Security.CommandResult_Boolean
+	(*EventStoreAccessGrantsResponse)(nil),                            // 12: Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantsResponse
+	(*EventStoreAccessHolder)(nil),                                    // 13: Cratis.Chronicle.Contracts.Security.EventStoreAccessHolder
+	(*EventStoreAccessPreflightResponse)(nil),                         // 14: Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponse
+	(*GrantAdministratorRequest)(nil),                                 // 15: Cratis.Chronicle.Contracts.Security.GrantAdministratorRequest
+	(*GrantEventStoreAccessRequest)(nil),                              // 16: Cratis.Chronicle.Contracts.Security.GrantEventStoreAccessRequest
+	(*QueryResult_AdminPasswordStatusResponse)(nil),                   // 17: Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse
+	(*QueryResult_IEnumerable_AdministratorResponse)(nil),             // 18: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse
+	(*QueryResult_IEnumerable_ApplicationResponse)(nil),               // 19: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse
+	(*QueryResult_IEnumerable_EventStoreAccessGrantsResponse)(nil),    // 20: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessGrantsResponse
+	(*QueryResult_IEnumerable_EventStoreAccessPreflightResponse)(nil), // 21: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessPreflightResponse
+	(*QueryResult_IEnumerable_UserResponse)(nil),                      // 22: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse
+	(*RemoveApplicationRequest)(nil),                                  // 23: Cratis.Chronicle.Contracts.Security.RemoveApplicationRequest
+	(*RemoveUserRequest)(nil),                                         // 24: Cratis.Chronicle.Contracts.Security.RemoveUserRequest
+	(*RequirePasswordChangeRequest)(nil),                              // 25: Cratis.Chronicle.Contracts.Security.RequirePasswordChangeRequest
+	(*RevokeAdministratorRequest)(nil),                                // 26: Cratis.Chronicle.Contracts.Security.RevokeAdministratorRequest
+	(*RevokeEventStoreAccessRequest)(nil),                             // 27: Cratis.Chronicle.Contracts.Security.RevokeEventStoreAccessRequest
+	(*SerializableDateTimeOffset)(nil),                                // 28: Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
+	(*SetInitialAdminPasswordRequest)(nil),                            // 29: Cratis.Chronicle.Contracts.Security.SetInitialAdminPasswordRequest
+	(*UserResponse)(nil),                                              // 30: Cratis.Chronicle.Contracts.Security.UserResponse
+	(*ValidationResult)(nil),                                          // 31: Cratis.Chronicle.Contracts.Security.ValidationResult
+	(*bcl.Guid)(nil),                                                  // 32: bcl.Guid
+	(*emptypb.Empty)(nil),                                             // 33: google.protobuf.Empty
 }
 var file_security_proto_depIdxs = []int32{
-	22, // 0: Cratis.Chronicle.Contracts.Security.AddApplicationRequest.Id:type_name -> bcl.Guid
-	22, // 1: Cratis.Chronicle.Contracts.Security.AddUserRequest.UserId:type_name -> bcl.Guid
-	22, // 2: Cratis.Chronicle.Contracts.Security.AdminPasswordStatusResponse.AdminUserId:type_name -> bcl.Guid
-	22, // 3: Cratis.Chronicle.Contracts.Security.AdministratorResponse.UserId:type_name -> bcl.Guid
-	22, // 4: Cratis.Chronicle.Contracts.Security.ApplicationResponse.Id:type_name -> bcl.Guid
-	18, // 5: Cratis.Chronicle.Contracts.Security.ApplicationResponse.CreatedAt:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
-	18, // 6: Cratis.Chronicle.Contracts.Security.ApplicationResponse.LastModifiedAt:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
-	22, // 7: Cratis.Chronicle.Contracts.Security.ChangeApplicationSecretRequest.Id:type_name -> bcl.Guid
-	22, // 8: Cratis.Chronicle.Contracts.Security.ChangeUserPasswordRequest.UserId:type_name -> bcl.Guid
-	22, // 9: Cratis.Chronicle.Contracts.Security.CommandResult.CorrelationId:type_name -> bcl.Guid
-	21, // 10: Cratis.Chronicle.Contracts.Security.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
-	22, // 11: Cratis.Chronicle.Contracts.Security.GrantAdministratorRequest.UserId:type_name -> bcl.Guid
-	22, // 12: Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse.CorrelationId:type_name -> bcl.Guid
-	21, // 13: Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
-	3,  // 14: Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.AdminPasswordStatusResponse
-	22, // 15: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse.CorrelationId:type_name -> bcl.Guid
-	21, // 16: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
-	4,  // 17: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.AdministratorResponse
-	22, // 18: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse.CorrelationId:type_name -> bcl.Guid
-	21, // 19: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
-	5,  // 20: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.ApplicationResponse
-	22, // 21: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse.CorrelationId:type_name -> bcl.Guid
-	21, // 22: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
-	20, // 23: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.UserResponse
-	22, // 24: Cratis.Chronicle.Contracts.Security.RemoveApplicationRequest.Id:type_name -> bcl.Guid
-	22, // 25: Cratis.Chronicle.Contracts.Security.RemoveUserRequest.UserId:type_name -> bcl.Guid
-	22, // 26: Cratis.Chronicle.Contracts.Security.RequirePasswordChangeRequest.UserId:type_name -> bcl.Guid
-	22, // 27: Cratis.Chronicle.Contracts.Security.RevokeAdministratorRequest.UserId:type_name -> bcl.Guid
-	22, // 28: Cratis.Chronicle.Contracts.Security.SetInitialAdminPasswordRequest.UserId:type_name -> bcl.Guid
-	22, // 29: Cratis.Chronicle.Contracts.Security.UserResponse.Id:type_name -> bcl.Guid
-	18, // 30: Cratis.Chronicle.Contracts.Security.UserResponse.CreatedAt:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
-	18, // 31: Cratis.Chronicle.Contracts.Security.UserResponse.LastModifiedAt:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
-	0,  // 32: Cratis.Chronicle.Contracts.Security.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResultSeverity
-	23, // 33: Cratis.Chronicle.Contracts.Security.Administrators.AllAdministrators:input_type -> google.protobuf.Empty
-	9,  // 34: Cratis.Chronicle.Contracts.Security.Administrators.GrantAdministrator:input_type -> Cratis.Chronicle.Contracts.Security.GrantAdministratorRequest
-	17, // 35: Cratis.Chronicle.Contracts.Security.Administrators.RevokeAdministrator:input_type -> Cratis.Chronicle.Contracts.Security.RevokeAdministratorRequest
-	1,  // 36: Cratis.Chronicle.Contracts.Security.Applications.AddApplication:input_type -> Cratis.Chronicle.Contracts.Security.AddApplicationRequest
-	23, // 37: Cratis.Chronicle.Contracts.Security.Applications.AllApplications:input_type -> google.protobuf.Empty
-	6,  // 38: Cratis.Chronicle.Contracts.Security.Applications.ChangeApplicationSecret:input_type -> Cratis.Chronicle.Contracts.Security.ChangeApplicationSecretRequest
-	14, // 39: Cratis.Chronicle.Contracts.Security.Applications.RemoveApplication:input_type -> Cratis.Chronicle.Contracts.Security.RemoveApplicationRequest
-	2,  // 40: Cratis.Chronicle.Contracts.Security.Users.AddUser:input_type -> Cratis.Chronicle.Contracts.Security.AddUserRequest
-	23, // 41: Cratis.Chronicle.Contracts.Security.Users.AllUsers:input_type -> google.protobuf.Empty
-	7,  // 42: Cratis.Chronicle.Contracts.Security.Users.ChangeUserPassword:input_type -> Cratis.Chronicle.Contracts.Security.ChangeUserPasswordRequest
-	23, // 43: Cratis.Chronicle.Contracts.Security.Users.GetStatus:input_type -> google.protobuf.Empty
-	15, // 44: Cratis.Chronicle.Contracts.Security.Users.RemoveUser:input_type -> Cratis.Chronicle.Contracts.Security.RemoveUserRequest
-	16, // 45: Cratis.Chronicle.Contracts.Security.Users.RequirePasswordChange:input_type -> Cratis.Chronicle.Contracts.Security.RequirePasswordChangeRequest
-	19, // 46: Cratis.Chronicle.Contracts.Security.Users.SetInitialAdminPassword:input_type -> Cratis.Chronicle.Contracts.Security.SetInitialAdminPasswordRequest
-	11, // 47: Cratis.Chronicle.Contracts.Security.Administrators.AllAdministrators:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse
-	8,  // 48: Cratis.Chronicle.Contracts.Security.Administrators.GrantAdministrator:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	8,  // 49: Cratis.Chronicle.Contracts.Security.Administrators.RevokeAdministrator:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	8,  // 50: Cratis.Chronicle.Contracts.Security.Applications.AddApplication:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	12, // 51: Cratis.Chronicle.Contracts.Security.Applications.AllApplications:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse
-	8,  // 52: Cratis.Chronicle.Contracts.Security.Applications.ChangeApplicationSecret:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	8,  // 53: Cratis.Chronicle.Contracts.Security.Applications.RemoveApplication:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	8,  // 54: Cratis.Chronicle.Contracts.Security.Users.AddUser:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	13, // 55: Cratis.Chronicle.Contracts.Security.Users.AllUsers:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse
-	8,  // 56: Cratis.Chronicle.Contracts.Security.Users.ChangeUserPassword:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	10, // 57: Cratis.Chronicle.Contracts.Security.Users.GetStatus:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse
-	8,  // 58: Cratis.Chronicle.Contracts.Security.Users.RemoveUser:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	8,  // 59: Cratis.Chronicle.Contracts.Security.Users.RequirePasswordChange:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	8,  // 60: Cratis.Chronicle.Contracts.Security.Users.SetInitialAdminPassword:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
-	47, // [47:61] is the sub-list for method output_type
-	33, // [33:47] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	32, // 0: Cratis.Chronicle.Contracts.Security.AddApplicationRequest.Id:type_name -> bcl.Guid
+	32, // 1: Cratis.Chronicle.Contracts.Security.AddUserRequest.UserId:type_name -> bcl.Guid
+	32, // 2: Cratis.Chronicle.Contracts.Security.AdminPasswordStatusResponse.AdminUserId:type_name -> bcl.Guid
+	32, // 3: Cratis.Chronicle.Contracts.Security.AdministratorResponse.UserId:type_name -> bcl.Guid
+	32, // 4: Cratis.Chronicle.Contracts.Security.ApplicationResponse.Id:type_name -> bcl.Guid
+	28, // 5: Cratis.Chronicle.Contracts.Security.ApplicationResponse.CreatedAt:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
+	28, // 6: Cratis.Chronicle.Contracts.Security.ApplicationResponse.LastModifiedAt:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
+	32, // 7: Cratis.Chronicle.Contracts.Security.ChangeApplicationSecretRequest.Id:type_name -> bcl.Guid
+	32, // 8: Cratis.Chronicle.Contracts.Security.ChangeUserPasswordRequest.UserId:type_name -> bcl.Guid
+	32, // 9: Cratis.Chronicle.Contracts.Security.CommandResult.CorrelationId:type_name -> bcl.Guid
+	31, // 10: Cratis.Chronicle.Contracts.Security.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
+	32, // 11: Cratis.Chronicle.Contracts.Security.CommandResult_Boolean.CorrelationId:type_name -> bcl.Guid
+	31, // 12: Cratis.Chronicle.Contracts.Security.CommandResult_Boolean.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
+	1,  // 13: Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantsResponse.Access:type_name -> Cratis.Chronicle.Contracts.Security.StoreAccess
+	0,  // 14: Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantsResponse.Source:type_name -> Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantSource
+	13, // 15: Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantsResponse.Holder:type_name -> Cratis.Chronicle.Contracts.Security.EventStoreAccessHolder
+	1,  // 16: Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponse.Access:type_name -> Cratis.Chronicle.Contracts.Security.StoreAccess
+	28, // 17: Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponse.FirstSeen:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
+	28, // 18: Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponse.LastSeen:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
+	13, // 19: Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponse.Holder:type_name -> Cratis.Chronicle.Contracts.Security.EventStoreAccessHolder
+	32, // 20: Cratis.Chronicle.Contracts.Security.GrantAdministratorRequest.UserId:type_name -> bcl.Guid
+	1,  // 21: Cratis.Chronicle.Contracts.Security.GrantEventStoreAccessRequest.Access:type_name -> Cratis.Chronicle.Contracts.Security.StoreAccess
+	13, // 22: Cratis.Chronicle.Contracts.Security.GrantEventStoreAccessRequest.Holder:type_name -> Cratis.Chronicle.Contracts.Security.EventStoreAccessHolder
+	32, // 23: Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse.CorrelationId:type_name -> bcl.Guid
+	31, // 24: Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
+	5,  // 25: Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.AdminPasswordStatusResponse
+	32, // 26: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse.CorrelationId:type_name -> bcl.Guid
+	31, // 27: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
+	6,  // 28: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.AdministratorResponse
+	32, // 29: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse.CorrelationId:type_name -> bcl.Guid
+	31, // 30: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
+	7,  // 31: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.ApplicationResponse
+	32, // 32: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessGrantsResponse.CorrelationId:type_name -> bcl.Guid
+	31, // 33: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessGrantsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
+	12, // 34: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessGrantsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantsResponse
+	32, // 35: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessPreflightResponse.CorrelationId:type_name -> bcl.Guid
+	31, // 36: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessPreflightResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
+	14, // 37: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessPreflightResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.EventStoreAccessPreflightResponse
+	32, // 38: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse.CorrelationId:type_name -> bcl.Guid
+	31, // 39: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResult
+	30, // 40: Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse.Data:type_name -> Cratis.Chronicle.Contracts.Security.UserResponse
+	32, // 41: Cratis.Chronicle.Contracts.Security.RemoveApplicationRequest.Id:type_name -> bcl.Guid
+	32, // 42: Cratis.Chronicle.Contracts.Security.RemoveUserRequest.UserId:type_name -> bcl.Guid
+	32, // 43: Cratis.Chronicle.Contracts.Security.RequirePasswordChangeRequest.UserId:type_name -> bcl.Guid
+	32, // 44: Cratis.Chronicle.Contracts.Security.RevokeAdministratorRequest.UserId:type_name -> bcl.Guid
+	13, // 45: Cratis.Chronicle.Contracts.Security.RevokeEventStoreAccessRequest.Holder:type_name -> Cratis.Chronicle.Contracts.Security.EventStoreAccessHolder
+	32, // 46: Cratis.Chronicle.Contracts.Security.SetInitialAdminPasswordRequest.UserId:type_name -> bcl.Guid
+	32, // 47: Cratis.Chronicle.Contracts.Security.UserResponse.Id:type_name -> bcl.Guid
+	28, // 48: Cratis.Chronicle.Contracts.Security.UserResponse.CreatedAt:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
+	28, // 49: Cratis.Chronicle.Contracts.Security.UserResponse.LastModifiedAt:type_name -> Cratis.Chronicle.Contracts.Security.SerializableDateTimeOffset
+	2,  // 50: Cratis.Chronicle.Contracts.Security.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Security.ValidationResultSeverity
+	33, // 51: Cratis.Chronicle.Contracts.Security.Administrators.All:input_type -> google.protobuf.Empty
+	33, // 52: Cratis.Chronicle.Contracts.Security.Administrators.AllAdministrators:input_type -> google.protobuf.Empty
+	15, // 53: Cratis.Chronicle.Contracts.Security.Administrators.GrantAdministrator:input_type -> Cratis.Chronicle.Contracts.Security.GrantAdministratorRequest
+	16, // 54: Cratis.Chronicle.Contracts.Security.Administrators.GrantEventStoreAccess:input_type -> Cratis.Chronicle.Contracts.Security.GrantEventStoreAccessRequest
+	26, // 55: Cratis.Chronicle.Contracts.Security.Administrators.RevokeAdministrator:input_type -> Cratis.Chronicle.Contracts.Security.RevokeAdministratorRequest
+	27, // 56: Cratis.Chronicle.Contracts.Security.Administrators.RevokeEventStoreAccess:input_type -> Cratis.Chronicle.Contracts.Security.RevokeEventStoreAccessRequest
+	33, // 57: Cratis.Chronicle.Contracts.Security.Administrators.Uncovered:input_type -> google.protobuf.Empty
+	3,  // 58: Cratis.Chronicle.Contracts.Security.Applications.AddApplication:input_type -> Cratis.Chronicle.Contracts.Security.AddApplicationRequest
+	33, // 59: Cratis.Chronicle.Contracts.Security.Applications.AllApplications:input_type -> google.protobuf.Empty
+	8,  // 60: Cratis.Chronicle.Contracts.Security.Applications.ChangeApplicationSecret:input_type -> Cratis.Chronicle.Contracts.Security.ChangeApplicationSecretRequest
+	23, // 61: Cratis.Chronicle.Contracts.Security.Applications.RemoveApplication:input_type -> Cratis.Chronicle.Contracts.Security.RemoveApplicationRequest
+	4,  // 62: Cratis.Chronicle.Contracts.Security.Users.AddUser:input_type -> Cratis.Chronicle.Contracts.Security.AddUserRequest
+	33, // 63: Cratis.Chronicle.Contracts.Security.Users.AllUsers:input_type -> google.protobuf.Empty
+	9,  // 64: Cratis.Chronicle.Contracts.Security.Users.ChangeUserPassword:input_type -> Cratis.Chronicle.Contracts.Security.ChangeUserPasswordRequest
+	33, // 65: Cratis.Chronicle.Contracts.Security.Users.GetStatus:input_type -> google.protobuf.Empty
+	24, // 66: Cratis.Chronicle.Contracts.Security.Users.RemoveUser:input_type -> Cratis.Chronicle.Contracts.Security.RemoveUserRequest
+	25, // 67: Cratis.Chronicle.Contracts.Security.Users.RequirePasswordChange:input_type -> Cratis.Chronicle.Contracts.Security.RequirePasswordChangeRequest
+	29, // 68: Cratis.Chronicle.Contracts.Security.Users.SetInitialAdminPassword:input_type -> Cratis.Chronicle.Contracts.Security.SetInitialAdminPasswordRequest
+	20, // 69: Cratis.Chronicle.Contracts.Security.Administrators.All:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessGrantsResponse
+	18, // 70: Cratis.Chronicle.Contracts.Security.Administrators.AllAdministrators:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_AdministratorResponse
+	10, // 71: Cratis.Chronicle.Contracts.Security.Administrators.GrantAdministrator:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	10, // 72: Cratis.Chronicle.Contracts.Security.Administrators.GrantEventStoreAccess:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	10, // 73: Cratis.Chronicle.Contracts.Security.Administrators.RevokeAdministrator:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	11, // 74: Cratis.Chronicle.Contracts.Security.Administrators.RevokeEventStoreAccess:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult_Boolean
+	21, // 75: Cratis.Chronicle.Contracts.Security.Administrators.Uncovered:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_EventStoreAccessPreflightResponse
+	10, // 76: Cratis.Chronicle.Contracts.Security.Applications.AddApplication:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	19, // 77: Cratis.Chronicle.Contracts.Security.Applications.AllApplications:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_ApplicationResponse
+	10, // 78: Cratis.Chronicle.Contracts.Security.Applications.ChangeApplicationSecret:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	10, // 79: Cratis.Chronicle.Contracts.Security.Applications.RemoveApplication:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	10, // 80: Cratis.Chronicle.Contracts.Security.Users.AddUser:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	22, // 81: Cratis.Chronicle.Contracts.Security.Users.AllUsers:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_IEnumerable_UserResponse
+	10, // 82: Cratis.Chronicle.Contracts.Security.Users.ChangeUserPassword:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	17, // 83: Cratis.Chronicle.Contracts.Security.Users.GetStatus:output_type -> Cratis.Chronicle.Contracts.Security.QueryResult_AdminPasswordStatusResponse
+	10, // 84: Cratis.Chronicle.Contracts.Security.Users.RemoveUser:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	10, // 85: Cratis.Chronicle.Contracts.Security.Users.RequirePasswordChange:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	10, // 86: Cratis.Chronicle.Contracts.Security.Users.SetInitialAdminPassword:output_type -> Cratis.Chronicle.Contracts.Security.CommandResult
+	69, // [69:87] is the sub-list for method output_type
+	51, // [51:69] is the sub-list for method input_type
+	51, // [51:51] is the sub-list for extension type_name
+	51, // [51:51] is the sub-list for extension extendee
+	0,  // [0:51] is the sub-list for field type_name
 }
 
 func init() { file_security_proto_init() }
@@ -1672,8 +2512,8 @@ func file_security_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_security_proto_rawDesc), len(file_security_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   21,
+			NumEnums:      3,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

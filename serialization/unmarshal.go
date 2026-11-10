@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/jsonstructure"
@@ -56,6 +57,9 @@ func (p *Plan) Unmarshal(data []byte, target any) error {
 }
 
 func decodeLeafJSON(data []byte, value reflect.Value) error {
+	if value.Type() == reflect.TypeFor[time.Time]() {
+		data = unescapedString(data)
+	}
 	target := value.Addr()
 	if target.Type().Implements(reflect.TypeFor[json.Unmarshaler]()) || target.Type().Implements(reflect.TypeFor[encoding.TextUnmarshaler]()) {
 		_, err := invoke(func() (struct{}, error) { return struct{}{}, json.Unmarshal(data, target.Interface()) })
@@ -204,4 +208,24 @@ func (n *node) decodeContext(data []byte, value reflect.Value, depth int, open b
 		}
 		return nil
 	}
+}
+
+// unescapedString rewrites a JSON string that holds escape sequences as plain
+// characters. The kernel writes the + of a time offset as \u002B, which is valid
+// JSON, but time.Time reads the raw bytes of a string without unescaping it
+// before Go 1.27. Anything that is not a string is returned unchanged.
+func unescapedString(data []byte) []byte {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) < 2 || trimmed[0] != '"' || !bytes.Contains(trimmed, []byte{'\\'}) {
+		return data
+	}
+	var text string
+	if err := json.Unmarshal(trimmed, &text); err != nil {
+		return data
+	}
+	plain, err := json.Marshal(text)
+	if err != nil {
+		return data
+	}
+	return plain
 }

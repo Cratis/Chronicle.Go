@@ -1905,6 +1905,7 @@ type SinkDefinition struct {
 	ConfigurationId *bcl.Guid                       `protobuf:"bytes,1,opt,name=ConfigurationId,proto3" json:"ConfigurationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
 	TypeId          string                          `protobuf:"bytes,2,opt,name=TypeId,proto3" json:"TypeId,omitempty"`
 	EventSequence   *EventSequenceSinkConfiguration `protobuf:"bytes,3,opt,name=EventSequence,proto3" json:"EventSequence,omitempty"`
+	Name            string                          `protobuf:"bytes,4,opt,name=Name,proto3" json:"Name,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1958,6 +1959,13 @@ func (x *SinkDefinition) GetEventSequence() *EventSequenceSinkConfiguration {
 		return x.EventSequence
 	}
 	return nil
+}
+
+func (x *SinkDefinition) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
 }
 
 type UpdateDefinitionRequest struct {
@@ -2269,11 +2277,12 @@ const file_readmodels_proto_rawDesc = "" +
 	"\tReadModel\x18\x03 \x01(\v2:.Cratis.Chronicle.Contracts.ReadModels.ReadModelDefinitionR\tReadModel\x12N\n" +
 	"\x06Source\x18\x04 \x01(\x0e26.Cratis.Chronicle.Contracts.ReadModels.ReadModelSourceR\x06Source\"2\n" +
 	"\x1aSerializableDateTimeOffset\x12\x14\n" +
-	"\x05Value\x18\x01 \x01(\tR\x05Value\"\xca\x01\n" +
+	"\x05Value\x18\x01 \x01(\tR\x05Value\"\xde\x01\n" +
 	"\x0eSinkDefinition\x123\n" +
 	"\x0fConfigurationId\x18\x01 \x01(\v2\t.bcl.GuidR\x0fConfigurationId\x12\x16\n" +
 	"\x06TypeId\x18\x02 \x01(\tR\x06TypeId\x12k\n" +
-	"\rEventSequence\x18\x03 \x01(\v2E.Cratis.Chronicle.Contracts.ReadModels.EventSequenceSinkConfigurationR\rEventSequence\"\xbb\x01\n" +
+	"\rEventSequence\x18\x03 \x01(\v2E.Cratis.Chronicle.Contracts.ReadModels.EventSequenceSinkConfigurationR\rEventSequence\x12\x12\n" +
+	"\x04Name\x18\x04 \x01(\tR\x04Name\"\xbb\x01\n" +
 	"\x17UpdateDefinitionRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +

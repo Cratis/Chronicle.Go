@@ -22,6 +22,10 @@ func TestProjectionDefaultsSnippetMatchesCompiledExample(t *testing.T) {
 	checkProjectionSnippets(t, "examples/projections/defaults.go", "Documentation/projections/defaults.md", []string{"projection-defaults"})
 }
 
+func TestScoreboardProjectionSnippetsMatchCompiledExample(t *testing.T) {
+	checkProjectionSnippets(t, "examples/projections/scoreboards.go", "Documentation/projections/dictionaries-and-ordering.md", []string{"scoreboard-events", "scoreboard-fluent", "scoreboard-model-bound"})
+}
+
 func TestProjectionSnippetsMatchCompiledExample(t *testing.T) {
 	checkProjectionSnippets(t, "examples/projections/main.go", "Documentation/projections/index.md", []string{"model-bound", "fluent"})
 }

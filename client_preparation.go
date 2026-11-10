@@ -8,6 +8,7 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/reactors"
@@ -120,7 +121,8 @@ func (p *ClientPreparation) Prepare(ctx context.Context, scopes reactors.ScopeFa
 	c.storeRegistryOutputs = make(map[StoreName]*registryPreparationOutput, len(p.names))
 	frozen := c.registryOutput.compose()
 	c.catalog, c.constraints, c.readModelCatalog = frozen.events, frozen.constraints, frozen.models
-	c.projections, c.seeds = frozen.projections, frozen.seeds
+	c.projections, c.seeds, c.graphs = frozen.projections, frozen.seeds, frozen.graphs
+	c.storeGraphs = make(map[StoreName][]graphs.Definition, len(p.names))
 	c.reactors.defaults, c.reducers.defaults, c.readModelReactors.defaults = frozen.reactors, frozen.reducers, frozen.readModelReactors
 	for _, name := range p.names {
 		output := compiled[p.stores[name]]
@@ -128,6 +130,7 @@ func (p *ClientPreparation) Prepare(ctx context.Context, scopes reactors.ScopeFa
 		frozen := output.compose()
 		c.catalogs[name], c.storeConstraints[name] = frozen.events, frozen.constraints
 		c.readModelCatalogs[name], c.storeProjections[name] = frozen.models, frozen.projections
+		c.storeGraphs[name] = frozen.graphs
 		c.reactors.stores[name], c.reducers.stores[name] = frozen.reactors, frozen.reducers
 		c.readModelReactors.stores[name], c.storeSeeds[name] = frozen.readModelReactors, frozen.seeds
 	}
@@ -159,6 +162,7 @@ func (p *ClientPreparation) compile(ctx context.Context, scopes, runtimeServices
 		if err != nil {
 			return nil, err
 		}
+		prepared.graphSink = p.client.config.defaultGraphSinkType
 		schemas[declarations] = prepared
 	}
 	compiled := make(map[*registryDeclarations]*registryPreparationOutput)

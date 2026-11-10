@@ -10,6 +10,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/internal/artifacts"
 	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/reactors"
@@ -40,6 +41,7 @@ type registrySnapshot struct {
 	models            *readmodels.Catalog
 	constraints       []constraints.Definition
 	projections       []projections.Definition
+	graphs            []graphs.Definition
 	reactors          []*reactorPlan
 	readModelReactors []*reactors.ReadModelPlan
 	reducers          []*reducers.Plan
@@ -91,6 +93,10 @@ func prepareRegistryOutput(ctx context.Context, captured *registryDeclarations, 
 			return err
 		}
 		if err := compileReadModelReactors(&frozen, captured.readModelReactors, services, captured.reactorSideEffects); err != nil {
+			return err
+		}
+		frozen.graphs, err = compileGraphs(captured.graphs, schemas, frozen)
+		if err != nil {
 			return err
 		}
 		frozen.seeds, err = prepareSeeders(ctx, frozen.events, captured.seeders, plans)

@@ -366,22 +366,26 @@ func Validate(role Role, directives []Directive) error {
 			if !eventReference(d.Args[0].Value) {
 				return failure("invalid event reference", false)
 			}
-			for i, a := range d.Args[1:] {
-				expected := "from"
-				if d.Name == "value" {
-					expected = "value"
-				}
-				if a.Name != expected || i > 0 {
+			expected, seen := "from", map[string]bool{}
+			if d.Name == "value" {
+				expected = "value"
+			}
+			for _, a := range d.Args[1:] {
+				if a.Name != expected && a.Name != "once" || seen[a.Name] {
 					return failure("unknown or duplicate argument", false)
 				}
-				if expected == "from" && (a.Value.Kind != Name || !Path(a.Value.Text)) {
+				seen[a.Name] = true
+				if a.Name == "once" && a.Value.Kind != Boolean {
+					return failure("once requires true or false", false)
+				}
+				if a.Name == "from" && (a.Value.Kind != Name || !Path(a.Value.Text)) {
 					return failure("serialized property path required", false)
 				}
-				if expected == "value" && (a.Value.Kind == Name || a.Value.Kind == Call || a.Value.Kind == List) {
+				if a.Name == "value" && (a.Value.Kind == Name || a.Value.Kind == Call || a.Value.Kind == List) {
 					return failure("JSON scalar required", false)
 				}
 			}
-			if d.Name == "value" && len(d.Args) != 2 {
+			if d.Name == "value" && !seen["value"] {
 				return failure("value argument required", false)
 			}
 		default:
