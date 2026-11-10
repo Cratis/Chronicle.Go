@@ -67,7 +67,7 @@ The check also detects stale or unexpected generated files; it does not require 
 Run the real-kernel tests against the development image matching the contract release:
 
 ```sh
-docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.150.1-development
+docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.153.0-development
 # In another terminal, after https://localhost:35000/health reports Healthy:
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
 CHRONICLE_INTEGRATION_CONTAINER=chronicle-go \
