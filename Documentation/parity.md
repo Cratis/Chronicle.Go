@@ -1073,7 +1073,7 @@ Enabled AutoMap default.
 
 ## Projection dictionaries, set-once and child ordering
 
-References: Chronicle 19.150.1 (`dd12d46eda596f7d4bae1880fecca2432d6cc7f6`,
+References: Chronicle 19.153.0 (`9157c14098688ac0c6946a335bfabf1f44220c7c`,
 [Cratis/Chronicle#5775](https://github.com/Cratis/Chronicle/pull/5775)),
 `Source/Clients/DotNET/{WellKnownExpressions,Projections/ReadModelPropertiesBuilder,Projections/ChildrenBuilder,Projections/ModelBound/ChildrenFromAttribute,Projections/ModelBound/SetFromAttribute}.cs`
 and `Source/Kernel/Protobuf/projections.proto`. Expected strings are derived from
@@ -1154,7 +1154,7 @@ the `x-graph-*` schema annotations. Generated contracts were bumped to Chronicle
 | `GraphSchemaWriter` | **Implemented**: the read-model schema carries `x-graph`, `x-graph-kind`, `x-graph-key`, `x-graph-source`, `x-graph-target` and `x-graph-identity`. Property types come from the Go serialization plan, so number formats can differ from the CLR ones the kernel ignores | `TestGraphSchemaAnnotations` |
 | Registration | **Implemented**: the graph is registered as a read model in the read-model stage and as a projection in the full-set projection request, after event types | `TestGraphIsRegisteredAsReadModelAndProjectionBesideOrdinaryOnes`, `TestGraphAloneIsRegisteredWithoutOrdinaryReadModels`, `TestGraphsPerStoreRegistryAreKeptApart` |
 | Runtime registration of a graph | **Not implemented**: `RegisterProjection` adds ordinary projections only, and a runtime addition sends no graph | Graphs are part of the startup registry, like other definition families |
-| Kernel observation | **Partial** backend qualification on `19.150.1-development` with the in-memory graph sink | `TestKernelGraphProjectionRegistersAndObservesEvents`: stored definitions carry the graph, and the observer handles every event without a failed partition. The stored graph is not read back, and Neo4j is not provisioned by this fixture |
+| Kernel observation | **Partial** backend qualification on `19.153.0-development` with the in-memory graph sink | `TestKernelGraphProjectionRegistersAndObservesEvents`: stored definitions carry the graph, and the observer handles every event without a failed partition. The stored graph is not read back, and Neo4j is not provisioned by this fixture |
 
 The [graph projection guide](projections/graphs.md) and its compiling example are
 tied together by `TestGraphProjectionSnippetsMatchCompiledExample`. The kernel
