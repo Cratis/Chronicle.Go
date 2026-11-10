@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-//go:build chronicle_imports
-
 package eventsequences
 
 import (
@@ -20,8 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// grpcImports binds the kernel's Imports service. It needs contracts/imports,
-// which the pinned contracts do not carry yet; see import_unsupported.go.
+// grpcImports binds the kernel's Imports service.
 type grpcImports struct {
 	client                     imports.ImportsClient
 	store, namespace, sequence string
