@@ -33,6 +33,9 @@ type Reducer struct {
 	// OnChange receives successful local folds before kernel acknowledgement.
 	// Install before Run. It must not block or call user code.
 	OnChange func(string, json.RawMessage)
+	// OnDelivered runs on the Run goroutine for every message the kernel
+	// delivers. Install before Run. It must not block or call user code.
+	OnDelivered func()
 }
 
 // OpenReducer sends the immutable registration snapshot. Like reactors, the
@@ -55,7 +58,7 @@ func OpenReducer(ctx context.Context, conn grpc.ClientConnInterface, connectionI
 // Run processes one complete fold and cleanup before acknowledging it. Replay
 // notifications run serially in fresh scopes and have no result handshake.
 func (r *Reducer) Run(ctx context.Context) error {
-	return runStream(ctx, r.stream.Recv, func(ctx context.Context, operation *contracts.ReduceOperationMessage) (*contracts.ReducerResult, error) {
+	return runStream(ctx, delivering(r.stream.Recv, r.OnDelivered), func(ctx context.Context, operation *contracts.ReduceOperationMessage) (*contracts.ReducerResult, error) {
 		if operation.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
 			var state reducers.ReplayState
 			switch operation.ReplayState {

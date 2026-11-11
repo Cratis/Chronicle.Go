@@ -7,9 +7,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"sync"
 	"time"
 
+	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/internal/diagnostics"
 )
 
@@ -18,10 +20,22 @@ type observerPlan struct {
 	id              string
 	logger          *slog.Logger
 	operation       string
-	open            func(context.Context, *generation) (observerStream, error)
-	reportOpenError func(context.Context, error) // Runs on the owned worker after readiness, without locks.
-	oneShot         bool                         // Read-model changes have no durable cursor: never silently resume.
+	open            func(context.Context, *generation, func()) (observerStream, error) // The callback records a delivery.
+	reportOpenError func(context.Context, error)                                       // Runs on the owned worker after readiness, without locks.
+	oneShot         bool                                                               // Read-model changes have no durable cursor: never silently resume.
 }
+
+// observerRetry is how observer workers wait before reopening a stream that ended.
+type observerRetry struct {
+	wait    func(context.Context, time.Duration) error
+	backoff func() *connection.ObservationBackoff
+}
+
+// newObserverBackoff returns a backoff with the defaults the .NET client uses.
+func newObserverBackoff() *connection.ObservationBackoff {
+	return connection.NewObservationBackoff(connection.ObservationBaseDelay, connection.ObservationMaxDelay, connection.ObservationHealthyStream, time.Now, rand.Float64)
+}
+
 type storeObservers struct {
 	mu      sync.Mutex
 	runs    map[string]*observerRun
@@ -38,7 +52,7 @@ type observerRun struct {
 
 // start retains isolated per-observer retry workers across registration calls.
 // g.work or the registration worker pins admission before retirement joins observers.
-func (s *storeObservers) start(ctx context.Context, g *generation, waitReady bool, plans []observerPlan, wait func(context.Context, time.Duration) error) error {
+func (s *storeObservers) start(ctx context.Context, g *generation, waitReady bool, plans []observerPlan, retry observerRetry) error {
 	for _, plan := range plans {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -70,7 +84,7 @@ func (s *storeObservers) start(ctx context.Context, g *generation, waitReady boo
 			}
 			s.runs[plan.id] = run
 			g.observers.Add(1)
-			go s.run(runCtx, g, plan, run, wait)
+			go s.run(runCtx, g, plan, run, retry.wait, retry.backoff())
 		}
 		s.mu.Unlock()
 		if !waitReady {
@@ -92,7 +106,12 @@ func (s *storeObservers) start(ctx context.Context, g *generation, waitReady boo
 	}
 	return nil
 }
-func (s *storeObservers) run(ctx context.Context, g *generation, plan observerPlan, run *observerRun, wait func(context.Context, time.Duration) error) {
+
+// run owns one observer's stream on one generation. A stream that ends is
+// reopened after a jittered, growing backoff; a stream the kernel rejects
+// because it no longer knows the connection ends the generation instead, since
+// only a new connection ID can recover.
+func (s *storeObservers) run(ctx context.Context, g *generation, plan observerPlan, run *observerRun, wait func(context.Context, time.Duration) error, backoff *connection.ObservationBackoff) {
 	defer g.observers.Done()
 	defer func() {
 		s.mu.Lock()
@@ -114,7 +133,8 @@ func (s *storeObservers) run(ctx context.Context, g *generation, plan observerPl
 	defer ready.Do(func() { close(run.ready) })
 	for ctx.Err() == nil {
 		attempt, cancel := context.WithCancel(ctx)
-		stream, err := plan.open(attempt, g)
+		backoff.Opened()
+		stream, err := plan.open(attempt, g, backoff.Delivered)
 		if ctx.Err() == nil {
 			markReady(err)
 			if err != nil && plan.reportOpenError != nil {
@@ -134,8 +154,13 @@ func (s *storeObservers) run(ctx context.Context, g *generation, plan observerPl
 			// The stream reports its terminal outcome through its error handler.
 			return
 		}
+		if connection.SessionLost(err) {
+			diagnostics.Log(ctx, plan.logger, slog.LevelWarn, "kernel no longer knows the connection; reconnecting", plan.operation, "session_lost", err)
+			g.loseSession()
+			return
+		}
 		diagnostics.Log(ctx, plan.logger, slog.LevelWarn, "observer stream ended; resubscribing", plan.operation, "resubscribe", err)
-		if wait(ctx, 2*time.Second) != nil {
+		if wait(ctx, backoff.Next()) != nil {
 			return
 		}
 	}

@@ -75,6 +75,11 @@ type clientConfig struct {
 	reactorServices                                 reactorScopeFactory
 	reactorServicesSet                              bool
 	reactorRetryWait                                func(context.Context, time.Duration) error
+	observerBackoff                                 func() *connection.ObservationBackoff
+}
+
+func (c *clientConfig) observerRetry() observerRetry {
+	return observerRetry{wait: c.reactorRetryWait, backoff: c.observerBackoff}
 }
 
 // WithLogger selects the borrowed logger for SDK lifecycle and observer diagnostics.

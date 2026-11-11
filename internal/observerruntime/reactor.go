@@ -31,6 +31,9 @@ type Reactor struct {
 	runtime   reactors.Runtime
 	store     metadata.StoreName
 	namespace metadata.Namespace
+	// OnDelivered runs on the Run goroutine for every message the kernel
+	// delivers. Install before Run. It must not block or call user code.
+	OnDelivered func()
 }
 
 // Open sends the registration on an explicit generation lifetime. The protocol
@@ -64,7 +67,7 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 // Run processes batches sequentially until cancellation or stream failure. Effects
 // are never retried here. The kernel controls failure recovery and resume position.
 func (r *Reactor) Run(ctx context.Context) error {
-	return runStream(ctx, r.stream.Recv, func(ctx context.Context, batch *contracts.EventsToObserve) (*contracts.ReactorResult, error) {
+	return runStream(ctx, delivering(r.stream.Recv, r.OnDelivered), func(ctx context.Context, batch *contracts.EventsToObserve) (*contracts.ReactorResult, error) {
 		if batch.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
 			ctx = reactors.WithBatch(ctx, reactors.Batch{Reactor: r.plan.Identifier(), Store: r.store, Namespace: r.namespace, Sequence: r.plan.EventSequence()})
 			return nil, r.plan.NotifyReplay(ctx, reactors.ReplayState(batch.ReplayState), events.SourceID(batch.Partition))

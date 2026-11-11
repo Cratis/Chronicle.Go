@@ -479,17 +479,17 @@ func TestObserverResubscriptionUsesFrozenArtifactRoute(t *testing.T) {
 	g := &generation{ctx: ctx, number: 1}
 	s := &storeObservers{}
 	var opened atomic.Int32
-	plan := observerPlan{id: "secret-observer", logger: slog.New(h), operation: "reactor", open: func(context.Context, *generation) (observerStream, error) {
+	plan := observerPlan{id: "secret-observer", logger: slog.New(h), operation: "reactor", open: func(context.Context, *generation, func()) (observerStream, error) {
 		opened.Add(1)
 		return loggingEndedStream{status.Error(codes.Unavailable, "secret-stream-status")}, nil
 	}}
-	if err := s.start(ctx, g, true, []observerPlan{plan}, func(context.Context, time.Duration) error {
+	if err := s.start(ctx, g, true, []observerPlan{plan}, observerRetry{wait: func(context.Context, time.Duration) error {
 		if opened.Load() == 1 {
 			return nil
 		}
 		cancel()
 		return context.Canceled
-	}); err != nil && !errors.Is(err, context.Canceled) {
+	}, backoff: newObserverBackoff}); err != nil && !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}
 	g.observers.Wait()

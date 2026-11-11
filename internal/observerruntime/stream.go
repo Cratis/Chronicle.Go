@@ -36,3 +36,18 @@ func runStream[Request, Response any](ctx context.Context, receive func() (*Requ
 		}
 	}
 }
+
+// delivering calls delivered after each message the kernel delivers, before it
+// is handled, which tells the reconnect backoff that the stream worked.
+func delivering[Request any](receive func() (*Request, error), delivered func()) func() (*Request, error) {
+	if delivered == nil {
+		return receive
+	}
+	return func() (*Request, error) {
+		request, err := receive()
+		if err == nil && request != nil {
+			delivered()
+		}
+		return request, err
+	}
+}
