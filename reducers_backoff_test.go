@@ -14,10 +14,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestReducerStreamBacksOffResetsAfterDeliveryAndReconnectsOnLostSession(t *testing.T) {
+func TestReducerStreamBacksOffResetsAfterDeliveryAndKeepsGrowingAcrossALostSession(t *testing.T) {
 	delays := make(chan time.Duration, 8)
 	retry := func(c *clientConfig) {
-		c.reactorRetryWait = func(ctx context.Context, delay time.Duration) error {
+		c.observerRetryWait = func(ctx context.Context, delay time.Duration) error {
 			delays <- delay
 			return ctx.Err()
 		}
@@ -51,15 +51,21 @@ func TestReducerStreamBacksOffResetsAfterDeliveryAndReconnectsOnLostSession(t *t
 	if renewed.ConnectionId == first.ConnectionId {
 		t.Fatal("reducer reregistered under the lost connection ID")
 	}
-	select {
-	case delay := <-delays:
-		t.Fatalf("a lost session was retried on the stale connection after %s", delay)
-	default:
-	}
+	// The backoff belongs to the reducer, not the connection: the growth since
+	// the last delivery carries over to the new connection.
+	server.end <- nil
+	expect(4 * time.Second)
+
 	if err := store.UnregisterReducer(ctx, "fold"); err != nil {
 		t.Fatal(err)
 	}
 	if err := client.Close(); err != nil {
 		t.Fatal(err)
+	}
+	// Close has joined every worker, so a retry of the lost session would be here.
+	select {
+	case delay := <-delays:
+		t.Fatalf("a stream was retried after %s that should not have been", delay)
+	default:
 	}
 }

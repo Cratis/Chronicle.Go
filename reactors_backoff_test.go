@@ -19,7 +19,7 @@ import (
 // recordingRetryClock reports every retry delay and lets the test release it.
 func recordingRetryClock() (<-chan time.Duration, chan<- struct{}, chronicle.ClientOption) {
 	delays, resume := make(chan time.Duration, 8), make(chan struct{}, 8)
-	return delays, resume, chronicle.WithReactorRetryWaitForTest(func(ctx context.Context, delay time.Duration) error {
+	return delays, resume, chronicle.WithObserverRetryWaitForTest(func(ctx context.Context, delay time.Duration) error {
 		delays <- delay
 		select {
 		case <-ctx.Done():
@@ -69,7 +69,7 @@ func TestReactorSessionLostReconnectsOnceUnderNewConnectionID(t *testing.T) {
 	delays, _, clock := recordingRetryClock()
 	disconnected := make(chan error, 4)
 	kernel := &reactorKernel{}
-	_, _, ctx := reactorClient(t, kernel, registry, clock, chronicle.WithOnDisconnected(func(_ context.Context, event chronicle.ConnectionEvent) {
+	client, _, ctx := reactorClient(t, kernel, registry, clock, chronicle.WithOnDisconnected(func(_ context.Context, event chronicle.ConnectionEvent) {
 		disconnected <- event.Err
 	}))
 	old := []*observerSession{receive(t, ctx, kernel.sessions), receive(t, ctx, kernel.sessions)}
@@ -88,8 +88,50 @@ func TestReactorSessionLostReconnectsOnceUnderNewConnectionID(t *testing.T) {
 			t.Fatal("reactors reregistered under different connection IDs")
 		}
 	}
+	// Close joins every worker of both connections, so a stale retry or a second
+	// reconnect would show by now.
+	if err := client.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if calls := kernel.connectCalls.Load(); calls != 2 {
 		t.Fatalf("connect calls = %d, want one reconnect", calls)
+	}
+	select {
+	case delay := <-delays:
+		t.Fatalf("a lost session was retried on the stale connection after %s", delay)
+	default:
+	}
+}
+
+func TestReactorSessionLostWhileHandlingReconnectsWithoutRetrying(t *testing.T) {
+	registry := reactorRegistry(t)
+	handling, release := make(chan struct{}, 1), make(chan struct{})
+	if err := chronicle.RegisterReactorHandler(registry, "rejected", func(context.Context, ReactorInput) error {
+		handling <- struct{}{}
+		<-release
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	delays, _, clock := recordingRetryClock()
+	disconnected := make(chan error, 4)
+	kernel := &reactorKernel{}
+	client, _, ctx := reactorClient(t, kernel, registry, clock, chronicle.WithOnDisconnected(func(_ context.Context, event chronicle.ConnectionEvent) {
+		disconnected <- event.Err
+	}))
+	old := receive(t, ctx, kernel.sessions)
+	old.rejectAfter <- rejection{batch: batch(1), err: status.Error(codes.Internal, "Observer subscription failed: ClientIsNotConnected")}
+	receive(t, ctx, handling)
+	receive(t, ctx, old.done)
+	close(release)
+	if err := receive(t, ctx, disconnected); !errors.Is(err, chronicle.ErrSessionLost) {
+		t.Fatalf("disconnected with %v, want ErrSessionLost", err)
+	}
+	if renewed := receive(t, ctx, kernel.sessions); renewed.registration.ConnectionId == old.registration.ConnectionId {
+		t.Fatalf("reactor reregistered under the lost connection ID %q", renewed.registration.ConnectionId)
+	}
+	if err := client.Close(); err != nil {
+		t.Fatal(err)
 	}
 	select {
 	case delay := <-delays:

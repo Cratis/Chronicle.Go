@@ -5,6 +5,7 @@ package chronicle
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/internal/diagnostics"
+	"github.com/cratis/chronicle.go/internal/observerruntime"
 )
 
 type observerStream interface{ Run(context.Context) error }
@@ -37,10 +39,11 @@ func newObserverBackoff() *connection.ObservationBackoff {
 }
 
 type storeObservers struct {
-	mu      sync.Mutex
-	runs    map[string]*observerRun
-	retired map[string]map[*observerRun]struct{}
-	removed map[string]bool
+	mu       sync.Mutex
+	runs     map[string]*observerRun
+	retired  map[string]map[*observerRun]struct{}
+	removed  map[string]bool
+	backoffs map[string]*connection.ObservationBackoff // One per observer for the client's lifetime, as in .NET.
 }
 type observerRun struct {
 	generation uint64
@@ -84,7 +87,7 @@ func (s *storeObservers) start(ctx context.Context, g *generation, waitReady boo
 			}
 			s.runs[plan.id] = run
 			g.observers.Add(1)
-			go s.run(runCtx, g, plan, run, retry.wait, retry.backoff())
+			go s.run(runCtx, g, plan, run, retry.wait, s.backoff(plan.id, retry))
 		}
 		s.mu.Unlock()
 		if !waitReady {
@@ -107,10 +110,25 @@ func (s *storeObservers) start(ctx context.Context, g *generation, waitReady boo
 	return nil
 }
 
+// backoff returns the observer's backoff, which outlives generations so that
+// its growth carries across reconnects. The caller holds s.mu.
+func (s *storeObservers) backoff(id string, retry observerRetry) *connection.ObservationBackoff {
+	backoff := s.backoffs[id]
+	if backoff == nil {
+		backoff = retry.backoff()
+		if s.backoffs == nil {
+			s.backoffs = make(map[string]*connection.ObservationBackoff)
+		}
+		s.backoffs[id] = backoff
+	}
+	return backoff
+}
+
 // run owns one observer's stream on one generation. A stream that ends is
-// reopened after a jittered, growing backoff; a stream the kernel rejects
-// because it no longer knows the connection ends the generation instead, since
-// only a new connection ID can recover.
+// reopened after the observer's jittered, growing backoff; a stream the kernel
+// rejects because it no longer knows the connection ends the generation
+// instead, since only a new connection ID can recover. Only errors of the
+// stream itself are classified: handler and replay-hook errors never are.
 func (s *storeObservers) run(ctx context.Context, g *generation, plan observerPlan, run *observerRun, wait func(context.Context, time.Duration) error, backoff *connection.ObservationBackoff) {
 	defer g.observers.Done()
 	defer func() {
@@ -154,9 +172,9 @@ func (s *storeObservers) run(ctx context.Context, g *generation, plan observerPl
 			// The stream reports its terminal outcome through its error handler.
 			return
 		}
-		if connection.SessionLost(err) {
+		if observerruntime.SessionLost(err) {
 			diagnostics.Log(ctx, plan.logger, slog.LevelWarn, "kernel no longer knows the connection; reconnecting", plan.operation, "session_lost", err)
-			g.loseSession()
+			g.loseSession(errors.Unwrap(err))
 			return
 		}
 		diagnostics.Log(ctx, plan.logger, slog.LevelWarn, "observer stream ended; resubscribing", plan.operation, "resubscribe", err)
@@ -171,6 +189,7 @@ func (s *storeObservers) unregister(ctx context.Context, id string) error {
 		s.removed = make(map[string]bool)
 	}
 	s.removed[id] = true
+	delete(s.backoffs, id)
 	var runs []*observerRun
 	if run := s.runs[id]; run != nil {
 		runs = append(runs, run)

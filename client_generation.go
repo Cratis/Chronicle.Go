@@ -31,7 +31,7 @@ type generation struct {
 	capabilities  kernelcapability.Capabilities
 	ctx           context.Context
 	cancel        context.CancelFunc
-	lose          func() // Ends this generation because the kernel no longer knows its connection ID.
+	lose          func(error) // Ends this generation because the kernel no longer knows its connection ID.
 	raw           grpc.ClientConnInterface
 	closer        io.Closer
 	tokens        TokenSource

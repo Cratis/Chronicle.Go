@@ -38,10 +38,11 @@ type Reactor struct {
 
 // Open sends the registration on an explicit generation lifetime. The protocol
 // has no registration acknowledgement: success means sent, not kernel acceptance.
+// Failures to open or register are StreamErrors.
 func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID string, store metadata.StoreName, namespace metadata.Namespace, plan *reactors.Plan, runtime reactors.Runtime) (*Reactor, error) {
 	stream, err := contracts.NewReactorsClient(conn).Observe(ctx)
 	if err != nil {
-		return nil, err
+		return nil, streamError(err)
 	}
 	definition := &contracts.ReactorDefinition{
 		ReactorId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()),
@@ -57,7 +58,7 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 	for _, ref := range plan.EventTypes() {
 		definition.EventTypes = append(definition.EventTypes, &contracts.EventTypeWithKeyExpression{EventType: &contracts.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Key: "$eventSourceId"})
 	}
-	err = stream.Send(&contracts.ReactorMessage{Content: &contracts.OneOf_RegisterReactor_ReactorResult{Value0: &contracts.RegisterReactor{ConnectionId: connectionID, EventStore: string(store), Namespace: string(namespace), Reactor: definition, PageDelivery: &contracts.PageDelivery{Enabled: true}}}})
+	err = sendOnStream(stream.Send, stream.Recv, &contracts.ReactorMessage{Content: &contracts.OneOf_RegisterReactor_ReactorResult{Value0: &contracts.RegisterReactor{ConnectionId: connectionID, EventStore: string(store), Namespace: string(namespace), Reactor: definition, PageDelivery: &contracts.PageDelivery{Enabled: true}}}})
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +68,7 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 // Run processes batches sequentially until cancellation or stream failure. Effects
 // are never retried here. The kernel controls failure recovery and resume position.
 func (r *Reactor) Run(ctx context.Context) error {
-	return runStream(ctx, delivering(r.stream.Recv, r.OnDelivered), func(ctx context.Context, batch *contracts.EventsToObserve) (*contracts.ReactorResult, error) {
+	return runStream(ctx, r.stream.Recv, r.OnDelivered, func(ctx context.Context, batch *contracts.EventsToObserve) (*contracts.ReactorResult, error) {
 		if batch.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
 			ctx = reactors.WithBatch(ctx, reactors.Batch{Reactor: r.plan.Identifier(), Store: r.store, Namespace: r.namespace, Sequence: r.plan.EventSequence()})
 			return nil, r.plan.NotifyReplay(ctx, reactors.ReplayState(batch.ReplayState), events.SourceID(batch.Partition))

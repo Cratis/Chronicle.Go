@@ -28,7 +28,8 @@ var (
 	ErrProtocol = faults.ErrProtocol
 	// ErrSessionLost identifies a connection ended because the kernel no longer
 	// knew its connection ID. The client reconnects under a new connection ID.
-	ErrSessionLost = errors.New("chronicle: kernel no longer knows the connection")
+	// The error also wraps the kernel status that reported it.
+	ErrSessionLost = faults.ErrSessionLost
 )
 
 // ClientStateError reports a denied operation with payload-free state diagnostics.

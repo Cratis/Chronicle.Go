@@ -6,18 +6,31 @@ package chronicle
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestSessionLostEndsTheGenerationAsErrSessionLost(t *testing.T) {
 	g := &generation{}
 	g.bind(t.Context())
-	g.loseSession()
+	kernel := status.Error(codes.Internal, "ClientIsNotConnected")
+	g.loseSession(kernel)
 	if g.ctx.Err() == nil {
 		t.Fatal("a lost session left the generation running")
 	}
-	if err := generationEnded(g, context.Canceled); !errors.Is(err, ErrSessionLost) {
-		t.Fatalf("generation ended with %v, want ErrSessionLost", err)
+	err := generationEnded(g, context.Canceled)
+	if !errors.Is(err, ErrSessionLost) || !errors.Is(err, kernel) {
+		t.Fatalf("generation ended with %v, want ErrSessionLost wrapping the kernel status", err)
+	}
+}
+
+func TestSessionLostIsNeverTerminalWhateverTheKernelCode(t *testing.T) {
+	err := fmt.Errorf("%w: %w", ErrSessionLost, status.Error(codes.InvalidArgument, "ClientIsNotConnected"))
+	if terminalConnectionError(err) {
+		t.Fatal("a lost session stopped the client from reconnecting")
 	}
 }
 
@@ -27,7 +40,7 @@ func TestLateSessionLostReportFromAnEndedGenerationChangesNothing(t *testing.T) 
 	current.bind(t.Context())
 	stale := errors.New("keep-alive ended")
 	old.cancel()
-	old.loseSession()
+	old.loseSession(status.Error(codes.Internal, "ClientIsNotConnected"))
 	if err := generationEnded(old, stale); err != stale {
 		t.Fatalf("ended generation reported %v, want its original end %v", err, stale)
 	}
