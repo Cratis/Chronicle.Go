@@ -63,8 +63,10 @@ kernel acceptance or caught-up acknowledgement. Stream errors and normal EOF
 resubscribe only that reducer, as in C#, with the same jittered backoff as
 [reactors](reactors.md): two seconds, doubling up to 60 seconds while streams end
 without having worked, and starting over once a stream delivered an operation or
-stayed open for three minutes. A stream rejected with `ClientIsNotConnected`
-reconnects the whole client under a new connection ID instead. No reducer retry
+stayed open for three minutes. Each reducer keeps its wait for the life of the
+client, so the growth carries across reconnects. A stream rejected with
+`ClientIsNotConnected` reconnects the whole client under a new connection ID
+instead; an error a fold or replay callback returns never does. No reducer retry
 replays an application-side effect.
 
 `store.UnregisterReducer(ctx, id)` cancels and joins local streams, including

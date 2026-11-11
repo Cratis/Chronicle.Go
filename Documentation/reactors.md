@@ -112,16 +112,23 @@ before resubscribing starts at two seconds and doubles for every stream that end
 without having worked, up to 60 seconds. Each wait lands at random in the upper
 half of that ceiling, so reactors whose streams failed together, for example
 during a kernel rollout, do not come back together. The wait starts over at two
-seconds once a stream delivered a batch or stayed open for three minutes.
+seconds once a stream delivered a batch or stayed open for three minutes. As in
+C#, each reactor keeps its wait for the life of the client, so the growth carries
+across reconnects instead of starting over on every new connection.
 Unregister and shutdown cancel the retry delay.
 
 When the kernel rejects a stream with `ClientIsNotConnected`, it no longer knows
 the connection: it restarted or evicted the client. Retrying under that
 connection ID cannot work, so the client ends the connection, reports
-`ErrSessionLost` to `WithOnDisconnected` hooks and reconnects under a new
-connection ID. Only a report from the current connection counts, so many
-observers failing together cause one reconnect. The keep-alive watchdog owns
-recovery from other connection loss. Either way a new generation re-registers
+`ErrSessionLost` to `WithOnDisconnected` hooks, wrapping the kernel status, and
+reconnects under a new connection ID. This also holds when the kernel ends the
+stream while a batch is being handled. Only a report from the current connection
+counts, so many observers failing together cause one reconnect. Only the stream
+itself is classified: an error a handler or replay hook returns never ends the
+connection, whatever it says. Read-model watches end on any stream error and
+never report a lost session, so a client whose only observers are watches
+relies on the keep-alive watchdog. The keep-alive watchdog owns recovery from
+other connection loss. Either way a new generation re-registers
 frozen plans without waiting for old handlers to finish. The kernel retains
 progress; the client does not invent a resume position.
 `store.UnregisterReactor(ctx, id)` cancels and joins a local reactor, retaining its
