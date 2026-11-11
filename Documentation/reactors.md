@@ -106,10 +106,22 @@ resets to unavailable. **Effects may already have happened and can repeat on
 kernel recovery.** Make them idempotent. Middleware activation also fails closed,
 rather than C#'s log-and-skip policy.
 
-When a reactor stream fails or completes, only that reactor resubscribes after
-two seconds on the same connection. This does not cancel unrelated appends or
-observers. Unregister and shutdown cancel the retry delay. The keep-alive
-watchdog owns recovery from actual connection loss: a new generation re-registers
+When a reactor stream fails or completes, only that reactor resubscribes on the
+same connection. This does not cancel unrelated appends or observers. The wait
+before resubscribing starts at two seconds and doubles for every stream that ends
+without having worked, up to 60 seconds. Each wait lands at random in the upper
+half of that ceiling, so reactors whose streams failed together, for example
+during a kernel rollout, do not come back together. The wait starts over at two
+seconds once a stream delivered a batch or stayed open for three minutes.
+Unregister and shutdown cancel the retry delay.
+
+When the kernel rejects a stream with `ClientIsNotConnected`, it no longer knows
+the connection: it restarted or evicted the client. Retrying under that
+connection ID cannot work, so the client ends the connection, reports
+`ErrSessionLost` to `WithOnDisconnected` hooks and reconnects under a new
+connection ID. Only a report from the current connection counts, so many
+observers failing together cause one reconnect. The keep-alive watchdog owns
+recovery from other connection loss. Either way a new generation re-registers
 frozen plans without waiting for old handlers to finish. The kernel retains
 progress; the client does not invent a resume position.
 `store.UnregisterReactor(ctx, id)` cancels and joins a local reactor, retaining its
