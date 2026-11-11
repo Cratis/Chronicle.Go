@@ -21,9 +21,15 @@ var grpcStatusError = reflect.TypeOf(status.Error(codes.Unknown, ""))
 // SessionLost reports whether err is the kernel saying it no longer knows the
 // connection ID a stream was opened under: it restarted or evicted this client.
 // Retrying under that ID can never work; only a new connection can recover.
+// As in .NET, Unavailable and Cancelled are transport conditions first: they
+// never count as a lost session, whatever their message says.
 func SessionLost(err error) bool {
 	if err == nil || reflect.TypeOf(err) != grpcStatusError {
 		return false
 	}
-	return strings.Contains(status.Convert(err).Message(), clientIsNotConnected)
+	kernel := status.Convert(err)
+	if kernel.Code() == codes.Unavailable || kernel.Code() == codes.Canceled {
+		return false
+	}
+	return strings.Contains(kernel.Message(), clientIsNotConnected)
 }

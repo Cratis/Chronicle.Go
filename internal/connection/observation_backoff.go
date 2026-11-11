@@ -3,7 +3,11 @@
 
 package connection
 
-import "time"
+import (
+	"math"
+	"sync"
+	"time"
+)
 
 const (
 	// ObservationBaseDelay is the wait after a stream that had worked.
@@ -24,11 +28,14 @@ const (
 // delivered something or stayed open for the healthy duration. A base delay of
 // zero or less is returned as it is.
 //
-// One observer worker owns an ObservationBackoff; it is not safe for concurrent use.
+// One ObservationBackoff belongs to one observer for the life of the client, so
+// its growth survives reconnects. It is safe for concurrent use: a stream of an
+// ended connection can still record a delivery while its successor opens.
 type ObservationBackoff struct {
 	base, maximum, healthy time.Duration
 	now                    func() time.Time
 	jitter                 func() float64
+	mu                     sync.Mutex
 	endedWithoutWorking    int
 	openedAt               time.Time
 }
@@ -39,31 +46,34 @@ func NewObservationBackoff(base, maximum, healthy time.Duration, now func() time
 }
 
 // Opened records that the stream is being opened, which starts its healthy window.
-func (b *ObservationBackoff) Opened() { b.openedAt = b.now() }
+func (b *ObservationBackoff) Opened() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.openedAt = b.now()
+}
 
 // Delivered records that the open stream delivered something, which proves it worked.
-func (b *ObservationBackoff) Delivered() { b.endedWithoutWorking = 0 }
+func (b *ObservationBackoff) Delivered() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.endedWithoutWorking = 0
+}
 
 // Next returns how long to wait before opening the stream again, now that it ended.
 func (b *ObservationBackoff) Next() time.Duration {
 	if b.base <= 0 {
 		return b.base
 	}
+	b.mu.Lock()
 	if b.now().Sub(b.openedAt) >= b.healthy {
 		b.endedWithoutWorking = 0
 	}
 	b.endedWithoutWorking = min(b.endedWithoutWorking+1, maxObservationExponent+1)
-	ceiling := b.base
-	for i := 1; i < b.endedWithoutWorking && ceiling < b.maximum; i++ {
-		if ceiling > b.maximum/2 {
-			ceiling = b.maximum
-		} else {
-			ceiling *= 2
-		}
-	}
-	ceiling = min(ceiling, b.maximum)
+	attempt := b.endedWithoutWorking
+	b.mu.Unlock()
+	ceiling := cappedDoubling(attempt, b.base, b.maximum)
 	jitter := b.jitter()
-	if !(jitter >= 0) {
+	if math.IsNaN(jitter) || jitter < 0 {
 		jitter = 0
 	}
 	jitter = min(jitter, 1)

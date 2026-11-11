@@ -92,3 +92,21 @@ func TestObservationBackoffUsesANonPositiveBaseAsItIs(t *testing.T) {
 		t.Fatalf("delay = %s, want 0", delay)
 	}
 }
+
+func TestObservationBackoffIsSafeAcrossAnEndingAndANewStream(t *testing.T) {
+	b := NewObservationBackoff(2*time.Second, 60*time.Second, 3*time.Minute, time.Now, func() float64 { return 1 })
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 100 {
+			b.Delivered()
+		}
+	}()
+	for range 100 {
+		b.Opened()
+		if delay := b.Next(); delay < 2*time.Second || delay > 60*time.Second {
+			t.Errorf("delay = %s, outside [2s, 60s]", delay)
+		}
+	}
+	<-done
+}

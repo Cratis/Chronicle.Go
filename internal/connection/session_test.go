@@ -30,6 +30,8 @@ func TestSessionLost(t *testing.T) {
 		{"kernel does not know the connection", status.Error(codes.Internal, "Observer failed: ClientIsNotConnected"), true},
 		{"unknown status code still names it", status.Error(codes.Unknown, "ClientIsNotConnected"), true},
 		{"other kernel failure", status.Error(codes.Unavailable, "kernel stopping"), false},
+		{"unavailable naming it is a transport condition", status.Error(codes.Unavailable, "ClientIsNotConnected"), false},
+		{"cancelled naming it is a transport condition", status.Error(codes.Canceled, "ClientIsNotConnected"), false},
 		{"end of stream", io.EOF, false},
 		{"nil", nil, false},
 		{"plain error naming it", errors.New("ClientIsNotConnected"), false},
