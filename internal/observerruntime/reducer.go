@@ -33,20 +33,24 @@ type Reducer struct {
 	// OnChange receives successful local folds before kernel acknowledgement.
 	// Install before Run. It must not block or call user code.
 	OnChange func(string, json.RawMessage)
+	// OnDelivered runs on the Run goroutine for every message the kernel
+	// delivers. Install before Run. It must not block or call user code.
+	OnDelivered func()
 }
 
 // OpenReducer sends the immutable registration snapshot. Like reactors, the
 // duplex protocol has no registration acknowledgement beyond a successful send.
+// Failures to open or register are StreamErrors.
 func OpenReducer(ctx context.Context, conn grpc.ClientConnInterface, connectionID string, store metadata.StoreName, namespace metadata.Namespace, plan *reducers.Plan) (*Reducer, error) {
 	stream, err := contracts.NewReducersClient(conn).Observe(ctx)
 	if err != nil {
-		return nil, err
+		return nil, streamError(err)
 	}
 	definition := &contracts.ReducerDefinition{ReducerId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()), ReadModel: string(plan.Model().Identifier()), IsActive: plan.IsActive(), Tags: plan.Tags(), Filters: &contracts.ObserverFilters{FilterTags: plan.FilterTags(), EventSourceType: string(plan.EventSourceType()), EventStreamType: string(plan.EventStreamType())}, Hash: plan.Fingerprint()}
 	for _, ref := range plan.EventTypes() {
 		definition.EventTypes = append(definition.EventTypes, &contracts.EventTypeWithKeyExpression{EventType: &contracts.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Key: "$eventSourceId"})
 	}
-	if err = stream.Send(&contracts.ReducerMessage{Content: &contracts.OneOf_RegisterReducer_ReducerResult{Value0: &contracts.RegisterReducer{ConnectionId: connectionID, EventStore: string(store), Namespace: string(namespace), Reducer: definition, PageDelivery: &contracts.PageDelivery{Enabled: true}}}}); err != nil {
+	if err = sendOnStream(stream.Send, stream.Recv, &contracts.ReducerMessage{Content: &contracts.OneOf_RegisterReducer_ReducerResult{Value0: &contracts.RegisterReducer{ConnectionId: connectionID, EventStore: string(store), Namespace: string(namespace), Reducer: definition, PageDelivery: &contracts.PageDelivery{Enabled: true}}}}); err != nil {
 		return nil, err
 	}
 	return &Reducer{plan: plan, stream: stream, store: store, namespace: namespace}, nil
@@ -55,7 +59,7 @@ func OpenReducer(ctx context.Context, conn grpc.ClientConnInterface, connectionI
 // Run processes one complete fold and cleanup before acknowledging it. Replay
 // notifications run serially in fresh scopes and have no result handshake.
 func (r *Reducer) Run(ctx context.Context) error {
-	return runStream(ctx, r.stream.Recv, func(ctx context.Context, operation *contracts.ReduceOperationMessage) (*contracts.ReducerResult, error) {
+	return runStream(ctx, r.stream.Recv, r.OnDelivered, func(ctx context.Context, operation *contracts.ReduceOperationMessage) (*contracts.ReducerResult, error) {
 		if operation.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
 			var state reducers.ReplayState
 			switch operation.ReplayState {
