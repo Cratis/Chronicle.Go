@@ -1,6 +1,6 @@
 ---
 title: Projections
-description: Declare model-bound or fluent mappings and read kernel-materialized state.
+description: Declare projections with model-bound or fluent mappings from events to read models, and read the state the Chronicle kernel materializes for you.
 ---
 
 Use a projection to populate a read model from events. Chronicle runs the mappings;
@@ -11,11 +11,14 @@ joins, nested objects and removals. See [orders with children and joins](orders.
 for their model-bound and fluent equivalents. See [variants](variants.md) for
 mutually exclusive lifecycle shapes, shared handlers, recursive children and
 ad-hoc projection queries. See [initial values and labels](defaults.md) for
-initial model state and artifact metadata.
+initial model state and artifact metadata. See [graph projections](graphs.md) to
+project events into nodes and edges instead of a read-model document.
+See [dictionaries, set-once and child ordering](dictionaries-and-ordering.md) to
+maintain keyed map entries, keep first values and insert children in order.
 
 ## Model-bound declarations
 
-These declarations come from the [runnable example](../../examples/projections/main.go).
+These declarations come from the [runnable example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/projections/main.go).
 They use `chronicle`, `events`, `projections`, `readmodels`, and standard `time`
 imports. Call `declarations()` before constructing the client.
 
@@ -61,7 +64,41 @@ automatically discovers mapping tags on those models. You only need
 `AddProjection(ModelBound(...))` for aliases or type-level settings. `key`,
 `no-auto`, and `not-projected` alone do not discover a projection.
 
+## Run and read the model
+
+With a development Chronicle kernel running on port 35000:
+
+```sh
+go run ./examples/projections
+```
+
+Expected output:
+
+```text
+item-1: Notebook (available)
+```
+
+The example creates a uniquely named store, appends a product event, then polls
+`readmodels.For(store.ReadModels(), model).Get(ctx, "item-1")` for up to 15 seconds.
+Active projections are eventually consistent; successful registration or append
+is not a sink-completion signal. Always check `Exists` before using `Value`.
+The example uses development TLS settings and leaves its store in the development
+kernel; use a disposable kernel for repeat runs, not production credentials/data.
+
+Definitions register after event types and read models, share the store-level
+registration barrier, and replay from frozen snapshots on reconnect. Adding to a
+registry after `NewClient` does not alter that client. Definitions expose a
+`Hash()` of their finalized wire shape, stable only within one build. Do not
+persist it across upgrades; neither the kernel nor C# uses a client hash. Runtime
+registry extension remains unimplemented. For a new model and projection on an already acquired store, use the separate [runtime registration workflow](runtime-registration.md); this is not mutation of the startup registry. Children of a single-derivative family
+are covered in [derived children](../derived-codecs.md#project-derived-children). Inbox sequences now
+[provision external subscriptions](../integrations/index.md); see
+[variants, recursive children and queries](variants.md) and the
+[attribute parity map](../parity.md) for the remaining boundaries.
+
 ## Fluent declarations
+
+Optional: use this authoring style instead of the model-bound declaration above.
 
 The alternative below uses the same `ProductRegistered` event. Keep property
 mapping tags off the fluent model; mixing the two sources is an error. Identity
@@ -248,35 +285,3 @@ contents. `Definition.Diagnostics()` reports model-bound shadowing: C# precedenc
 is `set`, `add`, `subtract`, `increment`, `decrement`, `count`, `context`,
 `value`, then `clear`; the last directive within a family wins.
 Fluent duplicate writes are errors instead.
-
-## Run and read the model
-
-With a development Chronicle kernel running on port 35000:
-
-```sh
-go run ./examples/projections
-```
-
-Expected output:
-
-```text
-item-1: Notebook (available)
-```
-
-The example creates a uniquely named store, appends a product event, then polls
-`readmodels.For(store.ReadModels(), model).Get(ctx, "item-1")` for up to 15 seconds.
-Active projections are eventually consistent; successful registration or append
-is not a sink-completion signal. Always check `Exists` before using `Value`.
-The example uses development TLS settings and leaves its store in the development
-kernel; use a disposable kernel for repeat runs, not production credentials/data.
-
-Definitions register after event types and read models, share the store-level
-registration barrier, and replay from frozen snapshots on reconnect. Adding to a
-registry after `NewClient` does not alter that client. Definitions expose a
-`Hash()` of their finalized wire shape, stable only within one build. Do not
-persist it across upgrades; neither the kernel nor C# uses a client hash. Runtime
-registry extension remains unimplemented. Children of a single-derivative family
-are covered in [derived children](../derived-codecs.md#project-derived-children). Inbox sequences now
-[provision external subscriptions](../integrations/index.md); see
-[variants, recursive children and queries](variants.md) and the
-[attribute parity map](../parity.md) for the remaining boundaries.

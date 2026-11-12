@@ -47,6 +47,7 @@ type childDeclaration struct {
 	identifiedBy   string
 	identityType   reflect.Type
 	nested         bool
+	ordering       *childOrdering
 	data           *declaration
 }
 

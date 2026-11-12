@@ -1,6 +1,6 @@
 ---
 title: Enforce unique event constraints
-description: Declare unique values and event-type lifecycles, release claims, and inspect append-time violations.
+description: Declare unique-value and event-type lifecycle constraints, release claims when no longer needed, and inspect violations reported at append time.
 ---
 
 Use constraints when a value or event lifecycle must remain unique even when writers race. Chronicle checks the rule inside the append; a client-side lookup cannot replace it. Constraint APIs are experimental in the v0.x Go SDK.
@@ -53,9 +53,9 @@ foreign event descriptors and unknown composition names fail atomically.
 
 ## Declare and register a unique value
 
-Register participating events first, build the definition, then call `Registry.AddConstraint` before constructing the client with `WithRegistry`. The client registers constraints after event types and waits for acknowledgement before returning a store or dispatching an append. Reconnection replays those registrations.
+For an explicit-builder alternative to field tags, register participating events first, build the definition, then call `Registry.AddConstraint` before constructing the client with `WithRegistry`. The client registers constraints after event types and waits for acknowledgement before returning a store or dispatching an append. Reconnection replays those registrations. Do not redeclare the same constraint through both routes. To extend a tag-derived declaration, use the composition callback described above.
 
-This excerpt from the [executable example](../../examples/constraints/main.go) uses its `EmailReserved` event (`Email string`, tagged `json:"email"`) and empty `EmailReleased` event. It reserves the address across event sources, ignoring casing, until the owning source appends a release event:
+This excerpt from the [executable example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/constraints/main.go) uses its `EmailReserved` event (`Email string`, tagged `json:"email"`) and empty `EmailReleased` event. It reserves the address across event sources, ignoring casing, until the owning source appends a release event:
 
 ```go
 func declarations() (*chronicle.Registry, error) {

@@ -1,6 +1,6 @@
 ---
 title: Read-model reactors
-description: React to best-effort model changes with Added, Modified and Removed conventions.
+description: React to best-effort read-model changes using the Added, Modified and Removed conventions, and learn what delivery guarantees to expect from them.
 ---
 
 Use a read-model reactor for a side effect triggered by changes to a projection
@@ -11,7 +11,7 @@ changes have no durable cursor, checkpoint or retry guarantee.
 ## Register a convention-based reactor
 
 Register the model and its contributing events, then explicitly admit the reactor
-type before `NewClient`. The [watch example](../examples/watches/main.go) provides
+type before `NewClient`. The [watch example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/watches/main.go) provides
 a complete, runnable projection-backed workflow without a dependency container.
 Its registration has this shape (`registry`, `model` and `names` are created there):
 

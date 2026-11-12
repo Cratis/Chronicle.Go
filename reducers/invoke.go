@@ -18,6 +18,7 @@ import (
 	"github.com/cratis/chronicle.go/internal/discovery"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/metadata"
+	"github.com/cratis/chronicle.go/observation"
 )
 
 // Event is a decoded event and its delivery context. Content must match the
@@ -49,7 +50,18 @@ type batchKey struct{}
 // ReduceOption configures identity ownership for one reduce operation.
 type ReduceOption func(*reduceConfig)
 
-type reduceConfig struct{ preserveIdentity bool }
+type reduceConfig struct {
+	preserveIdentity bool
+	batchContext     *observation.BatchContext
+}
+
+// WithBatchContext supplies the page description a batch method receives. The
+// observer runtime passes the delivered page's context; without it, local folds
+// such as passive reads describe the folded events with OriginUnknown, and a
+// deferral fails the fold. Per-event folds ignore it.
+func WithBatchContext(batchContext observation.BatchContext) ReduceOption {
+	return func(c *reduceConfig) { c.batchContext = &batchContext }
+}
 
 // WithCallerIdentity preserves the caller's identity during activation and folds,
 // as required for passive local reads. Kernel-driven operations use System by default.
@@ -147,25 +159,9 @@ func (l *Lease) Invoke(ctx context.Context, event Event, current any) (state any
 	if !ok {
 		return nil, fmt.Errorf("%w: wrong reducer event content", faults.ErrProtocol)
 	}
-	model := l.plan.model.GoType()
-	value := reflect.Zero(reflect.PointerTo(model))
-	if !artifacts.NilLike(current) {
-		value = reflect.ValueOf(current)
-		if value.Type() == model {
-			pointer := reflect.New(model)
-			pointer.Elem().Set(value)
-			value = pointer
-		}
-		if value.Type() != reflect.PointerTo(model) {
-			return nil, invalid("wrong initial read model")
-		}
-	}
-	if f.valueCurrent {
-		if value.IsNil() {
-			value = reflect.Zero(model)
-		} else {
-			value = value.Elem()
-		}
+	value, err := currentValue(l.plan.model.GoType(), current, f.valueCurrent)
+	if err != nil {
+		return nil, err
 	}
 	args := []reflect.Value{}
 	if f.receiver {
@@ -185,16 +181,43 @@ func (l *Lease) Invoke(ctx context.Context, event Event, current any) (state any
 	if f.returnsError && !results[1].IsNil() {
 		return nil, results[1].Interface().(error)
 	}
-	next := results[0]
+	return nextState(l.plan.model.GoType(), results[0]), nil
+}
+
+// currentValue adapts nil, M or *M current state to a fold's M or *M parameter.
+func currentValue(model reflect.Type, current any, valueCurrent bool) (reflect.Value, error) {
+	value := reflect.Zero(reflect.PointerTo(model))
+	if !artifacts.NilLike(current) {
+		value = reflect.ValueOf(current)
+		if value.Type() == model {
+			pointer := reflect.New(model)
+			pointer.Elem().Set(value)
+			value = pointer
+		}
+		if value.Type() != reflect.PointerTo(model) {
+			return value, invalid("wrong initial read model")
+		}
+	}
+	if valueCurrent {
+		if value.IsNil() {
+			return reflect.Zero(model), nil
+		}
+		return value.Elem(), nil
+	}
+	return value, nil
+}
+
+// nextState turns a fold's M or *M result into *M, nil meaning deleted.
+func nextState(model reflect.Type, next reflect.Value) any {
 	if next.Kind() == reflect.Pointer {
 		if next.IsNil() {
-			return nil, nil
+			return nil
 		}
-		return next.Interface(), nil
+		return next.Interface()
 	}
 	pointer := reflect.New(model)
 	pointer.Elem().Set(next)
-	return pointer.Interface(), nil
+	return pointer.Interface()
 }
 
 // Reduce folds sequentially in one scope, stopping at the first failure. The
@@ -204,7 +227,8 @@ func (l *Lease) Invoke(ctx context.Context, event Event, current any) (state any
 func (p *Plan) Reduce(ctx context.Context, batch []Event, initial any, options ...ReduceOption) (result Result) {
 	result.LastSuccessful = events.Unavailable
 	defer func() {
-		if result.Err != nil {
+		// A type assertion, not errors.Is: diagnostics never call into application errors.
+		if _, deferred := result.Err.(*observation.DeferredError); result.Err != nil && !deferred {
 			diagnostics.Log(ctx, p.Logger(), slog.LevelError, "reducer operation failed", "reducer", "reduce", result.Err)
 		}
 	}()
@@ -241,6 +265,9 @@ func (p *Plan) Reduce(ctx context.Context, batch []Event, initial any, options .
 		}
 	}()
 	result.State = initial
+	if p.batch != nil {
+		return lease.reduceBatch(ctx, batch, initial, config.batchContext, result)
+	}
 	var previous events.SequenceNumber
 	for i, event := range batch {
 		if event.Context.SequenceNumber >= events.Unavailable-2 || (i > 0 && event.Context.SequenceNumber <= previous) {

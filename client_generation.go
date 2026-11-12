@@ -31,6 +31,7 @@ type generation struct {
 	capabilities  kernelcapability.Capabilities
 	ctx           context.Context
 	cancel        context.CancelFunc
+	lose          func(error) // Ends this generation because the kernel no longer knows its connection ID.
 	raw           grpc.ClientConnInterface
 	closer        io.Closer
 	tokens        TokenSource
@@ -65,7 +66,7 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 	if g.raw == nil {
 		g.address = address
 	}
-	g.ctx, g.cancel = context.WithCancel(c.life)
+	g.bind(c.life)
 	c.nextGeneration++
 	g.number = c.nextGeneration
 	g.initialStores = c.storeSnapshot()

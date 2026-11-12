@@ -1,6 +1,6 @@
 ---
 title: Append atomic batches
-description: Append ordered events across sources with independent concurrency checks and complete outcomes.
+description: Append ordered events across several event sources in one call, with independent concurrency checks per source and a complete outcome for each.
 ---
 
 Use `Sequence.AppendMany` for one source or `Sequence.AppendBatch` for ordered events across sources. Both submit one atomic append within one store, namespace and sequence. A known rejection commits none of the events. These APIs remain experimental in the v0.x SDK.
@@ -40,7 +40,7 @@ A transport failure, malformed response, or execution exception is also an `Outc
 
 ## Run the example
 
-The [batches program](../../examples/batches/main.go) loads source A, protects that exact history, then appends A1, B1, A2 in one batch and reads A back. With a local development kernel running as described in [getting started](../clients/go/getting-started.md), run from the repository root:
+The [batches program](https://github.com/Cratis/Chronicle.Go/blob/main/examples/batches/main.go) loads source A, protects that exact history, then appends A1, B1, A2 in one batch and reads A back. With a local development kernel running as described in [getting started](../clients/go/getting-started.md), run from the repository root:
 
 ```sh
 go run ./examples/batches

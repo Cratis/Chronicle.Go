@@ -1,6 +1,6 @@
 ---
 title: Protect and erase personal data
-description: Declare PII and confidentiality metadata, release protected values and manage subject-key erasure.
+description: Declare PII and confidentiality metadata on events, release protected values to authorized readers and manage subject-key erasure for data subjects.
 ---
 
 Mark personal data with `chronicle:"pii"` and use
@@ -171,10 +171,10 @@ nor erasure removes copies exported outside Chronicle, including logs and backup
 
 ## Run the example
 
-The [compiling example](../examples/compliance/main.go) creates a unique store and
+The [compiling example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/compliance/main.go) creates a unique store and
 random subject, erases synthetic personal data, verifies confidentiality survives,
 checks write refusal and explicitly reauthorizes. It prints no values or keys.
-Use a disposable 19.125.2 development kernel with an encryption certificate.
+Use a disposable 19.153.0 development kernel with an encryption certificate.
 `scripts/configure-compliance-integration.sh CONTAINER` creates an ephemeral test
 certificate inside a **fresh disposable** container and restarts it. Never use
 that script on an existing data store or production deployment.

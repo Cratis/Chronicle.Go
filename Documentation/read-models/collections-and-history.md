@@ -1,6 +1,6 @@
 ---
 title: Read-model collections and history
-description: Read all model instances or correlation-grouped projection snapshots with explicit event-count and fidelity limits.
+description: Read all model instances or correlation-grouped projection snapshots, with explicit event-count limits and fidelity caveats for historical views.
 ---
 
 Use `reader.GetAll(ctx, count)` for a complete collection and
@@ -30,6 +30,12 @@ if err != nil {
 }
 fmt.Println(historical.ProcessedEventsCount)
 ```
+
+For a reducer, the 100-event call above selects a local fold; that count is not a history-fetch limit.
+
+The history RPC is unpaged and has no count field. A local count bounds folding,
+not the amount fetched or retained in memory. A missing local reducer plan fails
+with `ErrUnsupported`; the SDK does not delegate the fold to a connected client.
 
 This excerpt assumes a connected `store`, its registered `model`, a caller `ctx`,
 and an enclosing function returning `error`.
@@ -67,10 +73,6 @@ that bound. Source/type filtering follows C# historical reads; active observer
 metadata filters do not narrow the query. Generation-aware decoding, caller
 identity, scoped activation and cleanup use the production reducer plan. Query
 folds emit no local change notifications or observer acknowledgments.
-
-The history RPC is unpaged and has no count field. A local count bounds folding,
-not the amount fetched or retained in memory. A missing local reducer plan fails
-with `ErrUnsupported`; the SDK does not delegate the fold to a connected client.
 
 ## Projection snapshots
 

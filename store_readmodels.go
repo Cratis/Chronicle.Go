@@ -79,6 +79,13 @@ func (s *EventStore) registerReadModels(ctx context.Context, g *generation, root
 			}
 			request.ReadModels = append(request.ReadModels, definition)
 		}
+		if full {
+			// A graph is registered as a read model beside the ordinary ones, in the
+			// same pass; a runtime addition changes no graph, so it sends none.
+			for _, graph := range root.snapshot.graphs {
+				request.ReadModels = append(request.ReadModels, graph.ReadModel())
+			}
+		}
 		result, err := contracts.NewReadModelsClient(s.definitionTransport(g, root, false)).RegisterMany(ctx, request)
 		if err != nil {
 			return wire.RPCError(err)

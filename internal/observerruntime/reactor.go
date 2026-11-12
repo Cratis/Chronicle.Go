@@ -7,19 +7,17 @@ package observerruntime
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"time"
 
 	contracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/identities"
-	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/metadata"
+	"github.com/cratis/chronicle.go/observation"
 	"github.com/cratis/chronicle.go/reactors"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protowire"
@@ -33,14 +31,18 @@ type Reactor struct {
 	runtime   reactors.Runtime
 	store     metadata.StoreName
 	namespace metadata.Namespace
+	// OnDelivered runs on the Run goroutine for every message the kernel
+	// delivers. Install before Run. It must not block or call user code.
+	OnDelivered func()
 }
 
 // Open sends the registration on an explicit generation lifetime. The protocol
 // has no registration acknowledgement: success means sent, not kernel acceptance.
+// Failures to open or register are StreamErrors.
 func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID string, store metadata.StoreName, namespace metadata.Namespace, plan *reactors.Plan, runtime reactors.Runtime) (*Reactor, error) {
 	stream, err := contracts.NewReactorsClient(conn).Observe(ctx)
 	if err != nil {
-		return nil, err
+		return nil, streamError(err)
 	}
 	definition := &contracts.ReactorDefinition{
 		ReactorId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()),
@@ -56,7 +58,7 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 	for _, ref := range plan.EventTypes() {
 		definition.EventTypes = append(definition.EventTypes, &contracts.EventTypeWithKeyExpression{EventType: &contracts.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Key: "$eventSourceId"})
 	}
-	err = stream.Send(&contracts.ReactorMessage{Content: &contracts.OneOf_RegisterReactor_ReactorResult{Value0: &contracts.RegisterReactor{ConnectionId: connectionID, EventStore: string(store), Namespace: string(namespace), Reactor: definition}}})
+	err = sendOnStream(stream.Send, stream.Recv, &contracts.ReactorMessage{Content: &contracts.OneOf_RegisterReactor_ReactorResult{Value0: &contracts.RegisterReactor{ConnectionId: connectionID, EventStore: string(store), Namespace: string(namespace), Reactor: definition, PageDelivery: &contracts.PageDelivery{Enabled: true}}}})
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +68,7 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 // Run processes batches sequentially until cancellation or stream failure. Effects
 // are never retried here. The kernel controls failure recovery and resume position.
 func (r *Reactor) Run(ctx context.Context) error {
-	return runStream(ctx, r.stream.Recv, func(ctx context.Context, batch *contracts.EventsToObserve) (*contracts.ReactorResult, error) {
+	return runStream(ctx, r.stream.Recv, r.OnDelivered, func(ctx context.Context, batch *contracts.EventsToObserve) (*contracts.ReactorResult, error) {
 		if batch.ReplayState != contracts.ReplayState_REPLAY_STATE_None {
 			ctx = reactors.WithBatch(ctx, reactors.Batch{Reactor: r.plan.Identifier(), Store: r.store, Namespace: r.namespace, Sequence: r.plan.EventSequence()})
 			return nil, r.plan.NotifyReplay(ctx, reactors.ReplayState(batch.ReplayState), events.SourceID(batch.Partition))
@@ -77,73 +79,83 @@ func (r *Reactor) Run(ctx context.Context) error {
 	})
 }
 func (r *Reactor) handle(ctx context.Context, batch *contracts.EventsToObserve) (result *contracts.ReactorResult) {
-	result = &contracts.ReactorResult{Partition: batch.Partition, State: contracts.ObservationState_Success, LastSuccessfulObservation: uint64(events.Unavailable)}
-	var failure error
-	var lease *reactors.Lease
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			failure = &diagnostics.PanicError{}
-		}
-		if lease != nil {
-			// Cleanup gets a bounded cancellation-independent budget, but never escapes
-			// joining. Callbacks that ignore cancellation cannot be forcibly terminated.
-			cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-			err := lease.Close(cleanup)
-			cancel()
-			if err != nil {
-				failure = errors.Join(failure, err)
-				result.LastSuccessfulObservation = uint64(events.Unavailable)
-			}
-		}
-		if failure != nil {
-			diagnostics.Log(ctx, r.plan.Logger(), slog.LevelError, "reactor batch failed", "reactor", "observe", failure)
-			result.State = contracts.ObservationState_Failed
-			result.ExceptionMessages = []string{failure.Error()}
-		}
-	}()
-	ctx = reactors.WithBatch(ctx, reactors.Batch{Reactor: r.plan.Identifier(), Store: r.store, Namespace: r.namespace, Sequence: r.plan.EventSequence()})
-	if !r.plan.PerEvent() {
-		lease, failure = r.plan.Activate(ctx)
-		if failure != nil {
-			return result
-		}
+	paged := len(batch.Partitions) > 0
+	raw := batch.Partitions
+	if !paged {
+		raw = []*contracts.PartitionEvents{{Partition: batch.Partition, Events: batch.Events}}
 	}
-	var previous uint64
-	for i, appended := range batch.Events {
-		if failure = ctx.Err(); failure != nil {
-			return result
+	partitions := make([]PagePartition, 0, len(raw))
+	for _, partition := range raw {
+		if partition == nil {
+			partitions = append(partitions, PagePartition{Failed: faults.ErrProtocol, FailedAt: 0})
+			continue
 		}
-		if appended == nil || appended.Context == nil || (i > 0 && appended.Context.SequenceNumber <= previous) {
-			failure = faults.ErrProtocol
-			return result
+		partitions = append(partitions, r.decodePartition(partition.Partition, partition.Events))
+	}
+	ctx = reactors.WithBatch(ctx, reactors.Batch{Reactor: r.plan.Identifier(), Store: r.store, Namespace: r.namespace, Sequence: r.plan.EventSequence()})
+	batchContext := NewBatchContext(string(r.plan.Identifier()), r.store, r.namespace, r.plan.EventSequence(), origin(batch.Origin), partitions, time.Duration(batch.DeliverWithinMilliseconds)*time.Millisecond, paged)
+	outcomes := DispatchReactorPage(ctx, r.plan, partitions, batchContext, r.runtime)
+	if paged {
+		result = &contracts.ReactorResult{DeliveryId: batch.DeliveryId}
+		for _, outcome := range outcomes {
+			result.Partitions = append(result.Partitions, &contracts.PartitionResult{Partition: outcome.Partition, State: outcome.State, LastSuccessfulObservation: uint64(outcome.LastSuccessful), ExceptionMessages: messages(outcome.Err), RetryAfterMilliseconds: uint64(outcome.RetryAfter.Milliseconds())})
 		}
-		previous = appended.Context.SequenceNumber
-		var ec events.Context
-		var content any
-		ec, content, failure = r.decode(appended)
-		if failure != nil {
-			return result
-		}
-		deliveryCtx := ReactorInvocationContext(ctx, r.plan.Identifier(), ec)
-		if r.plan.PerEvent() {
-			lease, failure = r.plan.Activate(deliveryCtx)
-			if failure != nil {
-				return result
-			}
-		}
-		failure = lease.Invoke(deliveryCtx, content, ec, r.runtime)
-		if r.plan.PerEvent() {
-			cleanup, cancel := context.WithTimeout(context.WithoutCancel(deliveryCtx), 5*time.Second)
-			failure = errors.Join(failure, lease.Close(cleanup))
-			cancel()
-			lease = nil
-		}
-		if failure != nil {
-			return result
-		}
-		result.LastSuccessfulObservation = appended.Context.SequenceNumber
+		return result
+	}
+	outcome := outcomes[0]
+	result = &contracts.ReactorResult{Partition: batch.Partition, DeliveryId: batch.DeliveryId, State: outcome.State, LastSuccessfulObservation: uint64(outcome.LastSuccessful), ExceptionMessages: messages(outcome.Err)}
+	if result.State == contracts.ObservationState_Deferred {
+		// A kernel that does not deliver pages does not understand Deferred.
+		result.State = contracts.ObservationState_Failed
 	}
 	return result
+}
+
+// decodePartition validates and decodes one partition's events, stopping at the
+// first event that cannot be decoded. Events before it can still be handled.
+func (r *Reactor) decodePartition(partition string, appended []*contracts.AppendedEvent) PagePartition {
+	decoded := PagePartition{Partition: partition}
+	var previous uint64
+	for i, event := range appended {
+		at := events.SequenceNumber(previous + 1)
+		if i == 0 {
+			at = 0
+		}
+		if event == nil || event.Context == nil || (i > 0 && event.Context.SequenceNumber <= previous) {
+			decoded.Failed, decoded.FailedAt = faults.ErrProtocol, at
+			return decoded
+		}
+		previous = event.Context.SequenceNumber
+		ec, content, err := r.decode(event)
+		if err != nil {
+			decoded.Failed, decoded.FailedAt = err, events.SequenceNumber(event.Context.SequenceNumber)
+			return decoded
+		}
+		decoded.Events = append(decoded.Events, PageEvent{Content: content, Context: ec})
+	}
+	return decoded
+}
+
+func messages(err error) []string {
+	if err == nil {
+		return nil
+	}
+	return []string{err.Error()}
+}
+
+func origin(value contracts.ObservationOrigin) observation.Origin {
+	switch value {
+	case contracts.ObservationOrigin_Live:
+		return observation.OriginLive
+	case contracts.ObservationOrigin_CatchingUp:
+		return observation.OriginCatchUp
+	case contracts.ObservationOrigin_Replaying:
+		return observation.OriginReplay
+	case contracts.ObservationOrigin_Retrying:
+		return observation.OriginRetry
+	default:
+		return observation.OriginUnknown
+	}
 }
 func (r *Reactor) decode(appended *contracts.AppendedEvent) (events.Context, any, error) {
 	ec, err := eventContext(appended.Context, r.store, r.namespace, r.plan.EventSequence())

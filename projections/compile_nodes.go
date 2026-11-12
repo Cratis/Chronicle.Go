@@ -265,6 +265,9 @@ func mappingExpression(d declarations.Directive, target string) expression {
 		v, _ := argument(d, "value")
 		e = literalValue(v)
 	}
+	if once, ok := argument(d, "once"); ok && once.Kind == declarations.Boolean && once.Text == "true" {
+		e.once = true
+	}
 	return e
 }
 func removalFromTag(d declarations.Directive, event events.Descriptor) removalDeclaration {

@@ -114,7 +114,10 @@ func (r *rebinder) from(from fromDefinition, old, next []serialization.Field) fr
 		if !w.synthetic {
 			w.path = r.path(w.path, old, next)
 		}
-		w.provenance.Path = w.path
+		if w.entry.source == eventContentKey {
+			w.entry.path = r.path(w.entry.path, eventOld, eventNext)
+		}
+		w.provenance.Path = w.entry.encode(w.path)
 		w.expression = r.expression(w.expression, eventOld, eventNext)
 		from.writes[j] = w
 	}
@@ -124,6 +127,11 @@ func (r *rebinder) node(n nodeDefinition, old, next []serialization.Field) nodeD
 	n.keyField = r.path(n.keyField, old, next)
 	if n.identifiedBy != "$eventSourceId" && n.identifiedBy != "*NotSet*" {
 		n.identifiedBy = r.path(n.identifiedBy, old, next)
+	}
+	if n.ordering != nil && n.ordering.sortBy != "" {
+		ordering := *n.ordering
+		ordering.sortBy = r.path(ordering.sortBy, old, next)
+		n.ordering = &ordering
 	}
 	n.exclusions = slices.Clone(n.exclusions)
 	for i, path := range n.exclusions {

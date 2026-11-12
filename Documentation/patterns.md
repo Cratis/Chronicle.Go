@@ -1,12 +1,12 @@
 ---
 title: Query established behavior
-description: Ask contextual and usual-action questions without inventing behavior when Chronicle has no answer.
+description: Ask contextual and usual-action questions of Chronicle, and handle the case where it has no answer instead of inventing behavior in your code.
 ---
 
 Use `store.Patterns()` to ask what a scope usually does. Answers are server
 inference from established behavior, **not promises of future actions**. An empty
 answer means nothing is established for that question; do not fill it with local
-inference. This experimental v0.x API starts no miner, training runtime or scheduler.
+inference. This v0.x API starts no miner, training runtime or scheduler.
 
 This reference assumes a connected `*chronicle.EventStore`; see
 [Get started](clients/go/getting-started.md) for connection setup. The facade

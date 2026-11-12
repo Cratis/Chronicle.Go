@@ -120,7 +120,7 @@ func reducerFixture(t *testing.T, registry *Registry, options ...ClientOption) (
 		return nil
 	}}}
 	fastRetry := func(c *clientConfig) {
-		c.reactorRetryWait = func(ctx context.Context, _ time.Duration) error { return ctx.Err() }
+		c.observerRetryWait = func(ctx context.Context, _ time.Duration) error { return ctx.Err() }
 	}
 	client, ctx := supervisionClient(t, kernel, append([]ClientOption{WithRegistry(registry), fastRetry}, options...)...)
 	store, err := client.EventStore(ctx, "store")

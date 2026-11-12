@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cratis/chronicle.go/eventsequences"
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/internal/clientoptions"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/internal/outgoing"
@@ -68,11 +69,17 @@ type clientConfig struct {
 	rootCausation                                   *metadata.RootCausation
 	naming                                          serialization.NamingPolicy
 	defaultSinkType                                 readmodels.SinkType
+	defaultGraphSinkType                            graphs.SinkType
 	registry                                        *Registry
 	stores                                          map[StoreName]*Registry
 	reactorServices                                 reactorScopeFactory
 	reactorServicesSet                              bool
-	reactorRetryWait                                func(context.Context, time.Duration) error
+	observerRetryWait                               func(context.Context, time.Duration) error
+	observerBackoff                                 func() *connection.ObservationBackoff
+}
+
+func (c *clientConfig) observerRetry() observerRetry {
+	return observerRetry{wait: c.observerRetryWait, backoff: c.observerBackoff}
 }
 
 // WithLogger selects the borrowed logger for SDK lifecycle and observer diagnostics.

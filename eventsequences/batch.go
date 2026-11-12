@@ -219,6 +219,9 @@ func (s *Sequence) preflightEntries(entries []Entry, config batchConfig) ([]Entr
 		if strings.TrimSpace(string(entry.Source)) == "" {
 			return nil, nil, faults.ErrInvalidConfiguration
 		}
+		if entry.importOnly() {
+			return nil, nil, fmt.Errorf("%w: entry %d sets a field only imports honor", faults.ErrInvalidConfiguration, i)
+		}
 		descriptor, found := s.catalog.Lookup(entry.Event)
 		if !found {
 			return nil, nil, faults.ErrNotRegistered

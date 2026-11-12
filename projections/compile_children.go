@@ -99,6 +99,9 @@ func (c *compiler) addChildCreator(bc *boundChildContext, directive declarations
 	if err := bc.setIdentity(directive); err != nil {
 		return err
 	}
+	if err := bc.setOrdering(directive); err != nil {
+		return err
+	}
 	bc.creators = append(bc.creators, s)
 	return nil
 }
@@ -148,6 +151,7 @@ func (c *compiler) compileChild(n *nodeDefinition, spec childSpec) error {
 	if err = c.stampDerivative(compiled, shape); err != nil {
 		return err
 	}
+	compiled.ordering = child.ordering
 	attachChild(n, field.Path, compiled, child.nested)
 	return nil
 }
@@ -163,6 +167,9 @@ func (c *compiler) checkedChildShape(n *nodeDefinition, spec childSpec) (nodeSha
 		return shape, invalid("duplicate or incompatible child node")
 	}
 	if err = validateNodeOptions(child.data); err != nil {
+		return shape, err
+	}
+	if err = checkChildOrdering(child, shape.fields); err != nil {
 		return shape, err
 	}
 	return shape, checkChildIdentityType(child, shape.fields)

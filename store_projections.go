@@ -40,6 +40,12 @@ func (s *EventStore) registerProjections(ctx context.Context, g *generation, roo
 		for _, definition := range definitions {
 			request.Projections = append(request.Projections, definition.KernelDefinition())
 		}
+		if full {
+			// The registration is the full set, so graph projections travel in it.
+			for _, graph := range root.snapshot.graphs {
+				request.Projections = append(request.Projections, graph.Projection())
+			}
+		}
 		response, err := contracts.NewProjectionsClient(s.definitionTransport(g, root, full)).Register(ctx, request, grpc.ForceCodec(projectionRegistrationCodec{}))
 		if err != nil {
 			return wire.RPCError(err)

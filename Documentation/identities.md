@@ -1,10 +1,10 @@
 ---
 title: Rename a stored identity display name
-description: Request one namespace-scoped name update and distinguish acknowledgment from observed storage state.
+description: Request a namespace-scoped identity name update and learn to tell an acknowledged request apart from the storage state you actually observe later.
 ---
 
 Use `store.Identities().Rename` to change a stored identity's display name without
-changing its opaque subject or username. This experimental v0.x workflow performs
+changing its opaque subject or username. This v0.x workflow performs
 one pre-list, one rename command, and one post-list. It does not register an
 identity: ordinary actor appends establish identities first.
 
@@ -20,7 +20,7 @@ identity: ordinary actor appends establish identities first.
 - Supply your own context deadline. There is no default timeout, retry, polling,
   compensation, or timeout extension.
 
-The [compiling external example](../example_identity_rename_test.go) shows the
+The [compiling external example](https://github.com/Cratis/Chronicle.Go/blob/main/example_identity_rename_test.go) shows the
 public workflow and error handling. With an acquired ready `store` and `ctx`:
 
 ```go

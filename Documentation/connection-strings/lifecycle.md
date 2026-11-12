@@ -1,6 +1,6 @@
 ---
 title: Connection lifecycle and readiness
-description: Understand automatic recovery, registration outcomes and bounded Go client shutdown.
+description: Understand automatic connection recovery, registration outcomes and how to shut the Go client down within a bounded time so work is not lost.
 ---
 
 With normal logical sessions, keep your client and store handles across transient outages. The client replaces failed connection generations, refreshes endpoint discovery and OAuth, and replays the frozen registrations before admitting writes through those handles. It does not replay application operations. [Clients without a logical session](#short-lived-clients-and-process-ownership) have different loss detection and replay limits.
@@ -47,7 +47,7 @@ defer func() { _ = client.Close() }()
 | --- | --- |
 | Registration | Options accumulate in declaration order without deduplication. Nil hooks fail construction with `ErrInvalidConfiguration` before I/O. Hook collections freeze at `CaptureClient` and apply to every owned or borrowed generation. |
 | Connected | The generation reached authenticated protocol readiness, the same point `Connect` returns. This does not prove artifact registration or observer attachment; use `WaitForRegistration` and `Ready` for their documented barriers. |
-| Event | `ConnectionEvent` carries `Generation` (matching `RegistrationOutcome.Generation`), `ConnectionID`, selected `Address`, and `Err`. Connected has no error; Disconnected carries the termination cause. |
+| Event | `ConnectionEvent` carries `Generation` (matching `RegistrationOutcome.Generation`), `ConnectionID`, selected `Address`, and `Err`. Connected has no error; Disconnected carries the termination cause. The cause is `ErrSessionLost`, wrapping the kernel status, when a reactor or reducer stream was rejected with `ClientIsNotConnected`: the kernel no longer knows the connection, so the client reconnects under a new `ConnectionID`. |
 | Dispatch | One client-owned dispatcher orders Connected(N), Disconnected(N), Connected(N+1). Each event's hooks run concurrently and are joined before the next event. Hooks never run on the caller goroutine or under SDK locks. |
 | Progress | Supervision, reconnect, RPCs and `Ready` never wait for hooks. A hook may call `Ready`, `EventStore` or `WaitForRegistration` without deadlocking dispatch. |
 | Coalescing | If a generation ends before its Connected hooks start, both notifications are skipped. Its generation number is never reported; attempts that never become ready also leave gaps, so a gap alone does not prove coalescing. At most two events are pending. Every delivered Connected has exactly one Disconnected. |

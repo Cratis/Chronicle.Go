@@ -25,9 +25,10 @@ func (s *EventStore) startReducers(ctx context.Context, g *generation, waitReady
 	s.readModelChanges.BindGeneration(g.ctx)
 	var plans []observerPlan
 	for _, plan := range s.reducerPlans() {
-		plans = append(plans, observerPlan{id: string(plan.Identifier()), logger: plan.Logger(), operation: "reducer", open: func(ctx context.Context, g *generation) (observerStream, error) {
+		plans = append(plans, observerPlan{id: string(plan.Identifier()), logger: plan.Logger(), operation: "reducer", open: func(ctx context.Context, g *generation, delivered func()) (observerStream, error) {
 			runtime, err := observerruntime.OpenReducer(ctx, g.transport, g.id, s.name, s.namespace, plan)
 			if err == nil {
+				runtime.OnDelivered = delivered
 				runtime.OnChange = func(key string, value json.RawMessage) {
 					s.readModelChanges.Publish(g.ctx, plan.Model().Identifier(), readmodels.Key(key), value)
 				}
@@ -35,7 +36,7 @@ func (s *EventStore) startReducers(ctx context.Context, g *generation, waitReady
 			return runtime, err
 		}})
 	}
-	return s.reducers.start(ctx, g, waitReady, plans, s.client.config.reactorRetryWait)
+	return s.reducers.start(ctx, g, waitReady, plans, s.client.config.observerRetry())
 }
 
 // UnregisterReducer cancels and joins this store/namespace's reducer across

@@ -67,7 +67,7 @@ func TestKernelEnumSparseEveryMissingThenKnown(t *testing.T) {
 		projections.EveryMap(e, projections.Path[sparseEnumView, *boundaryStatus]("Status"), "Status")
 	})
 	addBoundaryProjection(t, r, b)
-	store, err := f.client(r, chronicle.WithNamingPolicy(serialization.LegacyGoCamelCase)).EventStore(f.ctx, f.storeName, chronicle.WithNamespace("es"))
+	store, err := f.client(r, chronicle.WithNamingPolicy(serialization.LegacyGoCamelCase)).EventStore(f.ctx, f.storeName, chronicle.WithNamespace("enum-sparse"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestKernelEnumSparseEveryMissingThenKnown(t *testing.T) {
 		if state.Value.Status != nil {
 			typedStatus = *state.Value.Status
 		}
-		t.Logf("sparse enum store=%s namespace=es marker=%d typed-status=%v raw=%s", f.storeName, marker, typedStatus, raw.Value)
+		t.Logf("sparse enum store=%s namespace=enum-sparse marker=%d typed-status=%v raw=%s", f.storeName, marker, typedStatus, raw.Value)
 	}
 	appendSuccessfully(t, f.ctx, store, "subject", SparseEnumTick{Marker: 1})
 	observe(1, nil)

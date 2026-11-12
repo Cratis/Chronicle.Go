@@ -11,6 +11,7 @@ var (
 	ErrNotRegistered        = errors.New("chronicle: event type not registered")
 	ErrInvalidConfiguration = errors.New("chronicle: invalid configuration")
 	ErrProtocol             = errors.New("chronicle: invalid kernel response")
+	ErrSessionLost          = errors.New("chronicle: kernel no longer knows the connection")
 )
 
 // BeforeDispatch marks a locally rejected operation, known not to have reached Invoke.

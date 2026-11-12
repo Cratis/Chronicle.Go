@@ -1,6 +1,6 @@
 ---
 title: External integrations
-description: Declare cross-store subscriptions, outgoing webhooks and external HTTP or database services.
+description: Declare cross-store subscriptions, outgoing webhooks and external HTTP or database services from Go, and choose the right integration for each need.
 ---
 
 Use store subscriptions to consume another store's outbox, webhooks to declare
@@ -15,6 +15,10 @@ Use separate stores when definitions must differ; namespace selection is not
 authorization.
 
 ## Consume another store's events
+
+Source and target
+must differ. Definitions do not move events appended to the ordinary event log:
+the producer must publish into `source.EventSequence(events.Outbox)`.
 
 Declare the origin when registering a consumed event:
 
@@ -49,7 +53,7 @@ events' origins, selects the named inbox even in that store, and cannot be mixed
 with an explicit sequence. Projections follow C#: an explicitly selected
 `inbox-<store>` still provisions; an explicit non-inbox sequence does not.
 
-For explicit management, on an already registered target `store`:
+For manual subscription management, use an already registered target `store`:
 
 ```go
 err := store.Subscriptions().Subscribe(ctx, "orders", "orders",
@@ -64,9 +68,7 @@ the kernel; it is not a synchronous read-after-write barrier.
 
 No event IDs means **all currently registered event IDs**, not a wildcard for
 future types. IDs are deduplicated. Like C#, subscription filters use generation
-one; an observer still requests its own declared generation. Source and target
-must differ. Definitions do not move events appended to the ordinary event log:
-the producer must publish into `source.EventSequence(events.Outbox)`.
+one; an observer still requests its own declared generation.
 
 ## Declare an outgoing webhook
 

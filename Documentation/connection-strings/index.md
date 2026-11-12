@@ -1,6 +1,6 @@
 ---
 title: Connect to Chronicle
-description: Configure endpoints, TLS, OAuth credentials and client ownership in Go.
+description: Configure Chronicle endpoints, TLS, OAuth credentials and client ownership in Go, and learn how a connection string maps onto client options.
 ---
 
 A client shares one connection generation across stores and namespaces. Create it with `chronicle.NewClient(options...)` for lazy construction, or `chronicle.Dial(ctx, options...)` to finish startup before returning. With normal logical sessions, startup includes authentication, structural compatibility and the first kernel keep-alive. With `WithSkipKeepAlive`, the protected read-only startup probe replaces that heartbeat; compatibility is still checked unless explicitly skipped. See [short-lived clients and process ownership](lifecycle.md#short-lived-clients-and-process-ownership) for exclusions and readiness limits.

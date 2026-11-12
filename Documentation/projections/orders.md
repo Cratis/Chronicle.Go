@@ -1,12 +1,12 @@
 ---
 title: Project orders with children and joins
-description: Combine model-bound child collections, numeric totals and event joins, or use the equivalent fluent declarations.
+description: Combine model-bound child collections, numeric totals and event joins in an order example, or use the equivalent fluent projection declarations.
 ---
 
 Use child projections for an order's lines, arithmetic for its running total, and
 an event join for the customer's latest name. Register the event and root model
 types before constructing the client, as in the [projection guide](index.md).
-The excerpts below come from [the compiled example](../../examples/projections/orders.go).
+The excerpts below come from [the compiled example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/projections/orders.go).
 
 ## Events
 
@@ -60,7 +60,7 @@ func modelBoundOrder(model readmodels.Model[Order], placed events.Type[OrderPlac
 An appended line with `amount: 4` adds four to `Total` and creates or updates the
 line identified by `lineId`. A later customer rename updates `CustomerName`.
 Read the order by its event-source ID; active projection reads are eventually
-consistent. The [kernel specification](../../internal/integration/projection_nodes_test.go)
+consistent. The [kernel specification](https://github.com/Cratis/Chronicle.Go/blob/main/internal/integration/projection_nodes_test.go)
 also demonstrates removal, nested clears, scalar clears and global timestamps.
 
 ## Fluent equivalent
@@ -172,6 +172,8 @@ explicit `AutoMap()` or `NoAutoMap()` overrides inheritance. Exclusions remain l
   execute children inside nested objects, or nested-object joins inside collection
   children. Avoid these shapes; successful definition registration is not evidence
   they will materialize.
+
+Continue with [variants, recursive children and queries](variants.md) for the chapter guidance.
 
 Recursive and polymorphic child schemas, variants and derivative groups remain
 in [part 3](https://github.com/Cratis/Chronicle.Go/issues/27).

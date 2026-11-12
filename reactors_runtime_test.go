@@ -47,7 +47,12 @@ type observerSession struct {
 	batches      chan *contracts.EventsToObserve
 	results      chan *contracts.ReactorResult
 	end          chan error
+	rejectAfter  chan rejection // Delivers the batch, then ends the stream without reading its result.
 	done         chan struct{}
+}
+type rejection struct {
+	batch *contracts.EventsToObserve
+	err   error
 }
 type reactorKernel struct {
 	fakeKernel
@@ -88,7 +93,7 @@ func (k *reactorKernel) Observe(stream grpc.BidiStreamingServer[contracts.Reacto
 	if !k.constraintsReady.Load() || k.registrations.Load() == 0 {
 		return errors.New("observer started before definitions")
 	}
-	s := &observerSession{registration: first.GetContent().GetValue0(), batches: make(chan *contracts.EventsToObserve, 1), results: make(chan *contracts.ReactorResult, 1), end: make(chan error, 1), done: make(chan struct{})}
+	s := &observerSession{registration: first.GetContent().GetValue0(), batches: make(chan *contracts.EventsToObserve, 1), results: make(chan *contracts.ReactorResult, 1), end: make(chan error, 1), rejectAfter: make(chan rejection, 1), done: make(chan struct{})}
 	defer close(s.done)
 	select {
 	case k.sessions <- s:
@@ -101,6 +106,11 @@ func (k *reactorKernel) Observe(stream grpc.BidiStreamingServer[contracts.Reacto
 			return stream.Context().Err()
 		case err := <-s.end:
 			return err
+		case rejected := <-s.rejectAfter:
+			if err := stream.Send(rejected.batch); err != nil {
+				return err
+			}
+			return rejected.err
 		case batch := <-s.batches:
 			if err := stream.Send(batch); err != nil {
 				return err

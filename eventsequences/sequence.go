@@ -35,6 +35,8 @@ type Sequence struct {
 	appendOriginResolver AppendOriginResolver
 	outgoing             outgoing.Config
 	conn                 grpc.ClientConnInterface
+	// imports replaces the Imports service in tests; nil uses conn.
+	imports importTransport
 }
 
 // New creates a low-level sequence over a caller-owned connection and registered

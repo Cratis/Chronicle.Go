@@ -82,18 +82,63 @@ func (x *AllowNewEncryptionKeyRequest) GetIdentifier() string {
 	return ""
 }
 
+type AllowNewEncryptionKeyResponse struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	NotCoveredEventStores []string               `protobuf:"bytes,1,rep,name=NotCoveredEventStores,proto3" json:"NotCoveredEventStores,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *AllowNewEncryptionKeyResponse) Reset() {
+	*x = AllowNewEncryptionKeyResponse{}
+	mi := &file_compliance_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AllowNewEncryptionKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AllowNewEncryptionKeyResponse) ProtoMessage() {}
+
+func (x *AllowNewEncryptionKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_compliance_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AllowNewEncryptionKeyResponse.ProtoReflect.Descriptor instead.
+func (*AllowNewEncryptionKeyResponse) Descriptor() ([]byte, []int) {
+	return file_compliance_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AllowNewEncryptionKeyResponse) GetNotCoveredEventStores() []string {
+	if x != nil {
+		return x.NotCoveredEventStores
+	}
+	return nil
+}
+
 type DeleteEncryptionKeyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
 	Namespace     string                 `protobuf:"bytes,2,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
 	Identifier    string                 `protobuf:"bytes,3,opt,name=Identifier,proto3" json:"Identifier,omitempty"`
+	RequestId     string                 `protobuf:"bytes,4,opt,name=RequestId,proto3" json:"RequestId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteEncryptionKeyRequest) Reset() {
 	*x = DeleteEncryptionKeyRequest{}
-	mi := &file_compliance_proto_msgTypes[1]
+	mi := &file_compliance_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -105,7 +150,7 @@ func (x *DeleteEncryptionKeyRequest) String() string {
 func (*DeleteEncryptionKeyRequest) ProtoMessage() {}
 
 func (x *DeleteEncryptionKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_compliance_proto_msgTypes[1]
+	mi := &file_compliance_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -118,7 +163,7 @@ func (x *DeleteEncryptionKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteEncryptionKeyRequest.ProtoReflect.Descriptor instead.
 func (*DeleteEncryptionKeyRequest) Descriptor() ([]byte, []int) {
-	return file_compliance_proto_rawDescGZIP(), []int{1}
+	return file_compliance_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *DeleteEncryptionKeyRequest) GetEventStore() string {
@@ -142,6 +187,57 @@ func (x *DeleteEncryptionKeyRequest) GetIdentifier() string {
 	return ""
 }
 
+func (x *DeleteEncryptionKeyRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+type DeleteEncryptionKeyResponse struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	NotCoveredEventStores []string               `protobuf:"bytes,1,rep,name=NotCoveredEventStores,proto3" json:"NotCoveredEventStores,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *DeleteEncryptionKeyResponse) Reset() {
+	*x = DeleteEncryptionKeyResponse{}
+	mi := &file_compliance_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteEncryptionKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteEncryptionKeyResponse) ProtoMessage() {}
+
+func (x *DeleteEncryptionKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_compliance_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteEncryptionKeyResponse.ProtoReflect.Descriptor instead.
+func (*DeleteEncryptionKeyResponse) Descriptor() ([]byte, []int) {
+	return file_compliance_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *DeleteEncryptionKeyResponse) GetNotCoveredEventStores() []string {
+	if x != nil {
+		return x.NotCoveredEventStores
+	}
+	return nil
+}
+
 type ReleaseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -156,7 +252,7 @@ type ReleaseRequest struct {
 
 func (x *ReleaseRequest) Reset() {
 	*x = ReleaseRequest{}
-	mi := &file_compliance_proto_msgTypes[2]
+	mi := &file_compliance_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -168,7 +264,7 @@ func (x *ReleaseRequest) String() string {
 func (*ReleaseRequest) ProtoMessage() {}
 
 func (x *ReleaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_compliance_proto_msgTypes[2]
+	mi := &file_compliance_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -181,7 +277,7 @@ func (x *ReleaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseRequest.ProtoReflect.Descriptor instead.
 func (*ReleaseRequest) Descriptor() ([]byte, []int) {
-	return file_compliance_proto_rawDescGZIP(), []int{2}
+	return file_compliance_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ReleaseRequest) GetEventStore() string {
@@ -239,7 +335,7 @@ type ReleaseResponse struct {
 
 func (x *ReleaseResponse) Reset() {
 	*x = ReleaseResponse{}
-	mi := &file_compliance_proto_msgTypes[3]
+	mi := &file_compliance_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -251,7 +347,7 @@ func (x *ReleaseResponse) String() string {
 func (*ReleaseResponse) ProtoMessage() {}
 
 func (x *ReleaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_compliance_proto_msgTypes[3]
+	mi := &file_compliance_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -264,7 +360,7 @@ func (x *ReleaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseResponse.ProtoReflect.Descriptor instead.
 func (*ReleaseResponse) Descriptor() ([]byte, []int) {
-	return file_compliance_proto_rawDescGZIP(), []int{3}
+	return file_compliance_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ReleaseResponse) GetPayload() string {
@@ -314,7 +410,9 @@ const file_compliance_proto_rawDesc = "" +
 	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x1e\n" +
 	"\n" +
 	"Identifier\x18\x03 \x01(\tR\n" +
-	"Identifier\"z\n" +
+	"Identifier\"U\n" +
+	"\x1dAllowNewEncryptionKeyResponse\x124\n" +
+	"\x15NotCoveredEventStores\x18\x01 \x03(\tR\x15NotCoveredEventStores\"\x98\x01\n" +
 	"\x1aDeleteEncryptionKeyRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -322,7 +420,10 @@ const file_compliance_proto_rawDesc = "" +
 	"\tNamespace\x18\x02 \x01(\tR\tNamespace\x12\x1e\n" +
 	"\n" +
 	"Identifier\x18\x03 \x01(\tR\n" +
-	"Identifier\"\xb2\x01\n" +
+	"Identifier\x12\x1c\n" +
+	"\tRequestId\x18\x04 \x01(\tR\tRequestId\"S\n" +
+	"\x1bDeleteEncryptionKeyResponse\x124\n" +
+	"\x15NotCoveredEventStores\x18\x01 \x03(\tR\x15NotCoveredEventStores\"\xb2\x01\n" +
 	"\x0eReleaseRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -337,11 +438,13 @@ const file_compliance_proto_rawDesc = "" +
 	"\bHasError\x18\x02 \x01(\bR\bHasError\x12\x14\n" +
 	"\x05Error\x18\x03 \x01(\tR\x05Error\x12*\n" +
 	"\x10FailedProperties\x18\x04 \x03(\tR\x10FailedProperties\x12\x16\n" +
-	"\x06Strict\x18\x05 \x01(\bR\x06Strict2\xee\x02\n" +
+	"\x06Strict\x18\x05 \x01(\bR\x06Strict2\xca\x05\n" +
 	"\n" +
 	"Compliance\x12t\n" +
-	"\x15AllowNewEncryptionKey\x12C.Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyRequest\x1a\x16.google.protobuf.Empty\x12p\n" +
-	"\x13DeleteEncryptionKey\x12A.Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyRequest\x1a\x16.google.protobuf.Empty\x12x\n" +
+	"\x15AllowNewEncryptionKey\x12C.Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyRequest\x1a\x16.google.protobuf.Empty\x12\xae\x01\n" +
+	"!AllowNewEncryptionKeyWithCoverage\x12C.Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyRequest\x1aD.Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyResponse\x12p\n" +
+	"\x13DeleteEncryptionKey\x12A.Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyRequest\x1a\x16.google.protobuf.Empty\x12\xa8\x01\n" +
+	"\x1fDeleteEncryptionKeyWithCoverage\x12A.Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyRequest\x1aB.Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyResponse\x12x\n" +
 	"\aRelease\x125.Cratis.Chronicle.Contracts.Compliance.ReleaseRequest\x1a6.Cratis.Chronicle.Contracts.Compliance.ReleaseResponseB\xa9\x02\n" +
 	")com.Cratis.Chronicle.Contracts.ComplianceB\x0fComplianceProtoP\x01Z3github.com/cratis/chronicle.go/contracts/compliance\xa2\x02\x04CCCC\xaa\x02%Cratis.Chronicle.Contracts.Compliance\xca\x02%Cratis\\Chronicle\\Contracts\\Compliance\xe2\x021Cratis\\Chronicle\\Contracts\\Compliance\\GPBMetadata\xea\x02(Cratis::Chronicle::Contracts::Complianceb\x06proto3"
 
@@ -357,23 +460,29 @@ func file_compliance_proto_rawDescGZIP() []byte {
 	return file_compliance_proto_rawDescData
 }
 
-var file_compliance_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_compliance_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_compliance_proto_goTypes = []any{
-	(*AllowNewEncryptionKeyRequest)(nil), // 0: Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyRequest
-	(*DeleteEncryptionKeyRequest)(nil),   // 1: Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyRequest
-	(*ReleaseRequest)(nil),               // 2: Cratis.Chronicle.Contracts.Compliance.ReleaseRequest
-	(*ReleaseResponse)(nil),              // 3: Cratis.Chronicle.Contracts.Compliance.ReleaseResponse
-	(*emptypb.Empty)(nil),                // 4: google.protobuf.Empty
+	(*AllowNewEncryptionKeyRequest)(nil),  // 0: Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyRequest
+	(*AllowNewEncryptionKeyResponse)(nil), // 1: Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyResponse
+	(*DeleteEncryptionKeyRequest)(nil),    // 2: Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyRequest
+	(*DeleteEncryptionKeyResponse)(nil),   // 3: Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyResponse
+	(*ReleaseRequest)(nil),                // 4: Cratis.Chronicle.Contracts.Compliance.ReleaseRequest
+	(*ReleaseResponse)(nil),               // 5: Cratis.Chronicle.Contracts.Compliance.ReleaseResponse
+	(*emptypb.Empty)(nil),                 // 6: google.protobuf.Empty
 }
 var file_compliance_proto_depIdxs = []int32{
 	0, // 0: Cratis.Chronicle.Contracts.Compliance.Compliance.AllowNewEncryptionKey:input_type -> Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyRequest
-	1, // 1: Cratis.Chronicle.Contracts.Compliance.Compliance.DeleteEncryptionKey:input_type -> Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyRequest
-	2, // 2: Cratis.Chronicle.Contracts.Compliance.Compliance.Release:input_type -> Cratis.Chronicle.Contracts.Compliance.ReleaseRequest
-	4, // 3: Cratis.Chronicle.Contracts.Compliance.Compliance.AllowNewEncryptionKey:output_type -> google.protobuf.Empty
-	4, // 4: Cratis.Chronicle.Contracts.Compliance.Compliance.DeleteEncryptionKey:output_type -> google.protobuf.Empty
-	3, // 5: Cratis.Chronicle.Contracts.Compliance.Compliance.Release:output_type -> Cratis.Chronicle.Contracts.Compliance.ReleaseResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
+	0, // 1: Cratis.Chronicle.Contracts.Compliance.Compliance.AllowNewEncryptionKeyWithCoverage:input_type -> Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyRequest
+	2, // 2: Cratis.Chronicle.Contracts.Compliance.Compliance.DeleteEncryptionKey:input_type -> Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyRequest
+	2, // 3: Cratis.Chronicle.Contracts.Compliance.Compliance.DeleteEncryptionKeyWithCoverage:input_type -> Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyRequest
+	4, // 4: Cratis.Chronicle.Contracts.Compliance.Compliance.Release:input_type -> Cratis.Chronicle.Contracts.Compliance.ReleaseRequest
+	6, // 5: Cratis.Chronicle.Contracts.Compliance.Compliance.AllowNewEncryptionKey:output_type -> google.protobuf.Empty
+	1, // 6: Cratis.Chronicle.Contracts.Compliance.Compliance.AllowNewEncryptionKeyWithCoverage:output_type -> Cratis.Chronicle.Contracts.Compliance.AllowNewEncryptionKeyResponse
+	6, // 7: Cratis.Chronicle.Contracts.Compliance.Compliance.DeleteEncryptionKey:output_type -> google.protobuf.Empty
+	3, // 8: Cratis.Chronicle.Contracts.Compliance.Compliance.DeleteEncryptionKeyWithCoverage:output_type -> Cratis.Chronicle.Contracts.Compliance.DeleteEncryptionKeyResponse
+	5, // 9: Cratis.Chronicle.Contracts.Compliance.Compliance.Release:output_type -> Cratis.Chronicle.Contracts.Compliance.ReleaseResponse
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -390,7 +499,7 @@ func file_compliance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_compliance_proto_rawDesc), len(file_compliance_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

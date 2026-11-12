@@ -1,6 +1,6 @@
 ---
 title: Read events and protect loaded history
-description: Read ordered raw events with explicit tail absence and an expectation derived from loaded history.
+description: Read ordered raw events from an event source, handle an absent tail explicitly and derive an append expectation from the history you loaded.
 ---
 
 Use `ReadHistory` when a subsequent write depends on source state. It returns the events you actually loaded and the matching concurrency expectation together. Use the other reads for browsing, imports or presence checks. These APIs remain experimental in the v0.x SDK.

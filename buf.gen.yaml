@@ -44,6 +44,9 @@ managed:
       path: identities.proto
       value: github.com/cratis/chronicle.go/contracts/identities
     - file_option: go_package
+      path: imports.proto
+      value: github.com/cratis/chronicle.go/contracts/imports
+    - file_option: go_package
       path: jobs.proto
       value: github.com/cratis/chronicle.go/contracts/jobs
     - file_option: go_package

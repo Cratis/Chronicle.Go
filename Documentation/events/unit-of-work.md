@@ -1,6 +1,6 @@
 ---
 title: Stage an ordered unit of work
-description: Share immutable event staging with nested participants while retaining one completion owner.
+description: Share immutable event staging with nested participants in a unit of work, while a single completion owner decides when the events are committed.
 ---
 
 Use `transactions.Begin` when several participants must contribute to one atomic append. The unit fixes one store, namespace and sequence, and preserves global enrollment order: A1, B1, A2 stays A1, B1, A2. This API is experimental in the v0.x SDK. Use [decision reads](../read-models/decision-reads.md) to enroll admitted projection reads into an owned commit.
@@ -54,7 +54,7 @@ An empty unit is different from a scope-only unit. Staging explicit scopes witho
 
 ## Run the example
 
-The [unit-of-work program](../../examples/unitofwork/main.go) stages A1, joins a nested participant for B1, stages A2, commits once, and verifies the persisted order. With a disposable development kernel running as described in [getting started](../clients/go/getting-started.md), run from the repository root:
+The [unit-of-work program](https://github.com/Cratis/Chronicle.Go/blob/main/examples/unitofwork/main.go) stages A1, joins a nested participant for B1, stages A2, commits once, and verifies the persisted order. With a disposable development kernel running as described in [getting started](../clients/go/getting-started.md), run from the repository root:
 
 ```sh
 go run ./examples/unitofwork

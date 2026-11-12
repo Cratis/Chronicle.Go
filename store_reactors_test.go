@@ -166,7 +166,7 @@ func TestReactorOpenFailureRetriesOnSameGeneration(t *testing.T) {
 			return nil, err
 		}
 		return &receivingReactorStream{ClientStream: stream, receiving: receiving}, nil
-	}, WithReactorRetryWaitForTest(func(ctx context.Context, delay time.Duration) error {
+	}, WithObserverRetryWaitForTest(func(ctx context.Context, delay time.Duration) error {
 		if delay != 2*time.Second {
 			t.Errorf("delay = %v", delay)
 		}

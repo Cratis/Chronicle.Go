@@ -4,6 +4,7 @@
 package events
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -72,11 +73,28 @@ func (a Appended) Redaction() (EventRedacted, error) {
 	if a.Context.EventType.ID != RedactedTypeID {
 		return result, fmt.Errorf("%w: event is not a redaction marker", faults.ErrProtocol)
 	}
-	if err := json.Unmarshal(a.Content, &result); err != nil {
+	content, err := normalizeJSON(a.Content)
+	if err != nil {
+		return EventRedacted{}, fmt.Errorf("%w: invalid redaction marker: %v", faults.ErrProtocol, err)
+	}
+	if err := json.Unmarshal(content, &result); err != nil {
 		return EventRedacted{}, fmt.Errorf("%w: invalid redaction marker: %v", faults.ErrProtocol, err)
 	}
 	if strings.TrimSpace(string(result.Reason)) == "" || strings.TrimSpace(string(result.OriginalEventType)) == "" {
 		return EventRedacted{}, fmt.Errorf("%w: redaction marker requires reason and original type", faults.ErrProtocol)
 	}
 	return result, nil
+}
+
+// normalizeJSON rewrites valid but escaped text, such as the \u002B the kernel
+// writes for the + of a time offset, as plain characters. time.Time's decoder
+// reads the raw bytes of a string without unescaping it before Go 1.27.
+func normalizeJSON(data []byte) ([]byte, error) {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var value any
+	if err := decoder.Decode(&value); err != nil {
+		return nil, err
+	}
+	return json.Marshal(value)
 }

@@ -18,7 +18,7 @@ import (
 func reactorRetryClock(t *testing.T) (<-chan struct{}, chan<- struct{}, chronicle.ClientOption) {
 	t.Helper()
 	waiting, resume := make(chan struct{}, 8), make(chan struct{}, 8)
-	return waiting, resume, chronicle.WithReactorRetryWaitForTest(func(ctx context.Context, delay time.Duration) error {
+	return waiting, resume, chronicle.WithObserverRetryWaitForTest(func(ctx context.Context, delay time.Duration) error {
 		if delay != 2*time.Second {
 			t.Errorf("retry delay = %s, want 2s", delay)
 		}

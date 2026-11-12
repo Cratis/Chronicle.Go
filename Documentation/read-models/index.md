@@ -1,6 +1,6 @@
 ---
 title: Read models
-description: Register model schemas and read typed or raw state without confusing absence with a zero value.
+description: Register read-model schemas and read typed or raw state, learning to distinguish a missing instance from a legitimate zero value in Go.
 ---
 
 Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the client. A model describes state produced by a projection or reducer; **registration alone does not create an instance**. This page covers catalog registration, one-shot reads, watches, materialized windows, projection sessions and release. [Projection authoring](../projections/index.md), [collections and history](collections-and-history.md), and [decision reads](decision-reads.md) have their own references.
@@ -191,7 +191,7 @@ Namespace/global confidentiality can release without a subject. See [compliance 
 
 ## Run the example
 
-The [read-model example](../../examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.125.2-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
+The [read-model example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.153.0-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
 
 ```sh
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
@@ -204,8 +204,10 @@ Expected output:
 Example.InventoryItem registered; item-1 exists: false
 ```
 
+Optional next step: use [watch changes](#watch-changes) or [materialized windows](#materialized-windows) when you need those routes.
+
 For watches, projection-backed callbacks and an initial materialized window,
-run the [watch example](../../examples/watches/main.go):
+run the [watch example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/watches/main.go):
 
 ```sh
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
