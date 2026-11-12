@@ -6,6 +6,7 @@ package chronicle
 import (
 	"fmt"
 
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
@@ -27,5 +28,23 @@ func validateDefaultSinkType(kind readmodels.SinkType) error {
 		return nil
 	default:
 		return fmt.Errorf("%w: default sink must be MongoDB, SQL or InMemory", ErrInvalidConfiguration)
+	}
+}
+
+// WithDefaultGraphSinkType selects the kernel-owned sink that stores graph
+// projections without an explicit graphs.Graph.UsingSink. The default is Neo4j;
+// InMemoryGraph is also accepted. Last wins. Any other type fails CaptureClient or
+// NewClient with ErrInvalidConfiguration before preparation or connection work.
+// Selecting a provider does not configure or verify its server-side backend.
+func WithDefaultGraphSinkType(kind graphs.SinkType) ClientOption {
+	return func(c *clientConfig) { c.defaultGraphSinkType = kind }
+}
+
+func validateDefaultGraphSinkType(kind graphs.SinkType) error {
+	switch kind {
+	case graphs.Neo4j, graphs.InMemoryGraph:
+		return nil
+	default:
+		return fmt.Errorf("%w: default graph sink must be Neo4j or InMemoryGraph", ErrInvalidConfiguration)
 	}
 }

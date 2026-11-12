@@ -82,11 +82,22 @@ func constraintsFixture(t *testing.T, configure func(constraintEvents) *constrai
 func appendConstraintEvent(t *testing.T, ctx context.Context, sequence *eventsequences.Sequence, source events.SourceID, value any, options ...eventsequences.AppendOption) eventsequences.AppendResult {
 	t.Helper()
 	options = append([]eventsequences.AppendOption{eventsequences.WithScope(eventsequences.Scope{Expectation: eventsequences.NoCheck()})}, options...)
-	result, err := sequence.Append(ctx, source, value, options...)
-	if err != nil {
-		t.Fatal(err)
+	for {
+		result, err := sequence.Append(ctx, source, value, options...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// A constraint index that is rebuilding refuses governed appends and stores
+		// nothing; the kernel asks for the unchanged append to be retried after a delay.
+		if !errors.Is(result.Err(), eventsequences.ConstraintIndexUnavailable) {
+			return result
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatalf("constraint index did not become available: %v", ctx.Err())
+		case <-time.After(200 * time.Millisecond):
+		}
 	}
-	return result
 }
 
 func requireConstraintCommit(t *testing.T, result eventsequences.AppendResult) {

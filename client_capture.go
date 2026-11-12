@@ -14,6 +14,7 @@ import (
 
 	"github.com/cratis/chronicle.go/constraints"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/graphs"
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/internal/diagnostics"
 	"github.com/cratis/chronicle.go/projections"
@@ -31,8 +32,8 @@ import (
 // see WithLogger for the pristine slog default's standard-log bridge exception.
 func CaptureClient(options ...ClientOption) (*ClientPreparation, error) {
 	config := clientConfig{logger: slog.Default(), uri: "chronicle://localhost:35000", connectTimeout: 5 * time.Second,
-		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize, defaultSinkType: readmodels.MongoDB,
-		keepAliveTimeout: 5 * time.Second, reactorRetryWait: connection.Wait, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
+		maxSendMessageSize: defaultMaxMessageSize, maxReceiveMessageSize: defaultMaxMessageSize, defaultSinkType: readmodels.MongoDB, defaultGraphSinkType: graphs.Neo4j,
+		keepAliveTimeout: 5 * time.Second, observerRetryWait: connection.Wait, observerBackoff: newObserverBackoff, registrationRetry: RegistrationRetry{MaxAttempts: 5, InitialDelay: 2 * time.Second, MaximumDelay: 30 * time.Second, AttemptTimeout: 30 * time.Second}}
 	for _, option := range options {
 		if option == nil {
 			return nil, fmt.Errorf("%w: nil client option", ErrInvalidConfiguration)
@@ -43,6 +44,9 @@ func CaptureClient(options ...ClientOption) (*ClientPreparation, error) {
 		return nil, err
 	}
 	if err := validateDefaultSinkType(config.defaultSinkType); err != nil {
+		return nil, err
+	}
+	if err := validateDefaultGraphSinkType(config.defaultGraphSinkType); err != nil {
 		return nil, err
 	}
 	uri, tlsConfig, err := validateConfig(config)

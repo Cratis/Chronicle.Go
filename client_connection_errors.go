@@ -13,7 +13,7 @@ import (
 
 func terminalConnectionError(err error) bool {
 	var selection *LoadBalancerError
-	if errors.As(err, &selection) {
+	if errors.As(err, &selection) || errors.Is(err, ErrSessionLost) {
 		return false
 	}
 	var incompatible *CompatibilityError

@@ -129,6 +129,13 @@ func Wait(ctx context.Context, delay time.Duration) error {
 
 // Backoff returns capped exponential delay with downward jitter and no overflow.
 func Backoff(attempt int, initial, maximum time.Duration) time.Duration {
+	delay := cappedDoubling(attempt, initial, maximum)
+	return delay/2 + time.Duration(rand.Int64N(int64(delay-delay/2)+1))
+}
+
+// cappedDoubling returns initial doubled attempt-1 times, never above maximum
+// and without overflow.
+func cappedDoubling(attempt int, initial, maximum time.Duration) time.Duration {
 	delay := initial
 	for i := 1; i < attempt && delay < maximum; i++ {
 		if delay > maximum/2 {
@@ -137,8 +144,5 @@ func Backoff(attempt int, initial, maximum time.Duration) time.Duration {
 			delay *= 2
 		}
 	}
-	if delay > maximum {
-		delay = maximum
-	}
-	return delay/2 + time.Duration(rand.Int64N(int64(delay-delay/2)+1))
+	return min(delay, maximum)
 }

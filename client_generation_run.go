@@ -5,6 +5,8 @@ package chronicle
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/cratis/chronicle.go/contracts/clients"
 	"github.com/cratis/chronicle.go/internal/connection"
@@ -16,7 +18,7 @@ func (c *Client) runGeneration(g *generation) error {
 		go func() { defer close(registered); c.replayRegistrations(g) }()
 		<-g.ctx.Done()
 		<-registered
-		return g.ctx.Err()
+		return generationEnded(g, g.ctx.Err())
 	}
 	heartbeat := make(chan struct{}, 1)
 	received := make(chan error, 1)
@@ -34,7 +36,35 @@ func (c *Client) runGeneration(g *generation) error {
 	// Watch always leaves joining the receiver to its owner.
 	<-receiverDone
 	<-registered
+	return generationEnded(g, err)
+}
+
+// generationEnded reports a session the kernel no longer knows as ErrSessionLost,
+// wrapping the kernel status that reported it, rather than the cancellation or
+// stream error it caused.
+func generationEnded(g *generation, err error) error {
+	if cause := context.Cause(g.ctx); errors.Is(cause, ErrSessionLost) {
+		return cause
+	}
 	return err
+}
+
+// bind gives the generation its lifetime under parent.
+func (g *generation) bind(parent context.Context) {
+	var cancel context.CancelCauseFunc
+	g.ctx, cancel = context.WithCancelCause(parent)
+	g.cancel = func() { cancel(nil) }
+	g.lose = func(kernel error) { cancel(fmt.Errorf("%w: %w", ErrSessionLost, kernel)) }
+}
+
+// loseSession ends this generation because the kernel no longer knows its
+// connection ID. The supervisor then reconnects under a new connection ID. A
+// report from an observer of an already ended generation changes nothing, so
+// many observers failing together cause one reconnect.
+func (g *generation) loseSession(kernel error) {
+	if g.lose != nil {
+		g.lose(kernel)
+	}
 }
 
 func (c *Client) receiveKeepAlive(g *generation, heartbeat chan<- struct{}) error {

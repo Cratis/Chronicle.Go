@@ -5,7 +5,8 @@ description: Write reducers as plain callbacks or discovered methods, work with 
 
 Use a reducer when the next state needs control flow that neither model-bound nor
 fluent projections can express. For field mappings, counters and collection
-updates, start with a projection. This reducer API supports active
+updates, start with a projection; [projection or reducer?](projections/dictionaries-and-ordering.md#projection-or-reducer)
+compares them. This reducer API supports active
 materialization and passive reads; [the parity map](parity.md#reducers) lists the
 remaining boundaries.
 
@@ -59,8 +60,14 @@ registration and migration authoring are not implemented.
 
 Registration sends the frozen plan after event/model registration. It is not a
 kernel acceptance or caught-up acknowledgement. Stream errors and normal EOF
-resubscribe only that reducer after two seconds; C# reconnects on errors but has
-no normal-completion handler. No reducer retry replays an application-side effect.
+resubscribe only that reducer, as in C#, with the same jittered backoff as
+[reactors](reactors.md): two seconds, doubling up to 60 seconds while streams end
+without having worked, and starting over once a stream delivered an operation or
+stayed open for three minutes. Each reducer keeps its wait for the life of the
+client, so the growth carries across reconnects. A stream rejected with
+`ClientIsNotConnected` reconnects the whole client under a new connection ID
+instead; an error a fold or replay callback returns never does. No reducer retry
+replays an application-side effect.
 
 `store.UnregisterReducer(ctx, id)` cancels and joins local streams, including
 retired generations, and retains removal across reconnect. It does not delete

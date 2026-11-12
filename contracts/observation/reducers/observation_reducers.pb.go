@@ -1201,6 +1201,7 @@ type ReduceOperationMessage struct {
 	DeliverWithinMilliseconds uint64                 `protobuf:"varint,6,opt,name=DeliverWithinMilliseconds,proto3" json:"DeliverWithinMilliseconds,omitempty"`
 	Partitions                []*ReducerPartition    `protobuf:"bytes,7,rep,name=Partitions,proto3" json:"Partitions,omitempty"`
 	Origin                    ObservationOrigin      `protobuf:"varint,8,opt,name=Origin,proto3,enum=Cratis.Chronicle.Contracts.Observation.Reducers.ObservationOrigin" json:"Origin,omitempty"`
+	InitialStateUnchanged     bool                   `protobuf:"varint,9,opt,name=InitialStateUnchanged,proto3" json:"InitialStateUnchanged,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -1289,6 +1290,13 @@ func (x *ReduceOperationMessage) GetOrigin() ObservationOrigin {
 		return x.Origin
 	}
 	return ObservationOrigin_Unknown
+}
+
+func (x *ReduceOperationMessage) GetInitialStateUnchanged() bool {
+	if x != nil {
+		return x.InitialStateUnchanged
+	}
+	return false
 }
 
 type ReducerDefinition struct {
@@ -1444,12 +1452,13 @@ func (x *ReducerMessage) GetContent() *OneOf_RegisterReducer_ReducerResult {
 }
 
 type ReducerPartition struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Partition     string                 `protobuf:"bytes,1,opt,name=Partition,proto3" json:"Partition,omitempty"`
-	InitialState  string                 `protobuf:"bytes,2,opt,name=InitialState,proto3" json:"InitialState,omitempty"`
-	Events        []*AppendedEvent       `protobuf:"bytes,3,rep,name=Events,proto3" json:"Events,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Partition             string                 `protobuf:"bytes,1,opt,name=Partition,proto3" json:"Partition,omitempty"`
+	InitialState          string                 `protobuf:"bytes,2,opt,name=InitialState,proto3" json:"InitialState,omitempty"`
+	Events                []*AppendedEvent       `protobuf:"bytes,3,rep,name=Events,proto3" json:"Events,omitempty"`
+	InitialStateUnchanged bool                   `protobuf:"varint,4,opt,name=InitialStateUnchanged,proto3" json:"InitialStateUnchanged,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ReducerPartition) Reset() {
@@ -1501,6 +1510,13 @@ func (x *ReducerPartition) GetEvents() []*AppendedEvent {
 		return x.Events
 	}
 	return nil
+}
+
+func (x *ReducerPartition) GetInitialStateUnchanged() bool {
+	if x != nil {
+		return x.InitialStateUnchanged
+	}
+	return false
 }
 
 type ReducerResult struct {
@@ -1618,6 +1634,7 @@ type RegisterReducer struct {
 	Namespace     string                 `protobuf:"bytes,3,opt,name=Namespace,proto3" json:"Namespace,omitempty"`
 	Reducer       *ReducerDefinition     `protobuf:"bytes,4,opt,name=Reducer,proto3" json:"Reducer,omitempty"`
 	PageDelivery  *PageDelivery          `protobuf:"bytes,5,opt,name=PageDelivery,proto3" json:"PageDelivery,omitempty"`
+	StateCaching  *StateCaching          `protobuf:"bytes,6,opt,name=StateCaching,proto3" json:"StateCaching,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1687,6 +1704,13 @@ func (x *RegisterReducer) GetPageDelivery() *PageDelivery {
 	return nil
 }
 
+func (x *RegisterReducer) GetStateCaching() *StateCaching {
+	if x != nil {
+		return x.StateCaching
+	}
+	return nil
+}
+
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 type SerializableDateTimeOffset struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1730,6 +1754,50 @@ func (x *SerializableDateTimeOffset) GetValue() string {
 		return x.Value
 	}
 	return ""
+}
+
+type StateCaching struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=Enabled,proto3" json:"Enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StateCaching) Reset() {
+	*x = StateCaching{}
+	mi := &file_observation_reducers_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StateCaching) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StateCaching) ProtoMessage() {}
+
+func (x *StateCaching) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_reducers_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StateCaching.ProtoReflect.Descriptor instead.
+func (*StateCaching) Descriptor() ([]byte, []int) {
+	return file_observation_reducers_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *StateCaching) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
 }
 
 var File_observation_reducers_proto protoreflect.FileDescriptor
@@ -1827,7 +1895,7 @@ const file_observation_reducers_proto_rawDesc = "" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x126\n" +
 	"\x16RetryAfterMilliseconds\x18\x06 \x01(\x04R\x16RetryAfterMilliseconds\x12&\n" +
-	"\x0eReadModelState\x18\a \x01(\tR\x0eReadModelState\"\xaf\x04\n" +
+	"\x0eReadModelState\x18\a \x01(\tR\x0eReadModelState\"\xe5\x04\n" +
 	"\x16ReduceOperationMessage\x12\x1c\n" +
 	"\tPartition\x18\x01 \x01(\tR\tPartition\x12\"\n" +
 	"\fInitialState\x18\x02 \x01(\tR\fInitialState\x12V\n" +
@@ -1840,7 +1908,8 @@ const file_observation_reducers_proto_rawDesc = "" +
 	"\n" +
 	"Partitions\x18\a \x03(\v2A.Cratis.Chronicle.Contracts.Observation.Reducers.ReducerPartitionR\n" +
 	"Partitions\x12Z\n" +
-	"\x06Origin\x18\b \x01(\x0e2B.Cratis.Chronicle.Contracts.Observation.Reducers.ObservationOriginR\x06Origin\"\x80\x04\n" +
+	"\x06Origin\x18\b \x01(\x0e2B.Cratis.Chronicle.Contracts.Observation.Reducers.ObservationOriginR\x06Origin\x124\n" +
+	"\x15InitialStateUnchanged\x18\t \x01(\bR\x15InitialStateUnchanged\"\x80\x04\n" +
 	"\x11ReducerDefinition\x12\x1c\n" +
 	"\tReducerId\x18\x01 \x01(\tR\tReducerId\x12(\n" +
 	"\x0fEventSequenceId\x18\x02 \x01(\tR\x0fEventSequenceId\x12k\n" +
@@ -1855,11 +1924,12 @@ const file_observation_reducers_proto_rawDesc = "" +
 	"\x12GenerationDelivery\x18\n" +
 	" \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Reducers.EventGenerationDeliveryR\x12GenerationDelivery\"\x80\x01\n" +
 	"\x0eReducerMessage\x12n\n" +
-	"\aContent\x18\x01 \x01(\v2T.Cratis.Chronicle.Contracts.Observation.Reducers.OneOf_RegisterReducer_ReducerResultR\aContent\"\xac\x01\n" +
+	"\aContent\x18\x01 \x01(\v2T.Cratis.Chronicle.Contracts.Observation.Reducers.OneOf_RegisterReducer_ReducerResultR\aContent\"\xe2\x01\n" +
 	"\x10ReducerPartition\x12\x1c\n" +
 	"\tPartition\x18\x01 \x01(\tR\tPartition\x12\"\n" +
 	"\fInitialState\x18\x02 \x01(\tR\fInitialState\x12V\n" +
-	"\x06Events\x18\x03 \x03(\v2>.Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEventR\x06Events\"\x86\x04\n" +
+	"\x06Events\x18\x03 \x03(\v2>.Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEventR\x06Events\x124\n" +
+	"\x15InitialStateUnchanged\x18\x04 \x01(\bR\x15InitialStateUnchanged\"\x86\x04\n" +
 	"\rReducerResult\x12\x1c\n" +
 	"\tPartition\x18\x01 \x01(\tR\tPartition\x12W\n" +
 	"\x05State\x18\x02 \x01(\x0e2A.Cratis.Chronicle.Contracts.Observation.Reducers.ObservationStateR\x05State\x12<\n" +
@@ -1873,7 +1943,7 @@ const file_observation_reducers_proto_rawDesc = "" +
 	"\x16RetryAfterMilliseconds\x18\b \x01(\x04R\x16RetryAfterMilliseconds\x12`\n" +
 	"\n" +
 	"Partitions\x18\t \x03(\v2@.Cratis.Chronicle.Contracts.Observation.Reducers.PartitionResultR\n" +
-	"Partitions\"\xb4\x02\n" +
+	"Partitions\"\x97\x03\n" +
 	"\x0fRegisterReducer\x12\"\n" +
 	"\fConnectionId\x18\x01 \x01(\tR\fConnectionId\x12\x1e\n" +
 	"\n" +
@@ -1881,9 +1951,12 @@ const file_observation_reducers_proto_rawDesc = "" +
 	"EventStore\x12\x1c\n" +
 	"\tNamespace\x18\x03 \x01(\tR\tNamespace\x12\\\n" +
 	"\aReducer\x18\x04 \x01(\v2B.Cratis.Chronicle.Contracts.Observation.Reducers.ReducerDefinitionR\aReducer\x12a\n" +
-	"\fPageDelivery\x18\x05 \x01(\v2=.Cratis.Chronicle.Contracts.Observation.Reducers.PageDeliveryR\fPageDelivery\"2\n" +
+	"\fPageDelivery\x18\x05 \x01(\v2=.Cratis.Chronicle.Contracts.Observation.Reducers.PageDeliveryR\fPageDelivery\x12a\n" +
+	"\fStateCaching\x18\x06 \x01(\v2=.Cratis.Chronicle.Contracts.Observation.Reducers.StateCachingR\fStateCaching\"2\n" +
 	"\x1aSerializableDateTimeOffset\x12\x14\n" +
-	"\x05Value\x18\x01 \x01(\tR\x05Value*8\n" +
+	"\x05Value\x18\x01 \x01(\tR\x05Value\"(\n" +
+	"\fStateCaching\x12\x18\n" +
+	"\aEnabled\x18\x01 \x01(\bR\aEnabled*8\n" +
 	"\x17EventGenerationDelivery\x12\x11\n" +
 	"\rCompatibility\x10\x00\x12\n" +
 	"\n" +
@@ -1929,7 +2002,7 @@ func file_observation_reducers_proto_rawDescGZIP() []byte {
 }
 
 var file_observation_reducers_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_observation_reducers_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_observation_reducers_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_observation_reducers_proto_goTypes = []any{
 	(EventGenerationDelivery)(0),                // 0: Cratis.Chronicle.Contracts.Observation.Reducers.EventGenerationDelivery
 	(EventObservationState)(0),                  // 1: Cratis.Chronicle.Contracts.Observation.Reducers.EventObservationState
@@ -1955,19 +2028,20 @@ var file_observation_reducers_proto_goTypes = []any{
 	(*ReducerResult)(nil),                       // 21: Cratis.Chronicle.Contracts.Observation.Reducers.ReducerResult
 	(*RegisterReducer)(nil),                     // 22: Cratis.Chronicle.Contracts.Observation.Reducers.RegisterReducer
 	(*SerializableDateTimeOffset)(nil),          // 23: Cratis.Chronicle.Contracts.Observation.Reducers.SerializableDateTimeOffset
-	nil,                                         // 24: Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEvent.GenerationalContentEntry
-	nil,                                         // 25: Cratis.Chronicle.Contracts.Observation.Reducers.Causation.PropertiesEntry
-	(*bcl.Guid)(nil),                            // 26: bcl.Guid
+	(*StateCaching)(nil),                        // 24: Cratis.Chronicle.Contracts.Observation.Reducers.StateCaching
+	nil,                                         // 25: Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEvent.GenerationalContentEntry
+	nil,                                         // 26: Cratis.Chronicle.Contracts.Observation.Reducers.Causation.PropertiesEntry
+	(*bcl.Guid)(nil),                            // 27: bcl.Guid
 }
 var file_observation_reducers_proto_depIdxs = []int32{
 	7,  // 0: Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEvent.Context:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.EventContext
 	8,  // 1: Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEvent.Revisions:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.EventRevision
-	24, // 2: Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEvent.GenerationalContent:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEvent.GenerationalContentEntry
+	25, // 2: Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEvent.GenerationalContent:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.AppendedEvent.GenerationalContentEntry
 	23, // 3: Cratis.Chronicle.Contracts.Observation.Reducers.Causation.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.SerializableDateTimeOffset
-	25, // 4: Cratis.Chronicle.Contracts.Observation.Reducers.Causation.Properties:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.Causation.PropertiesEntry
+	26, // 4: Cratis.Chronicle.Contracts.Observation.Reducers.Causation.Properties:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.Causation.PropertiesEntry
 	9,  // 5: Cratis.Chronicle.Contracts.Observation.Reducers.EventContext.EventType:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.EventType
 	23, // 6: Cratis.Chronicle.Contracts.Observation.Reducers.EventContext.Occurred:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.SerializableDateTimeOffset
-	26, // 7: Cratis.Chronicle.Contracts.Observation.Reducers.EventContext.CorrelationId:type_name -> bcl.Guid
+	27, // 7: Cratis.Chronicle.Contracts.Observation.Reducers.EventContext.CorrelationId:type_name -> bcl.Guid
 	6,  // 8: Cratis.Chronicle.Contracts.Observation.Reducers.EventContext.Causation:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.Causation
 	11, // 9: Cratis.Chronicle.Contracts.Observation.Reducers.EventContext.CausedBy:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.Identity
 	1,  // 10: Cratis.Chronicle.Contracts.Observation.Reducers.EventContext.ObservationState:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.EventObservationState
@@ -1992,13 +2066,14 @@ var file_observation_reducers_proto_depIdxs = []int32{
 	16, // 29: Cratis.Chronicle.Contracts.Observation.Reducers.ReducerResult.Partitions:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.PartitionResult
 	18, // 30: Cratis.Chronicle.Contracts.Observation.Reducers.RegisterReducer.Reducer:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.ReducerDefinition
 	15, // 31: Cratis.Chronicle.Contracts.Observation.Reducers.RegisterReducer.PageDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.PageDelivery
-	19, // 32: Cratis.Chronicle.Contracts.Observation.Reducers.Reducers.Observe:input_type -> Cratis.Chronicle.Contracts.Observation.Reducers.ReducerMessage
-	17, // 33: Cratis.Chronicle.Contracts.Observation.Reducers.Reducers.Observe:output_type -> Cratis.Chronicle.Contracts.Observation.Reducers.ReduceOperationMessage
-	33, // [33:34] is the sub-list for method output_type
-	32, // [32:33] is the sub-list for method input_type
-	32, // [32:32] is the sub-list for extension type_name
-	32, // [32:32] is the sub-list for extension extendee
-	0,  // [0:32] is the sub-list for field type_name
+	24, // 32: Cratis.Chronicle.Contracts.Observation.Reducers.RegisterReducer.StateCaching:type_name -> Cratis.Chronicle.Contracts.Observation.Reducers.StateCaching
+	19, // 33: Cratis.Chronicle.Contracts.Observation.Reducers.Reducers.Observe:input_type -> Cratis.Chronicle.Contracts.Observation.Reducers.ReducerMessage
+	17, // 34: Cratis.Chronicle.Contracts.Observation.Reducers.Reducers.Observe:output_type -> Cratis.Chronicle.Contracts.Observation.Reducers.ReduceOperationMessage
+	34, // [34:35] is the sub-list for method output_type
+	33, // [33:34] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_observation_reducers_proto_init() }
@@ -2012,7 +2087,7 @@ func file_observation_reducers_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_observation_reducers_proto_rawDesc), len(file_observation_reducers_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   21,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

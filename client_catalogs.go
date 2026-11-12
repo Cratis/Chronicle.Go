@@ -56,10 +56,11 @@ func (c *Client) initialStoreSnapshotLocked(store StoreName) (registrySnapshot, 
 	if strings.TrimSpace(string(store)) == "" {
 		return registrySnapshot{}, fmt.Errorf("%w: store must be nonblank", ErrInvalidConfiguration)
 	}
-	snapshot := registrySnapshot{events: c.catalog, models: c.readModelCatalog, constraints: c.constraints, projections: c.projections}
+	snapshot := registrySnapshot{events: c.catalog, models: c.readModelCatalog, constraints: c.constraints, projections: c.projections, graphs: c.graphs}
 	if selected, ok := c.catalogs[store]; ok {
 		snapshot.events, snapshot.models = selected, c.readModelCatalogs[store]
 		snapshot.constraints, snapshot.projections = c.storeConstraints[store], c.storeProjections[store]
+		snapshot.graphs = c.storeGraphs[store]
 	}
 	snapshot.reactors = c.reactors.defaults
 	if selected, ok := c.reactors.stores[store]; ok {

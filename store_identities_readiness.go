@@ -20,10 +20,10 @@ type identityReadiness struct {
 
 func (s *EventStore) identityReadiness(root *definitionRoot) identityReadiness {
 	p := identityReadiness{namespace: registrationKey(s.name, s.namespace, root.revision)}
-	if len(root.snapshot.models.Descriptors()) > 0 {
+	if registersReadModels(root.snapshot) {
 		p.definitionKeys = append(p.definitionKeys, [2]string{definitionStageKey(s.name, root.revision, "read-models", false), definitionStageKey(s.name, root.revision, "read-models", true)})
 	}
-	if len(root.snapshot.projections) > 0 {
+	if registersProjections(root.snapshot) {
 		p.definitionKeys = append(p.definitionKeys, [2]string{definitionStageKey(s.name, root.revision, "projections", false), definitionStageKey(s.name, root.revision, "projections", true)})
 	}
 	if len(s.externalSubscriptions()) > 0 {

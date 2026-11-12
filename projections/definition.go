@@ -70,6 +70,8 @@ type nodeDefinition struct {
 	// derivative is the sole registered concrete type selected for a children
 	// collection whose element is a derived-type family; nil otherwise.
 	derivative *serialization.Derivative
+	// ordering places new children; nil appends them (the kernel default).
+	ordering *childOrdering
 }
 type joinDefinition struct {
 	fromDefinition
@@ -179,7 +181,7 @@ func encodeNode(data *nodeDefinition) *contracts.ChildrenDefinition {
 	} else if data.noAuto {
 		auto = contracts.AutoMap_Disabled
 	}
-	result := &contracts.ChildrenDefinition{IdentifiedBy: data.identifiedBy, AutoMap: auto, All: &contracts.FromEveryDefinition{Properties: encodeWrites(data.all), IncludeChildren: data.includeChildren}, NoAutoMapProperties: slices.Clone(data.exclusions)}
+	result := &contracts.ChildrenDefinition{IdentifiedBy: data.identifiedBy, AutoMap: auto, All: &contracts.FromEveryDefinition{Properties: encodeWrites(data.all), IncludeChildren: data.includeChildren}, NoAutoMapProperties: slices.Clone(data.exclusions), Ordering: data.ordering.encode()}
 	for _, from := range data.from {
 		result.From = append(result.From, &contracts.KeyValuePair_EventType_FromDefinition{Key: encodeEvent(from.event), Value: &contracts.FromDefinition{Key: from.key.encode(), ParentKey: from.parent.encode(), Properties: encodeWrites(from.writes)}})
 	}
@@ -211,7 +213,7 @@ func encodeNode(data *nodeDefinition) *contracts.ChildrenDefinition {
 func encodeWrites(writes []write) map[string]string {
 	properties := make(map[string]string, len(writes))
 	for _, w := range writes {
-		properties[w.path] = w.expression.encode()
+		properties[w.entry.encode(w.path)] = w.expression.encode()
 	}
 	return properties
 }

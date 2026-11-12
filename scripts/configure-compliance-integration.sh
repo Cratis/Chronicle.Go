@@ -4,6 +4,10 @@
 
 # Only for a fresh, disposable 19.32.3-development test container. Never use on
 # an existing store: losing this ephemeral certificate loses encrypted data.
+#
+# Since Chronicle 19.147.0 every PII erasure waits Compliance:Encryption:RevocationGrace
+# (default 00:00:05) before it is confirmed. The suite erases many times, so the
+# default alone can exhaust the go test timeout; tests use a 1 second grace.
 set -euo pipefail
 container=${1:?Pass the disposable integration container name or ID}
 
@@ -17,6 +21,6 @@ docker exec "$container" sh -ec '
         -keyout /tmp/compliance-test.key -out /tmp/compliance-test.crt >/dev/null 2>&1
     openssl pkcs12 -export -out /tmp/compliance-test.pfx \
         -inkey /tmp/compliance-test.key -in /tmp/compliance-test.crt -passout pass:
-    printf "%s\n" '\''{"Cratis":{"Chronicle":{"EncryptionCertificate":{"CertificatePath":"/tmp/compliance-test.pfx","CertificatePassword":""}}}}'\'' > /app/appsettings.Production.json
+    printf "%s\n" '\''{"Cratis":{"Chronicle":{"EncryptionCertificate":{"CertificatePath":"/tmp/compliance-test.pfx","CertificatePassword":""},"Compliance":{"Encryption":{"RevocationGrace":"00:00:01"}}}}}'\'' > /app/appsettings.Production.json
 '
 docker restart "$container"

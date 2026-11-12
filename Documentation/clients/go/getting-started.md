@@ -10,7 +10,7 @@ The maintained Go example below registers a typed customer event, appends it and
 Use Go 1.26 or newer and Docker. Start the integration kernel matching the contract release:
 
 ```sh
-docker run --rm --name chronicle-go -p 127.0.0.1:35000:35000 cratis/chronicle:19.125.2-development
+docker run --rm --name chronicle-go -p 127.0.0.1:35000:35000 cratis/chronicle:19.153.0-development
 ```
 
 Wait until `curl -skf https://localhost:35000/health` returns `Healthy`; that establishes process health, not feature compatibility. The development image includes MongoDB and a self-signed certificate. Never expose its built-in credentials on a production endpoint.
@@ -87,7 +87,7 @@ An empty namespace starts at position `0`; later runs append at higher sequence-
 
 `EventStore` connects, ensures the default namespace and waits for event registration before publishing the handle. Registration sent is not observer subscription or catch-up. `Close` releases the client, including its keep-alive worker. Read [short-lived clients and process ownership](../../connection-strings/lifecycle.md#short-lived-clients-and-process-ownership) for skipped-session exclusions and process reuse.
 
-Generated contracts target Chronicle **19.125.2**, and the real-kernel tests run against **19.125.2-development**. [Decision reads](../../read-models/decision-reads.md) have their own exact server/protocol and projection-admission requirements.
+Generated contracts target Chronicle **19.153.0**, and the real-kernel tests run against **19.153.0-development**. [Decision reads](../../read-models/decision-reads.md) have their own exact server/protocol and projection-admission requirements.
 
 ## Continue
 

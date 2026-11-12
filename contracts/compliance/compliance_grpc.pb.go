@@ -20,9 +20,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Compliance_AllowNewEncryptionKey_FullMethodName = "/Cratis.Chronicle.Contracts.Compliance.Compliance/AllowNewEncryptionKey"
-	Compliance_DeleteEncryptionKey_FullMethodName   = "/Cratis.Chronicle.Contracts.Compliance.Compliance/DeleteEncryptionKey"
-	Compliance_Release_FullMethodName               = "/Cratis.Chronicle.Contracts.Compliance.Compliance/Release"
+	Compliance_AllowNewEncryptionKey_FullMethodName             = "/Cratis.Chronicle.Contracts.Compliance.Compliance/AllowNewEncryptionKey"
+	Compliance_AllowNewEncryptionKeyWithCoverage_FullMethodName = "/Cratis.Chronicle.Contracts.Compliance.Compliance/AllowNewEncryptionKeyWithCoverage"
+	Compliance_DeleteEncryptionKey_FullMethodName               = "/Cratis.Chronicle.Contracts.Compliance.Compliance/DeleteEncryptionKey"
+	Compliance_DeleteEncryptionKeyWithCoverage_FullMethodName   = "/Cratis.Chronicle.Contracts.Compliance.Compliance/DeleteEncryptionKeyWithCoverage"
+	Compliance_Release_FullMethodName                           = "/Cratis.Chronicle.Contracts.Compliance.Compliance/Release"
 )
 
 // ComplianceClient is the client API for Compliance service.
@@ -30,7 +32,9 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ComplianceClient interface {
 	AllowNewEncryptionKey(ctx context.Context, in *AllowNewEncryptionKeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	AllowNewEncryptionKeyWithCoverage(ctx context.Context, in *AllowNewEncryptionKeyRequest, opts ...grpc.CallOption) (*AllowNewEncryptionKeyResponse, error)
 	DeleteEncryptionKey(ctx context.Context, in *DeleteEncryptionKeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteEncryptionKeyWithCoverage(ctx context.Context, in *DeleteEncryptionKeyRequest, opts ...grpc.CallOption) (*DeleteEncryptionKeyResponse, error)
 	Release(ctx context.Context, in *ReleaseRequest, opts ...grpc.CallOption) (*ReleaseResponse, error)
 }
 
@@ -52,10 +56,30 @@ func (c *complianceClient) AllowNewEncryptionKey(ctx context.Context, in *AllowN
 	return out, nil
 }
 
+func (c *complianceClient) AllowNewEncryptionKeyWithCoverage(ctx context.Context, in *AllowNewEncryptionKeyRequest, opts ...grpc.CallOption) (*AllowNewEncryptionKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AllowNewEncryptionKeyResponse)
+	err := c.cc.Invoke(ctx, Compliance_AllowNewEncryptionKeyWithCoverage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *complianceClient) DeleteEncryptionKey(ctx context.Context, in *DeleteEncryptionKeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Compliance_DeleteEncryptionKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *complianceClient) DeleteEncryptionKeyWithCoverage(ctx context.Context, in *DeleteEncryptionKeyRequest, opts ...grpc.CallOption) (*DeleteEncryptionKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteEncryptionKeyResponse)
+	err := c.cc.Invoke(ctx, Compliance_DeleteEncryptionKeyWithCoverage_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +101,9 @@ func (c *complianceClient) Release(ctx context.Context, in *ReleaseRequest, opts
 // for forward compatibility.
 type ComplianceServer interface {
 	AllowNewEncryptionKey(context.Context, *AllowNewEncryptionKeyRequest) (*emptypb.Empty, error)
+	AllowNewEncryptionKeyWithCoverage(context.Context, *AllowNewEncryptionKeyRequest) (*AllowNewEncryptionKeyResponse, error)
 	DeleteEncryptionKey(context.Context, *DeleteEncryptionKeyRequest) (*emptypb.Empty, error)
+	DeleteEncryptionKeyWithCoverage(context.Context, *DeleteEncryptionKeyRequest) (*DeleteEncryptionKeyResponse, error)
 	Release(context.Context, *ReleaseRequest) (*ReleaseResponse, error)
 	mustEmbedUnimplementedComplianceServer()
 }
@@ -92,8 +118,14 @@ type UnimplementedComplianceServer struct{}
 func (UnimplementedComplianceServer) AllowNewEncryptionKey(context.Context, *AllowNewEncryptionKeyRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method AllowNewEncryptionKey not implemented")
 }
+func (UnimplementedComplianceServer) AllowNewEncryptionKeyWithCoverage(context.Context, *AllowNewEncryptionKeyRequest) (*AllowNewEncryptionKeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AllowNewEncryptionKeyWithCoverage not implemented")
+}
 func (UnimplementedComplianceServer) DeleteEncryptionKey(context.Context, *DeleteEncryptionKeyRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteEncryptionKey not implemented")
+}
+func (UnimplementedComplianceServer) DeleteEncryptionKeyWithCoverage(context.Context, *DeleteEncryptionKeyRequest) (*DeleteEncryptionKeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteEncryptionKeyWithCoverage not implemented")
 }
 func (UnimplementedComplianceServer) Release(context.Context, *ReleaseRequest) (*ReleaseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Release not implemented")
@@ -137,6 +169,24 @@ func _Compliance_AllowNewEncryptionKey_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Compliance_AllowNewEncryptionKeyWithCoverage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AllowNewEncryptionKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ComplianceServer).AllowNewEncryptionKeyWithCoverage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Compliance_AllowNewEncryptionKeyWithCoverage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ComplianceServer).AllowNewEncryptionKeyWithCoverage(ctx, req.(*AllowNewEncryptionKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Compliance_DeleteEncryptionKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteEncryptionKeyRequest)
 	if err := dec(in); err != nil {
@@ -151,6 +201,24 @@ func _Compliance_DeleteEncryptionKey_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ComplianceServer).DeleteEncryptionKey(ctx, req.(*DeleteEncryptionKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Compliance_DeleteEncryptionKeyWithCoverage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteEncryptionKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ComplianceServer).DeleteEncryptionKeyWithCoverage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Compliance_DeleteEncryptionKeyWithCoverage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ComplianceServer).DeleteEncryptionKeyWithCoverage(ctx, req.(*DeleteEncryptionKeyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -185,8 +253,16 @@ var Compliance_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Compliance_AllowNewEncryptionKey_Handler,
 		},
 		{
+			MethodName: "AllowNewEncryptionKeyWithCoverage",
+			Handler:    _Compliance_AllowNewEncryptionKeyWithCoverage_Handler,
+		},
+		{
 			MethodName: "DeleteEncryptionKey",
 			Handler:    _Compliance_DeleteEncryptionKey_Handler,
+		},
+		{
+			MethodName: "DeleteEncryptionKeyWithCoverage",
+			Handler:    _Compliance_DeleteEncryptionKeyWithCoverage_Handler,
 		},
 		{
 			MethodName: "Release",

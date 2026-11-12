@@ -121,7 +121,8 @@ func Value[M, E, V any](builder *FromBuilder[M, E], target Field[M, V], value V)
 	builder.add(target.path, reflect.TypeFor[V](), nil, expression, "value")
 }
 func (b *FromBuilder[M, E]) add(path string, target, source reflect.Type, expression expression, directive string) {
-	b.subscription.writes = append(b.subscription.writes, write{path: path, targetType: target, sourceType: source, expression: expression, provenance: Provenance{Path: path, Directive: directive, Offset: -1, FrontEnd: "fluent"}})
+	field, entry := splitEntry(path)
+	b.subscription.writes = append(b.subscription.writes, write{path: field, entry: entry, targetType: target, sourceType: source, expression: expression, provenance: Provenance{Path: path, Directive: directive, Offset: -1, FrontEnd: "fluent"}})
 }
 
 // Build validates locally available metadata and snapshots the declaration. Event
