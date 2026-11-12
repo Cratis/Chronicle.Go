@@ -1,6 +1,6 @@
 ---
 name: cratis-code-review
-description: Review changed code in a Cratis application against the architecture, style, and specification-coverage criteria that the compiler cannot check, and produce a structured report with blocking issues separated from suggestions. Use when asked to review, check, or validate a change. Do not substitute it for a focused security audit and do not restate specialist performance findings.
+description: Use when reviewing changed Cratis application code for architecture, style and specification coverage beyond compiler checks. Not for a focused security or scalability audit, or for scheduling review rounds.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-code-review/SKILL.md -->
@@ -85,8 +85,11 @@ there is nothing to review under a red build.
 - Read protection is `Off` by default; new code sets `<CratisReadProtection>On</CratisReadProtection>`.
   Under `Off` an injected model or validator read is advisory, not a concurrency guard.
   Under `On`, review that state rules sit in validators or handlers with the model as
-  a parameter, `[Unprotected("why")]` carries a real reason, and a conflict spec
-  (`AppendConcurrently` plus `ConcurrencyViolation`) exists.
+  a parameter and `[Unprotected("why")]` carries a real reason. Apply
+  [specs.scenarios.csharp.md](../../rules/specs.scenarios.csharp.md): business
+  decisions use direct `Handle()`/validator calls with supplied state. Require
+  one cheap assembly-level admission spec for the application's own shapes,
+  not per-decision concurrency/conflict/isolation tests; Arc/Chronicle own that matrix.
 - Use `Cratis.Arc.Core.CodeAnalysis` and `Cratis.Arc.Chronicle.CodeAnalysis`.
   ARCCHR0011 (Info, `Off` only) and 0012 flag unprotected reads/immediate
   bypasses; 0013 (Info) recommends definitions; 0014 checks declared observer
@@ -152,12 +155,14 @@ degradations a reviewer can see without measuring:
 
 ## Step 6 — Specification coverage
 
-- Pure command, reducer and reactor decisions have plain-call specifications
-  (`Specification` plus a direct call); scenarios are added where pipelines,
-  validation, constraints, projections or wiring contribute proof.
+- Pure command, validator, reducer and reactor decisions have plain-call specs
+  with supplied read-model state; scenarios cover exactly the obligations in the
+  per-artifact decision table of `specs.scenarios.csharp.md` (pipeline and
+  authorization, constraints, projection and reducer dispatch, reactor dispatch
+  and routing) plus application-owned race-policy proof.
 - Every State Change command has a happy-path specification.
-- Every validation rule has a failure specification asserting **both**
-  `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`.
+- Every validation rule has a direct-call failure spec. Pipeline validation
+  specs assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`.
 - Every business-rule rejection has a specification.
 - Every constraint has an `EventScenario` specification asserting the constraint
   **name** by default.
@@ -177,6 +182,9 @@ that leaves changed behavior unverified belong in Blockers when they require
 correction before merge. Style preferences and maintainability improvements
 without such a consequence belong in Suggestions. Apply the shared verdict
 vocabulary to those findings.
+
+For a follow-up round after blockers were fixed, review only the delta and carry prior
+findings forward; see `cratis-engineering-review-rounds`.
 
 ## What breaks
 
