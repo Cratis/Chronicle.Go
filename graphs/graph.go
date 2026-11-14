@@ -7,6 +7,8 @@ import (
 	"errors"
 	"slices"
 	"strings"
+
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 var errNilOption = errors.New("nil option")
@@ -28,6 +30,7 @@ type Graph struct {
 	name     string
 	sink     SinkType
 	elements []Element
+	views    []*View
 }
 
 // New declares a graph with its nodes and edges.
@@ -52,6 +55,7 @@ type declaration struct {
 	sink  SinkType
 	nodes []*Node
 	edges []*Edge
+	views []*viewSnapshot
 }
 
 // Name returns the name of the graph.
@@ -79,6 +83,7 @@ func (g *Graph) Build() (Declaration, error) {
 	}
 	data := &declaration{name: g.name, sink: g.sink}
 	index := make(map[*Node]*Node)
+	edgeIndex := make(map[*Edge]*Edge)
 	var edges []*Edge
 	for _, element := range g.elements {
 		switch element := element.(type) {
@@ -105,11 +110,21 @@ func (g *Graph) Build() (Declaration, error) {
 		frozen := edge.snapshot()
 		frozen.source, frozen.target = index[edge.source], index[edge.target]
 		data.edges = append(data.edges, frozen)
+		edgeIndex[edge] = frozen
 	}
 	if len(data.nodes) == 0 {
 		return Declaration{}, refuse(g.name, "", ErrInvalidGraph, "a graph needs at least one node")
 	}
 	if err := data.validate(); err != nil {
+		return Declaration{}, err
+	}
+	for _, view := range g.views {
+		if view == nil {
+			return Declaration{}, refuse(g.name, "", ErrInvalidGraph, "a nil view")
+		}
+	}
+	data.views = freezeViews(g.views, index, edgeIndex)
+	if _, err := data.checkViews(serialization.PreservePropertyNames); err != nil {
 		return Declaration{}, err
 	}
 	return Declaration{data: data}, nil

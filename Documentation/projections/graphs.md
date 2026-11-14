@@ -13,8 +13,8 @@ what the events leave behind; nothing writes to it directly.
 
 Your Go process declares the graph and registers its definition. The Chronicle
 kernel runs it. The Go client does not read the graph back: query it with Cypher
-or the tooling of the graph database. Graph projections need Chronicle 19.129.0
-or later, and the client produces the same definition as the .NET client.
+or the tooling of the graph database, or declare [views](#read-a-graph-with-views)
+over it. Graph projections need Chronicle 19.129.0 or later, and the client produces the same definition as the .NET client.
 
 ## Declare a graph
 
@@ -182,6 +182,92 @@ of one graph and `chronicle.WithDefaultGraphSinkType` the default of the client;
 both accept `graphs.Neo4j` and `graphs.InMemoryGraph`. The in-memory graph needs no
 database and suits development and specifications. Selecting a sink does not
 configure the Neo4j connection: that belongs to the kernel.
+
+## Read a graph with views
+
+A **graph view** is a read model over a graph you have already declared. It is
+anchored at one node, and each member is a property of that node, a relation along
+a declared edge to another view, or a property of the edge that was followed. A view
+only reads: it changes nothing about the projection, the read model schema or what
+the kernel stores. Graphs that declare no views behave exactly as before.
+
+Declare views with `graphs.NewView` and add them to the graph with `WithViews`. The
+view type names the view (`Named` overrides it); member names are serialized
+property names of that type.
+
+```go
+// GroupMembership is read from a group and the MEMBER_OF edge that led to it.
+type GroupMembership struct {
+    ID    string    `json:"id"`
+    Title string    `json:"title"`
+    Since time.Time `json:"since"`
+}
+
+// PersonWithGroups is read from a person and the groups the person is a member of.
+type PersonWithGroups struct {
+    ID     string            `json:"id"`
+    Name   string            `json:"name"`
+    Groups []GroupMembership `json:"groups"`
+}
+
+func organizationWithViews(person, group *graphs.Node, memberOf *graphs.Edge) (graphs.Declaration, error) {
+    groupMembership := graphs.NewView[GroupMembership](group).
+        Property("id").
+        Property("title").
+        EdgeProperty("since")
+    personWithGroups := graphs.NewView[PersonWithGroups](person).
+        Property("id").
+        Property("name").
+        FollowsMany("groups", memberOf, groupMembership)
+    return graphs.New("Organization", person, group, memberOf).
+        WithViews(personWithGroups, groupMembership).
+        Build()
+}
+```
+
+| Declaration | Meaning |
+| --- | --- |
+| `NewView[T](root)` | A view named after `T`, anchored at the node `root`, which must be a node of the graph |
+| `Property(member, options...)` | Read a property of the root node, matched by name ignoring case; `SourceProperty` names a different one |
+| `EdgeProperty(member, options...)` | Read a property of the edge that was followed to reach this view |
+| `FollowsMany(member, edge, view, options...)` | Follow `edge` to `view` and yield a list; no related nodes gives an empty list |
+| `FollowsOne(member, edge, view, options...)` | Follow `edge` to `view` and yield one value; no related node gives null |
+| `Outgoing()`, `Incoming()` | The direction of a relation. It is derived from the root for every edge except a self edge, which needs one of them |
+
+`Build` refuses an invalid view with a `*graphs.ViewError`. Match its stable reason
+with `errors.Is` against a `graphs.ViewReason`, or read it with
+`graphs.ViewReasonOf`. The error also matches `chronicle.ErrInvalidConfiguration`.
+A refused view fails the `Build` of its own graph only; other graphs are
+unaffected.
+
+| Reason | Refused declaration |
+| --- | --- |
+| `graphs.ViewRootNotANode` | A root that is not a node of the graph |
+| `graphs.ViewIsAlsoSchema` | A view type that is also a node or an edge |
+| `graphs.DuplicateViewName` | Two views with the same name |
+| `graphs.UnknownNodeProperty` | A property member the root node does not declare |
+| `graphs.UnknownEdge` | A relation along an edge the graph does not declare |
+| `graphs.UnknownEdgeProperty` | An edge property member the edge does not declare |
+| `graphs.EdgeNotIncidentOnRoot` | An edge that does not touch the root of the view, or a direction that does not fit it |
+| `graphs.AmbiguousDirection` | A self edge without `Outgoing` or `Incoming` |
+| `graphs.TargetLabelMismatch` | A target view not rooted at the far end of the edge |
+| `graphs.RelationTargetNotAView` | A relation target that was not added to the graph with `WithViews` |
+| `graphs.RecursiveView` | A view that contains itself, directly or through other views |
+| `graphs.EdgePropertyViewNotUsedAsTarget` | A view with edge property members that no relation targets |
+| `graphs.EdgePropertyViewSharedAcrossEdges` | A view with edge property members that relations along more than one edge type target |
+
+The compiled graph exposes the views in the canonical definition format that every
+Chronicle client emits: `Definition.Views()` on the definitions in the client's
+artifacts, or `Declaration.ViewDefinition(policy)` for a declaration. `Canonical()`
+serializes it as indented JSON with a fixed layout and property order, and
+`CanonicalWithSchema()` also lists the nodes and edges the views were validated
+against. The definition is a
+conformance and transport format, not something you author.
+
+This client declares and validates views and describes them; it does not execute
+them. Reading the graph through a view needs a host stack that runs the queries,
+and none is provided for Go yet. Until then, read the graph with Cypher or the
+tooling of the graph database, as described above.
 
 ## Run it
 
