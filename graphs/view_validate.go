@@ -6,13 +6,15 @@ package graphs
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/cratis/chronicle.go/serialization"
 )
 
 // ViewDefinition validates the views of the declaration against the naming
-// policy of the client and returns their canonical definition. A declaration
+// policy of the client and returns their canonical definition, with the views
+// sorted by name. A declaration
 // without views yields a definition without views. Build has already refused
 // every violation that does not depend on the policy.
 func (d Declaration) ViewDefinition(policy serialization.NamingPolicy) (GraphViewDefinition, error) {
@@ -174,6 +176,7 @@ func (d *declaration) checkViews(policy serialization.NamingPolicy) (GraphViewDe
 			return GraphViewDefinition{}, err
 		}
 	}
+	slices.SortStableFunc(result.Views, func(a, b ViewDefinition) int { return strings.Compare(a.Name, b.Name) })
 	return result, nil
 }
 
