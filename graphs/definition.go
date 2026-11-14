@@ -114,7 +114,8 @@ func (d Definition) Views() GraphViewDefinition {
 	if len(views) == 0 {
 		views = nil
 	}
-	return GraphViewDefinition{Graph: d.data.views.Graph, Views: views}
+	schema := ViewSchema{Nodes: slices.Clone(d.data.views.Schema.Nodes), Edges: slices.Clone(d.data.views.Schema.Edges)}
+	return GraphViewDefinition{Graph: d.data.views.Graph, Schema: schema, Views: views}
 }
 
 func (c *compiler) definition(nodes []*compiledNode, edges []*compiledEdge) (Definition, error) {

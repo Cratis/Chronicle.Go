@@ -177,7 +177,32 @@ func (d *declaration) checkViews(policy serialization.NamingPolicy) (GraphViewDe
 		}
 	}
 	slices.SortStableFunc(result.Views, func(a, b ViewDefinition) int { return strings.Compare(a.Name, b.Name) })
+	for _, node := range d.nodes {
+		analyzed, err := nodeShape(node)
+		if err != nil {
+			return GraphViewDefinition{}, err
+		}
+		key, _ := analyzed.keyCandidate(node.key)
+		result.Schema.Nodes = append(result.Schema.Nodes, ViewSchemaNode{Label: node.label, Key: key, Properties: analyzed.names()})
+	}
+	for _, edge := range d.edges {
+		analyzed, err := edgeShape(edge)
+		if err != nil {
+			return GraphViewDefinition{}, err
+		}
+		identity, _ := analyzed.keyCandidate(edge.identity)
+		result.Schema.Edges = append(result.Schema.Edges, ViewSchemaEdge{Type: edge.name, Source: edge.source.label, Target: edge.target.label, IdentifiedBy: identity, Properties: analyzed.names()})
+	}
 	return result, nil
+}
+
+// names returns the property names in declaration order.
+func (s *shape) names() []string {
+	names := make([]string, len(s.properties))
+	for i, property := range s.properties {
+		names[i] = property.name
+	}
+	return names
 }
 
 // resolveEdgeProperties checks the edge property members of a view against the

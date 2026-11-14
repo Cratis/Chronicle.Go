@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -156,65 +155,31 @@ func TestOrganizationViewsMatchTheSharedFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	canonical, err := definition.Canonical()
-	if err != nil {
-		t.Fatal(err)
-	}
 	fixture, err := os.ReadFile(filepath.Join("..", "testdata", "graphs", "graph-views-organization.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The fixture also carries the schema the views are declared over and lays
-	// its members out on one line each, so the comparison is over the graph name
-	// and the views: the same tokens in the same order.
-	var shared struct {
-		Graph string          `json:"graph"`
-		Views json.RawMessage `json:"views"`
-	}
-	if err := json.Unmarshal(fixture, &shared); err != nil {
+	withSchema, err := definition.CanonicalWithSchema()
+	if err != nil {
 		t.Fatal(err)
 	}
-	var emitted struct {
-		Graph string          `json:"graph"`
-		Views json.RawMessage `json:"views"`
+	if !bytes.Equal(withSchema, fixture) {
+		t.Fatalf("the schema-included form differs from the fixture:\n%s", withSchema)
 	}
-	if err := json.Unmarshal(canonical, &emitted); err != nil {
+	// The default form is the fixture without its schema section.
+	text := string(fixture)
+	start := strings.Index(text, "  \"schema\": {\n")
+	end := strings.Index(text, "\n  },\n")
+	if start < 0 || end < start {
+		t.Fatal("the fixture has no schema section")
+	}
+	want := text[:start] + text[end+len("\n  },\n"):]
+	plain, err := definition.Canonical()
+	if err != nil {
 		t.Fatal(err)
 	}
-	if shared.Graph != emitted.Graph {
-		t.Fatalf("graph = %q, want %q", emitted.Graph, shared.Graph)
-	}
-	if got, want := tokens(t, emitted.Views), tokens(t, shared.Views); !reflect.DeepEqual(got, want) {
-		t.Fatalf("views differ from the fixture:\n got %v\nwant %v", got, want)
-	}
-}
-
-func tokens(t *testing.T, document json.RawMessage) []string {
-	t.Helper()
-	decoder := json.NewDecoder(bytes.NewReader(document))
-	var result []string
-	for {
-		token, err := decoder.Token()
-		if errors.Is(err, io.EOF) {
-			return result
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		result = append(result, strings.TrimSpace(strings.Join([]string{typeName(token), toString(token)}, ":")))
-	}
-}
-
-func typeName(token json.Token) string { return reflect.TypeOf(token).String() }
-
-func toString(token json.Token) string {
-	switch token := token.(type) {
-	case string:
-		return token
-	case json.Delim:
-		return string(token)
-	default:
-		return reflect.ValueOf(token).String()
+	if string(plain) != want {
+		t.Fatalf("the default form differs from the fixture without its schema:\n%s", plain)
 	}
 }
 
@@ -228,34 +193,45 @@ func TestCanonicalViewDefinitionFormat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	canonical, err := definition.Canonical()
+	for _, form := range []func() ([]byte, error){definition.Canonical, definition.CanonicalWithSchema} {
+		canonical, err := form()
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(canonical)
+		if !strings.HasSuffix(text, "}\n") || strings.HasSuffix(text, "\n\n") || strings.Contains(text, "\r") || strings.Contains(text, "\t") || strings.Contains(text, "\n\n") {
+			t.Fatalf("not canonical: %q", text)
+		}
+		var parsed struct {
+			Views []struct{ Name string } `json:"views"`
+		}
+		if err := json.Unmarshal(canonical, &parsed); err != nil {
+			t.Fatalf("not valid JSON: %v", err)
+		}
+		var names []string
+		for _, view := range parsed.Views {
+			names = append(names, view.Name)
+		}
+		want := []string{"GroupMembership", "GroupSummary", "GroupWithMembers", "GroupWithParent", "MemberSummary", "PersonRoles", "PersonWithGroups", "RoleAssignment"}
+		if !reflect.DeepEqual(names, want) {
+			t.Fatalf("views are not sorted by name: %v", names)
+		}
+		again, err := form()
+		if err != nil || !bytes.Equal(canonical, again) {
+			t.Fatal("serialization is not deterministic")
+		}
+	}
+}
+
+func TestEmptyViewListsAreWrittenInline(t *testing.T) {
+	definition := graphs.GraphViewDefinition{Graph: "G", Views: []graphs.ViewDefinition{{Name: "V", Root: "N"}}}
+	text, err := definition.CanonicalWithSchema()
 	if err != nil {
 		t.Fatal(err)
 	}
-	text := string(canonical)
-	if !strings.HasSuffix(text, "}\n") || strings.HasSuffix(text, "\n\n") || strings.Contains(text, "\r") || strings.Contains(text, "\t") {
-		t.Fatalf("not canonical: %q", text[len(text)-10:])
-	}
-	if !strings.HasPrefix(text, "{\n  \"graph\": \"Organization\",\n  \"views\": [\n    {\n      \"name\": \"GroupMembership\",\n      \"root\": \"Group\",\n      \"members\": [\n        {\n          \"name\": \"id\",\n          \"kind\": \"property\",\n          \"source\": \"groupId\"\n        },") {
-		t.Fatalf("unexpected layout:\n%s", text[:300])
-	}
-	var names []string
-	want := []string{"GroupMembership", "GroupSummary", "GroupWithMembers", "GroupWithParent", "MemberSummary", "PersonRoles", "PersonWithGroups", "RoleAssignment"}
-	again, err := definition.Canonical()
-	if err != nil || !bytes.Equal(canonical, again) {
-		t.Fatal("serialization is not deterministic")
-	}
-	var parsed struct {
-		Views []struct{ Name string } `json:"views"`
-	}
-	if err := json.Unmarshal(canonical, &parsed); err != nil {
-		t.Fatal(err)
-	}
-	for _, view := range parsed.Views {
-		names = append(names, view.Name)
-	}
-	if !reflect.DeepEqual(names, want) {
-		t.Fatalf("views are not sorted by name: %v", names)
+	want := "{\n  \"graph\": \"G\",\n  \"schema\": {\n    \"nodes\": [],\n    \"edges\": []\n  },\n  \"views\": [\n    {\n      \"name\": \"V\",\n      \"root\": \"N\",\n      \"members\": []\n    }\n  ]\n}\n"
+	if string(text) != want {
+		t.Fatalf("got %q", text)
 	}
 }
 

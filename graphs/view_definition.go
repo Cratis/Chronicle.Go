@@ -70,51 +70,161 @@ type ViewDefinition struct {
 // client, never authored by hand, and it does not change the graph projection.
 type GraphViewDefinition struct {
 	Graph string
-	Views []ViewDefinition
+	// Schema lists the nodes and edges the views were validated against. Only
+	// the schema-included form of the serialization writes it.
+	Schema ViewSchema
+	Views  []ViewDefinition
 }
 
-// Canonical serializes the definition as UTF-8 JSON with LF line endings,
-// two-space indentation, the property order shared by every client, views sorted
-// by name ordinal and one trailing newline.
-func (d GraphViewDefinition) Canonical() ([]byte, error) {
-	document := canonicalDocument{Graph: d.Graph, Views: make([]canonicalView, 0, len(d.Views))}
-	for _, view := range d.Views {
-		entry := canonicalView{Name: view.Name, Root: view.Root, Members: make([]canonicalMember, 0, len(view.Members))}
-		for _, member := range view.Members {
-			entry.Members = append(entry.Members, canonicalMember(member))
-		}
-		document.Views = append(document.Views, entry)
+// ViewSchemaNode describes a node the views were validated against.
+type ViewSchemaNode struct {
+	Label      string
+	Key        string
+	Properties []string
+}
+
+// ViewSchemaEdge describes an edge the views were validated against.
+// IdentifiedBy is empty for an edge without an identifying property.
+type ViewSchemaEdge struct {
+	Type         string
+	Source       string
+	Target       string
+	IdentifiedBy string
+	Properties   []string
+}
+
+// ViewSchema lists the nodes and edges of the graph, in declaration order, that
+// the views were validated against.
+type ViewSchema struct {
+	Nodes []ViewSchemaNode
+	Edges []ViewSchemaEdge
+}
+
+// Canonical serializes the definition in its default form, {graph, views}: UTF-8
+// JSON with LF line endings, two-space indentation, the layout and property order
+// shared by every client, views sorted by name ordinal, members in declaration
+// order and one trailing newline.
+func (d GraphViewDefinition) Canonical() ([]byte, error) { return d.canonical(false) }
+
+// CanonicalWithSchema serializes the definition in its schema-included form,
+// {graph, schema, views}, which also lists the nodes and edges the views were
+// validated against. Both forms are identical in everything else.
+func (d GraphViewDefinition) CanonicalWithSchema() ([]byte, error) { return d.canonical(true) }
+
+func (d GraphViewDefinition) canonical(withSchema bool) ([]byte, error) {
+	var w canonicalWriter
+	w.line(0, "{")
+	w.line(1, `"graph": `+w.quote(d.Graph)+",")
+	if withSchema {
+		w.line(1, `"schema": {`)
+		w.list(2, `"nodes": [`, len(d.Schema.Nodes), true, func(i int) {
+			node := d.Schema.Nodes[i]
+			w.line(3, `{ "label": `+w.quote(node.Label)+`, "key": `+w.quote(node.Key)+`, "properties": `+w.array(node.Properties)+` }`+comma(i, len(d.Schema.Nodes)))
+		})
+		w.list(2, `"edges": [`, len(d.Schema.Edges), false, func(i int) {
+			edge := d.Schema.Edges[i]
+			identity := ""
+			if edge.IdentifiedBy != "" {
+				identity = `"identifiedBy": ` + w.quote(edge.IdentifiedBy) + ", "
+			}
+			w.line(3, `{ "type": `+w.quote(edge.Type)+`, "source": `+w.quote(edge.Source)+`, "target": `+w.quote(edge.Target)+`, `+identity+`"properties": `+w.array(edge.Properties)+` }`+comma(i, len(d.Schema.Edges)))
+		})
+		w.line(1, "},")
 	}
-	slices.SortStableFunc(document.Views, func(a, b canonicalView) int { return strings.Compare(a.Name, b.Name) })
-	var buffer bytes.Buffer
-	encoder := json.NewEncoder(&buffer)
+	views := slices.Clone(d.Views)
+	slices.SortStableFunc(views, func(a, b ViewDefinition) int { return strings.Compare(a.Name, b.Name) })
+	w.list(1, `"views": [`, len(views), false, func(i int) {
+		view := views[i]
+		w.line(2, "{")
+		w.line(3, `"name": `+w.quote(view.Name)+",")
+		w.line(3, `"root": `+w.quote(view.Root)+",")
+		w.list(3, `"members": [`, len(view.Members), false, func(j int) {
+			w.line(4, view.Members[j].inline()+comma(j, len(view.Members)))
+		})
+		w.line(2, "}"+comma(i, len(views)))
+	})
+	w.line(0, "}")
+	return w.bytes()
+}
+
+func (m ViewMember) inline() string {
+	var w canonicalWriter
+	text := `{ "name": ` + w.quote(m.Name) + `, "kind": ` + w.quote(string(m.Kind))
+	if m.Source != "" {
+		text += `, "source": ` + w.quote(m.Source)
+	}
+	if m.Edge != "" {
+		text += `, "edge": ` + w.quote(m.Edge)
+	}
+	if m.Direction != "" {
+		text += `, "direction": ` + w.quote(string(m.Direction))
+	}
+	if m.Cardinality != "" {
+		text += `, "cardinality": ` + w.quote(string(m.Cardinality))
+	}
+	if m.View != "" {
+		text += `, "view": ` + w.quote(m.View)
+	}
+	return text + " }"
+}
+
+func comma(index, count int) string {
+	if index < count-1 {
+		return ","
+	}
+	return ""
+}
+
+// canonicalWriter writes the fixed layout by hand: encoding/json cannot lay out
+// inline objects and arrays, and the layout is part of the format.
+type canonicalWriter struct {
+	buffer bytes.Buffer
+	err    error
+}
+
+func (w *canonicalWriter) line(depth int, text string) {
+	w.buffer.WriteString(strings.Repeat("  ", depth))
+	w.buffer.WriteString(text)
+	w.buffer.WriteByte('\n')
+}
+
+func (w *canonicalWriter) quote(text string) string {
+	var out bytes.Buffer
+	encoder := json.NewEncoder(&out)
 	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(document); err != nil {
-		return nil, err
+	if err := encoder.Encode(text); err != nil && w.err == nil {
+		w.err = err
 	}
-	return buffer.Bytes(), nil
+	return strings.TrimSuffix(out.String(), "\n")
 }
 
-// The canonical types fix the order of the JSON properties: encoding/json writes
-// struct fields in declaration order, so the order is part of the type.
-type canonicalDocument struct {
-	Graph string          `json:"graph"`
-	Views []canonicalView `json:"views"`
+// array writes an inline array with a space inside the brackets, or [] when empty.
+func (w *canonicalWriter) array(items []string) string {
+	if len(items) == 0 {
+		return "[]"
+	}
+	quoted := make([]string, len(items))
+	for i, item := range items {
+		quoted[i] = w.quote(item)
+	}
+	return "[ " + strings.Join(quoted, ", ") + " ]"
 }
 
-type canonicalView struct {
-	Name    string            `json:"name"`
-	Root    string            `json:"root"`
-	Members []canonicalMember `json:"members"`
+// list writes a list that is empty as [] on one line, and otherwise one line per item.
+func (w *canonicalWriter) list(depth int, open string, count int, more bool, item func(int)) {
+	separator := ""
+	if more {
+		separator = ","
+	}
+	if count == 0 {
+		w.line(depth, open+"]"+separator)
+		return
+	}
+	w.line(depth, open)
+	for i := 0; i < count; i++ {
+		item(i)
+	}
+	w.line(depth, "]"+separator)
 }
 
-type canonicalMember struct {
-	Name        string          `json:"name"`
-	Kind        ViewMemberKind  `json:"kind"`
-	Source      string          `json:"source,omitempty"`
-	Edge        string          `json:"edge,omitempty"`
-	Direction   ViewDirection   `json:"direction,omitempty"`
-	Cardinality ViewCardinality `json:"cardinality,omitempty"`
-	View        string          `json:"view,omitempty"`
-}
+func (w *canonicalWriter) bytes() ([]byte, error) { return w.buffer.Bytes(), w.err }

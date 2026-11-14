@@ -259,7 +259,9 @@ unaffected.
 The compiled graph exposes the views in the canonical definition format that every
 Chronicle client emits: `Definition.Views()` on the definitions in the client's
 artifacts, or `Declaration.ViewDefinition(policy)` for a declaration. `Canonical()`
-serializes it as indented JSON with a fixed property order. The definition is a
+serializes it as indented JSON with a fixed layout and property order, and
+`CanonicalWithSchema()` also lists the nodes and edges the views were validated
+against. The definition is a
 conformance and transport format, not something you author.
 
 This client declares and validates views and describes them; it does not execute
