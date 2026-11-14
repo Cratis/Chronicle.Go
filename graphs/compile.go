@@ -124,7 +124,16 @@ func (c *compiler) compile(d *declaration) (Definition, error) {
 		}
 		edges = append(edges, compiled)
 	}
-	return c.definition(nodes, edges)
+	views, err := d.checkViews(c.policy)
+	if err != nil {
+		return Definition{}, err
+	}
+	definition, err := c.definition(nodes, edges)
+	if err != nil {
+		return Definition{}, err
+	}
+	definition.data.views = views
+	return definition, nil
 }
 
 func eventKey(ref events.TypeRef) string { return fmt.Sprintf("%s+%d", ref.ID, ref.Generation) }

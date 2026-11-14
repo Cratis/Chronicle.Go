@@ -29,6 +29,7 @@ type definition struct {
 	events     []events.TypeRef
 	readModel  *readmodels.ReadModelDefinition
 	projection *projections.ProjectionDefinition
+	views      GraphViewDefinition
 }
 
 // Name returns the name of the graph, which is also the identifier of its
@@ -96,6 +97,24 @@ func (d Definition) Projection() *projections.ProjectionDefinition {
 		return nil
 	}
 	return proto.Clone(d.data.projection).(*projections.ProjectionDefinition)
+}
+
+// Views returns the canonical definition of the views declared on the graph. It
+// has no views for a graph that declares none. Views describe how the graph is
+// read; they are not part of the read model schema or the projection. Reading
+// through views needs a host that executes them.
+func (d Definition) Views() GraphViewDefinition {
+	if d.data == nil {
+		return GraphViewDefinition{}
+	}
+	views := make([]ViewDefinition, len(d.data.views.Views))
+	for i, view := range d.data.views.Views {
+		views[i] = ViewDefinition{Name: view.Name, Root: view.Root, Members: slices.Clone(view.Members)}
+	}
+	if len(views) == 0 {
+		views = nil
+	}
+	return GraphViewDefinition{Graph: d.data.views.Graph, Views: views}
 }
 
 func (c *compiler) definition(nodes []*compiledNode, edges []*compiledEdge) (Definition, error) {

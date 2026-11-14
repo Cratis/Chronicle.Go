@@ -38,4 +38,20 @@
 // field, or the field name under the client's naming policy. They are validated
 // when the client is prepared, against the registered event types and the node and
 // edge structs.
+//
+// A graph can also declare views: read models over the graph, anchored at a node
+// and following declared edges to other views. NewView declares one, Graph.WithViews
+// adds it, and Definition.Views describes it in the canonical format shared by every
+// Chronicle client. Views change nothing about the projection.
+//
+//	groupMembership := graphs.NewView[GroupMembership](group).
+//		Property("id", graphs.SourceProperty("groupId")).
+//		Property("name").
+//		EdgeProperty("since")
+//	personWithGroups := graphs.NewView[PersonWithGroups](person).
+//		Property("id", graphs.SourceProperty("personId")).
+//		Property("name").
+//		FollowsMany("groups", memberOf, groupMembership)
+//	graph := graphs.New("Organization", person, group, memberOf).
+//		WithViews(personWithGroups, groupMembership)
 package graphs
