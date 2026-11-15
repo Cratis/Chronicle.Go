@@ -71,8 +71,10 @@ docker run --rm --name chronicle-go -p 35000:35000 cratis/chronicle:19.153.0-dev
 # In another terminal, after https://localhost:35000/health reports Healthy:
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
 CHRONICLE_INTEGRATION_CONTAINER=chronicle-go \
-  go test -tags=integration -count=1 -timeout=4m ./internal/integration
+  go test -tags=integration -count=1 -timeout=6m ./internal/integration ./chronicletest/...
 ```
+
+This mirrors the package list and timeout of the CI integration job.
 
 The tests create isolated random stores, validate registration and schema preservation, exercise numeric/nullable/dictionary round trips and concurrency bounds, and read persisted events through public contracts. Compliance tests also need the disposable encryption certificate from `scripts/configure-compliance-integration.sh chronicle-go`, and they inspect what the kernel stored by running `mongosh` inside the container named by `CHRONICLE_INTEGRATION_CONTAINER`. Stop your test container afterwards. A missing endpoint or container fails rather than silently skipping integration tests.
 
@@ -88,8 +90,13 @@ dotnet build internal/integration/testdata/captureparser/CaptureParser.csproj \
   -o "$PWD/.ai-work/captureparser/bin/"
 CHRONICLE_CAPTURE_PARSER_DLL="$PWD/.ai-work/captureparser/bin/CaptureParser.dll" \
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
-  go test -tags=integration -count=1 -timeout=4m ./internal/integration
+CHRONICLE_INTEGRATION_CONTAINER=chronicle-go \
+  go test -tags=integration -count=1 -timeout=6m ./internal/integration
 ```
+
+Set both variables again here: the earlier command's environment assignments
+apply only to that command, and the raw-storage assertions fail without
+`CHRONICLE_INTEGRATION_CONTAINER`.
 
 Without `CHRONICLE_CAPTURE_PARSER_DLL`, only this optional AST test skips; kernel
 capture validation still runs and checks compilation before capability errors.

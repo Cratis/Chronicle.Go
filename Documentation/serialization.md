@@ -127,7 +127,7 @@ have no custom JSON/text marshaler. Fixed `[N]byte` arrays remain integer arrays
 | Empty non-nil `[]byte{}` | `""`, not `[]` |
 | Nil byte-slice property | Omitted |
 | `*[]byte` | String/null schema with `byte-array?` format; nil pointer omitted |
-| `[][]byte` and other collections containing binary | Refused before registration: the pinned kernel's projection conversion loses binary elements |
+| `[][]byte` and other collections containing binary | Refused before registration: no kernel witness qualifies binary elements in collections |
 
 ### Admitted binary shapes
 
@@ -181,12 +181,17 @@ includes `chronicle:"unique"`, `UniqueValues(...).On(...)`, `chronicle:"subject"
 `WithSubjectProperty`, `chronicle:"index"` and `WithIndexes`. Unique constraints
 and indexes also refuse objects containing binary. The pinned kernel hashes a
 byte array's `ToString()` value, not its contents; subject identities likewise
-lack a qualified cross-client representation. The pinned kernel preserves
-binary arrays in event history but its projection converter treats each byte
-array as another collection; read models lose their byte values. See the
-[binary kernel limitation](parity.md#baselines-and-evidence) for source citations
-and [Chronicle#4595](https://github.com/Cratis/Chronicle/issues/4595) for the upstream fix.
-Go does not repair these lossy read models or weaken its base64 decoder. Whole-object
+lack a qualified cross-client representation.
+
+Older kernels preserved binary arrays in event history but their projection
+converter treated each byte array as another collection, so read models lost
+their byte values. That kernel defect is fixed upstream
+([Chronicle#4595](https://github.com/Cratis/Chronicle/issues/4595)), and the fix
+is part of the contract release this client pins. The Go restriction is separate:
+Go admits only the shapes listed above, because no kernel witness yet qualifies
+binary under collections, maps or the other refused declarations. See the
+[binary kernel limitation](parity.md#baselines-and-evidence) for the history.
+Go does not repair read models written by older kernels or weaken its base64 decoder. Whole-object
 binary copies are also refused: the pinned projection converter unwraps any
 single-`value` ExpandoObject even against an object schema, then enumerates its
 bytes into a list instead of preserving the object. That conversion recurses into

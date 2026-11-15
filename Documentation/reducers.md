@@ -55,8 +55,11 @@ kernel. See [Wait for observers before the first append](reactors.md#wait-for-ob
 Folds execute in event order. Failure returns no partial state and reports the
 last successful sequence position; cleanup failure resets it to unavailable.
 The kernel owns partition recovery. Generation-specific payloads are selected
-when supplied, otherwise C#'s current-content fallback applies. Historical codec
-registration and migration authoring are not implemented.
+when supplied, otherwise C#'s current-content fallback applies. Register
+historical shapes with `RegisterEventGeneration` and author migrations between
+generations with `RegisterEventMigration` or `RegisterEventMigrationFactory`; see
+[event evolution](events/evolution.md) and
+[definition factories](definition-factories.md).
 
 Registration sends the frozen plan after event/model registration. It is not a
 kernel acceptance or caught-up acknowledgement. Stream errors and normal EOF
@@ -79,8 +82,11 @@ which returns an incomplete-cleanup error; an external later `Close` joins clean
 `CloseContext` bounds the wait, not a callback that ignores cancellation. Retired callbacks can overlap a new
 generation until they honor cancellation, as with reactors.
 
-Snapshots and bounded historical folds remain in #33; these replay callbacks do
-not complete all of #31. Local watch notifications use successful folds, not
+Bounded historical folds are supported: `reader.GetAll(ctx, &count)` with an
+explicit count folds the reducer locally (see
+[collections and history](read-models/collections-and-history.md)). Reducer
+snapshots are not: `GetSnapshots` returns `ErrUnsupported` for a reducer before
+any RPC. These replay callbacks do not complete all of #31. Local watch notifications use successful folds, not
 lifecycle callbacks. Reducer sessions remain unsupported.
 
 It prints `Balance: -6`. The example uses development TLS/credentials and creates
