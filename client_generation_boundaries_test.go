@@ -50,7 +50,7 @@ func (s *startupBoundaryStream) RecvMsg(message any) error {
 	return s.lifecycleStream.RecvMsg(message)
 }
 
-func startupFailureCase(name string, cancel context.CancelFunc, failure error) (*startupBoundaryConn, error, int) {
+func startupFailureCase(name string, cancel context.CancelFunc, failure error) (*startupBoundaryConn, int, error) {
 	stream := &startupBoundaryStream{}
 	conn := &startupBoundaryConn{stream: stream, ack: func() error { return nil }}
 	want, acks := failure, 0
@@ -66,7 +66,7 @@ func startupFailureCase(name string, cancel context.CancelFunc, failure error) (
 		conn.ack = func() error { cancel(); return nil }
 		want, acks = context.Canceled, 1
 	}
-	return conn, want, acks
+	return conn, acks, want
 }
 
 func TestEstablishCancelsAndDrainsFailedStartup(t *testing.T) {
@@ -75,7 +75,7 @@ func TestEstablishCancelsAndDrainsFailedStartup(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
-			conn, want, acks := startupFailureCase(name, cancel, failure)
+			conn, acks, want := startupFailureCase(name, cancel, failure)
 			client := &Client{config: clientConfig{skipCompatibility: true}}
 			g := &generation{client: client, raw: conn}
 			g.bind(t.Context())
