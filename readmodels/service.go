@@ -47,20 +47,40 @@ type Service struct {
 // New constructs a service without I/O. The caller owns the channel and any
 // registration/readiness barriers; the store facade supplies those automatically.
 func New(store metadata.StoreName, namespace metadata.Namespace, catalog *Catalog, conn grpc.ClientConnInterface, options ...ServiceOption) (*Service, error) {
-	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || catalog == nil || conn == nil || (reflect.ValueOf(conn).Kind() == reflect.Pointer && reflect.ValueOf(conn).IsNil()) {
-		return nil, invalid("store, namespace, catalog and transport required")
+	if err := validateServiceInputs(store, namespace, catalog, conn); err != nil {
+		return nil, err
 	}
 	service := &Service{store: store, namespace: namespace, catalog: catalog, client: contracts.NewReadModelsClient(conn), materialized: contracts.NewMaterializedReadModelsClient(conn), explorer: readmodelexplorer.NewReadModelExplorerClient(conn), compliance: compliance.NewComplianceClient(conn), conn: conn}
 	service.decisions, _ = conn.(decision.Provider)
-	for _, option := range options {
-		if option == nil {
-			return nil, invalid("nil service option")
-		}
-		if err := option(service); err != nil {
-			return nil, err
-		}
+	if err := service.applyOptions(options); err != nil {
+		return nil, err
 	}
 	return service, nil
+}
+
+func validateServiceInputs(store metadata.StoreName, namespace metadata.Namespace, catalog *Catalog, conn grpc.ClientConnInterface) error {
+	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" {
+		return invalid("store, namespace, catalog and transport required")
+	}
+	if catalog == nil || conn == nil {
+		return invalid("store, namespace, catalog and transport required")
+	}
+	if reflect.ValueOf(conn).Kind() == reflect.Pointer && reflect.ValueOf(conn).IsNil() {
+		return invalid("store, namespace, catalog and transport required")
+	}
+	return nil
+}
+
+func (s *Service) applyOptions(options []ServiceOption) error {
+	for _, option := range options {
+		if option == nil {
+			return invalid("nil service option")
+		}
+		if err := option(s); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Catalog returns the immutable set of registered models.
@@ -108,38 +128,32 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 	if err := ctx.Err(); err != nil {
 		return Instance[json.RawMessage]{}, err
 	}
+	if err := validateInstanceKey(key); err != nil {
+		return Instance[json.RawMessage]{}, err
+	}
+	return s.readInstance(ctx, d, key, session)
+}
+
+func validateInstanceKey(key Key) error {
 	if strings.TrimSpace(string(key)) == "" {
-		return Instance[json.RawMessage]{}, invalid("nonblank read-model key required")
+		return invalid("nonblank read-model key required")
 	}
 	if key == "*" {
-		return Instance[json.RawMessage]{}, fmt.Errorf("%w: unspecified-key replay is not a one-shot instance read", faults.ErrUnsupported)
+		return fmt.Errorf("%w: unspecified-key replay is not a one-shot instance read", faults.ErrUnsupported)
 	}
+	return nil
+}
+
+func (s *Service) readInstance(ctx context.Context, d Descriptor, key Key, session string) (Instance[json.RawMessage], error) {
 	if kind, _ := d.Observer(); kind == Reducer && d.Sink().Type == NoSink {
-		if s.passive == nil || session != "" {
-			return Instance[json.RawMessage]{}, fmt.Errorf("%w: passive reducer reader unavailable or session requested", faults.ErrUnsupported)
-		}
-		result, err := s.passive(ctx, d, key)
-		if err != nil {
-			return Instance[json.RawMessage]{}, err
-		}
-		if result.Exists {
-			if s.passiveReleased {
-				result.Value, err = releasedDocument(ctx, d, result.Value)
-			} else {
-				result.Value, err = s.Release(ctx, d.Identifier(), result.Value)
-			}
-			if err != nil {
-				return Instance[json.RawMessage]{}, err
-			}
-		}
-		return result, nil
+		return s.passiveInstance(ctx, d, key, session)
 	}
 	if d.Sink().Type == NoSink || session != "" {
 		if err := s.projectionReleaseAdmission(ctx, d); err != nil {
 			return Instance[json.RawMessage]{}, err
 		}
 	}
-	result, err = s.getInstance(ctx, d, key, session)
+	result, err := s.getInstance(ctx, d, key, session)
 	if err != nil || !result.Exists {
 		return result, err
 	}
@@ -151,6 +165,31 @@ func (s *Service) get(ctx context.Context, d Descriptor, key Key, session string
 	}
 	result.Value = data
 	return result, nil
+}
+
+func (s *Service) passiveInstance(ctx context.Context, d Descriptor, key Key, session string) (Instance[json.RawMessage], error) {
+	if s.passive == nil || session != "" {
+		return Instance[json.RawMessage]{}, fmt.Errorf("%w: passive reducer reader unavailable or session requested", faults.ErrUnsupported)
+	}
+	result, err := s.passive(ctx, d, key)
+	if err != nil {
+		return Instance[json.RawMessage]{}, err
+	}
+	if !result.Exists {
+		return result, nil
+	}
+	result.Value, err = s.releasePassiveValue(ctx, d, result.Value)
+	if err != nil {
+		return Instance[json.RawMessage]{}, err
+	}
+	return result, nil
+}
+
+func (s *Service) releasePassiveValue(ctx context.Context, d Descriptor, value json.RawMessage) (json.RawMessage, error) {
+	if s.passiveReleased {
+		return releasedDocument(ctx, d, value)
+	}
+	return s.Release(ctx, d.Identifier(), value)
 }
 
 // getInstance reads and checks raw protocol shape only. Its caller must admit
@@ -195,7 +234,10 @@ func For[T any](service *Service, model Model[T]) *Reader[T] {
 	return &Reader[T]{service: service, model: model}
 }
 func (r *Reader[T]) descriptor() (Descriptor, error) {
-	if r == nil || r.service == nil || r.model.descriptor.GoType() == nil {
+	if r == nil {
+		return Descriptor{}, notRegistered()
+	}
+	if r.service == nil || r.model.descriptor.GoType() == nil {
 		return Descriptor{}, notRegistered()
 	}
 	d, ok := r.service.catalog.LookupIdentifier(r.model.Identifier())
@@ -250,6 +292,20 @@ func normalizeID(data []byte, d Descriptor) ([]byte, error) {
 	if _, exists := fields[name]; exists {
 		return data, nil
 	}
+	alias := sinkIDAlias(fields, d)
+	if alias == "" {
+		return data, nil
+	}
+	fields[name] = fields[alias]
+	delete(fields, alias)
+	result, err := json.Marshal(fields)
+	if err != nil {
+		return nil, faults.ErrProtocol
+	}
+	return result, nil
+}
+
+func sinkIDAlias(fields map[string]json.RawMessage, d Descriptor) string {
 	declared := make(map[string]bool)
 	for _, field := range d.definition.plan.Fields() {
 		declared[field.Path] = true
@@ -260,17 +316,11 @@ func normalizeID(data []byte, d Descriptor) ([]byte, error) {
 		if declared[alias] {
 			continue
 		}
-		if value, exists := fields[alias]; exists {
-			fields[name] = value
-			delete(fields, alias)
-			result, err := json.Marshal(fields)
-			if err != nil {
-				return nil, faults.ErrProtocol
-			}
-			return result, nil
+		if _, exists := fields[alias]; exists {
+			return alias
 		}
 	}
-	return data, nil
+	return ""
 }
 
 func notRegistered() error { return fmt.Errorf("%w: read-model declaration", faults.ErrNotRegistered) }
