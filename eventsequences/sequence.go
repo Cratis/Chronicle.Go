@@ -47,7 +47,7 @@ type Sequence struct {
 // AppendOriginResolverProvider configuration once from conn, without invoking
 // the resolver. Invalid coordinates or nil dependencies fail.
 func New(store metadata.StoreName, namespace metadata.Namespace, id events.SequenceID, catalog *events.Catalog, conn grpc.ClientConnInterface) (*Sequence, error) {
-	if strings.TrimSpace(string(store)) == "" || strings.TrimSpace(string(namespace)) == "" || strings.TrimSpace(string(id)) == "" || catalog == nil || conn == nil {
+	if !validSequenceCoordinates(store, namespace, id) || !validSequenceDependencies(catalog, conn) {
 		return nil, fmt.Errorf("%w: sequence coordinates, catalog and connection are required", faults.ErrInvalidConfiguration)
 	}
 	sequence := &Sequence{store: store, namespace: namespace, id: id, catalog: catalog, service: sequences.NewEventSequencesClient(conn), conn: conn}
@@ -62,6 +62,14 @@ func New(store metadata.StoreName, namespace metadata.Namespace, id events.Seque
 		sequence.appendOriginResolver = provider.AppendOriginResolver()
 	}
 	return sequence, nil
+}
+
+func validSequenceCoordinates(store metadata.StoreName, namespace metadata.Namespace, id events.SequenceID) bool {
+	return strings.TrimSpace(string(store)) != "" && strings.TrimSpace(string(namespace)) != "" && strings.TrimSpace(string(id)) != ""
+}
+
+func validSequenceDependencies(catalog *events.Catalog, conn grpc.ClientConnInterface) bool {
+	return catalog != nil && conn != nil
 }
 
 // ID returns the selected event sequence.
@@ -81,17 +89,11 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	if strings.TrimSpace(string(source)) == "" || s.id == "" {
 		return AppendResult{}, fmt.Errorf("%w: source and sequence are required", faults.ErrInvalidConfiguration)
 	}
-	config := appendConfig{}
-	for _, option := range options {
-		if option == nil {
-			return AppendResult{}, fmt.Errorf("%w: nil append option", faults.ErrInvalidConfiguration)
-		}
-		option(&config)
+	config, err := singleAppendConfig(options)
+	if err != nil {
+		return AppendResult{}, err
 	}
-	var scopes []LabeledScope
-	if config.scope != nil {
-		scopes = []LabeledScope{{Label: string(source), Scope: *config.scope}}
-	}
+	scopes := singleAppendScopes(source, config)
 	batch, err := s.snapshotBatch(ctx, []Entry{{Source: source, Event: event, Route: config.route, Subject: config.subject, Occurred: config.occurred, Tags: config.tags, NamedTags: config.named}}, batchConfig{correlation: config.correlation, correlationSet: config.correlationSet, scopes: scopes})
 	if err != nil {
 		return AppendResult{}, err
@@ -110,6 +112,24 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 	return s.dispatchSingle(ctx, request, batch.refs[0], config.route, config.named, origin)
 }
 
+func singleAppendConfig(options []AppendOption) (appendConfig, error) {
+	config := appendConfig{}
+	for _, option := range options {
+		if option == nil {
+			return config, fmt.Errorf("%w: nil append option", faults.ErrInvalidConfiguration)
+		}
+		option(&config)
+	}
+	return config, nil
+}
+
+func singleAppendScopes(source events.SourceID, config appendConfig) []LabeledScope {
+	if config.scope != nil {
+		return []LabeledScope{{Label: string(source), Scope: *config.scope}}
+	}
+	return nil
+}
+
 func (s *Sequence) dispatchSingle(ctx context.Context, request *sequences.AppendRequest, ref events.TypeRef, route Route, named []events.NamedTag, origin Origin) (result AppendResult, err error) {
 	if err = ctx.Err(); err != nil {
 		return AppendResult{}, err
@@ -121,12 +141,7 @@ func (s *Sequence) dispatchSingle(ctx context.Context, request *sequences.Append
 			err = joinNotificationError(err, s.notifySingle(origin, events.SourceID(request.EventSourceId), ref, route, wire.Correlation(request.CorrelationId), result, err))
 		}
 	}()
-	var envelope *sequences.CommandResult_AppendResponse
-	if len(named) == 0 {
-		envelope, err = s.service.Append(ctx, request)
-	} else {
-		envelope, err = s.service.AppendWithNamedTags(ctx, namedRequest(request, named))
-	}
+	envelope, err := s.sendSingle(ctx, request, named)
 	var sent bool
 	result, sent, err = s.envelopeResult(envelope, err, ref)
 	if !sent {
@@ -135,14 +150,29 @@ func (s *Sequence) dispatchSingle(ctx context.Context, request *sequences.Append
 	if err != nil {
 		return result, err
 	}
+	return result, singleResultError(request, result)
+}
+
+func (s *Sequence) sendSingle(ctx context.Context, request *sequences.AppendRequest, named []events.NamedTag) (*sequences.CommandResult_AppendResponse, error) {
+	if len(named) == 0 {
+		return s.service.Append(ctx, request)
+	}
+	return s.service.AppendWithNamedTags(ctx, namedRequest(request, named))
+}
+
+func singleResultError(request *sequences.AppendRequest, result AppendResult) error {
 	protected := request.ConcurrencyScope.ExpectsNoMatchingEvent || request.ConcurrencyScope.SequenceNumber != uint64(events.Unavailable)
-	if protected && result.Disposition == Committed && !result.ConcurrencyCheckPerformed {
-		return result, fmt.Errorf("%w: kernel committed without the requested concurrency check; do not retry", faults.ErrUnsupported)
+	if missingSingleConcurrencyCheck(result, protected) {
+		return fmt.Errorf("%w: kernel committed without the requested concurrency check; do not retry", faults.ErrUnsupported)
 	}
 	if result.Disposition == Unknown {
-		return result, result.Err()
+		return result.Err()
 	}
-	return result, nil
+	return nil
+}
+
+func missingSingleConcurrencyCheck(result AppendResult, protected bool) bool {
+	return protected && result.Disposition == Committed && !result.ConcurrencyCheckPerformed
 }
 
 // envelopeResult converts one append-shaped kernel reply into a result. A refusal
@@ -150,18 +180,10 @@ func (s *Sequence) dispatchSingle(ctx context.Context, request *sequences.Append
 // OutcomeUnknownError; a known rejection envelope is a Rejected result.
 func (s *Sequence) envelopeResult(envelope *sequences.CommandResult_AppendResponse, err error, ref events.TypeRef) (result AppendResult, sent bool, _ error) {
 	if err != nil {
-		var local *faults.BeforeDispatch
-		if errors.As(err, &local) {
-			return AppendResult{}, false, local.Cause
-		}
-		return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
+		return singleDispatchFailure(err)
 	}
 	if err = wire.CheckEnvelope(envelope); err != nil {
-		var rejected *wire.EnvelopeError
-		if errors.As(err, &rejected) && len(rejected.ExceptionMessages) == 0 {
-			return AppendResult{Disposition: Rejected, CorrelationID: wire.Correlation(envelope.CorrelationId)}, true, err
-		}
-		return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
+		return singleEnvelopeFailure(envelope, err)
 	}
 	if err = wire.RequireMessage(envelope, "Response"); err != nil {
 		return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
@@ -173,24 +195,31 @@ func (s *Sequence) envelopeResult(envelope *sequences.CommandResult_AppendRespon
 	return result, true, nil
 }
 
+func singleDispatchFailure(err error) (AppendResult, bool, error) {
+	var local *faults.BeforeDispatch
+	if errors.As(err, &local) {
+		return AppendResult{}, false, local.Cause
+	}
+	return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
+}
+
+func singleEnvelopeFailure(envelope *sequences.CommandResult_AppendResponse, err error) (AppendResult, bool, error) {
+	var rejected *wire.EnvelopeError
+	if errors.As(err, &rejected) && len(rejected.ExceptionMessages) == 0 {
+		return AppendResult{Disposition: Rejected, CorrelationID: wire.Correlation(envelope.CorrelationId)}, true, err
+	}
+	return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
+}
+
 func (s *Sequence) request(ctx context.Context, source events.SourceID, descriptor events.Descriptor, content string, config appendConfig) (*sequences.AppendRequest, error) {
 	config.route = normalizedRoute(config.route)
-	if err := validateAppendMetadata(config.subject, config.occurred, config.named); err != nil {
+	subject, err := singleAppendSubject(source, config)
+	if err != nil {
 		return nil, err
 	}
-	subject := string(source)
-	if config.subject != nil {
-		subject = string(*config.subject)
-	}
-	if err := compliance.ValidateSubject(subject); err != nil {
+	config.correlation, err = singleAppendCorrelation(config.correlation)
+	if err != nil {
 		return nil, err
-	}
-	if config.correlation == (metadata.CorrelationID{}) {
-		var err error
-		config.correlation, err = metadata.NewCorrelationID()
-		if err != nil {
-			return nil, err
-		}
 	}
 	scope, err := s.resolveScope(ctx, source, config)
 	if err != nil {
@@ -206,12 +235,39 @@ func (s *Sequence) request(ctx context.Context, source events.SourceID, descript
 	if config.occurred != nil {
 		request.Occurred.Value = wire.DateTimeOffset(*config.occurred)
 	}
+	request.Tags = singleAppendTags(descriptor, config.tags)
+	return request, nil
+}
+
+func singleAppendSubject(source events.SourceID, config appendConfig) (string, error) {
+	if err := validateAppendMetadata(config.subject, config.occurred, config.named); err != nil {
+		return "", err
+	}
+	subject := string(source)
+	if config.subject != nil {
+		subject = string(*config.subject)
+	}
+	if err := compliance.ValidateSubject(subject); err != nil {
+		return "", err
+	}
+	return subject, nil
+}
+
+func singleAppendCorrelation(correlation metadata.CorrelationID) (metadata.CorrelationID, error) {
+	if correlation == (metadata.CorrelationID{}) {
+		return metadata.NewCorrelationID()
+	}
+	return correlation, nil
+}
+
+func singleAppendTags(descriptor events.Descriptor, tags []events.Tag) []string {
+	var merged []string
 	seen := make(map[events.Tag]bool)
-	for _, tag := range append(descriptor.Tags(), config.tags...) {
+	for _, tag := range append(descriptor.Tags(), tags...) {
 		if !seen[tag] {
 			seen[tag] = true
-			request.Tags = append(request.Tags, string(tag))
+			merged = append(merged, string(tag))
 		}
 	}
-	return request, nil
+	return merged
 }

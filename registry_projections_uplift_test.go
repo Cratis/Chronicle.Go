@@ -12,7 +12,7 @@ import (
 
 func TestRegistryRejectsGlobalHandlerRegisteredAsReadModel(t *testing.T) {
 	registry, _ := projectionRegistry(t)
-	global, err := projections.Global[ProjectionModel]()
+	global, err := projections.Global[ProjectionModel](projections.GlobalFor[ProjectionModel]())
 	if err != nil {
 		t.Fatal(err)
 	}
