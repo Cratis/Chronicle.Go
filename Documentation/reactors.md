@@ -86,9 +86,11 @@ func awaitObserversActive(ctx context.Context, store *chronicle.EventStore, ids 
 
 Pass the IDs of every observer on the event log involved: each reactor, each
 reducer and each projection. A projection's observer ID is its model or projection
-identifier (for example `model.Identifier()`). Always include the kernel's
-event-log observers `$system.statistics.event-types` and
-`$system.statistics.event-types.global`, as the integration tests do.
+identifier (for example `model.Identifier()`). Include the kernel's event-log
+observer `$system.statistics.event-types`, as the integration tests do. The
+integration tests do not wait for `$system.statistics.event-types.global`: on
+kernel 19.123 it stays disconnected. Its behavior on the pre-19.32.3 kernels this
+wait is for has not been verified; if you include it, keep the context bounded.
 
 This only helps when the observers have nothing to catch up, for example before
 any events exist for the keys involved. `observation.Active` means the observer is
@@ -141,12 +143,14 @@ ignores cancellation cannot block reconnection or unrelated RPCs, but it can
 outlive its generation and overlap delivery on the new one. Honor cancellation
 and make effects idempotent. `CloseContext` bounds the caller's wait when user
 code ignores cancellation; a timeout means cleanup is still incomplete.
-Read-model reactors (`Added`/`Modified`/`Removed` watches) remain with
-[#33](https://github.com/Cratis/Chronicle.Go/issues/33). Observer administration,
-completion/tail waits and local append-result notifications remain in the
-observer follow-up (#13 of the plan). Historical payload selection works for the
-one registered descriptor per ID; simultaneous historical codecs remain with
-[#32](https://github.com/Cratis/Chronicle.Go/issues/32).
+
+Related capabilities are documented separately: read-model reactors
+(`Added`/`Modified`/`Removed` watches) in [read-model reactors](read-model-reactors.md);
+observer administration, tail waits and append completion waits in
+[operations](operations.md); local append-result notifications in
+[appending events](events/appending-events.md#observe-command-attributable-append-attempts);
+and historical event generations and their migrations in
+[event evolution](events/evolution.md).
 
 The program prints `Handled order for Chronicle`. It uses development TLS and
 credentials, creates a new namespace under `plain-go-reactors` on each run, and

@@ -46,9 +46,12 @@ optional dependencies or a workspace. Add directories only
 when implemented; do not copy the C# `Source/` namespace layout. Public examples
 should compile. Product documentation belongs in `Documentation/`.
 
-Generated protobuf/gRPC bindings belong in `contracts/`, driven by pinned buf
-configuration and Go generation directives. This describes the implementation
-layout to establish, not a claim that generated contracts already exist.
+Generated protobuf/gRPC bindings live in public packages under `contracts/`.
+`contracts-source.json` pins the Chronicle release, its immutable commit, input
+hashes and generator versions; `contracts/provenance.go` records the generated
+release. A `go:generate` directive in `contracts/` runs
+`scripts/generate-contracts.py`, and
+`python3 scripts/generate-contracts.py --check` verifies the checked-in output.
 
 Run from the root using the version in `go.mod` and the matrix in CI:
 
@@ -61,7 +64,8 @@ govulncheck ./...
 go generate ./...
 ```
 
-`go generate ./...` regenerates contracts only after the buf recipe is installed;
+`go generate ./...` regenerates contracts and needs Buf installed (see
+[CONTRIBUTING](https://github.com/Cratis/Chronicle.Go/blob/main/CONTRIBUTING.md));
 a no-op invocation is not generation verification. Review its diff and never
 hand-edit generated files. After authorized dependency changes, run `go mod tidy`
 and inspect `go.mod`/`go.sum`. Use `GOWORK=off` to verify independent consumption.
@@ -89,8 +93,11 @@ work. Preparing guidance or code does not itself authorize publication.
 
 ## Local AI ownership and harnesses
 
-These Go rules, skills, and adapters are repository-owned additions, not entries
-in `.cratis/ai.manifest.json`. Do not add managed markers or edit that manifest.
+The [Go rules](https://github.com/Cratis/Chronicle.Go/blob/main/.cratis/ai/rules/go.md)
+are managed: they are listed in `.cratis/ai.manifest.json` and updated by the
+installer. The Cratis parity rules, the local Go skills and the adapters are
+repository-owned additions, not entries in that manifest. Do not add managed
+markers to them or edit the manifest.
 Updates leave unlisted files alone unless a selected corpus asset collides with
 their path; such collisions stop the update. Project instructions are a separate
 migration case: the CLI splits `rules/project.md` at level-two headings when

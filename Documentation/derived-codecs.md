@@ -146,9 +146,8 @@ A projection builds each child of a collection from an event, so the kernel, not
 your code, writes the child document. For an interface collection that document
 also needs `_derivedTypeId`, or the family codec cannot read it back. When the
 family has exactly one registered derivative, `children` resolves that concrete
-type and writes its discriminator on every child `From`; the C# client stamps
-only the `[ChildrenFrom]` creator for a collection with one `[DerivedType]`
-implementation. These declarations come from the executable
+type and writes its discriminator on every child `From`, as the C# client does
+for a child type marked `[DerivedType]`. These declarations come from the executable
 [example](https://github.com/Cratis/Chronicle.Go/blob/main/projections/example_derived_children_test.go):
 
 ```go
@@ -177,8 +176,7 @@ The kernel adds a child for any non-join `From` whose identity is absent, so a
 keyed update that arrives after the child was removed, or before it was created,
 writes a new child; the discriminator keeps that child readable. On an existing
 child the update rewrites the same constant. Joins never add a child, so they
-carry no discriminator, and removals delete the child. The C# client stamps only
-the `[ChildrenFrom]` creator, so a recreated C# child has no discriminator. The
+carry no discriminator, and removals delete the child. The
 fluent `projections.Children` accepts the same family with `Builder[Box]` and
 stamps every child `From` the same way.
 

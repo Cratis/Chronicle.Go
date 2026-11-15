@@ -18,7 +18,7 @@ Use [ReadHistory](reading-events.md) to protect earlier loaded state.
 
 C# exposes `IsSuccess` and `Errors` without a disposition. Go classifies errors-only failures as `Unknown` because the kernel cannot distinguish pre-commit from post-commit failures in its response.
 
-A result includes correlation, whether concurrency checking actually ran, every constraint's name/type/message/details/type ID/position, all append error codes, and a client-independent observer completion target. Waiting for observers is not implemented yet; append success means persistence, not completed side effects.
+A result includes correlation, whether concurrency checking actually ran, every constraint's name/type/message/details/type ID/position, all append error codes, and a client-independent observer completion target. Append success means persistence, not completed side effects. To wait for observers, append with `AppendWithMetadata`, `AppendManyWithMetadata` or `AppendBatchWithMetadata` and call `WaitForCompletion` on the result with `store.Observers()`; see [waiting for appended events to be processed](../operations.md#wait-for-appended-events-to-be-processed).
 
 ## Choose a concurrency expectation
 
