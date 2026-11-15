@@ -24,7 +24,7 @@ import (
 // fail immediately; forward event references and the entire graph are resolved
 // atomically by NewClient against this registry, never a global event catalog.
 func (r *Registry) AddProjection(declaration projections.Declaration) error {
-	if r == nil || declaration.Identifier() == "" || declaration.Model().GoType() == nil {
+	if r == nil || !validProjectionDeclaration(declaration) {
 		return fmt.Errorf("%w: registry and projection declaration required", ErrInvalidConfiguration)
 	}
 	r.mu.Lock()
@@ -34,6 +34,10 @@ func (r *Registry) AddProjection(declaration projections.Declaration) error {
 	}
 	r.projections = append(r.projections, declaration)
 	return nil
+}
+
+func validProjectionDeclaration(declaration projections.Declaration) bool {
+	return declaration.Identifier() != "" && declaration.Model().GoType() != nil
 }
 
 type registrySnapshot struct {
@@ -86,13 +90,7 @@ func prepareRegistryOutput(ctx context.Context, captured *registryDeclarations, 
 		if err != nil {
 			return err
 		}
-		if err := compileReactors(&frozen, captured.reactors, services, captured.reactorMiddlewares, captured.reactorSideEffects); err != nil {
-			return err
-		}
-		if err := compileReducers(&frozen, captured.reducers, services); err != nil {
-			return err
-		}
-		if err := compileReadModelReactors(&frozen, captured.readModelReactors, services, captured.reactorSideEffects); err != nil {
+		if err := compileRegistryObservers(&frozen, captured, services); err != nil {
 			return err
 		}
 		frozen.graphs, err = compileGraphs(captured.graphs, schemas, frozen)
@@ -110,6 +108,16 @@ func prepareRegistryOutput(ctx context.Context, captured *registryDeclarations, 
 		return nil, err
 	}
 	return output, nil
+}
+
+func compileRegistryObservers(frozen *registrySnapshot, captured *registryDeclarations, services reactorScopeFactory) error {
+	if err := compileReactors(frozen, captured.reactors, services, captured.reactorMiddlewares, captured.reactorSideEffects); err != nil {
+		return err
+	}
+	if err := compileReducers(frozen, captured.reducers, services); err != nil {
+		return err
+	}
+	return compileReadModelReactors(frozen, captured.readModelReactors, services, captured.reactorSideEffects)
 }
 
 func prepareRegistryDefinitions(captured *registryDeclarations, factories *registryFactoryOutput) (registryAuthoringOutput, error) {
@@ -132,33 +140,12 @@ func prepareRegistryDefinitions(captured *registryDeclarations, factories *regis
 	if err != nil {
 		return snapshot, err
 	}
-	for _, declaration := range captured.reducers {
-		model, ok := modelCatalog.LookupIdentifier(declaration.Model().Identifier())
-		if !ok || model != declaration.Model() {
-			return snapshot, &reducers.DeclarationError{Reducer: declaration.Identifier(), Cause: fmt.Errorf("%w: reducer model is not registered in this store", ErrInvalidConfiguration)}
-		}
+	if err := validateRegistryReducerModels(captured.reducers, modelCatalog); err != nil {
+		return snapshot, err
 	}
-	claimed := make(map[readmodels.Identifier]bool)
-	for _, declaration := range declarations {
-		if declaration.IsGlobal() {
-			for _, model := range models {
-				if model.GoType() == declaration.Model().GoType() {
-					return snapshot, fmt.Errorf("%w: global handler must not be registered as a read model", ErrInvalidConfiguration)
-				}
-			}
-			continue
-		}
-		model := declaration.Model()
-		registered, ok := modelCatalog.LookupIdentifier(model.Identifier())
-		if !ok || registered != model {
-			return snapshot, fmt.Errorf("%w: projection model is not registered in this store", ErrInvalidConfiguration)
-		}
-		claimed[model.Identifier()] = true
-	}
-	for _, model := range models {
-		if !claimed[model.Identifier()] && projections.HasMappings(model) {
-			declarations = append(declarations, projections.ModelBoundDescriptor(model))
-		}
+	declarations, err = registryModelProjections(declarations, models, modelCatalog)
+	if err != nil {
+		return snapshot, err
 	}
 	snapshot.projections, err = projections.CompileGroup(declarations, catalog)
 	if err != nil {
@@ -166,6 +153,55 @@ func prepareRegistryDefinitions(captured *registryDeclarations, factories *regis
 	}
 	snapshot.models = modelCatalog
 	return snapshot, nil
+}
+
+func validateRegistryReducerModels(declarations []reducers.Declaration, catalog *readmodels.Catalog) error {
+	for _, declaration := range declarations {
+		model, ok := catalog.LookupIdentifier(declaration.Model().Identifier())
+		if !ok || model != declaration.Model() {
+			return &reducers.DeclarationError{Reducer: declaration.Identifier(), Cause: fmt.Errorf("%w: reducer model is not registered in this store", ErrInvalidConfiguration)}
+		}
+	}
+	return nil
+}
+
+func registryModelProjections(declarations []projections.Declaration, models []readmodels.Descriptor, catalog *readmodels.Catalog) ([]projections.Declaration, error) {
+	claimed := make(map[readmodels.Identifier]bool)
+	for _, declaration := range declarations {
+		if err := validateRegistryProjectionModel(declaration, models, catalog); err != nil {
+			return nil, err
+		}
+		if !declaration.IsGlobal() {
+			claimed[declaration.Model().Identifier()] = true
+		}
+	}
+	for _, model := range models {
+		if !claimed[model.Identifier()] && projections.HasMappings(model) {
+			declarations = append(declarations, projections.ModelBoundDescriptor(model))
+		}
+	}
+	return declarations, nil
+}
+
+func validateRegistryProjectionModel(declaration projections.Declaration, models []readmodels.Descriptor, catalog *readmodels.Catalog) error {
+	if declaration.IsGlobal() {
+		return validateRegistryGlobalModel(declaration.Model(), models)
+	}
+	model := declaration.Model()
+	registered, ok := catalog.LookupIdentifier(model.Identifier())
+	if !ok || registered != model {
+		return fmt.Errorf("%w: projection model is not registered in this store", ErrInvalidConfiguration)
+	}
+	return nil
+}
+
+func validateRegistryGlobalModel(global readmodels.Descriptor, models []readmodels.Descriptor) error {
+	for _, model := range models {
+		if model.GoType() == global.GoType() {
+			return fmt.Errorf("%w: global handler must not be registered as a read model", ErrInvalidConfiguration)
+		}
+	}
+	return nil
 }
 
 // bindRegistryDefinitions uses finalized authoring definitions and already frozen
@@ -177,18 +213,10 @@ func bindRegistryDefinitions(authoring registryAuthoringOutput, schemas registry
 		projections: slices.Clone(authoring.projections),
 	}
 	models := schemas.models.Descriptors()
-	var err error
-	for _, compiled := range snapshot.projections {
-		for i, model := range models {
-			if model.Identifier() == compiled.Model().Identifier() {
-				models[i], err = readmodels.BindProjection(model, compiled.Identifier(), compiled.EventSequence(), compiled.IsPassive())
-				if err != nil {
-					return registrySnapshot{}, err
-				}
-				break
-			}
-		}
+	if err := bindRegistryProjectionModels(models, snapshot.projections); err != nil {
+		return registrySnapshot{}, err
 	}
+	var err error
 	snapshot.events, err = schemas.events.WithMigrations(migrations, validateGenerations)
 	if err != nil {
 		return registrySnapshot{}, err
@@ -197,18 +225,55 @@ func bindRegistryDefinitions(authoring registryAuthoringOutput, schemas registry
 	if err != nil {
 		return registrySnapshot{}, err
 	}
-	for i, constraint := range snapshot.constraints {
-		snapshot.constraints[i], err = constraint.Rebind(snapshot.events)
-		if err != nil {
-			return registrySnapshot{}, err
-		}
+	if err := snapshot.rebindConstraints(); err != nil {
+		return registrySnapshot{}, err
 	}
-	for i, projection := range snapshot.projections {
-		model, _ := snapshot.models.LookupIdentifier(projection.Model().Identifier())
-		snapshot.projections[i], err = projection.Rebind(model, authoring.events, snapshot.events)
-		if err != nil {
-			return registrySnapshot{}, err
-		}
+	if err := snapshot.rebindProjections(authoring.events); err != nil {
+		return registrySnapshot{}, err
 	}
 	return snapshot, nil
+}
+
+func bindRegistryProjectionModels(models []readmodels.Descriptor, definitions []projections.Definition) error {
+	for _, compiled := range definitions {
+		if err := bindRegistryProjectionModel(models, compiled); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func bindRegistryProjectionModel(models []readmodels.Descriptor, compiled projections.Definition) error {
+	for i, model := range models {
+		if model.Identifier() != compiled.Model().Identifier() {
+			continue
+		}
+		bound, err := readmodels.BindProjection(model, compiled.Identifier(), compiled.EventSequence(), compiled.IsPassive())
+		models[i] = bound
+		return err
+	}
+	return nil
+}
+
+func (s *registrySnapshot) rebindConstraints() error {
+	for i, constraint := range s.constraints {
+		bound, err := constraint.Rebind(s.events)
+		s.constraints[i] = bound
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *registrySnapshot) rebindProjections(authoringEvents *events.Catalog) error {
+	for i, projection := range s.projections {
+		model, _ := s.models.LookupIdentifier(projection.Model().Identifier())
+		bound, err := projection.Rebind(model, authoringEvents, s.events)
+		s.projections[i] = bound
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
