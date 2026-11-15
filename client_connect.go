@@ -30,39 +30,10 @@ type supervision struct {
 func (c *Client) Connect(ctx context.Context) error { return c.connect(ctx, true) }
 
 func (c *Client) connect(ctx context.Context, explicit bool) error {
-	c.mu.Lock()
-	if err := c.requirePreparedLocked("connect", false); err != nil {
-		c.mu.Unlock()
+	s, firstPending, err := c.connectSupervisor(ctx, explicit)
+	if err != nil || s == nil {
 		return err
 	}
-	if err := ctx.Err(); err != nil {
-		c.mu.Unlock()
-		return err
-	}
-	if c.current != nil && c.current.ctx.Err() == nil {
-		c.mu.Unlock()
-		return nil
-	}
-	s := c.supervisor
-	if s == nil {
-		if !explicit && c.connectionError != nil && terminalConnectionError(c.connectionError) {
-			err := c.connectionError
-			c.mu.Unlock()
-			return err
-		}
-		s = &supervision{first: make(chan struct{}), done: make(chan struct{})}
-		c.supervisor = s
-		c.connectionError = nil
-		c.work.Add(1)
-		go c.supervise(ctx, s)
-	}
-	firstPending := true
-	select {
-	case <-s.first:
-		firstPending = false
-	default:
-	}
-	c.mu.Unlock()
 	if !firstPending {
 		return c.waitConnected(ctx, s)
 	}
@@ -72,12 +43,64 @@ func (c *Client) connect(ctx context.Context, explicit bool) error {
 	case <-c.life.Done():
 		return ErrClosed
 	case <-s.first:
-		startupCanceled := errors.Is(s.err, context.Canceled) || errors.Is(s.err, context.DeadlineExceeded)
-		if s.err != nil && (ctx.Err() != nil || !startupCanceled) {
-			return s.err
+		if err := connectionStartupError(ctx, s.err); err != nil {
+			return err
 		}
 	}
 	return c.waitConnected(ctx, s)
+}
+
+func (c *Client) connectSupervisor(ctx context.Context, explicit bool) (*supervision, bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.requirePreparedLocked("connect", false); err != nil {
+		return nil, false, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
+	if c.current != nil && c.current.ctx.Err() == nil {
+		return nil, false, nil
+	}
+	s, err := c.ensureSupervisorLocked(ctx, explicit)
+	if err != nil {
+		return nil, false, err
+	}
+	firstPending := true
+	select {
+	case <-s.first:
+		firstPending = false
+	default:
+	}
+	return s, firstPending, nil
+}
+
+func (c *Client) ensureSupervisorLocked(ctx context.Context, explicit bool) (*supervision, error) {
+	if c.supervisor != nil {
+		return c.supervisor, nil
+	}
+	if !explicit && c.connectionError != nil {
+		if terminalConnectionError(c.connectionError) {
+			return nil, c.connectionError
+		}
+	}
+	s := &supervision{first: make(chan struct{}), done: make(chan struct{})}
+	c.supervisor = s
+	c.connectionError = nil
+	c.work.Add(1)
+	go c.supervise(ctx, s)
+	return s, nil
+}
+
+func connectionStartupError(ctx context.Context, err error) error {
+	startupCanceled := errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+	if err == nil {
+		return nil
+	}
+	if ctx.Err() != nil || !startupCanceled {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) waitConnected(ctx context.Context, s *supervision) error {
@@ -127,54 +150,18 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 		if closed {
 			return
 		}
-		parent := c.life
-		if startup != nil {
-			parent = startup
-		}
-		ctx, cancel := context.WithTimeout(parent, c.config.connectTimeout)
-		stop := context.AfterFunc(c.life, cancel)
-		g, err := c.newGeneration(ctx)
-		if err == nil {
-			err = c.establish(ctx, g)
-		}
-		stop()
-		cancel()
-		if err == nil && g.ctx.Err() != nil {
-			err = g.ctx.Err()
-		}
-		c.mu.Lock()
-		if err == nil && !c.closed {
-			c.current = g
-			c.connectionError = nil
-		} else if err == nil {
-			err = ErrClosed
-		}
-		c.notifyLocked()
-		c.mu.Unlock()
+		g, err := c.establishGeneration(startup)
+		err = c.installGeneration(g, err)
 		if startup != nil {
 			s.err = err
 			close(s.first)
 			startup = nil
 		}
 		if err == nil {
-			c.hooks.publishConnected(g)
-			diagnostics.Log(c.life, c.config.logger, slog.LevelInfo, "client connected", "client", "connect", nil)
 			attempt = 0
-			err = c.runGeneration(g)
-			cause := err
-			if c.life.Err() != nil {
-				cause = ErrClosed
-			}
-			c.hooks.publishDisconnected(g, cause)
+			err = c.runConnectedGeneration(g)
 		}
-		c.mu.Lock()
-		c.current = nil
-		c.connectionError = err
-		c.notifyLocked()
-		c.mu.Unlock()
-		if g != nil {
-			c.retire(g)
-		}
+		c.endGeneration(g, err)
 		if c.life.Err() != nil {
 			return
 		}
@@ -187,5 +174,60 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 		if connection.Wait(c.life, connection.Backoff(attempt, time.Second, 30*time.Second)) != nil {
 			return
 		}
+	}
+}
+
+func (c *Client) establishGeneration(startup context.Context) (*generation, error) {
+	parent := c.life
+	if startup != nil {
+		parent = startup
+	}
+	ctx, cancel := context.WithTimeout(parent, c.config.connectTimeout)
+	stop := context.AfterFunc(c.life, cancel)
+	g, err := c.newGeneration(ctx)
+	if err == nil {
+		err = c.establish(ctx, g)
+	}
+	stop()
+	cancel()
+	if err == nil && g.ctx.Err() != nil {
+		err = g.ctx.Err()
+	}
+	return g, err
+}
+
+func (c *Client) installGeneration(g *generation, err error) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err == nil && !c.closed {
+		c.current = g
+		c.connectionError = nil
+	} else if err == nil {
+		err = ErrClosed
+	}
+	c.notifyLocked()
+	return err
+}
+
+func (c *Client) runConnectedGeneration(g *generation) error {
+	c.hooks.publishConnected(g)
+	diagnostics.Log(c.life, c.config.logger, slog.LevelInfo, "client connected", "client", "connect", nil)
+	err := c.runGeneration(g)
+	cause := err
+	if c.life.Err() != nil {
+		cause = ErrClosed
+	}
+	c.hooks.publishDisconnected(g, cause)
+	return err
+}
+
+func (c *Client) endGeneration(g *generation, err error) {
+	c.mu.Lock()
+	c.current = nil
+	c.connectionError = err
+	c.notifyLocked()
+	c.mu.Unlock()
+	if g != nil {
+		c.retire(g)
 	}
 }
