@@ -47,16 +47,9 @@ type generation struct {
 }
 
 func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
-	addresses := make([]string, len(c.uri.addresses))
-	for i, address := range c.uri.addresses {
-		addresses[i] = address.String()
-	}
-	var err error
-	if c.uri.srv {
-		addresses, err = connection.Resolve(ctx, c.config.resolver, c.uri.addresses[0].Host)
-		if err != nil {
-			return nil, err
-		}
+	addresses, err := c.generationAddresses(ctx)
+	if err != nil {
+		return nil, err
 	}
 	address, err := c.selectAddress(ctx, addresses)
 	if err != nil {
@@ -70,31 +63,65 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 	c.nextGeneration++
 	g.number = c.nextGeneration
 	g.initialStores = c.storeSnapshot()
-	if g.tokens == nil && !c.config.noAuth && !c.uri.noAuth {
-		g.oauth = connection.NewOAuth(address, c.uri.clientID, c.uri.secret, c.tls)
-		g.tokens = g.oauth
+	g.configureAuthentication(address)
+	if err := g.openConnection(address); err != nil {
+		g.cancel()
+		if g.oauth != nil {
+			g.oauth.Close()
+		}
+		return nil, err
 	}
-	if g.raw == nil {
-		var conn *grpc.ClientConn
-		options := []grpc.DialOption{
-			grpc.WithTransportCredentials(credentials.NewTLS(c.tls)),
-			grpc.WithDisableRetry(),
-			grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 60 * time.Second, Timeout: 30 * time.Second}),
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(c.config.maxReceiveMessageSize), grpc.MaxCallSendMsgSize(c.config.maxSendMessageSize)),
-		}
-		if c.config.grpcStatsHandler != nil {
-			options = append(options, grpc.WithStatsHandler(c.config.grpcStatsHandler))
-		}
-		conn, err = grpc.NewClient("dns:///"+address, options...)
-		if err != nil {
-			g.cancel()
-			if g.oauth != nil {
-				g.oauth.Close()
-			}
-			return nil, err
-		}
-		g.raw, g.closer = conn, conn
+	g.configureTransport()
+	return g, nil
+}
+
+func (c *Client) generationAddresses(ctx context.Context) ([]string, error) {
+	addresses := make([]string, len(c.uri.addresses))
+	for i, address := range c.uri.addresses {
+		addresses[i] = address.String()
 	}
+	if c.uri.srv {
+		return connection.Resolve(ctx, c.config.resolver, c.uri.addresses[0].Host)
+	}
+	return addresses, nil
+}
+
+func (g *generation) configureAuthentication(address string) {
+	c := g.client
+	if g.tokens != nil {
+		return
+	}
+	if c.config.noAuth || c.uri.noAuth {
+		return
+	}
+	g.oauth = connection.NewOAuth(address, c.uri.clientID, c.uri.secret, c.tls)
+	g.tokens = g.oauth
+}
+
+func (g *generation) openConnection(address string) error {
+	if g.raw != nil {
+		return nil
+	}
+	c := g.client
+	options := []grpc.DialOption{
+		grpc.WithTransportCredentials(credentials.NewTLS(c.tls)),
+		grpc.WithDisableRetry(),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 60 * time.Second, Timeout: 30 * time.Second}),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(c.config.maxReceiveMessageSize), grpc.MaxCallSendMsgSize(c.config.maxSendMessageSize)),
+	}
+	if c.config.grpcStatsHandler != nil {
+		options = append(options, grpc.WithStatsHandler(c.config.grpcStatsHandler))
+	}
+	conn, err := grpc.NewClient("dns:///"+address, options...)
+	if err != nil {
+		return err
+	}
+	g.raw, g.closer = conn, conn
+	return nil
+}
+
+func (g *generation) configureTransport() {
+	c := g.client
 	g.transport = &generationTransport{generation: g}
 	if c.config.maxSendMessageSizeSet {
 		g.transport.callOptions = append(g.transport.callOptions, grpc.MaxCallSendMsgSize(c.config.maxSendMessageSize))
@@ -102,7 +129,6 @@ func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
 	if c.config.maxReceiveMessageSizeSet {
 		g.transport.callOptions = append(g.transport.callOptions, grpc.MaxCallRecvMsgSize(c.config.maxReceiveMessageSize))
 	}
-	return g, nil
 }
 
 func (c *Client) establish(ctx context.Context, g *generation) error {
@@ -110,32 +136,47 @@ func (c *Client) establish(ctx context.Context, g *generation) error {
 	ctx = kernelcapability.Without(ctx)
 	service := clients.NewConnectionServiceClient(g.transport)
 	if !c.config.skipCompatibility {
-		response, err := service.CheckCompatibility(ctx, &clients.CompatibilityRequest{ClientType: "Go", ClientVersion: "0.1.0-dev", ProtocolVersion: contracts.ProtocolVersion, DescriptorSet: contracts.DescriptorSet()})
-		if err != nil {
-			return fmt.Errorf("chronicle: compatibility preflight: %w", err)
+		if err := g.checkCompatibility(ctx, service); err != nil {
+			return err
 		}
-		if response == nil {
-			return ErrProtocol
-		}
-		if !response.IsCompatible || len(response.Incompatibilities) > 0 {
-			return &CompatibilityError{ServerVersion: response.ServerVersion, Details: append([]string(nil), response.Incompatibilities...)}
-		}
-		g.decisions = decision.Supported(response.ServerVersion, response.ServerProtocolVersion)
-		// Skipped verification leaves the zero value: no fix is assumed present.
-		g.capabilities = kernelcapability.FromVersion(response.ServerVersion)
 	}
 	if c.config.skipKeepAlive {
 		// Compatibility is anonymous on the kernel. A protected, read-only RPC
 		// verifies credentials without registering a fabricated logical session.
-		response, err := service.GetConnectedClients(ctx, &emptypb.Empty{})
-		if err != nil {
-			return fmt.Errorf("chronicle: skipped-session readiness probe: %w", err)
-		}
-		if response == nil {
-			return ErrProtocol
-		}
-		return ctx.Err()
+		return probeConnectionReadiness(ctx, service)
 	}
+	return g.connectSession(ctx, service)
+}
+
+func (g *generation) checkCompatibility(ctx context.Context, service clients.ConnectionServiceClient) error {
+	response, err := service.CheckCompatibility(ctx, &clients.CompatibilityRequest{ClientType: "Go", ClientVersion: "0.1.0-dev", ProtocolVersion: contracts.ProtocolVersion, DescriptorSet: contracts.DescriptorSet()})
+	if err != nil {
+		return fmt.Errorf("chronicle: compatibility preflight: %w", err)
+	}
+	if response == nil {
+		return ErrProtocol
+	}
+	if !response.IsCompatible || len(response.Incompatibilities) > 0 {
+		return &CompatibilityError{ServerVersion: response.ServerVersion, Details: append([]string(nil), response.Incompatibilities...)}
+	}
+	g.decisions = decision.Supported(response.ServerVersion, response.ServerProtocolVersion)
+	// Skipped verification leaves the zero value: no fix is assumed present.
+	g.capabilities = kernelcapability.FromVersion(response.ServerVersion)
+	return nil
+}
+
+func probeConnectionReadiness(ctx context.Context, service clients.ConnectionServiceClient) error {
+	response, err := service.GetConnectedClients(ctx, &emptypb.Empty{})
+	if err != nil {
+		return fmt.Errorf("chronicle: skipped-session readiness probe: %w", err)
+	}
+	if response == nil {
+		return ErrProtocol
+	}
+	return ctx.Err()
+}
+
+func (g *generation) connectSession(ctx context.Context, service clients.ConnectionServiceClient) error {
 	id, err := uuid.NewRandom()
 	if err != nil {
 		return err
@@ -149,24 +190,37 @@ func (c *Client) establish(ctx context.Context, g *generation) error {
 		return err
 	}
 	g.stream = stream
-	first, err := stream.Recv()
-	if err == nil && (first == nil || first.ConnectionId != g.id) {
-		err = ErrProtocol
-	}
+	err = g.acknowledgeStartup(ctx, service)
 	if err == nil {
-		_, err = service.ConnectionKeepAlive(ctx, first)
-	}
-	if err == nil && (!stop() || ctx.Err() != nil) {
-		err = ctx.Err()
-		if err == nil {
-			err = context.Canceled
-		}
+		err = completeConnectionStartup(ctx, stop)
 	}
 	if err != nil {
 		g.cancel()
 		drainStream(stream)
 	}
 	return err
+}
+
+func (g *generation) acknowledgeStartup(ctx context.Context, service clients.ConnectionServiceClient) error {
+	first, err := g.stream.Recv()
+	if err != nil {
+		return err
+	}
+	if first == nil || first.ConnectionId != g.id {
+		return ErrProtocol
+	}
+	_, err = service.ConnectionKeepAlive(ctx, first)
+	return err
+}
+
+func completeConnectionStartup(ctx context.Context, stop func() bool) error {
+	if stop() && ctx.Err() == nil {
+		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return context.Canceled
 }
 
 func drainStream(stream grpc.ServerStreamingClient[clients.ConnectionKeepAlive]) {
