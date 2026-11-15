@@ -44,6 +44,15 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 	if err != nil {
 		return nil, streamError(err)
 	}
+	definition := reactorDefinition(plan)
+	err = sendOnStream(stream.Send, stream.Recv, &contracts.ReactorMessage{Content: &contracts.OneOf_RegisterReactor_ReactorResult{Value0: &contracts.RegisterReactor{ConnectionId: connectionID, EventStore: string(store), Namespace: string(namespace), Reactor: definition, PageDelivery: &contracts.PageDelivery{Enabled: true}}}})
+	if err != nil {
+		return nil, err
+	}
+	return &Reactor{plan: plan, stream: stream, runtime: runtime, store: store, namespace: namespace}, nil
+}
+
+func reactorDefinition(plan *reactors.Plan) *contracts.ReactorDefinition {
 	definition := &contracts.ReactorDefinition{
 		ReactorId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()),
 		IsReplayable: plan.IsReplayable(), StartAtTail: plan.StartsAtTail(), Tags: plan.Tags(),
@@ -58,11 +67,7 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 	for _, ref := range plan.EventTypes() {
 		definition.EventTypes = append(definition.EventTypes, &contracts.EventTypeWithKeyExpression{EventType: &contracts.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Key: "$eventSourceId"})
 	}
-	err = sendOnStream(stream.Send, stream.Recv, &contracts.ReactorMessage{Content: &contracts.OneOf_RegisterReactor_ReactorResult{Value0: &contracts.RegisterReactor{ConnectionId: connectionID, EventStore: string(store), Namespace: string(namespace), Reactor: definition, PageDelivery: &contracts.PageDelivery{Enabled: true}}}})
-	if err != nil {
-		return nil, err
-	}
-	return &Reactor{plan: plan, stream: stream, runtime: runtime, store: store, namespace: namespace}, nil
+	return definition
 }
 
 // Run processes batches sequentially until cancellation or stream failure. Effects
@@ -121,7 +126,7 @@ func (r *Reactor) decodePartition(partition string, appended []*contracts.Append
 		if i == 0 {
 			at = 0
 		}
-		if event == nil || event.Context == nil || (i > 0 && event.Context.SequenceNumber <= previous) {
+		if invalidPartitionEvent(event, i, previous) {
 			decoded.Failed, decoded.FailedAt = faults.ErrProtocol, at
 			return decoded
 		}
@@ -134,6 +139,13 @@ func (r *Reactor) decodePartition(partition string, appended []*contracts.Append
 		decoded.Events = append(decoded.Events, PageEvent{Content: content, Context: ec})
 	}
 	return decoded
+}
+
+func invalidPartitionEvent(event *contracts.AppendedEvent, index int, previous uint64) bool {
+	if event == nil || event.Context == nil {
+		return true
+	}
+	return index > 0 && event.Context.SequenceNumber <= previous
 }
 
 func messages(err error) []string {
@@ -186,7 +198,7 @@ func ReactorInvocationContext(ctx context.Context, id reactors.ID, ec events.Con
 	return metadata.WithCausation(ctx, metadata.Causation{Occurred: time.Now(), Type: "Client Reactor", Properties: map[string]string{"ReactorId": string(id), "eventTypeId": string(ec.EventType.ID), "eventTypeGeneration": strconv.FormatUint(uint64(ec.EventType.Generation), 10), "eventSequenceId": string(ec.Sequence), "eventSequenceNumber": strconv.FormatUint(uint64(ec.SequenceNumber), 10)}})
 }
 func eventContext(c *contracts.EventContext, store metadata.StoreName, namespace metadata.Namespace, sequence events.SequenceID) (events.Context, error) {
-	if c == nil || c.EventType == nil || c.EventType.Id == "" || c.EventType.Generation == 0 || c.SequenceNumber >= uint64(events.Unavailable-2) || c.EventSourceId == "" || (c.EventStore != "" && c.EventStore != string(store)) || (c.Namespace != "" && c.Namespace != string(namespace)) {
+	if !validEventEnvelope(c) || !matchesEventLocation(c, store, namespace) {
 		return events.Context{}, faults.ErrProtocol
 	}
 	occurred, err := time.Parse(time.RFC3339Nano, c.GetOccurred().GetValue())
@@ -197,31 +209,62 @@ func eventContext(c *contracts.EventContext, store metadata.StoreName, namespace
 	if ec.Subject == "" {
 		ec.Subject = events.Subject(ec.SourceID)
 	}
+	err = appendEventMetadata(&ec, c)
+	return ec, err
+}
+
+func validEventEnvelope(c *contracts.EventContext) bool {
+	if c == nil || c.EventType == nil {
+		return false
+	}
+	if c.EventType.Id == "" || c.EventType.Generation == 0 {
+		return false
+	}
+	return c.SequenceNumber < uint64(events.Unavailable-2) && c.EventSourceId != ""
+}
+
+func matchesEventLocation(c *contracts.EventContext, store metadata.StoreName, namespace metadata.Namespace) bool {
+	if c.EventStore != "" && c.EventStore != string(store) {
+		return false
+	}
+	return c.Namespace == "" || c.Namespace == string(namespace)
+}
+
+func appendEventMetadata(ec *events.Context, c *contracts.EventContext) error {
 	for _, cause := range c.Causation {
-		if cause == nil {
-			return ec, faults.ErrProtocol
-		}
-		occurred, err := time.Parse(time.RFC3339Nano, cause.GetOccurred().GetValue())
+		decoded, err := decodeCausation(cause)
 		if err != nil {
-			return ec, faults.ErrProtocol
+			return err
 		}
-		properties := make(map[string]string, len(cause.Properties))
-		for k, v := range cause.Properties {
-			properties[k] = v
-		}
-		ec.Causation = append(ec.Causation, metadata.Causation{Occurred: occurred, Type: cause.Type, Properties: properties})
+		ec.Causation = append(ec.Causation, decoded)
 	}
 	for _, tag := range c.Tags {
 		ec.Tags = append(ec.Tags, events.Tag(tag))
 	}
 	for _, tag := range c.NamedTags {
 		if tag == nil {
-			return ec, faults.ErrProtocol
+			return faults.ErrProtocol
 		}
 		ec.NamedTags = append(ec.NamedTags, events.NamedTag{Name: tag.Name, Value: tag.Value})
 	}
-	return ec, nil
+	return nil
 }
+
+func decodeCausation(cause *contracts.Causation) (metadata.Causation, error) {
+	if cause == nil {
+		return metadata.Causation{}, faults.ErrProtocol
+	}
+	occurred, err := time.Parse(time.RFC3339Nano, cause.GetOccurred().GetValue())
+	if err != nil {
+		return metadata.Causation{}, faults.ErrProtocol
+	}
+	properties := make(map[string]string, len(cause.Properties))
+	for k, v := range cause.Properties {
+		properties[k] = v
+	}
+	return metadata.Causation{Occurred: occurred, Type: cause.Type, Properties: properties}, nil
+}
+
 func identity(value *contracts.Identity) identities.Identity {
 	if value == nil {
 		return identities.NotSet()
