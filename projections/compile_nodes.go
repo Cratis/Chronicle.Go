@@ -32,7 +32,7 @@ func (c *compiler) compileNode(d *declaration, fields, parentFields []serializat
 	if err := validateNodeInputs(d, parentFields); err != nil {
 		return nil, err
 	}
-	n := newNodeDefinition(d, parentFields != nil, inheritedNoAuto, nested, identifiedBy)
+	n := newNodeDefinition(d, nodeOptions{isChild: parentFields != nil, inheritedNoAuto: inheritedNoAuto, nested: nested, identifiedBy: identifiedBy})
 	childEvents, err := c.childEvents(fields)
 	if err != nil {
 		return nil, err
@@ -60,12 +60,19 @@ func hasRootOnlyState(d *declaration) bool {
 	return d.initialState != "" || len(d.labels) != 0
 }
 
-func newNodeDefinition(d *declaration, isChild, inheritedNoAuto, nested bool, identifiedBy string) *nodeDefinition {
-	n := &nodeDefinition{noAuto: inheritedNoAuto || d.noAuto, ownNoAuto: d.noAuto, inheritAuto: isChild && !d.modelBound && !d.autoSet, identifiedBy: identifiedBy, children: map[string]*nodeDefinition{}, nested: map[string]*nodeDefinition{}}
+type nodeOptions struct {
+	isChild         bool
+	inheritedNoAuto bool
+	nested          bool
+	identifiedBy    string
+}
+
+func newNodeDefinition(d *declaration, options nodeOptions) *nodeDefinition {
+	n := &nodeDefinition{noAuto: options.inheritedNoAuto || d.noAuto, ownNoAuto: d.noAuto, inheritAuto: options.isChild && !d.modelBound && !d.autoSet, identifiedBy: options.identifiedBy, children: map[string]*nodeDefinition{}, nested: map[string]*nodeDefinition{}}
 	if !d.modelBound {
 		n.noAuto = d.noAuto
 	}
-	if nested {
+	if options.nested {
 		n.identifiedBy = "*NotSet*"
 	}
 	return n
@@ -217,12 +224,11 @@ func hasWrite(writes []write, path string) bool {
 
 // anyChildNode reports whether the predicate holds for any child or nested node.
 func anyChildNode(n *nodeDefinition, match func(*nodeDefinition) bool) bool {
-	for _, child := range n.children {
-		if match(child) {
-			return true
-		}
-	}
-	for _, child := range n.nested {
+	return anyNode(n.children, match) || anyNode(n.nested, match)
+}
+
+func anyNode(nodes map[string]*nodeDefinition, match func(*nodeDefinition) bool) bool {
+	for _, child := range nodes {
 		if match(child) {
 			return true
 		}
@@ -265,10 +271,14 @@ func mappingExpression(d declarations.Directive, target string) expression {
 		v, _ := argument(d, "value")
 		e = literalValue(v)
 	}
-	if once, ok := argument(d, "once"); ok && once.Kind == declarations.Boolean && once.Text == "true" {
-		e.once = true
+	if once, ok := argument(d, "once"); ok {
+		e.once = booleanTrue(once)
 	}
 	return e
+}
+
+func booleanTrue(value declarations.Value) bool {
+	return value.Kind == declarations.Boolean && value.Text == "true"
 }
 func removalFromTag(d declarations.Directive, event events.Descriptor) removalDeclaration {
 	s := newSubscription(event, nil)
