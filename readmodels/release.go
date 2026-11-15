@@ -80,11 +80,43 @@ func (s *Service) releaseDocument(ctx context.Context, d Descriptor, document js
 	if err := json.Unmarshal(document, &fields); err != nil {
 		return nil, &ReleaseError{Cause: faults.ErrProtocol}
 	}
+	declared := releaseDeclaredFields(d)
+	subject := defaultReleaseSubject(d, fields, declared)
+	groups, err := releaseGroups(d, fields, declared, subject)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.releaseGroups(ctx, d, fields, groups); err != nil {
+		return nil, err
+	}
+	result, err := json.Marshal(fields)
+	if err != nil {
+		return nil, &ReleaseError{Cause: faults.ErrProtocol}
+	}
+	return result, nil
+}
+
+func releaseDeclaredFields(d Descriptor) map[string]bool {
 	declared := make(map[string]bool)
 	for _, field := range serialization.RootFields(d.definition.plan.Fields()) {
 		declared[field.Name] = true
 	}
-	subject := ""
+	return declared
+}
+
+func defaultReleaseSubject(d Descriptor, fields map[string]json.RawMessage, declared map[string]bool) string {
+	for _, name := range releaseSubjectProperties(d, declared) {
+		if name == "" {
+			continue
+		}
+		if value := releaseSubject(fields[name]); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func releaseSubjectProperties(d Descriptor, declared map[string]bool) []string {
 	// Stored lineage is authoritative for raw documents; a typed instance normally
 	// resolves the explicitly selected property, then the Go ID property.
 	subjectProperties := []string{"__subject", d.definition.config.subject}
@@ -98,15 +130,10 @@ func (s *Service) releaseDocument(ctx context.Context, d Descriptor, document js
 			}
 		}
 	}
-	for _, name := range subjectProperties {
-		if name == "" {
-			continue
-		}
-		if value := releaseSubject(fields[name]); value != "" {
-			subject = value
-			break
-		}
-	}
+	return subjectProperties
+}
+
+func releaseGroups(d Descriptor, fields map[string]json.RawMessage, declared map[string]bool, subject string) (map[string]map[string]json.RawMessage, error) {
 	var subjects map[string]string
 	if lineage, ok := fields["__subjects"]; ok {
 		if err := json.Unmarshal(lineage, &subjects); err != nil {
@@ -120,18 +147,30 @@ func (s *Service) releaseDocument(ctx context.Context, d Descriptor, document js
 		if !declared[name] {
 			continue
 		}
-		propertySubject, ok := subjects[name]
-		if !ok {
-			propertySubject = subject
-		}
-		if propertySubject == "" && (d.definition.protected[name] || ok) {
-			return nil, &ReleaseError{Cause: invalid("protected value requires a subject")}
+		propertySubject, err := releasePropertySubject(d, name, subjects, subject)
+		if err != nil {
+			return nil, err
 		}
 		if groups[propertySubject] == nil {
 			groups[propertySubject] = make(map[string]json.RawMessage)
 		}
 		groups[propertySubject][name] = value
 	}
+	return groups, nil
+}
+
+func releasePropertySubject(d Descriptor, name string, subjects map[string]string, fallback string) (string, error) {
+	subject, explicit := subjects[name]
+	if !explicit {
+		subject = fallback
+	}
+	if subject == "" && (d.definition.protected[name] || explicit) {
+		return "", &ReleaseError{Cause: invalid("protected value requires a subject")}
+	}
+	return subject, nil
+}
+
+func (s *Service) releaseGroups(ctx context.Context, d Descriptor, fields map[string]json.RawMessage, groups map[string]map[string]json.RawMessage) error {
 	ordered := make([]string, 0, len(groups))
 	for group := range groups {
 		ordered = append(ordered, group)
@@ -140,34 +179,45 @@ func (s *Service) releaseDocument(ctx context.Context, d Descriptor, document js
 	for _, group := range ordered {
 		payload, err := json.Marshal(groups[group])
 		if err != nil {
-			return nil, &ReleaseError{Cause: faults.ErrProtocol}
+			return &ReleaseError{Cause: faults.ErrProtocol}
 		}
 		released, err := s.releaseSlice(ctx, d, group, payload)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		// Never merge a partial reply over retained ciphertext. Unprotected
-		// bookkeeping may be omitted, but each protected root that was sent
-		// must be replaced by the release response.
-		for root := range d.definition.protected {
-			if _, sent := groups[group][root]; sent {
-				if _, returned := released[root]; !returned {
-					return nil, &ReleaseError{Cause: faults.ErrProtocol}
-				}
-			}
+		if err := checkReleasedRoots(d, groups[group], released); err != nil {
+			return err
 		}
-		for name, value := range released {
-			// A group cannot overwrite another owner's values or stored lineage.
-			if _, sent := groups[group][name]; sent && name != "__subject" && name != "__subjects" {
-				fields[name] = value
-			}
+		mergeReleasedGroup(fields, groups[group], released)
+	}
+	return nil
+}
+
+func checkReleasedRoots(d Descriptor, sent, released map[string]json.RawMessage) error {
+	// Never merge a partial reply over retained ciphertext. Unprotected
+	// bookkeeping may be omitted, but each protected root that was sent
+	// must be replaced by the release response.
+	for root := range d.definition.protected {
+		if _, ok := sent[root]; !ok {
+			continue
+		}
+		if _, ok := released[root]; !ok {
+			return &ReleaseError{Cause: faults.ErrProtocol}
 		}
 	}
-	result, err := json.Marshal(fields)
-	if err != nil {
-		return nil, &ReleaseError{Cause: faults.ErrProtocol}
+	return nil
+}
+
+func mergeReleasedGroup(fields, sent, released map[string]json.RawMessage) {
+	for name, value := range released {
+		// A group cannot overwrite another owner's values or stored lineage.
+		if name == "__subject" || name == "__subjects" {
+			continue
+		}
+		if _, ok := sent[name]; ok {
+			fields[name] = value
+		}
 	}
-	return result, nil
 }
 
 // validateReleasedDocument invokes application codecs, so callers must not hold
@@ -230,7 +280,7 @@ func (s *Service) releaseSlice(ctx context.Context, d Descriptor, subject string
 	if err != nil {
 		return nil, &ReleaseError{Cause: wire.RPCError(err)}
 	}
-	if response == nil || response.HasError || response.Error != "" || !validDocument(bytes.TrimSpace([]byte(response.Payload))) {
+	if !validReleaseResponse(response) {
 		return nil, &ReleaseError{Cause: faults.ErrProtocol}
 	}
 	if err := validateReleased(d.Schema(), payload, []byte(response.Payload)); err != nil {
@@ -241,6 +291,16 @@ func (s *Service) releaseSlice(ctx context.Context, d Descriptor, subject string
 		return nil, &ReleaseError{Cause: faults.ErrProtocol}
 	}
 	return released, nil
+}
+
+func validReleaseResponse(response *compliance.ReleaseResponse) bool {
+	if response == nil {
+		return false
+	}
+	if response.HasError || response.Error != "" {
+		return false
+	}
+	return validDocument(bytes.TrimSpace([]byte(response.Payload)))
 }
 
 func idProperty(d Descriptor) string {
