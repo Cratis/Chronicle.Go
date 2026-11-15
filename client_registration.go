@@ -77,17 +77,7 @@ func (c *Client) Ready(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		for _, store := range stores {
-			if _, err = store.register(attemptCtx, g); err != nil {
-				break
-			}
-		}
-		if err == nil {
-			err = g.ctx.Err()
-		}
-		if err == nil {
-			err = attemptCtx.Err()
-		}
+		err = registerStoreSnapshot(attemptCtx, g, stores)
 		retry := g.ctx.Err() != nil && retryReadiness(ctx, err)
 		done()
 		if !retry {
@@ -98,6 +88,18 @@ func (c *Client) Ready(ctx context.Context) error {
 
 func retryReadiness(ctx context.Context, err error) bool {
 	return err != nil && ctx.Err() == nil && !errors.Is(err, ErrNotPrepared) && !errors.Is(err, ErrPreparationInProgress) && !terminalConnectionError(err)
+}
+
+func registerStoreSnapshot(ctx context.Context, g *generation, stores []*EventStore) error {
+	for _, store := range stores {
+		if _, err := store.register(ctx, g); err != nil {
+			return err
+		}
+	}
+	if err := g.ctx.Err(); err != nil {
+		return err
+	}
+	return ctx.Err()
 }
 
 // acquireReady tolerates a generation disappearing between connection readiness
@@ -198,44 +200,71 @@ func (s *EventStore) registerRoot(ctx context.Context, g *generation, waitReady 
 	// Seeding must follow observer registration sends even during background
 	// replay. Without seeds, retain the nonblocking observer startup path.
 	hasExternalSubscriptions := len(s.externalSubscriptions()) > 0
-	waitReady = waitReady || !s.seedDefinition().IsEmpty() || hasExternalSubscriptions
-	if err := s.startReactors(ctx, g, waitReady); err != nil {
+	waitReady = s.registrationNeedsReadiness(waitReady, hasExternalSubscriptions)
+	if name, err := s.startRegistrationObservers(ctx, g, waitReady); err != nil {
 		outcome.Failure = err
 		outcome.RetryPending = ctx.Err() == nil && g.ctx.Err() == nil
-		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "reactors", Failure: err})
-		return outcome, &RegistrationError{Outcome: outcome}
-	}
-	if err := s.startReducers(ctx, g, waitReady); err != nil {
-		outcome.Failure = err
-		outcome.RetryPending = ctx.Err() == nil && g.ctx.Err() == nil
-		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "reducers", Failure: err})
+		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: name, Failure: err})
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
 	// C# registers external subscriptions after every observer and before
 	// read-model reactors and seeding. Do not use the barrier transport here.
-	if hasExternalSubscriptions {
-		err := s.registerExternalSubscriptions(ctx, g)
-		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "external-subscriptions", Failure: err})
-		if err != nil {
-			outcome.Failure, outcome.RetryPending = err, retryRegistration(err)
-			return outcome, &RegistrationError{Outcome: outcome}
-		}
+	outcome = s.registerSubscriptionStage(ctx, g, hasExternalSubscriptions, outcome)
+	if outcome.Failure != nil {
+		return outcome, &RegistrationError{Outcome: outcome}
 	}
 	if err := s.startReadModelReactors(ctx, g, waitReady); err != nil {
 		outcome.Failure = err
 		outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "read-model-reactors", Failure: err})
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
-	if !s.seedDefinition().IsEmpty() {
-		seedOutcome := s.registerSeeds(ctx, g)
-		outcome.Artifacts = append(outcome.Artifacts, seedOutcome.Artifacts...)
-		outcome.Attempts = max(outcome.Attempts, seedOutcome.Attempts)
-		outcome.Failure, outcome.RetryPending = seedOutcome.Failure, seedOutcome.RetryPending
-		if outcome.Failure != nil {
-			return outcome, &RegistrationError{Outcome: outcome}
-		}
+	outcome = s.registerSeedStage(ctx, g, outcome)
+	if outcome.Failure != nil {
+		return outcome, &RegistrationError{Outcome: outcome}
 	}
 	return outcome, nil
+}
+
+func (s *EventStore) registrationNeedsReadiness(waitReady, hasExternalSubscriptions bool) bool {
+	return waitReady || !s.seedDefinition().IsEmpty() || hasExternalSubscriptions
+}
+
+func (s *EventStore) startRegistrationObservers(ctx context.Context, g *generation, waitReady bool) (string, error) {
+	if err := s.startReactors(ctx, g, waitReady); err != nil {
+		return "reactors", err
+	}
+	if err := s.startReducers(ctx, g, waitReady); err != nil {
+		return "reducers", err
+	}
+	return "", nil
+}
+
+func (s *EventStore) registerSubscriptionStage(ctx context.Context, g *generation, enabled bool, outcome RegistrationOutcome) RegistrationOutcome {
+	if !enabled {
+		return outcome
+	}
+	err := s.registerExternalSubscriptions(ctx, g)
+	outcome.Artifacts = append(outcome.Artifacts, ArtifactRegistration{Name: "external-subscriptions", Failure: err})
+	if err != nil {
+		outcome.Failure, outcome.RetryPending = err, retryRegistration(err)
+	}
+	return outcome
+}
+
+func (s *EventStore) registerSeedStage(ctx context.Context, g *generation, outcome RegistrationOutcome) RegistrationOutcome {
+	if s.seedDefinition().IsEmpty() {
+		return outcome
+	}
+	seedOutcome := s.registerSeeds(ctx, g)
+	outcome.Artifacts = append(outcome.Artifacts, seedOutcome.Artifacts...)
+	outcome.Attempts = max(outcome.Attempts, seedOutcome.Attempts)
+	outcome.Failure, outcome.RetryPending = seedOutcome.Failure, seedOutcome.RetryPending
+	return outcome
+}
+
+func (s *EventStore) needsRegistrationReplay(g *generation) bool {
+	outcome := g.registrations.For(registrationKey(s.name, s.namespace, s.definitionRoot().revision)).Snapshot()
+	return !outcome.HasRun || outcome.RetryPending || s.needsSeedRegistration(g) || s.needsExternalSubscriptionRegistration(g)
 }
 
 func (c *Client) replayRegistrations(g *generation) {
@@ -248,8 +277,7 @@ func (c *Client) replayRegistrations(g *generation) {
 			if g.ctx.Err() != nil {
 				return
 			}
-			outcome := g.registrations.For(registrationKey(store.name, store.namespace, store.definitionRoot().revision)).Snapshot()
-			if !outcome.HasRun || outcome.RetryPending || store.needsSeedRegistration(g) || store.needsExternalSubscriptionRegistration(g) {
+			if store.needsRegistrationReplay(g) {
 				// Ordinary replay starts observer workers without waiting. Seeded
 				// stores must await their registration before dispatching seed data.
 				_, _ = store.registerWithReadiness(g.ctx, g, false)

@@ -139,31 +139,12 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 	if typ.Kind() != reflect.Struct || typ.Name() == "" {
 		return Type[T]{}, fmt.Errorf("%w: event must be a named non-pointer struct", faults.ErrInvalidConfiguration)
 	}
-	config := typeConfig{id: TypeID(typ.Name()), generation: 1}
-	for _, option := range options {
-		if option == nil {
-			return Type[T]{}, fmt.Errorf("%w: nil event option", faults.ErrInvalidConfiguration)
-		}
-		option(&config)
-	}
-	if config.sourceStore != "" && strings.TrimSpace(config.sourceStore) == "" {
-		return Type[T]{}, fmt.Errorf("%w: source store must be nonblank", faults.ErrInvalidConfiguration)
-	}
-	if strings.TrimSpace(string(config.id)) == "" || strings.Contains(string(config.id), ",") || config.generation == 0 {
-		return Type[T]{}, fmt.Errorf("%w: nonblank comma-free type ID and positive generation required", faults.ErrInvalidConfiguration)
-	}
-	if config.subjectType != nil && (config.subjectType != typ || config.subject == nil) {
-		return Type[T]{}, fmt.Errorf("%w: subject resolver must be non-nil and match the declared event type", faults.ErrInvalidConfiguration)
-	}
-	plan, err := serialization.CompileWith(typ, serialization.Config{Codecs: config.codecs})
+	config, err := configureEventType(typ, options)
 	if err != nil {
-		var declaration *serialization.CodecError
-		if errors.As(err, &declaration) {
-			declaration.Role = "event"
-		}
 		return Type[T]{}, err
 	}
-	if err := plan.ValidateRole(declarations.Event); err != nil {
+	plan, err := compileEventPlan(typ, config.codecs)
+	if err != nil {
 		return Type[T]{}, err
 	}
 	descriptor := Descriptor{typ: typ, ref: TypeRef{ID: config.id, Generation: config.generation}, plan: plan, tags: append([]Tag(nil), config.tags...), subject: config.subject, sourceStore: config.sourceStore,
@@ -177,6 +158,61 @@ func Define[T any](options ...TypeOption) (Type[T], error) {
 		return Type[T]{}, err
 	}
 	return Type[T]{descriptor: descriptor}, nil
+}
+
+func configureEventType(typ reflect.Type, options []TypeOption) (typeConfig, error) {
+	config := typeConfig{id: TypeID(typ.Name()), generation: 1}
+	for _, option := range options {
+		if option == nil {
+			return typeConfig{}, fmt.Errorf("%w: nil event option", faults.ErrInvalidConfiguration)
+		}
+		option(&config)
+	}
+	if err := config.validateIdentity(); err != nil {
+		return typeConfig{}, err
+	}
+	if !config.validSubjectResolver(typ) {
+		return typeConfig{}, fmt.Errorf("%w: subject resolver must be non-nil and match the declared event type", faults.ErrInvalidConfiguration)
+	}
+	return config, nil
+}
+
+func (config typeConfig) validateIdentity() error {
+	if config.sourceStore != "" {
+		if strings.TrimSpace(config.sourceStore) == "" {
+			return fmt.Errorf("%w: source store must be nonblank", faults.ErrInvalidConfiguration)
+		}
+	}
+	if !config.validTypeRef() {
+		return fmt.Errorf("%w: nonblank comma-free type ID and positive generation required", faults.ErrInvalidConfiguration)
+	}
+	return nil
+}
+
+func (config typeConfig) validTypeRef() bool {
+	return strings.TrimSpace(string(config.id)) != "" && !strings.Contains(string(config.id), ",") && config.generation != 0
+}
+
+func (config typeConfig) validSubjectResolver(typ reflect.Type) bool {
+	if config.subjectType == nil {
+		return true
+	}
+	return config.subjectType == typ && config.subject != nil
+}
+
+func compileEventPlan(typ reflect.Type, codecs *serialization.Codecs) (*serialization.Plan, error) {
+	plan, err := serialization.CompileWith(typ, serialization.Config{Codecs: codecs})
+	if err != nil {
+		var declaration *serialization.CodecError
+		if errors.As(err, &declaration) {
+			declaration.Role = "event"
+		}
+		return nil, err
+	}
+	if err := plan.ValidateRole(declarations.Event); err != nil {
+		return nil, err
+	}
+	return plan, nil
 }
 
 // Catalog is a frozen, concurrency-safe set of event descriptors. Use NewCatalog.
@@ -194,28 +230,59 @@ type Catalog struct {
 func NewCatalog(descriptors ...Descriptor) (*Catalog, error) {
 	c := &Catalog{types: make(map[reflect.Type]Descriptor), refs: make(map[TypeRef]Descriptor), current: make(map[TypeID]Descriptor), ordered: append([]Descriptor(nil), descriptors...)}
 	for _, descriptor := range descriptors {
-		if descriptor.typ == nil {
-			return nil, fmt.Errorf("%w: empty event descriptor", faults.ErrInvalidConfiguration)
-		}
-		_, duplicateRef := c.refs[descriptor.ref]
-		_, duplicateCurrent := c.current[descriptor.ref.ID]
-		if _, exists := c.types[descriptor.typ]; exists || duplicateRef || (descriptor.historicalFor == nil && duplicateCurrent) {
-			return nil, fmt.Errorf("%w: duplicate event type %s", faults.ErrInvalidConfiguration, descriptor.ref.ID)
-		}
-		c.types[descriptor.typ], c.refs[descriptor.ref] = descriptor, descriptor
-		if descriptor.historicalFor == nil {
-			c.current[descriptor.ref.ID] = descriptor
+		if err := c.addDescriptor(descriptor); err != nil {
+			return nil, err
 		}
 	}
 	for _, descriptor := range descriptors {
-		if target := descriptor.historicalFor; target != nil {
-			current, ok := c.current[descriptor.ref.ID]
-			if !ok || current.ref != target.ref || current.typ != target.typ || descriptor.ref.Generation >= current.ref.Generation {
-				return nil, fmt.Errorf("%w: historical generation requires its current event", faults.ErrInvalidConfiguration)
-			}
+		if !c.supportsHistory(descriptor) {
+			return nil, fmt.Errorf("%w: historical generation requires its current event", faults.ErrInvalidConfiguration)
 		}
 	}
 	return c, nil
+}
+
+func (c *Catalog) addDescriptor(descriptor Descriptor) error {
+	if descriptor.typ == nil {
+		return fmt.Errorf("%w: empty event descriptor", faults.ErrInvalidConfiguration)
+	}
+	if c.conflictsWith(descriptor) {
+		return fmt.Errorf("%w: duplicate event type %s", faults.ErrInvalidConfiguration, descriptor.ref.ID)
+	}
+	c.types[descriptor.typ], c.refs[descriptor.ref] = descriptor, descriptor
+	if descriptor.historicalFor == nil {
+		c.current[descriptor.ref.ID] = descriptor
+	}
+	return nil
+}
+
+func (c *Catalog) conflictsWith(descriptor Descriptor) bool {
+	if _, exists := c.types[descriptor.typ]; exists {
+		return true
+	}
+	if _, exists := c.refs[descriptor.ref]; exists {
+		return true
+	}
+	_, duplicateCurrent := c.current[descriptor.ref.ID]
+	return descriptor.historicalFor == nil && duplicateCurrent
+}
+
+func (c *Catalog) supportsHistory(descriptor Descriptor) bool {
+	target := descriptor.historicalFor
+	if target == nil {
+		return true
+	}
+	current, ok := c.current[descriptor.ref.ID]
+	if !ok {
+		return false
+	}
+	if current.ref != target.ref {
+		return false
+	}
+	if current.typ != target.typ {
+		return false
+	}
+	return descriptor.ref.Generation < current.ref.Generation
 }
 
 // Lookup resolves values and non-nil pointers to registered structs. Nil and nil

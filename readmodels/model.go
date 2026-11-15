@@ -239,65 +239,121 @@ func Define[T any](options ...ModelOption) (Model[T], error) {
 	if typ.Kind() != reflect.Struct || typ.Name() == "" {
 		return Model[T]{}, invalid("model must be a named non-pointer struct")
 	}
+	config, err := configureModel(typ, options)
+	if err != nil {
+		return Model[T]{}, err
+	}
+	definition, err := compileModelDefinition(typ, config)
+	if err != nil {
+		return Model[T]{}, err
+	}
+	return Model[T]{descriptor: Descriptor{definition: definition}}, nil
+}
+
+func configureModel(typ reflect.Type, options []ModelOption) (modelConfig, error) {
 	config := modelConfig{identifier: Identifier(typ.PkgPath() + "." + typ.Name()), generation: 1,
 		container: pluralize(typ.Name()), display: typ.Name(), sink: Sink{Type: MongoDB}, observer: Projection, sequence: events.EventLog}
 	for _, option := range options {
 		if option == nil {
-			return Model[T]{}, invalid("nil model option")
+			return modelConfig{}, invalid("nil model option")
 		}
 		option(&config)
 	}
-	if strings.Contains(typ.Name(), "[") && (!config.identifierExplicit || !config.containerExplicit) {
-		return Model[T]{}, invalid("generic models require an explicit identifier and container name")
+	if err := config.validateDeclaration(typ); err != nil {
+		return modelConfig{}, err
 	}
-	if strings.TrimSpace(string(config.identifier)) == "" || strings.TrimSpace(config.container) == "" || strings.TrimSpace(config.display) == "" || config.generation == 0 || strings.TrimSpace(string(config.sequence)) == "" {
-		return Model[T]{}, invalid("nonblank model identity, container, display, sequence and positive generation required")
+	if err := config.normalizeSink(); err != nil {
+		return modelConfig{}, err
 	}
-	if config.observer != Projection && config.observer != Reducer {
-		return Model[T]{}, invalid("unknown observer type")
+	return config, nil
+}
+
+func (config modelConfig) validateDeclaration(typ reflect.Type) error {
+	if config.needsExplicitIdentity(typ) {
+		return invalid("generic models require an explicit identifier and container name")
 	}
-	switch config.sink.Type {
-	case MongoDB, SQL, InMemory, NoSink:
-	default:
-		return Model[T]{}, fmt.Errorf("%w: unknown sink type", faults.ErrUnsupported)
+	if !config.validMetadata() {
+		return invalid("nonblank model identity, container, display, sequence and positive generation required")
+	}
+	if !config.validObserver() {
+		return invalid("unknown observer type")
+	}
+	return nil
+}
+
+func (config modelConfig) needsExplicitIdentity(typ reflect.Type) bool {
+	return strings.Contains(typ.Name(), "[") && (!config.identifierExplicit || !config.containerExplicit)
+}
+
+func (config modelConfig) validMetadata() bool {
+	return strings.TrimSpace(string(config.identifier)) != "" && strings.TrimSpace(config.container) != "" && strings.TrimSpace(config.display) != "" && config.generation != 0 && strings.TrimSpace(string(config.sequence)) != ""
+}
+
+func (config modelConfig) validObserver() bool {
+	return config.observer == Projection || config.observer == Reducer
+}
+
+func (config *modelConfig) normalizeSink() error {
+	if !supportedSink(config.sink.Type) {
+		return fmt.Errorf("%w: unknown sink type", faults.ErrUnsupported)
 	}
 	if config.sink.ConfigurationID == "" {
 		config.sink.ConfigurationID = uuid.Nil.String()
 	}
-	id, err := uuid.Parse(config.sink.ConfigurationID)
-	if err != nil || id.String() != config.sink.ConfigurationID {
-		return Model[T]{}, invalid("sink configuration requires a canonical UUID")
+	if !canonicalSinkConfiguration(config.sink.ConfigurationID) {
+		return invalid("sink configuration requires a canonical UUID")
 	}
-	if config.sink.Type == NoSink && strings.TrimSpace(config.observerID) == "" && !config.passive {
-		return Model[T]{}, invalid("passive models require a nonblank observer identifier")
+	if config.needsObserverIdentifier() {
+		return invalid("passive models require a nonblank observer identifier")
 	}
+	return nil
+}
+
+func supportedSink(kind SinkType) bool {
+	switch kind {
+	case MongoDB, SQL, InMemory, NoSink:
+		return true
+	default:
+		return false
+	}
+}
+
+func canonicalSinkConfiguration(value string) bool {
+	id, err := uuid.Parse(value)
+	return err == nil && id.String() == value
+}
+
+func (config modelConfig) needsObserverIdentifier() bool {
+	return config.sink.Type == NoSink && strings.TrimSpace(config.observerID) == "" && !config.passive
+}
+
+func compileModelDefinition(typ reflect.Type, config modelConfig) (*definition, error) {
 	plan, err := serialization.CompileReadModelWith(typ, serialization.Config{Codecs: config.codecs})
 	if err != nil {
-		return Model[T]{}, err
+		return nil, err
 	}
 	if err := plan.ValidateRole(declarations.Model); err != nil {
-		return Model[T]{}, err
+		return nil, err
 	}
 	if err := collectIndexes(plan, &config, typ); err != nil {
-		return Model[T]{}, err
+		return nil, err
 	}
 	if err := collectSubject(plan, &config); err != nil {
-		return Model[T]{}, err
+		return nil, err
 	}
 	config.protection, err = plan.FreezeProtection(config.protection...)
 	if err != nil {
-		return Model[T]{}, err
+		return nil, err
 	}
 	schema, err := modelSchema(plan, config)
 	if err != nil {
-		return Model[T]{}, err
+		return nil, err
 	}
 	protected, err := serialization.ProtectionRoots(schema)
 	if err != nil {
-		return Model[T]{}, err
+		return nil, err
 	}
-	descriptor := Descriptor{definition: &definition{typ: typ, plan: plan, origin: plan, config: config, schema: schema, protected: protected}}
-	return Model[T]{descriptor: descriptor}, nil
+	return &definition{typ: typ, plan: plan, origin: plan, config: config, schema: schema, protected: protected}, nil
 }
 
 func invalid(message string) error {
