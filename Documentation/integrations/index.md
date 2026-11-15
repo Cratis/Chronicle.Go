@@ -81,12 +81,14 @@ one; an observer still requests its own declared generation.
 | `WithEventTypes(refs...)` | All current catalog types if omitted; exact generations retained; repeated filters deduplicated |
 | `WithEventSequence(id)` | `event-log` |
 | `WithReplayable(bool)` | `true` |
-| `WithActive(bool)` | `true`; see the pinned-kernel limitation below |
+| `WithActive(bool)` | `true`; see the historical kernel limitation below |
 | `WithHeader(key, value)` | Replaces the same exact key |
 | `WithBasicAuth`, `WithBearerToken`, `WithOAuth` | No authorization; last authorization option wins |
 
-The C# public Register builder supports Basic and Bearer. Go `WithOAuth` is a
-converter/contract-backed convenience, not C# Register-factory parity. The
+The C# definition builder supports Basic, Bearer and OAuth. Go `WithOAuth` takes
+no scope, while the C# `WithOAuth` accepts an optional `scope`. The C# builder's
+managed identity authorization and generation delivery options have no Go
+equivalent. The
 [actual-package authentication observations](authentication-evidence.md) compare
 None/Basic/Bearer requests without claiming kernel authentication behavior.
 
@@ -97,14 +99,17 @@ Authorization is intentionally **not reconstructed** on read-back: the kernel
 never returns the credentials. Do not reuse read-back as a credential-preserving
 update template.
 
-The SDK sends explicit false fields to preserve C# protobuf defaults. In
-19.32.3-development, MongoDB's webhook conversion still loses `IsActive=false`
-on read-back, including C#-equivalent requests
+The SDK sends explicit false fields to preserve C# protobuf defaults.
+
+Historical limitation: in 19.32.3-development, MongoDB's webhook conversion lost
+`IsActive=false` on read-back, including C#-equivalent requests
 ([Chronicle#4394](https://github.com/Cratis/Chronicle/issues/4394)). Do not rely on
-inactive webhook behavior on that kernel. Definition management is tested; HTTP
-delivery/authentication and webhook updates are not end-to-end verified here.
-Authorization events can also fail to append on this kernel when their internal
-event schema is absent; command acceptance alone is not authentication evidence.
+inactive webhook behavior on that kernel. Current Chronicle source round-trips
+`IsActive`, but inactive webhook behavior on the kernel this client pins has not
+been verified here. Definition management is tested; HTTP delivery/authentication
+and webhook updates are not end-to-end verified here. On 19.32.3-development,
+authorization events could also fail to append when their internal event schema
+was absent; command acceptance alone is not authentication evidence.
 
 ## Declare external services
 

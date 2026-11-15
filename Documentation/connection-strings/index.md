@@ -23,7 +23,7 @@ Use `chronicle://one:35000,two:35000` for multiple endpoints or `chronicle+srv:/
 
 `loadBalancer=least-connections` is the default. It probes HTTPS `/connections/count` with a two-second budget per endpoint, randomly breaks ties, and makes a best-effort `/connections/reserve` request. Probes run concurrently over the bounded endpoint set after up to 250ms of jitter. Reservations expire server-side after 30 seconds; there is no release endpoint. `loadBalancer=round-robin` starts at a random offset; `loadBalancer=random` independently selects a candidate. Selection happens per generation, not per append. Single endpoints need no probe.
 
-API keys, URI certificate/password options and plaintext `disableTls` still return `ErrUnsupported`. Configure PEM material through `WithTLS`.
+API keys, the URI `certificatePath`/`certificatePassword` options and plaintext `disableTls` are recognized but still return `ErrUnsupported`. The C# client also recognizes `caCertificatePath`; Go does not, so it fails like any unknown option, with `ErrInvalidConfiguration`. Configure PEM material, including a CA certificate, through `WithTLS`.
 
 ## Custom load balancing
 
@@ -79,7 +79,7 @@ shows a strategy choosing the last candidate without network I/O.
 
 Certificate validation is **enabled by default**, unlike the C# development default. `WithDevelopmentDefaults()` explicitly permits a self-signed local kernel certificate. `skipTlsValidation=true` is an explicit URI alternative. Neither overrides an explicit `WithTLS` policy; `skipTlsValidation=false` also wins over development defaults.
 
-`WithTLS(*tls.Config)` clones the configuration and its root pool for both OAuth HTTPS and gRPC. Set `RootCAs` with `x509.NewCertPool`/`AppendCertsFromPEM`; load client certificates with `tls.LoadX509KeyPair`. TLS 1.2 is the minimum. Treat supplied certificates, private keys and TLS callbacks as immutable after configuration. Password-protected certificate files are unsupported; URI certificate options never silently succeed.
+`WithTLS(*tls.Config)` clones the configuration and its root pool for both OAuth HTTPS and gRPC. Set `RootCAs` with `x509.NewCertPool`/`AppendCertsFromPEM`; load client certificates with `tls.LoadX509KeyPair`. TLS 1.2 is the minimum. Treat supplied certificates, private keys and TLS callbacks as immutable after configuration. Password-protected certificate files are unsupported; URI certificate options never silently succeed (see above for which error each returns).
 
 `WithTokenSource(source)` accepts a concurrent, context-aware `Token(ctx) (chronicle.Token, error)` implementation. You own that source; the client never closes it. Nonzero expiration must be in the future. Tokens format as redacted, but their `AccessToken` field is sensitive.
 

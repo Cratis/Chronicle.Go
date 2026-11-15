@@ -61,10 +61,12 @@ must be regular files with exact casing, without symlink ancestors or hardlinks.
 Case-fold collisions are rejected. A root `go.work` is forbidden even if ignored;
 visible nested workspaces are forbidden too.
 
-## Unpublished source before a root release
+## Unpublished nested source
 
-Chronicle currently has no released root tag. This does **not** block ordinary
-root CI or source implementation of declaration tooling in
+The root module has v0.x release tags (see [releases](releases.md)). Nested
+modules are still unpublished, and an unpublished nested module may preview root
+source that no tag contains yet. This does **not** block ordinary root CI or
+source implementation of declaration tooling in
 [#23](https://github.com/Cratis/Chronicle.Go/issues/23) and
 [#39](https://github.com/Cratis/Chronicle.Go/issues/39).
 
