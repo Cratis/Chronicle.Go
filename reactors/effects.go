@@ -82,19 +82,29 @@ func supportsResult(typ reflect.Type, catalog *events.Catalog, handlers []SideEf
 	if builtinResult(typ, catalog) {
 		return true
 	}
+	if handlersSupportResult(typ, handlers) {
+		return true
+	}
+	if !isEffectCollection(typ) {
+		return false
+	}
+	elem := typ.Elem()
+	return !isEffectCollection(elem) && supportsResult(elem, catalog, handlers)
+}
+
+func handlersSupportResult(typ reflect.Type, handlers []SideEffectHandler) bool {
 	for _, handler := range handlers {
 		if handler.CanHandleReturnType(typ) {
 			return true
 		}
 	}
-	if typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
-		elem := typ.Elem()
-		if elem.Kind() != reflect.Slice && elem.Kind() != reflect.Array {
-			return supportsResult(elem, catalog, handlers)
-		}
-	}
 	return false
 }
+
+func isEffectCollection(typ reflect.Type) bool {
+	return typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array
+}
+
 func builtinResult(typ reflect.Type, catalog *events.Catalog) bool {
 	if len(matchingEvents(typ, catalog)) != 0 {
 		return true
@@ -105,17 +115,17 @@ func builtinResult(typ reflect.Type, catalog *events.Catalog) bool {
 	if typ == reflect.TypeFor[eventsequences.Entry]() || typ == reflect.TypeFor[eventsequences.EventsWithConcurrencyScopes]() {
 		return true
 	}
-	if typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
-		elem := typ.Elem()
-		if elem == reflect.TypeFor[any]() || len(matchingEvents(elem, catalog)) != 0 {
-			return true
-		}
-		if elem.Kind() == reflect.Pointer {
-			elem = elem.Elem()
-		}
-		return elem == reflect.TypeFor[eventsequences.Entry]()
+	return isEffectCollection(typ) && builtinCollectionResult(typ.Elem(), catalog)
+}
+
+func builtinCollectionResult(elem reflect.Type, catalog *events.Catalog) bool {
+	if elem == reflect.TypeFor[any]() || len(matchingEvents(elem, catalog)) != 0 {
+		return true
 	}
-	return false
+	if elem.Kind() == reflect.Pointer {
+		elem = elem.Elem()
+	}
+	return elem == reflect.TypeFor[eventsequences.Entry]()
 }
 
 type eventEffect struct {
@@ -140,13 +150,29 @@ func (l *Lease) handleEffect(ctx context.Context, value any, invocation Invocati
 	}
 	effectContext := SideEffectContext{Invocation: invocation, Reactor: l.instance, Runtime: runtime, Events: l.plan.catalog,
 		Replay: invocation.Context.ObservationState&events.ObservationReplay != 0, OnceOnly: onceOnly, Replayable: l.plan.IsReplayable()}
+	return l.handleEffectContext(ctx, value, effectContext)
+}
+
+func (l *Lease) handleEffectContext(ctx context.Context, value any, effectContext SideEffectContext) error {
 	actions, err := l.classifyEffect(value, effectContext, true)
 	if err != nil {
 		return err
 	}
-	if recorder, ok := runtime.(reactoreffects.Recorder); ok {
+	if recorder, ok := effectContext.Runtime.(reactoreffects.Recorder); ok {
 		return recorder.RecordEffect(ctx, value)
 	}
+	if err := l.prepareEffectActions(ctx, effectContext.Runtime, actions); err != nil {
+		return err
+	}
+	for _, action := range actions {
+		if err := action.execute(ctx, effectContext); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *Lease) prepareEffectActions(ctx context.Context, runtime Runtime, actions []effectAction) error {
 	// SDK appenders retain immutable prepared actions. Borrowed custom appenders
 	// keep their existing contract, which cannot guarantee private preparation.
 	var preparer reactoreffects.Preparer[eventsequences.Entry, eventsequences.LabeledScope]
@@ -154,46 +180,58 @@ func (l *Lease) handleEffect(ctx context.Context, value any, invocation Invocati
 		preparer, _ = provider.EventLog().(reactoreffects.Preparer[eventsequences.Entry, eventsequences.LabeledScope])
 	}
 	for i := range actions {
-		action := &actions[i]
-		if !action.builtin {
-			continue
-		}
-		if preparer != nil {
-			action.prepared, err = preparer.PrepareReturnedEvents(ctx, reactoreffects.Preparation[eventsequences.Entry, eventsequences.LabeledScope]{Entries: action.events.entries, Scopes: action.events.scopes, Bare: action.events.bare, Single: action.events.single, Batch: action.events.batch})
-			if err != nil {
-				return err
-			}
-			continue
-		}
-		for _, entry := range action.events.entries {
-			if err := ctx.Err(); err != nil {
-				return err
-			}
-			descriptor, ok := l.plan.catalog.Lookup(entry.Event)
-			if !ok {
-				return faults.ErrNotRegistered
-			}
-			if _, err := descriptor.Marshal(entry.Event); err != nil {
-				return err
-			}
+		if err := l.prepareEffectAction(ctx, &actions[i], preparer); err != nil {
+			return err
 		}
 	}
-	for _, action := range actions {
+	return nil
+}
+
+func (l *Lease) prepareEffectAction(ctx context.Context, action *effectAction, preparer reactoreffects.Preparer[eventsequences.Entry, eventsequences.LabeledScope]) error {
+	if !action.builtin {
+		return nil
+	}
+	if preparer == nil {
+		return l.marshalEffectEntries(ctx, action.events.entries)
+	}
+	var err error
+	action.prepared, err = preparer.PrepareReturnedEvents(ctx, reactoreffects.Preparation[eventsequences.Entry, eventsequences.LabeledScope]{Entries: action.events.entries, Scopes: action.events.scopes, Bare: action.events.bare, Single: action.events.single, Batch: action.events.batch})
+	return err
+}
+
+func (l *Lease) marshalEffectEntries(ctx context.Context, entries []eventsequences.Entry) error {
+	for _, entry := range entries {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		var failure error
-		if action.prepared != nil {
-			failure = action.prepared(ctx)
-		} else if action.builtin {
-			failure = appendEffect(ctx, runtime, action.events)
+		descriptor, ok := l.plan.catalog.Lookup(entry.Event)
+		if !ok {
+			return faults.ErrNotRegistered
 		}
-		for _, handler := range action.handlers {
-			failure = errors.Join(failure, handler.Handle(ctx, effectContext, action.value))
+		if _, err := descriptor.Marshal(entry.Event); err != nil {
+			return err
 		}
-		if failure != nil {
-			return failure
-		}
+	}
+	return nil
+}
+
+func (a effectAction) execute(ctx context.Context, effectContext SideEffectContext) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	failure := a.executeBuiltin(ctx, effectContext.Runtime)
+	for _, handler := range a.handlers {
+		failure = errors.Join(failure, handler.Handle(ctx, effectContext, a.value))
+	}
+	return failure
+}
+
+func (a effectAction) executeBuiltin(ctx context.Context, runtime Runtime) error {
+	if a.prepared != nil {
+		return a.prepared(ctx)
+	}
+	if a.builtin {
+		return appendEffect(ctx, runtime, a.events)
 	}
 	return nil
 }
@@ -210,18 +248,28 @@ func (l *Lease) classifyEffect(value any, ec SideEffectContext, collection bool)
 		return nil, err
 	}
 	action := effectAction{value: value, events: effect, builtin: builtin}
-	for _, handler := range l.plan.sideEffects {
-		if handler.CanHandle(ec, value) {
-			action.handlers = append(action.handlers, handler)
-		}
-	}
+	action.handlers = l.matchingEffectHandlers(ec, value)
 	if builtin || len(action.handlers) != 0 {
 		return []effectAction{action}, nil
 	}
 	v := reflect.ValueOf(value)
-	if !collection || (v.Kind() != reflect.Slice && v.Kind() != reflect.Array) {
+	if !collection || !isEffectCollection(v.Type()) {
 		return nil, invalid("unhandled reactor return value")
 	}
+	return l.classifyEffectItems(v, ec)
+}
+
+func (l *Lease) matchingEffectHandlers(ec SideEffectContext, value any) []SideEffectHandler {
+	var handlers []SideEffectHandler
+	for _, handler := range l.plan.sideEffects {
+		if handler.CanHandle(ec, value) {
+			handlers = append(handlers, handler)
+		}
+	}
+	return handlers
+}
+
+func (l *Lease) classifyEffectItems(v reflect.Value, ec SideEffectContext) ([]effectAction, error) {
 	var actions []effectAction
 	for i := 0; i < v.Len(); i++ {
 		item, err := l.classifyEffect(v.Index(i).Interface(), ec, false)
@@ -242,43 +290,62 @@ func (l *Lease) classifyEvents(value any, ec events.Context) (eventEffect, bool,
 		effect := eventEffect{entries: slices.Clone(batch.Events), scopes: slices.Clone(batch.Scopes), batch: true}
 		return effect, true, l.validateEffectEntries(effect.entries)
 	}
-	effect := eventEffect{bare: true, single: true}
-	values := []any{value}
-	if v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
-		effect.single = false
-		values = make([]any, v.Len())
-		for i := range values {
-			values[i] = v.Index(i).Interface()
-		}
+	values, single := effectValues(value, v)
+	effect, matched := l.collectEventEntries(values)
+	if !matched {
+		return eventEffect{}, false, nil
 	}
+	effect.single = single
+	l.applyEffectDefaults(&effect, values, ec)
+	return effect, true, l.validateEffectEntries(effect.entries)
+}
+
+func effectValues(value any, v reflect.Value) ([]any, bool) {
+	if !isEffectCollection(v.Type()) {
+		return []any{value}, true
+	}
+	values := make([]any, v.Len())
+	for i := range values {
+		values[i] = v.Index(i).Interface()
+	}
+	return values, false
+}
+
+func targetedEffectEntry(item any) (eventsequences.Entry, bool) {
+	v := reflect.ValueOf(item)
+	if v.Kind() == reflect.Pointer {
+		v = v.Elem()
+	}
+	entry, ok := v.Interface().(eventsequences.Entry)
+	return entry, ok
+}
+
+func (l *Lease) collectEventEntries(values []any) (eventEffect, bool) {
+	effect := eventEffect{bare: true}
 	for _, item := range values {
 		if nilLike(item) {
-			return eventEffect{}, false, nil
+			return eventEffect{}, false
 		}
-		iv := reflect.ValueOf(item)
-		if iv.Kind() == reflect.Pointer {
-			iv = iv.Elem()
-		}
-		if entry, ok := iv.Interface().(eventsequences.Entry); ok {
+		if entry, ok := targetedEffectEntry(item); ok {
 			effect.bare = false
 			effect.entries = append(effect.entries, entry)
 			continue
 		}
 		if _, ok := l.plan.catalog.Lookup(item); !ok {
-			return eventEffect{}, false, nil
+			return eventEffect{}, false
 		}
 		effect.entries = append(effect.entries, eventsequences.Entry{Event: item})
 	}
+	return effect, true
+}
+
+func (l *Lease) applyEffectDefaults(effect *eventEffect, values []any, ec events.Context) {
 	// Resolve providers once, and only for bare items. Targeted entries retain
 	// their own metadata, including zero/default fields.
 	var defaults eventsequences.Entry
 	resolved := false
 	for i, item := range values {
-		iv := reflect.ValueOf(item)
-		if iv.Kind() == reflect.Pointer {
-			iv = iv.Elem()
-		}
-		if _, targeted := iv.Interface().(eventsequences.Entry); targeted {
+		if _, targeted := targetedEffectEntry(item); targeted {
 			continue
 		}
 		if !resolved {
@@ -289,7 +356,6 @@ func (l *Lease) classifyEvents(value any, ec events.Context) (eventEffect, bool,
 		entry.Event = effect.entries[i].Event
 		effect.entries[i] = entry
 	}
-	return effect, true, l.validateEffectEntries(effect.entries)
 }
 
 func (l *Lease) validateEffectEntries(entries []eventsequences.Entry) error {
@@ -327,44 +393,60 @@ func appendEffect(ctx context.Context, runtime Runtime, effect eventEffect) erro
 	}
 	provider, ok := runtime.(EventLogRuntime)
 	if !ok {
-		if effect.bare && effect.single {
-			entry := effect.entries[0]
-			if entry.Subject == nil && entry.Route.SourceType == "" && entry.Route.StreamID == "" && entry.Route.StreamType == events.AllStreamTypes {
-				return runtime.Append(ctx, entry.Source, entry.Event)
-			}
-		}
-		return invalid("runtime does not support event-log effects")
+		return appendLegacyEffect(ctx, runtime, effect)
 	}
 	log := provider.EventLog()
 	if nilLike(log) {
 		return invalid("nil event-log appender")
 	}
 	if effect.bare {
-		first := effect.entries[0]
-		options := []eventsequences.AppendOption{eventsequences.WithRoute(first.Route)}
-		if first.Subject != nil {
-			options = append(options, eventsequences.WithSubject(*first.Subject))
-		}
-		if effect.single {
-			result, err := log.Append(ctx, first.Source, first.Event, options...)
-			if err != nil {
-				return err
-			}
-			return result.Err()
-		}
-		values := make([]any, len(effect.entries))
-		for i, entry := range effect.entries {
-			values[i] = entry.Event
-		}
-		result, err := log.AppendMany(ctx, first.Source, values, options...)
-		if err != nil {
-			return err
-		}
-		return result.Err()
+		return appendBareEffect(ctx, log, effect)
 	}
 	result, err := log.AppendBatch(ctx, effect.entries, eventsequences.WithScopes(effect.scopes...))
 	if err != nil {
 		return err
 	}
 	return result.Err()
+}
+
+func appendLegacyEffect(ctx context.Context, runtime Runtime, effect eventEffect) error {
+	if effect.bare && effect.single {
+		entry := effect.entries[0]
+		if hasDefaultEffectMetadata(entry) {
+			return runtime.Append(ctx, entry.Source, entry.Event)
+		}
+	}
+	return invalid("runtime does not support event-log effects")
+}
+
+func hasDefaultEffectMetadata(entry eventsequences.Entry) bool {
+	return entry.Subject == nil && entry.Route.SourceType == "" && entry.Route.StreamID == "" && entry.Route.StreamType == events.AllStreamTypes
+}
+
+func appendBareEffect(ctx context.Context, log EventAppender, effect eventEffect) error {
+	first := effect.entries[0]
+	options := []eventsequences.AppendOption{eventsequences.WithRoute(first.Route)}
+	if first.Subject != nil {
+		options = append(options, eventsequences.WithSubject(*first.Subject))
+	}
+	if effect.single {
+		result, err := log.Append(ctx, first.Source, first.Event, options...)
+		if err != nil {
+			return err
+		}
+		return result.Err()
+	}
+	result, err := log.AppendMany(ctx, first.Source, effectEventValues(effect.entries), options...)
+	if err != nil {
+		return err
+	}
+	return result.Err()
+}
+
+func effectEventValues(entries []eventsequences.Entry) []any {
+	values := make([]any, len(entries))
+	for i, entry := range entries {
+		values[i] = entry.Event
+	}
+	return values
 }
