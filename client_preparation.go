@@ -67,38 +67,19 @@ func (p *ClientPreparation) Prepare(ctx context.Context, scopes reactors.ScopeFa
 		c.mu.Unlock()
 		return nil, err
 	}
-	if invalidPreparationArguments(ctx, scopes, c.config.reactorServicesSet) {
+	if nilValue(ctx) || (scopes != nil && nilValue(scopes)) || (scopes != nil && c.config.reactorServicesSet) {
 		c.mu.Unlock()
 		return nil, invalidFactory("invalid preparation context or conflicting scope factory")
 	}
-	scopes = preparationScopes(scopes, c.config.reactorServices)
-	c.preparation = preparationRunning
-	c.mu.Unlock()
-	return p.prepare(ctx, scopes)
-}
-
-func invalidPreparationArguments(ctx context.Context, scopes reactors.ScopeFactory, configured bool) bool {
-	if nilValue(ctx) {
-		return true
-	}
 	if scopes == nil {
-		return false
-	}
-	return nilValue(scopes) || configured
-}
-
-func preparationScopes(scopes, configured reactors.ScopeFactory) reactors.ScopeFactory {
-	if scopes == nil {
-		scopes = configured
+		scopes = c.config.reactorServices
 	}
 	if scopes == nil {
 		scopes = artifacts.DefaultScopeFactory()
 	}
-	return scopes
-}
+	c.preparation = preparationRunning
+	c.mu.Unlock()
 
-func (p *ClientPreparation) prepare(ctx context.Context, scopes reactors.ScopeFactory) (*Client, error) {
-	c := p.client
 	// No work/generation lease: a callback or closer may Close this identity.
 	preparationCtx, cancel := context.WithCancel(ctx)
 	stop := context.AfterFunc(c.life, cancel)
@@ -107,14 +88,28 @@ func (p *ClientPreparation) prepare(ctx context.Context, scopes reactors.ScopeFa
 	var compiled map[*registryDeclarations]*registryPreparationOutput
 	runtimeServices := clientIdentityServices(scopes, c)
 	err := artifacts.Protect("client", "prepare", func() error {
+		if err := preparationCtx.Err(); err != nil {
+			return err
+		}
+		if err := c.life.Err(); err != nil {
+			return ErrClosed
+		}
 		var compileErr error
-		compiled, compileErr = p.compileIfActive(preparationCtx, scopes, runtimeServices)
+		compiled, compileErr = p.compile(preparationCtx, scopes, runtimeServices)
 		return compileErr
 	})
 	// Publication is all-or-nothing, after every scope and owned result is closed.
 	c.mu.Lock()
 	err = artifacts.Protect("client", "publish", func() error {
-		return c.preparationPublicationError(ctx, preparationCtx, err)
+		var closedErr error
+		if c.closed || c.life.Err() != nil {
+			closedErr = ErrClosed
+		}
+		callerErr, preparationErr := ctx.Err(), preparationCtx.Err()
+		if callerErr == nil && preparationErr == nil && closedErr == nil {
+			return err
+		}
+		return errors.Join(err, callerErr, preparationErr, closedErr)
 	})
 	if err != nil {
 		c.preparation, c.preparationError = preparationFailed, err
@@ -122,39 +117,6 @@ func (p *ClientPreparation) prepare(ctx context.Context, scopes reactors.ScopeFa
 		diagnostics.Log(preparationCtx, c.config.logger, slog.LevelError, "client preparation failed", "client", "prepare", err)
 		return nil, err
 	}
-	p.publish(compiled, runtimeServices)
-	c.preparation = preparationSucceeded
-	c.mu.Unlock()
-	return c, nil
-}
-
-func (p *ClientPreparation) compileIfActive(ctx context.Context, scopes, runtimeServices reactors.ScopeFactory) (map[*registryDeclarations]*registryPreparationOutput, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if err := p.client.life.Err(); err != nil {
-		return nil, ErrClosed
-	}
-	return p.compile(ctx, scopes, runtimeServices)
-}
-
-func (c *Client) preparationPublicationError(ctx, preparationCtx context.Context, err error) error {
-	var closedErr error
-	if c.closed || c.life.Err() != nil {
-		closedErr = ErrClosed
-	}
-	callerErr, preparationErr := ctx.Err(), preparationCtx.Err()
-	if callerErr != nil || preparationErr != nil {
-		return errors.Join(err, callerErr, preparationErr, closedErr)
-	}
-	if closedErr != nil {
-		return errors.Join(err, callerErr, preparationErr, closedErr)
-	}
-	return err
-}
-
-func (p *ClientPreparation) publish(compiled map[*registryDeclarations]*registryPreparationOutput, runtimeServices reactors.ScopeFactory) {
-	c := p.client
 	c.registryOutput = compiled[p.defaults]
 	c.storeRegistryOutputs = make(map[StoreName]*registryPreparationOutput, len(p.names))
 	frozen := c.registryOutput.compose()
@@ -173,29 +135,12 @@ func (p *ClientPreparation) publish(compiled map[*registryDeclarations]*registry
 		c.readModelReactors.stores[name], c.storeSeeds[name] = frozen.readModelReactors, frozen.seeds
 	}
 	c.config.reactorServices = runtimeServices
+	c.preparation = preparationSucceeded
+	c.mu.Unlock()
+	return c, nil
 }
 
 func (p *ClientPreparation) compile(ctx context.Context, scopes, runtimeServices reactors.ScopeFactory) (map[*registryDeclarations]*registryPreparationOutput, error) {
-	plans, err := p.preflightPlans(scopes)
-	if err != nil {
-		return nil, err
-	}
-	schemas, err := p.prepareSchemas(ctx)
-	if err != nil {
-		return nil, err
-	}
-	compiled := make(map[*registryDeclarations]*registryPreparationOutput)
-	for _, declarations := range p.selected {
-		frozen, err := prepareRegistryOutput(ctx, declarations, schemas[declarations], runtimeServices, p.client.config.validateEventTypes, plans[declarations])
-		if err != nil {
-			return nil, err
-		}
-		compiled[declarations] = frozen
-	}
-	return compiled, nil
-}
-
-func (p *ClientPreparation) preflightPlans(scopes reactors.ScopeFactory) (map[*registryDeclarations]registryFactoryPlans, error) {
 	plans := make(map[*registryDeclarations]registryFactoryPlans)
 	// All metadata and visible constructor dependencies precede the first scope.
 	for _, declarations := range p.selected {
@@ -208,10 +153,6 @@ func (p *ClientPreparation) preflightPlans(scopes reactors.ScopeFactory) (map[*r
 		}
 		plans[declarations] = plan
 	}
-	return plans, nil
-}
-
-func (p *ClientPreparation) prepareSchemas(ctx context.Context) (map[*registryDeclarations]registrySchemas, error) {
 	schemas := make(map[*registryDeclarations]registrySchemas)
 	for _, declarations := range p.selected {
 		if err := ctx.Err(); err != nil {
@@ -224,7 +165,15 @@ func (p *ClientPreparation) prepareSchemas(ctx context.Context) (map[*registryDe
 		prepared.graphSink = p.client.config.defaultGraphSinkType
 		schemas[declarations] = prepared
 	}
-	return schemas, nil
+	compiled := make(map[*registryDeclarations]*registryPreparationOutput)
+	for _, declarations := range p.selected {
+		frozen, err := prepareRegistryOutput(ctx, declarations, schemas[declarations], runtimeServices, p.client.config.validateEventTypes, plans[declarations])
+		if err != nil {
+			return nil, err
+		}
+		compiled[declarations] = frozen
+	}
+	return compiled, nil
 }
 
 func (c *Client) requirePrepared(operation string, offline bool) error {
@@ -234,8 +183,7 @@ func (c *Client) requirePrepared(operation string, offline bool) error {
 }
 
 func (c *Client) requirePreparedLocked(operation string, offline bool) error {
-	preparedOffline := offline && c.preparation == preparationSucceeded
-	if c.closed && !preparedOffline {
+	if c.closed && (!offline || c.preparation != preparationSucceeded) {
 		return &ClientStateError{Operation: operation, cause: ErrClosed}
 	}
 	if c.preparation != preparationSucceeded {
