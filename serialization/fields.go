@@ -154,39 +154,81 @@ func (p *Plan) ValidateRole(role declarations.Role) error {
 				return err
 			}
 		}
-		for _, derivative := range n.derivatives {
-			if err := visitNodes(derivative.node, map[*node]bool{}, func(child *node) error {
-				for _, f := range child.fields {
-					if role == declarations.Model {
-						switch strings.ToLower(f.name) {
-						case "_subject", "__subject", "__subjects":
-							return codecError(derivative.registration, f.goName, "reserved compliance property")
-						}
-					}
-					directives, err := declarations.Parse(declarations.V1, f.tag)
-					if err != nil {
-						return err
-					}
-					for _, directive := range directives {
-						if directive.Name == "pii" || directive.Name == "encrypted" || directive.Name == "compliance-details" {
-							continue // Protection audits and rejects classified variants separately.
-						}
-						// Derived children consume projection directives on their
-						// derivative. Subjects, indexes and event roles have no
-						// variant-qualified consumer and remain refused.
-						if role != declarations.Model || directive.Name == "subject" || directive.Name == "index" {
-							return codecError(derivative.registration, f.goName, "artifact role declarations within derivatives are not supported")
-						}
-					}
-				}
-				return nil
-			}); err != nil {
+		return validateDerivativesRole(n.derivatives, role)
+	})
+}
+
+func validateDerivativesRole(derivatives []derivative, role declarations.Role) error {
+	for _, derivative := range derivatives {
+		if err := validateDerivativeRole(derivative, role); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateDerivativeRole(derivative derivative, role declarations.Role) error {
+	return visitNodes(derivative.node, map[*node]bool{}, func(child *node) error {
+		for _, f := range child.fields {
+			if err := validateDerivativeField(f, derivative.registration, role); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
 }
+
+func validateDerivativeField(f field, registration Codec, role declarations.Role) error {
+	if role == declarations.Model && reservedComplianceProperty(f.name) {
+		return codecError(registration, f.goName, "reserved compliance property")
+	}
+	directives, err := declarations.Parse(declarations.V1, f.tag)
+	if err != nil {
+		return err
+	}
+	for _, directive := range directives {
+		if protectionDirective(directive.Name) {
+			continue // Protection audits and rejects classified variants separately.
+		}
+		// Derived children consume projection directives on their derivative.
+		// Subjects, indexes and event roles have no variant-qualified consumer.
+		if !derivativeDirectiveAllowed(directive.Name, role) {
+			return codecError(registration, f.goName, "artifact role declarations within derivatives are not supported")
+		}
+	}
+	return nil
+}
+
+func derivativeDirectiveAllowed(name string, role declarations.Role) bool {
+	if role != declarations.Model {
+		return false
+	}
+	switch name {
+	case "subject", "index":
+		return false
+	default:
+		return true
+	}
+}
+
+func reservedComplianceProperty(name string) bool {
+	switch strings.ToLower(name) {
+	case "_subject", "__subject", "__subjects":
+		return true
+	default:
+		return false
+	}
+}
+
+func protectionDirective(name string) bool {
+	switch name {
+	case "pii", "encrypted", "compliance-details":
+		return true
+	default:
+		return false
+	}
+}
+
 func validateTag(tag string, role declarations.Role, artifact, field, path string) error {
 	parsed, err := declarations.Parse(declarations.V1, tag)
 	if err == nil {
@@ -202,12 +244,27 @@ func validateTag(tag string, role declarations.Role, artifact, field, path strin
 // FieldAt resolves an exact serialized object-property path. Collection paths are
 // present in Fields for schema tooling but cannot be used as scalar object paths.
 func FieldAt(fields []Field, path string) (Field, bool) {
-	for _, f := range fields {
-		if f.Path == path {
-			f.Index = append([]int(nil), f.Index...)
-			return f, true
-		}
+	if field, ok := matchingField(fields, path, nil); ok {
+		field.Index = append([]int(nil), field.Index...)
+		return field, true
 	}
+	return descendantField(fields, path)
+}
+
+func matchingField(fields []Field, path string, capability func(Field) bool) (Field, bool) {
+	for _, field := range fields {
+		if field.Path != path {
+			continue
+		}
+		if capability != nil && !capability(field) {
+			continue
+		}
+		return field, true
+	}
+	return Field{}, false
+}
+
+func descendantField(fields []Field, path string) (Field, bool) {
 	// Resolve a finite caller-supplied path beyond a recursive metadata edge.
 	// Every step consumes a property segment, so cycles cannot loop indefinitely.
 	for _, parent := range RootFields(fields) {
@@ -218,15 +275,7 @@ func FieldAt(fields []Field, path string) (Field, bool) {
 		if !ok {
 			return Field{}, false
 		}
-		field.Path = parent.Path + "." + field.Path
-		field.GoField = parent.GoField + "." + field.GoField
-		field.Index = append(append([]int(nil), parent.Index...), field.Index...)
-		typ := parent.Type
-		for typ.Kind() == reflect.Pointer {
-			typ = typ.Elem()
-		}
-		field.Collection = field.Collection || parent.Collection || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array || typ.Kind() == reflect.Map
-		return field, true
+		return qualifyField(parent, field), true
 	}
 	return Field{}, false
 }
@@ -237,33 +286,48 @@ func FieldAt(fields []Field, path string) (Field, bool) {
 // candidate. Recursive paths are resolved finitely, consuming a prefix per step.
 // If no candidate has the capability (or capability is nil), FieldAt is used.
 func FieldAtWithCapability(fields []Field, path string, capability func(Field) bool) (Field, bool) {
-	if capability != nil {
-		for _, field := range fields {
-			if field.Path == path && capability(field) {
-				field.Index = slices.Clone(field.Index)
-				return field, true
-			}
-		}
-		for _, parent := range EmittedRootFields(fields) {
-			if !strings.HasPrefix(path, parent.Path+".") {
-				continue
-			}
-			field, ok := FieldAtWithCapability(parent.Fields(), strings.TrimPrefix(path, parent.Path+"."), capability)
-			if !ok || !capability(field) {
-				continue
-			}
-			field.Path = parent.Path + "." + field.Path
-			field.GoField = parent.GoField + "." + field.GoField
-			field.Index = append(slices.Clone(parent.Index), field.Index...)
-			typ := parent.Type
-			for typ.Kind() == reflect.Pointer {
-				typ = typ.Elem()
-			}
-			field.Collection = field.Collection || parent.Collection || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array || typ.Kind() == reflect.Map
-			return field, true
-		}
+	if capability == nil {
+		return FieldAt(fields, path)
+	}
+	if field, ok := matchingField(fields, path, capability); ok {
+		field.Index = slices.Clone(field.Index)
+		return field, true
+	}
+	if field, ok := descendantWithCapability(fields, path, capability); ok {
+		return field, true
 	}
 	return FieldAt(fields, path)
+}
+
+func descendantWithCapability(fields []Field, path string, capability func(Field) bool) (Field, bool) {
+	for _, parent := range EmittedRootFields(fields) {
+		if !strings.HasPrefix(path, parent.Path+".") {
+			continue
+		}
+		field, ok := FieldAtWithCapability(parent.Fields(), strings.TrimPrefix(path, parent.Path+"."), capability)
+		if !ok || !capability(field) {
+			continue
+		}
+		return qualifyField(parent, field), true
+	}
+	return Field{}, false
+}
+
+func qualifyField(parent, field Field) Field {
+	field.Path = parent.Path + "." + field.Path
+	field.GoField = parent.GoField + "." + field.GoField
+	field.Index = append(append([]int(nil), parent.Index...), field.Index...)
+	field.Collection = field.Collection || parent.Collection || collectionType(parent.Type)
+	return field
+}
+
+func collectionType(typ reflect.Type) bool {
+	switch dereference(typ).Kind() {
+	case reflect.Slice, reflect.Array, reflect.Map:
+		return true
+	default:
+		return false
+	}
 }
 
 // EmittedRootFields returns emitted top-level fields by Go index ownership,
