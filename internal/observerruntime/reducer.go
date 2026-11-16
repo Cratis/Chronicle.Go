@@ -89,6 +89,14 @@ func (r *Reducer) handle(ctx context.Context, operation *contracts.ReduceOperati
 		raw = []*contracts.ReducerPartition{{Partition: operation.Partition, InitialState: operation.InitialState, Events: operation.Events}}
 	}
 	ctx = reducers.WithBatch(ctx, reducers.Batch{Reducer: r.plan.Identifier(), Store: r.store, Namespace: r.namespace, Sequence: r.plan.EventSequence()})
+	decoded, described := r.decodePage(raw)
+	batchContext := NewBatchContext(string(r.plan.Identifier()), r.store, r.namespace, r.plan.EventSequence(), reducerOrigin(operation.Origin), described, time.Duration(operation.DeliverWithinMilliseconds)*time.Millisecond, paged)
+	outcomes := r.reducePage(ctx, decoded, batchContext)
+	r.notifyChanges(outcomes)
+	return reducerResult(operation, outcomes, paged)
+}
+
+func (r *Reducer) decodePage(raw []*contracts.ReducerPartition) ([]decodedReducerPartition, []PagePartition) {
 	decoded := make([]decodedReducerPartition, len(raw))
 	described := make([]PagePartition, len(raw))
 	for i, partition := range raw {
@@ -98,7 +106,10 @@ func (r *Reducer) handle(ctx context.Context, operation *contracts.ReduceOperati
 			described[i].Events = append(described[i].Events, PageEvent{Content: event.Content, Context: event.Context})
 		}
 	}
-	batchContext := NewBatchContext(string(r.plan.Identifier()), r.store, r.namespace, r.plan.EventSequence(), reducerOrigin(operation.Origin), described, time.Duration(operation.DeliverWithinMilliseconds)*time.Millisecond, paged)
+	return decoded, described
+}
+
+func (r *Reducer) reducePage(ctx context.Context, decoded []decodedReducerPartition, batchContext observation.BatchContext) []PartitionOutcome {
 	outcomes := make([]PartitionOutcome, len(decoded))
 	limit := make(chan struct{}, r.plan.MaxConcurrency())
 	var wg sync.WaitGroup
@@ -112,6 +123,10 @@ func (r *Reducer) handle(ctx context.Context, operation *contracts.ReduceOperati
 		}()
 	}
 	wg.Wait()
+	return outcomes
+}
+
+func (r *Reducer) notifyChanges(outcomes []PartitionOutcome) {
 	for _, outcome := range outcomes {
 		if outcome.State == reactorcontracts.ObservationState_Success && r.OnChange != nil {
 			var state json.RawMessage
@@ -121,6 +136,9 @@ func (r *Reducer) handle(ctx context.Context, operation *contracts.ReduceOperati
 			r.OnChange(outcome.Partition, state)
 		}
 	}
+}
+
+func reducerResult(operation *contracts.ReduceOperationMessage, outcomes []PartitionOutcome, paged bool) *contracts.ReducerResult {
 	if paged {
 		result := &contracts.ReducerResult{DeliveryId: operation.DeliveryId}
 		for _, outcome := range outcomes {
@@ -150,18 +168,9 @@ func (r *Reducer) decodePartition(partition *contracts.ReducerPartition) (decode
 		return decoded
 	}
 	decoded.partition = partition.Partition
-	data := bytes.TrimSpace([]byte(partition.InitialState))
-	if len(data) != 0 && !bytes.Equal(data, []byte("null")) {
-		if data[0] != '{' {
-			decoded.failure = faults.ErrProtocol
-			return decoded
-		}
-		value, err := r.plan.Model().Unmarshal(data)
-		if err != nil {
-			decoded.failure = faults.ErrProtocol
-			return decoded
-		}
-		decoded.initial = value
+	decoded.initial, decoded.failure = r.decodeInitialState(partition.InitialState)
+	if decoded.failure != nil {
+		return decoded
 	}
 	for _, appended := range partition.Events {
 		event, err := r.decode(appended)
@@ -172,6 +181,21 @@ func (r *Reducer) decodePartition(partition *contracts.ReducerPartition) (decode
 		decoded.events = append(decoded.events, event)
 	}
 	return decoded
+}
+
+func (r *Reducer) decodeInitialState(initial string) (any, error) {
+	data := bytes.TrimSpace([]byte(initial))
+	if len(data) == 0 || bytes.Equal(data, []byte("null")) {
+		return nil, nil
+	}
+	if data[0] != '{' {
+		return nil, faults.ErrProtocol
+	}
+	value, err := r.plan.Model().Unmarshal(data)
+	if err != nil {
+		return nil, faults.ErrProtocol
+	}
+	return value, nil
 }
 
 // reducePartition folds one partition in its own scope. A reducer writes no
