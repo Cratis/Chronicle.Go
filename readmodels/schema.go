@@ -14,11 +14,7 @@ import (
 )
 
 func modelSchema(plan *serialization.Plan, config modelConfig) (string, error) {
-	options := append([]compliance.Declaration(nil), config.protection...)
-	for _, path := range config.pii {
-		options = append(options, compliance.Property(path, compliance.Classification{PII: true}))
-	}
-	schema, err := plan.ProtectedSchema(options...)
+	schema, err := plan.ProtectedSchema(modelProtection(config)...)
 	if err != nil {
 		return "", err
 	}
@@ -26,43 +22,92 @@ func modelSchema(plan *serialization.Plan, config modelConfig) (string, error) {
 	if err := json.Unmarshal([]byte(schema), &root); err != nil {
 		return "", err
 	}
-	if err := reservedProperties(root); err != nil {
+	if err := validateModelSchema(root, plan, config); err != nil {
 		return "", err
-	}
-	for _, paths := range [][]string{config.indexes, config.pii} {
-		seen := make(map[string]bool)
-		for _, path := range paths {
-			if seen[path] {
-				return "", invalid("duplicate property path: " + path)
-			}
-			seen[path] = true
-			if schemaProperty(root, path) == nil {
-				return "", invalid("unknown serialized property path: " + path)
-			}
-		}
-	}
-	for _, path := range config.indexes {
-		field, ok := serialization.FieldAtWithCapability(plan.Fields(), path, serialization.Field.ContainsBinary)
-		if ok && field.ContainsBinary() {
-			return "", fmt.Errorf("%w: binary index is not supported: %s", faults.ErrUnsupported, path)
-		}
-	}
-	for _, field := range serialization.EmittedRootFields(plan.Fields()) {
-		if field.ContainsBinary() && (materializedIdentityAlias(field.Name) || strings.EqualFold(field.GoField, "id")) {
-			return "", fmt.Errorf("%w: binary identity is not supported: %s", faults.ErrUnsupported, field.Path)
-		}
-	}
-	if config.subject != "" {
-		field, ok := serialization.FieldAtWithCapability(plan.Fields(), config.subject, serialization.Field.ContainsBinary)
-		if ok && field.ContainsBinary() {
-			return "", fmt.Errorf("%w: binary subject is not supported: %s", faults.ErrUnsupported, config.subject)
-		}
-		if strings.Contains(config.subject, ".") || !ok || !field.Scalar.IsPrimitive() {
-			return "", invalid("subject must name a top-level scalar property")
-		}
 	}
 	data, err := json.Marshal(root)
 	return string(data), err
+}
+
+func modelProtection(config modelConfig) []compliance.Declaration {
+	options := append([]compliance.Declaration(nil), config.protection...)
+	for _, path := range config.pii {
+		options = append(options, compliance.Property(path, compliance.Classification{PII: true}))
+	}
+	return options
+}
+
+func validateModelSchema(root map[string]any, plan *serialization.Plan, config modelConfig) error {
+	if err := reservedProperties(root); err != nil {
+		return err
+	}
+	for _, paths := range [][]string{config.indexes, config.pii} {
+		if err := validateSchemaPaths(root, paths); err != nil {
+			return err
+		}
+	}
+	if err := validateBinaryIndexes(plan, config.indexes); err != nil {
+		return err
+	}
+	if err := validateBinaryIdentity(plan); err != nil {
+		return err
+	}
+	return validateSchemaSubject(plan, config.subject)
+}
+
+func validateSchemaPaths(root map[string]any, paths []string) error {
+	seen := make(map[string]bool)
+	for _, path := range paths {
+		if seen[path] {
+			return invalid("duplicate property path: " + path)
+		}
+		seen[path] = true
+		if schemaProperty(root, path) == nil {
+			return invalid("unknown serialized property path: " + path)
+		}
+	}
+	return nil
+}
+
+func validateBinaryIndexes(plan *serialization.Plan, paths []string) error {
+	for _, path := range paths {
+		field, ok := serialization.FieldAtWithCapability(plan.Fields(), path, serialization.Field.ContainsBinary)
+		if ok && field.ContainsBinary() {
+			return fmt.Errorf("%w: binary index is not supported: %s", faults.ErrUnsupported, path)
+		}
+	}
+	return nil
+}
+
+func validateBinaryIdentity(plan *serialization.Plan) error {
+	for _, field := range serialization.EmittedRootFields(plan.Fields()) {
+		if field.ContainsBinary() && isIdentityField(field) {
+			return fmt.Errorf("%w: binary identity is not supported: %s", faults.ErrUnsupported, field.Path)
+		}
+	}
+	return nil
+}
+
+func isIdentityField(field serialization.Field) bool {
+	return materializedIdentityAlias(field.Name) || strings.EqualFold(field.GoField, "id")
+}
+
+func validateSchemaSubject(plan *serialization.Plan, subject string) error {
+	if subject == "" {
+		return nil
+	}
+	field, ok := serialization.FieldAtWithCapability(plan.Fields(), subject, serialization.Field.ContainsBinary)
+	if ok && field.ContainsBinary() {
+		return fmt.Errorf("%w: binary subject is not supported: %s", faults.ErrUnsupported, subject)
+	}
+	if !isTopLevelScalar(field, ok, subject) {
+		return invalid("subject must name a top-level scalar property")
+	}
+	return nil
+}
+
+func isTopLevelScalar(field serialization.Field, found bool, path string) bool {
+	return !strings.Contains(path, ".") && found && field.Scalar.IsPrimitive()
 }
 
 func schemaProperty(root map[string]any, path string) map[string]any {
@@ -98,6 +143,10 @@ func reservedProperties(node map[string]any) error {
 			return err
 		}
 	}
+	return reservedCollectionProperties(node)
+}
+
+func reservedCollectionProperties(node map[string]any) error {
 	for _, key := range []string{"items", "additionalProperties"} {
 		if child, ok := node[key].(map[string]any); ok {
 			if err := reservedProperties(child); err != nil {
