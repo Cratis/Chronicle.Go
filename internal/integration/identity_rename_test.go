@@ -27,6 +27,17 @@ import (
 
 type identityRenameRecorded struct{ Value string }
 
+func identityRenameCorrelationMatches(ctx context.Context, method, selected string) bool {
+	switch method {
+	case contracts.Identities_GetIdentities_FullMethodName, contracts.Identities_RenameIdentity_FullMethodName:
+		md, _ := grpcmetadata.FromOutgoingContext(ctx)
+		values := md.Get("x-correlation-id")
+		return len(values) != 0 && values[0] == selected
+	default:
+		return true
+	}
+}
+
 func TestKernelIdentityRenameObservedName(t *testing.T) {
 	endpoint := os.Getenv("CHRONICLE_INTEGRATION_CONNECTION_STRING")
 	if endpoint == "" {
@@ -57,8 +68,7 @@ func TestKernelIdentityRenameObservedName(t *testing.T) {
 			case contracts.Identities_RenameIdentity_FullMethodName:
 				commands.Add(1)
 			}
-			md, _ := grpcmetadata.FromOutgoingContext(call)
-			if md.Get("x-correlation-id")[0] != selected.String() {
+			if !identityRenameCorrelationMatches(call, method, selected.String()) {
 				correlationHeader.Store(false)
 			}
 		}

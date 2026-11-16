@@ -82,94 +82,150 @@ func (r *DecisionReader[T]) GetDetached(ctx context.Context, key Key) (read Deci
 		return DecisionRead[T]{}, err
 	}
 	defer lease.Release()
-	callerContext := ctx
-	ctx = lease.Context
-	pinned := &Service{store: service.store, namespace: service.namespace, catalog: service.catalog,
-		client: contracts.NewReadModelsClient(lease.Conn)}
-	check := func() error {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if lease.Check() != nil || admitted.epoch != admitted.catalog.Epoch.Load() {
-			return decision.ErrStale
-		}
-		return nil
+	session := &decisionReadSession{ctx: lease.Context, lease: lease, service: service, admitted: admitted, key: key,
+		pinned: &Service{store: service.store, namespace: service.namespace, catalog: service.catalog,
+			client: contracts.NewReadModelsClient(lease.Conn)}}
+	session.ctx = decision.WithDispatchValidation(session.ctx, session.check)
+	fold, err := session.readFold()
+	if err != nil {
+		return DecisionRead[T]{}, err
 	}
-	ctx = decision.WithDispatchValidation(ctx, check)
-	for attempt := range 3 {
-		if err = check(); err != nil {
-			return DecisionRead[T]{}, err
-		}
-		if err = checkDecisionAgreement(ctx, lease.Conn, string(service.store), admitted); err != nil {
-			return DecisionRead[T]{}, err
-		}
-		boundary, err := decisionTail(ctx, lease, service, "", nil)
-		if err != nil {
-			return DecisionRead[T]{}, err
-		}
-		probe, err := decisionTail(ctx, lease, service, key, admitted.types)
-		if err != nil {
-			return DecisionRead[T]{}, err
-		}
-		raw, err := foldDecision(ctx, pinned, admitted.descriptor, key)
-		if err != nil {
-			return DecisionRead[T]{}, err
-		}
-		if err = check(); err != nil {
-			return DecisionRead[T]{}, err
-		}
-		if err = checkDecisionAgreement(ctx, lease.Conn, string(service.store), admitted); err != nil {
-			return DecisionRead[T]{}, err
-		}
-		if err = check(); err != nil {
-			return DecisionRead[T]{}, err
-		}
-		reason := DecisionReadRefusalReason("")
-		last := raw.LastHandled
-		if probe != events.Unavailable && (last == nil || *last < probe) {
-			reason = DecisionFoldIncomplete
-		}
-		if last != nil && (boundary == events.Unavailable || *last > boundary) {
-			reason = DecisionFoldAhead
-		}
-		if reason != "" {
-			if attempt < 2 {
-				continue
-			}
-			return DecisionRead[T]{}, &DecisionReadRefused{Model: admitted.descriptor.Identifier(), Reason: reason}
-		}
-		// All RPCs, protocol checks and awaited cleanup are complete. A
-		// codec may synchronously close the client, which joins counted work.
-		// Release cancels lease.Context, so the final check uses the caller's
-		// context and the separately retained generation/epoch identities.
-		lease.Release()
-		instance, err := decodeDecision[T](raw, admitted.descriptor)
-		if err != nil {
-			return DecisionRead[T]{}, err
-		}
-		if err = callerContext.Err(); err != nil {
-			return DecisionRead[T]{}, err
-		}
-		if lease.Check() != nil || admitted.epoch != admitted.catalog.Epoch.Load() {
-			return DecisionRead[T]{}, decision.ErrStale
-		}
-		token := decision.Issue(decision.Evidence{Target: service.decisions.DecisionTarget(events.EventLog), Model: string(admitted.descriptor.Identifier()), Key: string(key), Types: admitted.types, Boundary: boundary,
-			Catalog: admitted.catalog, Epoch: admitted.epoch, Generation: lease.Generation, Check: lease.Check})
-		if token.IsZero() {
-			return DecisionRead[T]{}, decision.ErrStale
-		}
-		return DecisionRead[T]{Instance: instance, Token: token}, nil
-	}
-	return DecisionRead[T]{}, faults.ErrProtocol
+	return completeDecisionRead[T](ctx, session, fold)
 }
 
-func decisionTail(ctx context.Context, lease *decision.Lease, service *Service, key Key, types []events.TypeRef) (events.SequenceNumber, error) {
+type decisionReadSession struct {
+	ctx      context.Context
+	lease    *decision.Lease
+	service  *Service
+	pinned   *Service
+	admitted admittedDecision
+	key      Key
+}
+
+type decisionFold struct {
+	raw             Instance[json.RawMessage]
+	boundary, probe events.SequenceNumber
+}
+
+func (s *decisionReadSession) checkGeneration() error {
+	if s.lease.Check() != nil || s.admitted.epoch != s.admitted.catalog.Epoch.Load() {
+		return decision.ErrStale
+	}
+	return nil
+}
+
+func (s *decisionReadSession) check() error {
+	if err := s.ctx.Err(); err != nil {
+		return err
+	}
+	return s.checkGeneration()
+}
+
+func (s *decisionReadSession) checkAgreement() error {
+	if err := s.check(); err != nil {
+		return err
+	}
+	return checkDecisionAgreement(s.ctx, s.lease.Conn, string(s.service.store), s.admitted)
+}
+
+func (s *decisionReadSession) readFold() (decisionFold, error) {
+	for attempt := range 3 {
+		fold, err := s.foldAttempt()
+		if err != nil {
+			return decisionFold{}, err
+		}
+		reason := fold.refusalReason()
+		if reason == "" {
+			return fold, nil
+		}
+		if attempt == 2 {
+			return decisionFold{}, &DecisionReadRefused{Model: s.admitted.descriptor.Identifier(), Reason: reason}
+		}
+	}
+	return decisionFold{}, faults.ErrProtocol
+}
+
+func (s *decisionReadSession) foldAttempt() (decisionFold, error) {
+	if err := s.checkAgreement(); err != nil {
+		return decisionFold{}, err
+	}
+	boundary, err := s.tail("", nil)
+	if err != nil {
+		return decisionFold{}, err
+	}
+	probe, err := s.tail(s.key, s.admitted.types)
+	if err != nil {
+		return decisionFold{}, err
+	}
+	raw, err := foldDecision(s.ctx, s.pinned, s.admitted.descriptor, s.key)
+	if err != nil {
+		return decisionFold{}, err
+	}
+	if err = s.checkAgreement(); err != nil {
+		return decisionFold{}, err
+	}
+	if err = s.check(); err != nil {
+		return decisionFold{}, err
+	}
+	return decisionFold{raw: raw, boundary: boundary, probe: probe}, nil
+}
+
+func (f decisionFold) refusalReason() DecisionReadRefusalReason {
+	reason := DecisionReadRefusalReason("")
+	if f.incomplete() {
+		reason = DecisionFoldIncomplete
+	}
+	if f.ahead() {
+		reason = DecisionFoldAhead
+	}
+	return reason
+}
+
+func (f decisionFold) incomplete() bool {
+	if f.probe == events.Unavailable {
+		return false
+	}
+	return f.raw.LastHandled == nil || *f.raw.LastHandled < f.probe
+}
+
+func (f decisionFold) ahead() bool {
+	if f.raw.LastHandled == nil {
+		return false
+	}
+	return f.boundary == events.Unavailable || *f.raw.LastHandled > f.boundary
+}
+
+func completeDecisionRead[T any](ctx context.Context, s *decisionReadSession, fold decisionFold) (DecisionRead[T], error) {
+	// All RPCs, protocol checks and awaited cleanup are complete. A
+	// codec may synchronously close the client, which joins counted work.
+	// Release cancels lease.Context, so the final check uses the caller's
+	// context and the separately retained generation/epoch identities.
+	s.lease.Release()
+	instance, err := decodeDecision[T](fold.raw, s.admitted.descriptor)
+	if err != nil {
+		return DecisionRead[T]{}, err
+	}
+	if err = ctx.Err(); err != nil {
+		return DecisionRead[T]{}, err
+	}
+	if err = s.checkGeneration(); err != nil {
+		return DecisionRead[T]{}, err
+	}
+	token := decision.Issue(decision.Evidence{Target: s.service.decisions.DecisionTarget(events.EventLog), Model: string(s.admitted.descriptor.Identifier()), Key: string(s.key), Types: s.admitted.types, Boundary: fold.boundary,
+		Catalog: s.admitted.catalog, Epoch: s.admitted.epoch, Generation: s.lease.Generation, Check: s.lease.Check})
+	if token.IsZero() {
+		return DecisionRead[T]{}, decision.ErrStale
+	}
+	return DecisionRead[T]{Instance: instance, Token: token}, nil
+}
+
+func (s *decisionReadSession) tail(key Key, types []events.TypeRef) (events.SequenceNumber, error) {
 	ids := make([]string, len(types))
 	for i, event := range types {
 		ids[i] = string(event.ID)
 	}
-	response, err := sequences.NewEventSequencesClient(lease.Conn).TailSequenceNumber(ctx, &sequences.TailSequenceNumberRequest{
-		EventStore: string(service.store), Namespace: string(service.namespace), EventSequenceId: string(events.EventLog), EventSourceId: string(key), EventTypeIds: strings.Join(ids, ",")})
+	response, err := sequences.NewEventSequencesClient(s.lease.Conn).TailSequenceNumber(s.ctx, &sequences.TailSequenceNumberRequest{
+		EventStore: string(s.service.store), Namespace: string(s.service.namespace), EventSequenceId: string(events.EventLog), EventSourceId: string(key), EventTypeIds: strings.Join(ids, ",")})
 	if err != nil {
 		return 0, wire.RPCError(err)
 	}

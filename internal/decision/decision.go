@@ -112,13 +112,31 @@ func Issue(e Evidence) Token {
 }
 
 func validate(e Evidence) error {
-	if e.Target.Client == nil || e.Target.Sequence != string(events.EventLog) || e.Model == "" || e.Key == "" || len(e.Types) == 0 || e.Catalog == nil || e.Check == nil {
+	if !validEvidenceTarget(e.Target) || !hasDecisionRead(e) {
 		return ErrInvalid
 	}
-	if e.Epoch != e.Catalog.ExpectedEpoch || e.Epoch != e.Catalog.Epoch.Load() || e.Check() != nil {
+	if e.Catalog == nil || e.Check == nil {
+		return ErrInvalid
+	}
+	if evidenceEpochChanged(e) || e.Check() != nil {
 		return ErrStale
 	}
 	return nil
+}
+
+func validEvidenceTarget(target Target) bool {
+	return target.Client != nil && target.Sequence == string(events.EventLog)
+}
+
+func hasDecisionRead(e Evidence) bool {
+	if e.Model == "" || e.Key == "" {
+		return false
+	}
+	return len(e.Types) != 0
+}
+
+func evidenceEpochChanged(e Evidence) bool {
+	return e.Epoch != e.Catalog.ExpectedEpoch || e.Epoch != e.Catalog.Epoch.Load()
 }
 
 // Guard is produced only by successful SDK enrollment. Its evidence cannot be
