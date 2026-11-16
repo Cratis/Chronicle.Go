@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/cratis/chronicle.go/contracts/sequences"
@@ -39,7 +40,7 @@ func (s *Sequence) PrepareBatch(ctx context.Context, entries []Entry, options ..
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if s == nil || s.catalog == nil || s.service == nil {
+	if !s.canPrepareBatch() {
 		return nil, faults.ErrInvalidConfiguration
 	}
 	config := batchConfig{correlation: metadata.Correlation(ctx)}
@@ -56,22 +57,34 @@ func (s *Sequence) PrepareBatch(ctx context.Context, entries []Entry, options ..
 	if err != nil {
 		return nil, err
 	}
+	freezeBatchCausation(batch.request)
+	return newPreparedBatch(s, batch, entries, config.scopes), nil
+}
+
+func (s *Sequence) canPrepareBatch() bool {
+	return s != nil && s.catalog != nil && s.service != nil
+}
+
+func freezeBatchCausation(request *sequences.AppendManyForEventSourcesRequest) {
 	// Every stage has its own audit chain. Do not let an empty per-entry chain
 	// inherit a different stage's common chain when snapshots are joined.
-	for _, event := range batch.request.Events {
+	for _, event := range request.Events {
 		if len(event.Causation) == 0 {
-			event.Causation = batch.request.Causation
+			event.Causation = request.Causation
 		}
 	}
-	batch.request.Causation = nil
-	result := &PreparedBatch{sequence: s, batch: batch}
+	request.Causation = nil
+}
+
+func newPreparedBatch(sequence *Sequence, batch preparedBatch, entries []Entry, scopes []LabeledScope) *PreparedBatch {
+	result := &PreparedBatch{sequence: sequence, batch: batch}
 	for _, entry := range entries {
 		result.entries = append(result.entries, Entry{Source: entry.Source, Route: entry.Route})
 	}
-	for _, labeled := range config.scopes {
+	for _, labeled := range scopes {
 		result.explicit = append(result.explicit, LabeledScope{Label: labeled.Label, Scope: cloneScope(labeled.Scope)})
 	}
-	return result, nil
+	return result
 }
 
 // Merge returns an ordered snapshot of b followed by next, without changing
@@ -79,23 +92,16 @@ func (s *Sequence) PrepareBatch(ctx context.Context, entries []Entry, options ..
 // Explicit scopes replace implicit defaults. Repeated identical scopes join;
 // conflicting scopes fail atomically. Event-type filters compare as sets.
 func (b *PreparedBatch) Merge(next *PreparedBatch) (*PreparedBatch, error) {
-	if b == nil || next == nil || b.sequence == nil || b.sequence != next.sequence {
+	if !b.sharesSequence(next) {
 		return nil, fmt.Errorf("%w: batches must use the same sequence handle", faults.ErrInvalidConfiguration)
 	}
 	first, second := b.batch.request, next.batch.request
 	if !proto.Equal(first.CorrelationId, second.CorrelationId) || !proto.Equal(first.CausedBy, second.CausedBy) {
 		return nil, fmt.Errorf("%w: batch correlation and actor must remain fixed", faults.ErrInvalidConfiguration)
 	}
-	explicit := slices.Clone(b.explicit)
-	for _, incoming := range next.explicit {
-		index := slices.IndexFunc(explicit, func(existing LabeledScope) bool { return existing.Label == incoming.Label })
-		if index < 0 {
-			explicit = append(explicit, incoming)
-			continue
-		}
-		if !equalScopes(explicit[index].Scope, incoming.Scope) {
-			return nil, fmt.Errorf("%w: conflicting concurrency scopes for label %q", faults.ErrInvalidConfiguration, incoming.Label)
-		}
+	explicit, err := mergeExplicitScopes(b.explicit, next.explicit)
+	if err != nil {
+		return nil, err
 	}
 	guards := slices.Concat(b.guards, next.guards)
 	if err := validateDecisionScopes(explicit, guards); err != nil {
@@ -113,28 +119,41 @@ func (b *PreparedBatch) Merge(next *PreparedBatch) (*PreparedBatch, error) {
 		batch: preparedBatch{request: request, refs: slices.Concat(b.batch.refs, next.batch.refs), named: slices.Concat(b.batch.named, next.batch.named), audit: b.batch.audit}}, nil
 }
 
-func equalScopes(first, second Scope) bool {
-	if first.Expectation != second.Expectation || !equalPointer(first.Filter.SourceID, second.Filter.SourceID) ||
-		!equalPointer(first.Filter.SourceType, second.Filter.SourceType) || !equalPointer(first.Filter.StreamType, second.Filter.StreamType) ||
-		!equalPointer(first.Filter.StreamID, second.Filter.StreamID) {
-		return false
-	}
-	left, right := make(map[events.TypeRef]bool), make(map[events.TypeRef]bool)
-	for _, ref := range first.Filter.EventTypes {
-		left[ref] = true
-	}
-	for _, ref := range second.Filter.EventTypes {
-		right[ref] = true
-	}
-	if len(left) != len(right) {
-		return false
-	}
-	for ref := range left {
-		if !right[ref] {
-			return false
+func (b *PreparedBatch) sharesSequence(next *PreparedBatch) bool {
+	return b != nil && next != nil && b.sequence != nil && b.sequence == next.sequence
+}
+
+func mergeExplicitScopes(first, second []LabeledScope) ([]LabeledScope, error) {
+	explicit := slices.Clone(first)
+	for _, incoming := range second {
+		index := slices.IndexFunc(explicit, func(existing LabeledScope) bool { return existing.Label == incoming.Label })
+		if index < 0 {
+			explicit = append(explicit, incoming)
+			continue
+		}
+		if !equalScopes(explicit[index].Scope, incoming.Scope) {
+			return nil, fmt.Errorf("%w: conflicting concurrency scopes for label %q", faults.ErrInvalidConfiguration, incoming.Label)
 		}
 	}
-	return true
+	return explicit, nil
+}
+
+func equalScopes(first, second Scope) bool {
+	return first.Expectation == second.Expectation && equalScopeFilterBounds(first.Filter, second.Filter) &&
+		maps.Equal(scopeEventTypes(first.Filter.EventTypes), scopeEventTypes(second.Filter.EventTypes))
+}
+
+func equalScopeFilterBounds(first, second ScopeFilter) bool {
+	return equalPointer(first.SourceID, second.SourceID) && equalPointer(first.SourceType, second.SourceType) &&
+		equalPointer(first.StreamType, second.StreamType) && equalPointer(first.StreamID, second.StreamID)
+}
+
+func scopeEventTypes(refs []events.TypeRef) map[events.TypeRef]bool {
+	result := make(map[events.TypeRef]bool)
+	for _, ref := range refs {
+		result[ref] = true
+	}
+	return result
 }
 
 func equalPointer[T comparable](first, second *T) bool {
@@ -164,16 +183,12 @@ func (s *Sequence) AppendPreparedBatch(ctx context.Context, snapshot *PreparedBa
 	if err := ctx.Err(); err != nil {
 		return BatchResult{}, err
 	}
-	if snapshot == nil || snapshot.sequence != s || s == nil {
+	if !s.ownsPreparedBatch(snapshot) {
 		return BatchResult{}, faults.ErrInvalidConfiguration
 	}
-	origin, owned := appendorigin.Unit[Origin](ctx, snapshot)
-	if !owned {
-		var err error
-		origin, err = s.resolveAppendOrigin(ctx)
-		if err != nil {
-			return BatchResult{Disposition: Rejected}, err
-		}
+	origin, err := s.preparedBatchOrigin(ctx, snapshot)
+	if err != nil {
+		return BatchResult{Disposition: Rejected}, err
 	}
 	ctx = snapshot.batch.audit.Context(ctx)
 	if len(snapshot.guards) > 0 {
@@ -191,4 +206,15 @@ func (s *Sequence) AppendPreparedBatch(ctx context.Context, snapshot *PreparedBa
 		return BatchResult{}, err
 	}
 	return s.dispatchBatch(ctx, batch, origin)
+}
+
+func (s *Sequence) ownsPreparedBatch(snapshot *PreparedBatch) bool {
+	return snapshot != nil && snapshot.sequence == s && s != nil
+}
+
+func (s *Sequence) preparedBatchOrigin(ctx context.Context, snapshot *PreparedBatch) (Origin, error) {
+	if origin, owned := appendorigin.Unit[Origin](ctx, snapshot); owned {
+		return origin, nil
+	}
+	return s.resolveAppendOrigin(ctx)
 }

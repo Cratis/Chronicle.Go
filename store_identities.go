@@ -125,13 +125,52 @@ func identityRenameError(phase string, failure identityFailure, disposition Iden
 // invoking unknown error hooks. Independent background operations and borrowed
 // implementations' own logging/explicit reentrant operations are not covered.
 func (m *IdentityManager) Rename(ctx context.Context, subject string, name identities.Name, correlation ...metadata.CorrelationID) (result IdentityRenameResult, err error) {
-	invalid := m == nil || m.store == nil || m.store.storeOwner == nil || m.store.client == nil || m.store.definitions == nil || nilValue(ctx) || len(correlation) > 1 ||
-		!utf8.ValidString(subject) || !utf8.ValidString(string(name)) || strings.TrimSpace(subject) == "" || strings.TrimSpace(string(name)) == ""
-	if invalid {
+	target := identityRenameTarget{subject: subject, name: name}
+	if !m.validRenameInput(ctx, target, correlation) {
 		return result, identityRenameError("prepare", identityFailure{reason: "configuration", category: ErrInvalidConfiguration}, result.Disposition)
 	}
+	i, cleanup, err := m.prepareRename(ctx, correlation, &result)
+	if err != nil {
+		return result, err
+	}
+	defer cleanup()
+	if failure := i.check(); failure.reason != "" {
+		return result, identityRenameError("prepare", failure, result.Disposition)
+	}
+	if failure := i.requireRenameSubject(target); failure.reason != "" {
+		return result, identityRenameError("pre_read", failure, result.Disposition)
+	}
+	if failure := i.rename(target, &result); failure.reason != "" {
+		return result, identityRenameError("command", failure, result.Disposition)
+	}
+	if failure := i.confirmRename(target); failure.reason != "" {
+		return result, identityRenameError("post_read", failure, result.Disposition)
+	}
+	result.Disposition = IdentityRenameObserved
+	return result, nil
+}
+
+type identityRenameTarget struct {
+	subject string
+	name    identities.Name
+}
+
+func (m *IdentityManager) validRenameInput(ctx context.Context, target identityRenameTarget, correlation []metadata.CorrelationID) bool {
+	return m.validRenameHandle() && !nilValue(ctx) && len(correlation) <= 1 && target.valid()
+}
+
+func (m *IdentityManager) validRenameHandle() bool {
+	return m != nil && m.store != nil && m.store.storeOwner != nil && m.store.client != nil && m.store.definitions != nil
+}
+
+func (t identityRenameTarget) valid() bool {
+	return utf8.ValidString(t.subject) && utf8.ValidString(string(t.name)) &&
+		strings.TrimSpace(t.subject) != "" && strings.TrimSpace(string(t.name)) != ""
+}
+
+func (m *IdentityManager) prepareRename(ctx context.Context, correlation []metadata.CorrelationID, result *IdentityRenameResult) (*identityInvocation, func(), error) {
 	if canceled := ctx.Err(); canceled != nil {
-		return result, identityRenameError("prepare", identityContextFailure(canceled), result.Disposition)
+		return nil, nil, identityRenameError("prepare", identityContextFailure(canceled), result.Disposition)
 	}
 	var id metadata.CorrelationID
 	if len(correlation) == 1 {
@@ -139,57 +178,47 @@ func (m *IdentityManager) Rename(ctx context.Context, subject string, name ident
 	}
 	audit, err := m.store.client.config.outgoing.Resolve(ctx, id, len(correlation) == 1, metadata.CorrelationID{})
 	if err != nil {
-		return result, err
+		return nil, nil, err
 	} // Resolve's Phase A boundary owns its payload-free grammar.
 	result.RequestCorrelationID = audit.Correlation
-	ctx = audit.Context(ctx)
+	return m.renameInvocation(audit.Context(ctx))
+}
+
+func (m *IdentityManager) renameInvocation(ctx context.Context) (*identityInvocation, func(), error) {
 	c := m.store.client
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
-		return result, identityRenameError("prepare", identityFailure{reason: "closed", category: ErrClosed}, result.Disposition)
+		return nil, nil, identityRenameError("prepare", identityFailure{reason: "closed", category: ErrClosed}, IdentityRenameNotDispatched)
 	}
 	g, root := c.current, m.store.definitions.root
 	c.mu.Unlock()
 	if g == nil || root == nil {
-		return result, identityRenameError("prepare", identityFailure{reason: "registration_not_ready"}, result.Disposition)
+		return nil, nil, identityRenameError("prepare", identityFailure{reason: "registration_not_ready"}, IdentityRenameNotDispatched)
 	}
 	p := m.store.identityReadiness(root)
 	ctx, cancel := context.WithCancel(ctx)
 	stop := context.AfterFunc(g.ctx, cancel)
-	defer func() { stop(); cancel() }()
 	i := &identityInvocation{store: m.store, generation: g, root: root, readiness: p, ctx: ctx}
-	if failure := i.check(); failure.reason != "" {
-		return result, identityRenameError("prepare", failure, result.Disposition)
-	}
-	match, failure := i.list(subject)
+	return i, func() { stop(); cancel() }, nil
+}
+
+func (i *identityInvocation) requireRenameSubject(target identityRenameTarget) identityFailure {
+	match, failure := i.list(target)
 	if failure.reason != "" {
-		return result, identityRenameError("pre_read", failure, result.Disposition)
+		return failure
 	}
 	if match == nil {
-		return result, identityRenameError("pre_read", identityFailure{reason: "not_found", category: &identities.NotFoundError{}}, result.Disposition)
+		return identityFailure{reason: "not_found", category: &identities.NotFoundError{}}
 	}
-	request := &contracts.RenameIdentityRequest{EventStore: string(m.store.name), Namespace: string(m.store.namespace), Subject: subject, Name: string(name)}
+	return identityFailure{}
+}
+
+func (i *identityInvocation) rename(target identityRenameTarget, result *IdentityRenameResult) identityFailure {
+	request := &contracts.RenameIdentityRequest{EventStore: string(i.store.name), Namespace: string(i.store.namespace), Subject: target.subject, Name: string(target.name)}
 	response := &contracts.CommandResult{}
 	entered, failure := i.invoke(contracts.Identities_RenameIdentity_FullMethodName, request, response, true, func(codec *identityCodec) identityFailure {
-		if !codec.decoded {
-			return identityFailure{reason: "protocol", category: ErrProtocol}
-		}
-		// A valid decoded command preserves correlation presence even when its
-		// envelope refuses execution or reports uncertainty.
-		if response.CorrelationId != nil {
-			selected := wire.Correlation(response.CorrelationId)
-			result.ResponseCorrelationID = &selected
-		}
-		failure := identityEnvelope(response.IsAuthorized, len(response.ValidationResults), response.ExceptionMessages, response.ExceptionStackTrace)
-		if failure.reason == "" && response.AuthorizationFailureReason != "" {
-			return identityFailure{reason: "protocol", category: ErrProtocol}
-		}
-		failure.refused = failure.reason == "authorization" || failure.reason == "validation"
-		if failure.reason == "" {
-			result.Acknowledged = true
-		}
-		return failure
+		return result.commandEnvelope(codec, response)
 	})
 	if failure.reason != "" {
 		if entered {
@@ -199,24 +228,45 @@ func (m *IdentityManager) Rename(ctx context.Context, subject string, name ident
 				result.Disposition = IdentityRenameRefused
 			}
 		}
-		return result, identityRenameError("command", failure, result.Disposition)
+		return failure
 	}
 	// Successful acknowledgment is recorded before any post-read admission check.
 	result.Disposition = IdentityRenameUnknown
-	match, failure = i.list(subject)
+	return identityFailure{}
+}
+
+func (result *IdentityRenameResult) commandEnvelope(codec *identityCodec, response *contracts.CommandResult) identityFailure {
+	if !codec.decoded {
+		return identityFailure{reason: "protocol", category: ErrProtocol}
+	}
+	// A valid decoded command preserves correlation presence even when its
+	// envelope refuses execution or reports uncertainty.
+	if response.CorrelationId != nil {
+		selected := wire.Correlation(response.CorrelationId)
+		result.ResponseCorrelationID = &selected
+	}
+	failure := identityEnvelope(response.IsAuthorized, len(response.ValidationResults), response.ExceptionMessages, response.ExceptionStackTrace)
+	if failure.reason == "" && response.AuthorizationFailureReason != "" {
+		return identityFailure{reason: "protocol", category: ErrProtocol}
+	}
+	failure.refused = failure.reason == "authorization" || failure.reason == "validation"
+	if failure.reason == "" {
+		result.Acknowledged = true
+	}
+	return failure
+}
+
+func (i *identityInvocation) confirmRename(target identityRenameTarget) identityFailure {
+	match, failure := i.list(target)
 	if failure.reason == "" {
 		switch {
 		case match == nil:
 			failure = identityFailure{reason: "missing_confirmation"}
-		case match.Name != string(name):
+		case match.Name != string(target.name):
 			failure = identityFailure{reason: "name_mismatch"}
 		}
 	}
-	if failure.reason != "" {
-		return result, identityRenameError("post_read", failure, result.Disposition)
-	}
-	result.Disposition = IdentityRenameObserved
-	return result, nil
+	return failure
 }
 
 func identityEnvelope(authorized bool, validation int, exceptions []string, stack string) identityFailure {
@@ -231,7 +281,7 @@ func identityEnvelope(authorized bool, validation int, exceptions []string, stac
 	}
 	return identityFailure{}
 }
-func (i *identityInvocation) list(subject string) (*contracts.IdentityDetailsResponse, identityFailure) {
+func (i *identityInvocation) list(target identityRenameTarget) (*contracts.IdentityDetailsResponse, identityFailure) {
 	response := &contracts.QueryResult_IEnumerable_IdentityDetailsResponse{}
 	_, failure := i.invoke(contracts.Identities_GetIdentities_FullMethodName, &contracts.GetIdentitiesRequest{EventStore: string(i.store.name), Namespace: string(i.store.namespace)}, response, false, func(codec *identityCodec) identityFailure {
 		if !codec.decoded {
@@ -245,12 +295,16 @@ func (i *identityInvocation) list(subject string) (*contracts.IdentityDetailsRes
 	if failure = i.check(); failure.reason != "" {
 		return nil, failure
 	}
+	return selectRenameSubject(response.Data, target)
+}
+
+func selectRenameSubject(rows []*contracts.IdentityDetailsResponse, target identityRenameTarget) (*contracts.IdentityDetailsResponse, identityFailure) {
 	var match *contracts.IdentityDetailsResponse
-	for _, row := range response.Data {
+	for _, row := range rows {
 		if row == nil || row.Id != row.Subject {
 			return nil, identityFailure{reason: "protocol", category: ErrProtocol}
 		}
-		if row.Subject != subject {
+		if row.Subject != target.subject {
 			continue
 		}
 		if match != nil {
