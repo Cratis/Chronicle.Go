@@ -42,21 +42,29 @@ func (p *Plan) Marshal(value any) ([]byte, error) {
 func (n *node) checkInteger(value reflect.Value, dictionary bool) error {
 	// The pinned MongoDB append path parses payload JSON as BSON, whose bare
 	// integer parser cannot represent unsigned values above MaxInt64.
-	if (value.Kind() == reflect.Uint || value.Kind() == reflect.Uint64) && value.Uint() > 1<<63-1 {
-		return unsupported(n.typ, "kernel MongoDB append requires unsigned integers at most MaxInt64")
+	switch value.Kind() {
+	case reflect.Uint, reflect.Uint64:
+		if value.Uint() > 1<<63-1 {
+			return unsupported(n.typ, "kernel MongoDB append requires unsigned integers at most MaxInt64")
+		}
 	}
 	// The kernel ignores dictionary value schemas and reads all nested numbers
 	// as double. Reject outside its contiguous exact-integer range before RPC.
-	if dictionary {
-		switch value.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			if v := value.Int(); v < -(1<<53) || v > 1<<53 {
-				return unsupported(n.typ, "open-schema integers must be between -2^53 and 2^53")
-			}
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			if value.Uint() > 1<<53 {
-				return unsupported(n.typ, "open-schema integers must be at most 2^53")
-			}
+	if !dictionary {
+		return nil
+	}
+	return n.checkDictionaryInteger(value)
+}
+
+func (n *node) checkDictionaryInteger(value reflect.Value) error {
+	switch value.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v := value.Int(); v < -(1<<53) || v > 1<<53 {
+			return unsupported(n.typ, "open-schema integers must be between -2^53 and 2^53")
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		if value.Uint() > 1<<53 {
+			return unsupported(n.typ, "open-schema integers must be at most 2^53")
 		}
 	}
 	return nil
@@ -80,42 +88,46 @@ func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, 
 	if n.reference != nil {
 		return n.reference.encode(value, dictionary, state, depth)
 	}
-	if value.Kind() == reflect.Pointer || value.Kind() == reflect.Map || value.Kind() == reflect.Slice {
+	encoder := nodeEncoder{node: n, dictionary: dictionary, state: state, depth: depth}
+	return encoder.encode(value)
+}
+
+type nodeEncoder struct {
+	node       *node
+	dictionary bool
+	state      *encodeState
+	depth      int
+}
+
+func encodingVisit(value reflect.Value) valueVisit {
+	switch value.Kind() {
+	case reflect.Pointer, reflect.Map, reflect.Slice:
 		visit := valueVisit{typ: value.Type(), pointer: value.Pointer()}
 		if value.Kind() == reflect.Slice {
 			visit.length = value.Len()
 		}
-		if visit.pointer != 0 {
-			if state.active[visit] {
-				return nil, unsupported(n.typ, "cyclic JSON value")
-			}
-			state.active[visit] = true
-			defer delete(state.active, visit)
-		}
+		return visit
+	default:
+		return valueVisit{}
 	}
+}
+
+func (e nodeEncoder) encode(value reflect.Value) (any, error) {
+	visit := encodingVisit(value)
+	if visit.pointer != 0 {
+		if e.state.active[visit] {
+			return nil, unsupported(e.node.typ, "cyclic JSON value")
+		}
+		e.state.active[visit] = true
+		defer delete(e.state.active, visit)
+	}
+	return e.value(value)
+}
+
+func (e nodeEncoder) value(value reflect.Value) (any, error) {
+	n := e.node
 	if n.family {
-		if value.IsNil() {
-			return nil, nil
-		}
-		concrete := value.Elem()
-		if concrete.Kind() == reflect.Pointer && concrete.IsNil() {
-			return nil, unsupported(n.typ, "typed-nil derivative")
-		}
-		for _, derivative := range n.derivatives {
-			if derivative.registration.concrete != concrete.Type() {
-				continue
-			}
-			encoded, err := derivative.node.encode(concrete, true, state, depth+1)
-			if err != nil {
-				return nil, err
-			}
-			object, ok := encoded.(orderedObject)
-			if !ok {
-				return nil, unsupported(n.typ, "derivative must encode an object")
-			}
-			return append(object, objectProperty{name: derivedTypeID, value: derivative.registration.id}), nil
-		}
-		return nil, unsupported(n.typ, "unregistered dynamic derivative")
+		return e.family(value)
 	}
 	if n.binary {
 		return encodeBinary(value), nil
@@ -124,93 +136,149 @@ func (n *node) encode(value reflect.Value, dictionary bool, state *encodeState, 
 		return n.encodeEnum(value)
 	}
 	if n.concept != nil {
-		return n.encodeConcept(value, dictionary, state)
+		return n.encodeConcept(value, e.dictionary, e.state)
 	}
-	if err := n.checkInteger(value, dictionary); err != nil {
+	if err := n.checkInteger(value, e.dictionary); err != nil {
 		return nil, err
 	}
 	if n.scalar {
 		return value.Interface(), nil
 	}
+	return e.composite(value)
+}
+
+func (e nodeEncoder) family(value reflect.Value) (any, error) {
+	if value.IsNil() {
+		return nil, nil
+	}
+	concrete := value.Elem()
+	if concrete.Kind() == reflect.Pointer && concrete.IsNil() {
+		return nil, unsupported(e.node.typ, "typed-nil derivative")
+	}
+	for _, derivative := range e.node.derivatives {
+		if derivative.registration.concrete != concrete.Type() {
+			continue
+		}
+		encoded, err := derivative.node.encode(concrete, true, e.state, e.depth+1)
+		if err != nil {
+			return nil, err
+		}
+		object, ok := encoded.(orderedObject)
+		if !ok {
+			return nil, unsupported(e.node.typ, "derivative must encode an object")
+		}
+		return append(object, objectProperty{name: derivedTypeID, value: derivative.registration.id}), nil
+	}
+	return nil, unsupported(e.node.typ, "unregistered dynamic derivative")
+}
+
+func (e nodeEncoder) composite(value reflect.Value) (any, error) {
 	switch value.Kind() {
 	case reflect.Pointer:
 		if value.IsNil() {
 			return nil, nil
 		}
-		return n.item.encode(value.Elem(), dictionary, state, depth+1)
+		return e.node.item.encode(value.Elem(), e.dictionary, e.state, e.depth+1)
 	case reflect.Struct:
-		result := make(orderedObject, 0, len(n.fields))
-		for _, field := range n.fields {
-			v, err := fieldValue(value, field.index, false)
-			if err != nil {
-				return nil, err
-			}
-			if !v.IsValid() {
-				continue
-			}
-			if err := field.value.validateFamilyValue(v); err != nil {
-				return nil, fmt.Errorf("property %s: %w", field.name, err)
-			}
-			if field.omitEmpty && empty(v) {
-				continue
-			}
-			if field.omitZero {
-				zero, err := invoke(func() (bool, error) { return field.isZero(v), nil })
-				if err != nil {
-					if failure, ok := err.(*CallbackError); ok {
-						state.panicked = failure.panicked
-					}
-					return nil, err
-				}
-				if zero {
-					continue
-				}
-			}
-			encoded, err := field.value.encode(v, dictionary, state, depth+1)
-			if err != nil {
-				return nil, fmt.Errorf("property %s: %w", field.name, err)
-			}
-			if encoded != nil {
-				result = append(result, objectProperty{name: field.name, value: encoded})
-			}
-		}
-		return result, nil
+		return e.object(value)
 	case reflect.Slice, reflect.Array:
-		if value.Kind() == reflect.Slice && value.IsNil() {
-			return nil, nil
-		}
-		result := make([]any, value.Len())
-		for i := range result {
-			encoded, err := n.item.encode(value.Index(i), dictionary, state, depth+1)
-			if err != nil {
-				return nil, err
-			}
-			if encoded == nil {
-				return nil, fmt.Errorf("chronicle: null collection element at %d", i)
-			}
-			result[i] = encoded
-		}
-		return result, nil
+		return e.collection(value)
 	case reflect.Map:
-		if value.IsNil() {
-			return nil, nil
-		}
-		result := make(map[string]any, value.Len())
-		iterator := value.MapRange()
-		for iterator.Next() {
-			encoded, err := n.item.encode(iterator.Value(), true, state, depth+1)
-			if err != nil {
-				return nil, err
-			}
-			if encoded == nil {
-				return nil, fmt.Errorf("chronicle: null map value")
-			}
-			result[iterator.Key().String()] = encoded
-		}
-		return result, nil
+		return e.dictionaryValue(value)
 	default:
 		return value.Interface(), nil
 	}
+}
+
+func (e nodeEncoder) object(value reflect.Value) (any, error) {
+	result := make(orderedObject, 0, len(e.node.fields))
+	for _, field := range e.node.fields {
+		v, err := fieldValue(value, field.index, false)
+		if err != nil {
+			return nil, err
+		}
+		if !v.IsValid() {
+			continue
+		}
+		encoded, err := e.field(field, v)
+		if err != nil {
+			return nil, err
+		}
+		if encoded != nil {
+			result = append(result, objectProperty{name: field.name, value: encoded})
+		}
+	}
+	return result, nil
+}
+
+func (e nodeEncoder) field(field field, value reflect.Value) (any, error) {
+	if err := field.value.validateFamilyValue(value); err != nil {
+		return nil, fmt.Errorf("property %s: %w", field.name, err)
+	}
+	if field.omitEmpty && empty(value) {
+		return nil, nil
+	}
+	if field.omitZero {
+		zero, err := e.omitZero(field, value)
+		if err != nil {
+			return nil, err
+		}
+		if zero {
+			return nil, nil
+		}
+	}
+	encoded, err := field.value.encode(value, e.dictionary, e.state, e.depth+1)
+	if err != nil {
+		return nil, fmt.Errorf("property %s: %w", field.name, err)
+	}
+	return encoded, nil
+}
+
+func (e nodeEncoder) omitZero(field field, value reflect.Value) (bool, error) {
+	zero, err := invoke(func() (bool, error) { return field.isZero(value), nil })
+	if err != nil {
+		if failure, ok := err.(*CallbackError); ok {
+			e.state.panicked = failure.panicked
+		}
+	}
+	return zero, err
+}
+
+func (e nodeEncoder) collection(value reflect.Value) (any, error) {
+	if value.Kind() == reflect.Slice && value.IsNil() {
+		return nil, nil
+	}
+	result := make([]any, value.Len())
+	for i := range result {
+		encoded, err := e.node.item.encode(value.Index(i), e.dictionary, e.state, e.depth+1)
+		if err != nil {
+			return nil, err
+		}
+		if encoded == nil {
+			return nil, fmt.Errorf("chronicle: null collection element at %d", i)
+		}
+		result[i] = encoded
+	}
+	return result, nil
+}
+
+func (e nodeEncoder) dictionaryValue(value reflect.Value) (any, error) {
+	if value.IsNil() {
+		return nil, nil
+	}
+	result := make(map[string]any, value.Len())
+	iterator := value.MapRange()
+	for iterator.Next() {
+		encoded, err := e.node.item.encode(iterator.Value(), true, e.state, e.depth+1)
+		if err != nil {
+			return nil, err
+		}
+		if encoded == nil {
+			return nil, fmt.Errorf("chronicle: null map value")
+		}
+		result[iterator.Key().String()] = encoded
+	}
+	return result, nil
 }
 
 type zeroer interface{ IsZero() bool }
@@ -221,23 +289,29 @@ func zeroFunc(typ reflect.Type) func(reflect.Value) bool {
 	contract := reflect.TypeFor[zeroer]()
 	switch {
 	case typ.Kind() == reflect.Interface && typ.Implements(contract):
-		return func(v reflect.Value) bool { return v.IsNil() || v.Interface().(zeroer).IsZero() }
+		return nilOrZero
 	case typ.Kind() == reflect.Pointer && typ.Implements(contract):
-		return func(v reflect.Value) bool { return v.IsNil() || v.Interface().(zeroer).IsZero() }
+		return nilOrZero
 	case typ.Implements(contract):
 		return func(v reflect.Value) bool { return v.Interface().(zeroer).IsZero() }
 	case reflect.PointerTo(typ).Implements(contract):
-		return func(v reflect.Value) bool {
-			if !v.CanAddr() {
-				copy := reflect.New(v.Type()).Elem()
-				copy.Set(v)
-				v = copy
-			}
-			return v.Addr().Interface().(zeroer).IsZero()
-		}
+		return addressableZero
 	default:
 		return reflect.Value.IsZero
 	}
+}
+
+func nilOrZero(v reflect.Value) bool {
+	return v.IsNil() || v.Interface().(zeroer).IsZero()
+}
+
+func addressableZero(v reflect.Value) bool {
+	if !v.CanAddr() {
+		copy := reflect.New(v.Type()).Elem()
+		copy.Set(v)
+		v = copy
+	}
+	return v.Addr().Interface().(zeroer).IsZero()
 }
 
 func empty(value reflect.Value) bool {
