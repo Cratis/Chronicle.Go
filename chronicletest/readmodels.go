@@ -77,15 +77,9 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 	if len(options) == 1 {
 		option = options[0]
 	}
-	if option.Projection != nil {
-		if option.Projection.Model().GoType() != reflect.TypeFor[M]() {
-			return nil, chronicle.ErrInvalidConfiguration
-		}
-		var err error
-		config.Registry, err = config.Registry.WithProjection(*option.Projection)
-		if err != nil {
-			return nil, err
-		}
+	config, err := option.configureRegistry(config)
+	if err != nil {
+		return nil, err
 	}
 	config, clientOptions, err := configuration(config)
 	if err != nil {
@@ -96,20 +90,47 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 		return nil, err
 	}
 	s := &ReadModelScenario[M]{config: config, client: client}
-	fail := func(err error) (*ReadModelScenario[M], error) { return nil, errors.Join(err, s.Close()) }
-	s.artifacts, err = client.Artifacts(config.Store)
+	if err := s.initializeModel(); err != nil {
+		return nil, errors.Join(err, s.Close())
+	}
+	if err := s.openProducer(ctx, option); err != nil {
+		return nil, errors.Join(err, s.Close())
+	}
+	return s, nil
+}
+
+func (o ReadModelOptions[M]) configureRegistry(config Config) (Config, error) {
+	if o.Projection == nil {
+		return config, nil
+	}
+	if o.Projection.Model().GoType() != reflect.TypeFor[M]() {
+		return config, chronicle.ErrInvalidConfiguration
+	}
+	var err error
+	config.Registry, err = config.Registry.WithProjection(*o.Projection)
+	return config, err
+}
+
+func (s *ReadModelScenario[M]) initializeModel() error {
+	var err error
+	s.artifacts, err = s.client.Artifacts(s.config.Store)
 	if err != nil {
-		return fail(err)
+		return err
 	}
 	var ok bool
 	s.model, ok = s.artifacts.ReadModels.LookupType(reflect.TypeFor[M]())
 	if !ok {
-		return fail(chronicle.ErrNotRegistered)
+		return chronicle.ErrNotRegistered
 	}
-	s.seeds, err = newSeededModels(config, s.artifacts.ReadModels)
+	s.seeds, err = newSeededModels(s.config, s.artifacts.ReadModels)
 	if err != nil {
-		return fail(err)
+		return err
 	}
+	s.selectProducer()
+	return nil
+}
+
+func (s *ReadModelScenario[M]) selectProducer() {
 	for _, plan := range s.artifacts.Reducers {
 		if plan.Model().GoType() == reflect.TypeFor[M]() {
 			s.reducer = plan
@@ -120,48 +141,66 @@ func OpenReadModelScenario[M any](ctx context.Context, config Config, options ..
 			s.projection = definition
 		}
 	}
+}
+
+func (s *ReadModelScenario[M]) openProducer(ctx context.Context, option ReadModelOptions[M]) error {
 	if s.reducer != nil {
-		if config.Engine == Kernel {
-			return fail(fmt.Errorf("%w: reducer scenarios require Substitute for in-process folding; use a kernel EventScenario for append constraints", ErrFidelityUnavailable))
-		}
-		if option.Initial != nil {
-			s.initial, err = s.model.Marshal(option.Initial)
-			if err != nil {
-				return fail(err)
-			}
-		}
-		return s, nil
+		return s.initializeReducer(option)
 	}
-	if s.projection.Identifier() == "" {
-		return fail(fmt.Errorf("%w: no read-model producer", chronicle.ErrNotRegistered))
-	}
-	if config.Engine != Kernel {
-		return fail(fmt.Errorf("%w: projections require the real kernel", ErrFidelityUnavailable))
+	return s.openProjection(ctx, option)
+}
+
+func (s *ReadModelScenario[M]) initializeReducer(option ReadModelOptions[M]) error {
+	if s.config.Engine == Kernel {
+		return fmt.Errorf("%w: reducer scenarios require Substitute for in-process folding; use a kernel EventScenario for append constraints", ErrFidelityUnavailable)
 	}
 	if option.Initial != nil {
-		return fail(fmt.Errorf("%w: projection initial state", chronicle.ErrUnsupported))
+		var err error
+		s.initial, err = s.model.Marshal(option.Initial)
+		return err
+	}
+	return nil
+}
+
+func (s *ReadModelScenario[M]) validateProjection(option ReadModelOptions[M]) error {
+	if s.projection.Identifier() == "" {
+		return fmt.Errorf("%w: no read-model producer", chronicle.ErrNotRegistered)
+	}
+	if s.config.Engine != Kernel {
+		return fmt.Errorf("%w: projections require the real kernel", ErrFidelityUnavailable)
+	}
+	if option.Initial != nil {
+		return fmt.Errorf("%w: projection initial state", chronicle.ErrUnsupported)
 	}
 	if s.projection.KernelDefinition().InitialModelState != "{}" {
-		return fail(fmt.Errorf("%w: kernel all-instance replay omits projection initial state; use materialized reads (Chronicle.Go#38)", ErrFidelityUnavailable))
+		return fmt.Errorf("%w: kernel all-instance replay omits projection initial state; use materialized reads (Chronicle.Go#38)", ErrFidelityUnavailable)
 	}
 	if len(s.artifacts.Reactors) != 0 || len(s.artifacts.Reducers) != 0 {
-		return fail(fmt.Errorf("%w: projection scenario registry contains other Go observers; isolate the registry or use EventScenario for live lifecycle", chronicle.ErrUnsupported))
+		return fmt.Errorf("%w: projection scenario registry contains other Go observers; isolate the registry or use EventScenario for live lifecycle", chronicle.ErrUnsupported)
+	}
+	return nil
+}
+
+func (s *ReadModelScenario[M]) openProjection(ctx context.Context, option ReadModelOptions[M]) error {
+	if err := s.validateProjection(option); err != nil {
+		return err
 	}
 	if option.StrictEventSubscription {
+		var err error
 		s.subscription, err = strictProjectionSubscription(s.projection, s.artifacts.Events)
 		if err != nil {
-			return fail(err)
+			return err
 		}
 	}
-	if config.ConnectionString == "" {
-		return fail(ErrKernelUnavailable)
+	if s.config.ConnectionString == "" {
+		return ErrKernelUnavailable
 	}
-	store, err := client.EventStore(ctx, config.Store, chronicle.WithNamespace(config.Namespace))
+	store, err := s.client.EventStore(ctx, s.config.Store, chronicle.WithNamespace(s.config.Namespace))
 	if err != nil {
-		return fail(err)
+		return err
 	}
-	s.eventScenario = &EventScenario{Client: client, Store: store, fidelity: kernelFidelity()}
-	return s, nil
+	s.eventScenario = &EventScenario{Client: s.client, Store: store, fidelity: kernelFidelity()}
+	return nil
 }
 
 // NewReadModelScenario registers testing.TB cleanup and skips only a missing kernel endpoint.
@@ -200,42 +239,54 @@ func (s *ReadModelScenario[M]) Given(ctx context.Context, source events.SourceID
 		return chronicle.ErrInvalidConfiguration
 	}
 	for _, value := range values {
-		if err := ctx.Err(); err != nil {
+		if err := s.givenEvent(ctx, source, value); err != nil {
 			return err
 		}
-		descriptor, ok := s.artifacts.Events.Lookup(value)
-		if !ok {
-			return chronicle.ErrNotRegistered
-		}
-		if err := s.subscription.admit(descriptor.Ref().ID); err != nil {
-			return err
-		}
-		data, err := descriptor.Marshal(value)
-		if err != nil {
-			return err
-		}
-		sequence := s.model.EventSequence()
-		ec := synthetic(s.config, sequence, descriptor, source, events.SequenceNumber(len(s.history)))
-		ec, content, err := observerruntime.DecodeContent(descriptor, ec, data, nil)
-		if err != nil {
-			return err
-		}
-		if s.eventScenario != nil {
-			handle, err := s.eventScenario.Store.EventSequence(s.projection.EventSequence())
-			if err != nil {
-				return err
-			}
-			result, err := handle.Append(ctx, source, value)
-			if err != nil {
-				return err
-			}
-			if err = result.Err(); err != nil {
-				return err
-			}
-		}
-		s.history = append(s.history, reducers.Event{Content: content, Context: ec})
 	}
 	return nil
+}
+
+func (s *ReadModelScenario[M]) givenEvent(ctx context.Context, source events.SourceID, value any) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	descriptor, ok := s.artifacts.Events.Lookup(value)
+	if !ok {
+		return chronicle.ErrNotRegistered
+	}
+	if err := s.subscription.admit(descriptor.Ref().ID); err != nil {
+		return err
+	}
+	data, err := descriptor.Marshal(value)
+	if err != nil {
+		return err
+	}
+	sequence := s.model.EventSequence()
+	ec := synthetic(s.config, sequence, descriptor, source, events.SequenceNumber(len(s.history)))
+	ec, content, err := observerruntime.DecodeContent(descriptor, ec, data, nil)
+	if err != nil {
+		return err
+	}
+	if err := s.appendProjectionEvent(ctx, source, value); err != nil {
+		return err
+	}
+	s.history = append(s.history, reducers.Event{Content: content, Context: ec})
+	return nil
+}
+
+func (s *ReadModelScenario[M]) appendProjectionEvent(ctx context.Context, source events.SourceID, value any) error {
+	if s.eventScenario == nil {
+		return nil
+	}
+	handle, err := s.eventScenario.Store.EventSequence(s.projection.EventSequence())
+	if err != nil {
+		return err
+	}
+	result, err := handle.Append(ctx, source, value)
+	if err != nil {
+		return err
+	}
+	return result.Err()
 }
 
 // Instances returns owned values keyed by the actual projected key. Kernel replay
@@ -255,6 +306,10 @@ func (s *ReadModelScenario[M]) Instances(ctx context.Context) (map[readmodels.Ke
 	if err != nil {
 		return nil, err
 	}
+	return s.projectionInstances(documents)
+}
+
+func (s *ReadModelScenario[M]) projectionInstances(documents []json.RawMessage) (map[readmodels.Key]M, error) {
 	result := map[readmodels.Key]M{}
 	for _, document := range documents {
 		key, err := modelKey(document, s.model)
@@ -277,19 +332,7 @@ func modelKey(document json.RawMessage, model readmodels.Descriptor) (readmodels
 	if err := json.Unmarshal(document, &object); err != nil {
 		return "", err
 	}
-	names := []string{model.KeyProperty()}
-	if names[0] == "" {
-		declared := make(map[string]bool)
-		for _, field := range serialization.RootFields(model.Fields()) {
-			declared[field.Name] = true
-		}
-		names = nil
-		for _, alias := range []string{"_id", "id", "Id", "ID"} {
-			if !declared[alias] {
-				names = append(names, alias)
-			}
-		}
-	}
+	names := modelKeyNames(model)
 	// ReplayProjection already normalizes genuine sink aliases. When a model
 	// declares a key, require that exact property; another field is not a key.
 	for _, name := range names {
@@ -305,7 +348,24 @@ func modelKey(document json.RawMessage, model readmodels.Descriptor) (readmodels
 	}
 	return "", fmt.Errorf("%w: keyed access requires a projected ID field", ErrFidelityUnavailable)
 }
-func (s *ReadModelScenario[M]) reduce(ctx context.Context) (map[readmodels.Key]M, error) {
+func modelKeyNames(model readmodels.Descriptor) []string {
+	if name := model.KeyProperty(); name != "" {
+		return []string{name}
+	}
+	declared := make(map[string]bool)
+	for _, field := range serialization.RootFields(model.Fields()) {
+		declared[field.Name] = true
+	}
+	var names []string
+	for _, alias := range []string{"_id", "id", "Id", "ID"} {
+		if !declared[alias] {
+			names = append(names, alias)
+		}
+	}
+	return names
+}
+
+func (s *ReadModelScenario[M]) reductionBatches() (map[readmodels.Key][]reducers.Event, []readmodels.Key) {
 	batches := map[readmodels.Key][]reducers.Event{}
 	var keys []readmodels.Key
 	for _, event := range s.history {
@@ -318,41 +378,64 @@ func (s *ReadModelScenario[M]) reduce(ctx context.Context) (map[readmodels.Key]M
 			batches[key] = append(batches[key], event)
 		}
 	}
+	return batches, keys
+}
+
+func (s *ReadModelScenario[M]) reduce(ctx context.Context) (map[readmodels.Key]M, error) {
+	batches, keys := s.reductionBatches()
 	result := map[readmodels.Key]M{}
 	for _, key := range keys {
-		batch := batches[key]
-		var initial *M
-		if s.initial != nil {
-			value, err := s.model.Unmarshal(s.initial)
-			if err != nil {
-				return nil, err
-			}
-			initial = value.(*M)
+		value, err := s.reduceBatch(ctx, batches[key])
+		if err != nil {
+			return nil, err
 		}
-		if len(batch) == 0 {
-			if initial != nil {
-				result[key] = *initial
-			}
-			continue
-		}
-		operation := reducers.WithBatch(ctx, reducers.Batch{Reducer: s.reducer.Identifier(), Store: s.config.Store, Namespace: s.config.Namespace, Sequence: s.reducer.EventSequence()})
-		folded := s.reducer.Reduce(operation, batch, initial)
-		if folded.Err != nil {
-			return nil, folded.Err
-		}
-		if folded.State != nil {
-			data, err := s.model.Marshal(folded.State)
-			if err != nil {
-				return nil, err
-			}
-			value, err := s.model.Unmarshal(data)
-			if err != nil {
-				return nil, err
-			}
-			result[key] = *value.(*M)
+		if value != nil {
+			result[key] = *value
 		}
 	}
 	return result, nil
+}
+
+func (s *ReadModelScenario[M]) initialModel() (*M, error) {
+	if s.initial == nil {
+		return nil, nil
+	}
+	value, err := s.model.Unmarshal(s.initial)
+	if err != nil {
+		return nil, err
+	}
+	return value.(*M), nil
+}
+
+func (s *ReadModelScenario[M]) reduceBatch(ctx context.Context, batch []reducers.Event) (*M, error) {
+	initial, err := s.initialModel()
+	if err != nil {
+		return nil, err
+	}
+	if len(batch) == 0 {
+		return initial, nil
+	}
+	operation := reducers.WithBatch(ctx, reducers.Batch{Reducer: s.reducer.Identifier(), Store: s.config.Store, Namespace: s.config.Namespace, Sequence: s.reducer.EventSequence()})
+	folded := s.reducer.Reduce(operation, batch, initial)
+	if folded.Err != nil {
+		return nil, folded.Err
+	}
+	if folded.State == nil {
+		return nil, nil
+	}
+	return s.snapshotModel(folded.State)
+}
+
+func (s *ReadModelScenario[M]) snapshotModel(state any) (*M, error) {
+	data, err := s.model.Marshal(state)
+	if err != nil {
+		return nil, err
+	}
+	value, err := s.model.Unmarshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return value.(*M), nil
 }
 
 // Instance returns absence or exactly one result; multiple materialized roots
@@ -362,21 +445,7 @@ func (s *ReadModelScenario[M]) Instance(ctx context.Context) (readmodels.Instanc
 		return readmodels.Instance[M]{}, chronicle.ErrClosed
 	}
 	if s.eventScenario != nil {
-		documents, err := s.eventScenario.Store.ReadModels().ReplayProjection(ctx, s.model.Identifier(), uint64(len(s.history)))
-		if err != nil {
-			return readmodels.Instance[M]{}, err
-		}
-		if len(documents) > 1 {
-			return readmodels.Instance[M]{}, ErrAmbiguousInstance
-		}
-		if len(documents) == 0 {
-			return readmodels.Instance[M]{}, nil
-		}
-		value, err := s.model.Unmarshal(documents[0])
-		if err != nil {
-			return readmodels.Instance[M]{}, err
-		}
-		return readmodels.Instance[M]{Exists: true, Value: *value.(*M)}, nil
+		return s.projectionInstance(ctx)
 	}
 	values, err := s.Instances(ctx)
 	if err != nil {
@@ -389,6 +458,24 @@ func (s *ReadModelScenario[M]) Instance(ctx context.Context) (readmodels.Instanc
 		return readmodels.Instance[M]{Exists: true, Value: value}, nil
 	}
 	return readmodels.Instance[M]{}, nil
+}
+
+func (s *ReadModelScenario[M]) projectionInstance(ctx context.Context) (readmodels.Instance[M], error) {
+	documents, err := s.eventScenario.Store.ReadModels().ReplayProjection(ctx, s.model.Identifier(), uint64(len(s.history)))
+	if err != nil {
+		return readmodels.Instance[M]{}, err
+	}
+	if len(documents) > 1 {
+		return readmodels.Instance[M]{}, ErrAmbiguousInstance
+	}
+	if len(documents) == 0 {
+		return readmodels.Instance[M]{}, nil
+	}
+	value, err := s.model.Unmarshal(documents[0])
+	if err != nil {
+		return readmodels.Instance[M]{}, err
+	}
+	return readmodels.Instance[M]{Exists: true, Value: *value.(*M)}, nil
 }
 
 // InstanceFor selects a projected key (not necessarily an event source ID).
