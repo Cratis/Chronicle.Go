@@ -17,7 +17,7 @@ import (
 // paths use declaration names even when a client selects another naming policy.
 // This registry-composition hook requires catalogs of the same declared events.
 func (d Definition) Rebind(model readmodels.Descriptor, before, after *events.Catalog) (Definition, error) {
-	if d.data == nil || model.GoType() != d.Model().GoType() || before == nil || after == nil {
+	if !d.canRebind(model, before, after) {
 		return Definition{}, invalid("matching model and event catalogs required")
 	}
 	copy := *d.data
@@ -51,6 +51,16 @@ func (d Definition) Rebind(model readmodels.Descriptor, before, after *events.Ca
 		return Definition{}, err
 	}
 	return Definition{data: &copy}, nil
+}
+
+func (d Definition) canRebind(model readmodels.Descriptor, before, after *events.Catalog) bool {
+	if d.data == nil {
+		return false
+	}
+	if before == nil || after == nil {
+		return false
+	}
+	return model.GoType() == d.Model().GoType()
 }
 
 type rebinder struct {
@@ -137,54 +147,82 @@ func (r *rebinder) node(n nodeDefinition, old, next []serialization.Field) nodeD
 	for i, path := range n.exclusions {
 		n.exclusions[i] = r.path(path, old, next)
 	}
-	n.from = slices.Clone(n.from)
-	for i, from := range n.from {
-		n.from[i] = r.from(from, old, next)
-	}
-	n.joins = slices.Clone(n.joins)
-	for i, join := range n.joins {
-		n.joins[i].on = r.path(join.on, old, next)
-		n.joins[i].fromDefinition = r.from(join.fromDefinition, old, next)
-	}
-	n.removals = slices.Clone(n.removals)
-	for i, removal := range n.removals {
-		eventOld, eventNext := r.event(removal.event)
-		n.removals[i].key = r.expression(removal.key, eventOld, eventNext)
-		n.removals[i].parent = r.expression(removal.parent, eventOld, eventNext)
-	}
-	n.all = slices.Clone(n.all)
-	for i, w := range n.all {
-		// C# model-bound globals from child nodes are hoisted by bare name.
-		// Preserve that behavior using the original field's metadata identity.
-		if _, ok := serialization.FieldAt(old, w.path); ok {
-			w.path = r.path(w.path, old, next)
-		} else {
-			p := r.provenance(w.provenance, old, next)
-			parts := strings.Split(p.Path, ".")
-			w.path = parts[len(parts)-1]
-		}
-		if w.expression.kind == pathExpression {
-			resolved := ""
-			for _, event := range r.before.Descriptors() {
-				if _, ok := serialization.FieldAt(event.Fields(), w.expression.text); !ok {
-					continue
-				}
-				eventOld, eventNext := r.event(event.Ref())
-				path := r.path(w.expression.text, eventOld, eventNext)
-				if resolved != "" && resolved != path {
-					r.err = invalid("global payload path has inconsistent naming across events")
-				}
-				resolved = path
-			}
-			if resolved != "" {
-				w.expression.text = resolved
-			}
-		}
-		n.all[i] = w
-	}
+	n.from = r.froms(n.from, old, next)
+	n.joins = r.joins(n.joins, old, next)
+	n.removals = r.removals(n.removals)
+	n.all = r.globals(n.all, old, next)
 	n.children = r.children(n.children, old, next)
 	n.nested = r.children(n.nested, old, next)
 	return n
+}
+
+func (r *rebinder) froms(from []fromDefinition, old, next []serialization.Field) []fromDefinition {
+	result := slices.Clone(from)
+	for i := range result {
+		result[i] = r.from(result[i], old, next)
+	}
+	return result
+}
+
+func (r *rebinder) joins(joins []joinDefinition, old, next []serialization.Field) []joinDefinition {
+	result := slices.Clone(joins)
+	for i := range result {
+		result[i].on = r.path(result[i].on, old, next)
+		result[i].fromDefinition = r.from(result[i].fromDefinition, old, next)
+	}
+	return result
+}
+
+func (r *rebinder) removals(removals []removalDefinition) []removalDefinition {
+	result := slices.Clone(removals)
+	for i := range result {
+		eventOld, eventNext := r.event(result[i].event)
+		result[i].key = r.expression(result[i].key, eventOld, eventNext)
+		result[i].parent = r.expression(result[i].parent, eventOld, eventNext)
+	}
+	return result
+}
+
+func (r *rebinder) globals(writes []write, old, next []serialization.Field) []write {
+	result := slices.Clone(writes)
+	for i := range result {
+		result[i].path = r.globalTarget(result[i], old, next)
+		result[i].expression = r.globalExpression(result[i].expression)
+	}
+	return result
+}
+
+func (r *rebinder) globalTarget(w write, old, next []serialization.Field) string {
+	// C# model-bound globals from child nodes are hoisted by bare name.
+	// Preserve that behavior using the original field's metadata identity.
+	if _, ok := serialization.FieldAt(old, w.path); ok {
+		return r.path(w.path, old, next)
+	}
+	p := r.provenance(w.provenance, old, next)
+	parts := strings.Split(p.Path, ".")
+	return parts[len(parts)-1]
+}
+
+func (r *rebinder) globalExpression(e expression) expression {
+	if e.kind != pathExpression {
+		return e
+	}
+	resolved := ""
+	for _, event := range r.before.Descriptors() {
+		if _, ok := serialization.FieldAt(event.Fields(), e.text); !ok {
+			continue
+		}
+		eventOld, eventNext := r.event(event.Ref())
+		path := r.path(e.text, eventOld, eventNext)
+		if resolved != "" && resolved != path {
+			r.err = invalid("global payload path has inconsistent naming across events")
+		}
+		resolved = path
+	}
+	if resolved != "" {
+		e.text = resolved
+	}
+	return e
 }
 func (r *rebinder) children(children map[string]*nodeDefinition, old, next []serialization.Field) map[string]*nodeDefinition {
 	result := make(map[string]*nodeDefinition, len(children))
@@ -195,20 +233,27 @@ func (r *rebinder) children(children map[string]*nodeDefinition, old, next []ser
 		if r.err != nil {
 			return result
 		}
-		if child.derivative != nil {
-			replacement, ok := binaryMappingField(next, newPath)
-			if !ok {
-				r.err = invalid("derived child selection changed during rebinding")
-				return result
-			}
-			shape, err := childShape(replacement, false)
-			if err != nil || shape.derivative == nil || shape.derivative.Type != child.derivative.Type || shape.derivative.ID != child.derivative.ID {
-				r.err = invalid("derived child selection changed during rebinding")
-				return result
-			}
+		if child.derivative != nil && !sameReboundDerivative(child.derivative, next, newPath) {
+			r.err = invalid("derived child selection changed during rebinding")
+			return result
 		}
 		copy := r.node(*child, scopedFields(old, path), scopedFields(next, newPath))
 		result[newPath] = &copy
 	}
 	return result
+}
+
+func sameReboundDerivative(selected *serialization.Derivative, fields []serialization.Field, path string) bool {
+	replacement, ok := binaryMappingField(fields, path)
+	if !ok {
+		return false
+	}
+	shape, err := childShape(replacement, false)
+	if err != nil || shape.derivative == nil {
+		return false
+	}
+	if shape.derivative.Type != selected.Type {
+		return false
+	}
+	return shape.derivative.ID == selected.ID
 }
