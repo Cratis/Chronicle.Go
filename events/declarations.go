@@ -108,31 +108,10 @@ func (c *Catalog) ValidateDeclarations() error {
 func (d Descriptor) compileDeclarations() (Descriptor, error) {
 	var subject *serialization.Field
 	for _, field := range d.Fields() {
-		directives, err := declarations.Parse(declarations.V1, field.Tag)
+		var err error
+		subject, err = d.compileFieldDeclarations(field, subject)
 		if err != nil {
 			return Descriptor{}, err
-		}
-		seen := map[string]bool{}
-		for _, directive := range directives {
-			if seen[directive.Name] {
-				return Descriptor{}, d.declarationError(field, directive, "duplicate field declaration")
-			}
-			seen[directive.Name] = true
-			if directive.Name == "pii" || directive.Name == "encrypted" || directive.Name == "compliance-details" {
-				continue
-			}
-			if len(field.Index) != 1 || field.Collection {
-				return Descriptor{}, d.declarationError(field, directive, "event declarations require a top-level field")
-			}
-			if directive.Name == "subject" {
-				if subject != nil {
-					return Descriptor{}, d.declarationError(field, directive, "only one subject field is allowed")
-				}
-				if !field.Scalar.IsPrimitive() {
-					return Descriptor{}, d.declarationError(field, directive, "subject requires a scalar or scalar concept")
-				}
-				subject = &field
-			}
 		}
 	}
 	if subject != nil {
@@ -143,6 +122,49 @@ func (d Descriptor) compileDeclarations() (Descriptor, error) {
 		}
 	}
 	return d.withCompensationSchema()
+}
+
+func (d Descriptor) compileFieldDeclarations(field serialization.Field, subject *serialization.Field) (*serialization.Field, error) {
+	directives, err := declarations.Parse(declarations.V1, field.Tag)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	for _, directive := range directives {
+		if seen[directive.Name] {
+			return nil, d.declarationError(field, directive, "duplicate field declaration")
+		}
+		seen[directive.Name] = true
+		subject, err = d.compileFieldDirective(field, directive, subject)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return subject, nil
+}
+
+func (d Descriptor) compileFieldDirective(field serialization.Field, directive declarations.Directive, subject *serialization.Field) (*serialization.Field, error) {
+	switch directive.Name {
+	case "pii", "encrypted", "compliance-details":
+		return subject, nil
+	}
+	if len(field.Index) != 1 || field.Collection {
+		return nil, d.declarationError(field, directive, "event declarations require a top-level field")
+	}
+	if directive.Name != "subject" {
+		return subject, nil
+	}
+	return d.compileSubjectField(field, directive, subject)
+}
+
+func (d Descriptor) compileSubjectField(field serialization.Field, directive declarations.Directive, subject *serialization.Field) (*serialization.Field, error) {
+	if subject != nil {
+		return nil, d.declarationError(field, directive, "only one subject field is allowed")
+	}
+	if !field.Scalar.IsPrimitive() {
+		return nil, d.declarationError(field, directive, "subject requires a scalar or scalar concept")
+	}
+	return &field, nil
 }
 
 func (d Descriptor) withCompensationSchema() (Descriptor, error) {
@@ -181,57 +203,81 @@ func taggedSubject(typ reflect.Type, field serialization.Field) func(any) (Subje
 	_, concept := fieldType.MethodByName("ConceptValue") // Validated by the serialization plan.
 	// Shared Fundamentals scalars have codecs and String, but no ConceptValue.
 	return func(value any) (Subject, bool) {
-		if !field.Scalar.IsPrimitive() {
+		v, ok := subjectFieldValue(typ, field, value)
+		if !ok {
 			return "", false
-		}
-		v := reflect.ValueOf(value)
-		if v.IsValid() && v.Kind() == reflect.Pointer {
-			if v.IsNil() {
-				return "", false
-			}
-			v = v.Elem()
-		}
-		if !v.IsValid() || v.Type() != typ {
-			return "", false
-		}
-		v = v.Field(field.Index[0])
-		for v.Kind() == reflect.Pointer {
-			if v.IsNil() {
-				return "", false
-			}
-			v = v.Elem()
 		}
 		if concept {
 			v = v.MethodByName("ConceptValue").Call(nil)[0]
 		}
-		subject := Subject(fmt.Sprint(v.Interface()))
-		if v.Kind() == reflect.Bool {
-			subject = "False"
-			if v.Bool() {
-				subject = "True"
-			}
-		}
+		subject := scalarSubject(v)
 		return subject, subject != ""
 	}
 }
 
+func subjectFieldValue(typ reflect.Type, field serialization.Field, value any) (reflect.Value, bool) {
+	if !field.Scalar.IsPrimitive() {
+		return reflect.Value{}, false
+	}
+	v := reflect.ValueOf(value)
+	if v.IsValid() && v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return reflect.Value{}, false
+		}
+		v = v.Elem()
+	}
+	if !v.IsValid() || v.Type() != typ {
+		return reflect.Value{}, false
+	}
+	return indirectSubjectField(v.Field(field.Index[0]))
+}
+
+func indirectSubjectField(v reflect.Value) (reflect.Value, bool) {
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return reflect.Value{}, false
+		}
+		v = v.Elem()
+	}
+	return v, true
+}
+
+func scalarSubject(v reflect.Value) Subject {
+	subject := Subject(fmt.Sprint(v.Interface()))
+	if v.Kind() == reflect.Bool {
+		subject = "False"
+		if v.Bool() {
+			subject = "True"
+		}
+	}
+	return subject
+}
+
 // ValidateUnique validates copied type-level metadata before constraint compilation.
 func (d Descriptor) ValidateUnique() error {
-	fail := func(message string) error {
-		return d.declarationError(serialization.Field{}, declarations.Directive{Name: "unique", Offset: -1}, message)
-	}
 	if len(d.unique) > 1 {
-		return fail("only one type-level unique declaration is allowed")
+		return d.uniqueError("only one type-level unique declaration is allowed")
 	}
 	for _, unique := range d.unique {
-		if unique.Name != "" && strings.TrimSpace(unique.Name) == "" {
-			return fail("constraint name must be nonblank")
-		}
-		for _, sequence := range unique.EventSequences {
-			if strings.TrimSpace(string(sequence)) == "" {
-				return fail("event sequence must be nonblank")
-			}
+		if err := d.validateUniqueDeclaration(unique); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+func (d Descriptor) validateUniqueDeclaration(unique Unique) error {
+	if unique.Name != "" && strings.TrimSpace(unique.Name) == "" {
+		return d.uniqueError("constraint name must be nonblank")
+	}
+	for _, sequence := range unique.EventSequences {
+		if strings.TrimSpace(string(sequence)) == "" {
+			return d.uniqueError("event sequence must be nonblank")
+		}
+	}
+	return nil
+}
+
+func (d Descriptor) uniqueError(message string) error {
+	return d.declarationError(serialization.Field{}, declarations.Directive{Name: "unique", Offset: -1}, message)
 }

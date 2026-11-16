@@ -64,17 +64,7 @@ func (s *Service) getSnapshots(ctx context.Context, d Descriptor, key Key) (resu
 			result, err = nil, readFailure(err)
 		}
 	}()
-	if err = ctx.Err(); err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(string(key)) == "" {
-		return nil, invalid("nonblank read-model key required")
-	}
-	kind, _ := d.Observer()
-	if kind != Projection || key == "*" {
-		return nil, fmt.Errorf("%w: projection snapshot with a specific key required", faults.ErrUnsupported)
-	}
-	if err = s.validateProjectionReplay(ctx, d); err != nil {
+	if err = s.validateSnapshotRead(ctx, d, key); err != nil {
 		return nil, err
 	}
 	response, err := s.explorer.AllSnapshotsForReadModel(ctx, &contracts.AllSnapshotsForReadModelRequest{
@@ -87,42 +77,86 @@ func (s *Service) getSnapshots(ctx context.Context, d Descriptor, key Key) (resu
 	if err = wire.CheckEnvelope(response); err != nil {
 		return nil, err
 	}
-	result = make([]Snapshot[json.RawMessage], 0, len(response.Data))
-	for _, snapshot := range response.Data {
-		if snapshot == nil {
-			return nil, faults.ErrProtocol
-		}
-		occurred, err := snapshotTime(snapshot.Occurred)
+	return s.decodeSnapshots(ctx, d, response.Data)
+}
+
+func (s *Service) validateSnapshotRead(ctx context.Context, d Descriptor, key Key) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if strings.TrimSpace(string(key)) == "" {
+		return invalid("nonblank read-model key required")
+	}
+	kind, _ := d.Observer()
+	if kind != Projection || key == "*" {
+		return fmt.Errorf("%w: projection snapshot with a specific key required", faults.ErrUnsupported)
+	}
+	return s.validateProjectionReplay(ctx, d)
+}
+
+func (s *Service) decodeSnapshots(ctx context.Context, d Descriptor, snapshots []*contracts.ReadModelSnapshotResponse) ([]Snapshot[json.RawMessage], error) {
+	result := make([]Snapshot[json.RawMessage], 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		decoded, err := s.decodeSnapshot(ctx, d, snapshot)
 		if err != nil {
 			return nil, err
 		}
-		instance, err := releasedDocument(ctx, d, json.RawMessage(snapshot.Instance))
-		if err != nil {
-			return nil, err
-		}
-		contributions := make([]events.Appended, len(snapshot.Events))
-		for i, contribution := range snapshot.Events {
-			if err := ctx.Err(); err != nil {
-				return nil, err
-			}
-			contributions[i], err = s.snapshotEvent(d, contribution)
-			if err != nil {
-				return nil, err
-			}
-			if descriptor, known := s.snapshotEvents[contributions[i].Context.EventType]; known {
-				// The kernel released with this event generation's schema before
-				// projecting. Validate its plaintext shape, never decrypt it again
-				// with either the event schema or the read-model schema.
-				if err := readCodec(func() error {
-					return descriptor.Unmarshal(contributions[i].Content, reflect.New(descriptor.GoType()).Interface())
-				}); err != nil {
-					return nil, &ReleaseError{Cause: err}
-				}
-			}
-		}
-		result = append(result, Snapshot[json.RawMessage]{Instance: instance, Events: contributions, Occurred: occurred, CorrelationID: wire.Correlation(snapshot.CorrelationId)})
+		result = append(result, decoded)
 	}
 	return result, nil
+}
+
+func (s *Service) decodeSnapshot(ctx context.Context, d Descriptor, snapshot *contracts.ReadModelSnapshotResponse) (Snapshot[json.RawMessage], error) {
+	if snapshot == nil {
+		return Snapshot[json.RawMessage]{}, faults.ErrProtocol
+	}
+	occurred, err := snapshotTime(snapshot.Occurred)
+	if err != nil {
+		return Snapshot[json.RawMessage]{}, err
+	}
+	instance, err := releasedDocument(ctx, d, json.RawMessage(snapshot.Instance))
+	if err != nil {
+		return Snapshot[json.RawMessage]{}, err
+	}
+	contributions, err := s.decodeSnapshotContributions(ctx, d, snapshot.Events)
+	if err != nil {
+		return Snapshot[json.RawMessage]{}, err
+	}
+	return Snapshot[json.RawMessage]{Instance: instance, Events: contributions, Occurred: occurred, CorrelationID: wire.Correlation(snapshot.CorrelationId)}, nil
+}
+
+func (s *Service) decodeSnapshotContributions(ctx context.Context, d Descriptor, contributions []*contracts.Event) ([]events.Appended, error) {
+	result := make([]events.Appended, len(contributions))
+	for i, contribution := range contributions {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		var err error
+		result[i], err = s.snapshotEvent(d, contribution)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.validateSnapshotContribution(result[i]); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func (s *Service) validateSnapshotContribution(contribution events.Appended) error {
+	descriptor, known := s.snapshotEvents[contribution.Context.EventType]
+	if !known {
+		return nil
+	}
+	// The kernel released with this event generation's schema before
+	// projecting. Validate its plaintext shape, never decrypt it again
+	// with either the event schema or the read-model schema.
+	if err := readCodec(func() error {
+		return descriptor.Unmarshal(contribution.Content, reflect.New(descriptor.GoType()).Interface())
+	}); err != nil {
+		return &ReleaseError{Cause: err}
+	}
+	return nil
 }
 
 // GetSnapshots decodes each state through the frozen model plan; contributions
