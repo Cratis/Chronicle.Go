@@ -79,8 +79,15 @@ func (c *compiler) event(element string, event Event) (*eventShape, error) {
 	if registered.SourceStore() != "" {
 		return nil, refuse(c.graph, element, faults.ErrUnsupported, "event type %s comes from another event store; a graph reads its own event log", ref.ID)
 	}
-	shape := &eventShape{ref: ref, byPath: make(map[string]serialization.Field)}
-	for _, field := range registered.Fields() {
+	shape := newEventShape(registered)
+	c.eventShapes[ref] = shape
+	c.used = append(c.used, ref)
+	return shape, nil
+}
+
+func newEventShape(descriptor events.Descriptor) *eventShape {
+	shape := &eventShape{ref: descriptor.Ref(), byPath: make(map[string]serialization.Field)}
+	for _, field := range descriptor.Fields() {
 		if field.Collection {
 			continue
 		}
@@ -91,9 +98,7 @@ func (c *compiler) event(element string, event Event) (*eventShape, error) {
 			shape.byPath[field.Path] = field
 		}
 	}
-	c.eventShapes[ref] = shape
-	c.used = append(c.used, ref)
-	return shape, nil
+	return shape
 }
 
 // resolvePath validates a serialized event path that supplies a primitive value.
@@ -106,23 +111,13 @@ func (c *compiler) resolvePath(element, what, path string, event *eventShape) (s
 }
 
 func (c *compiler) compile(d *declaration) (Definition, error) {
-	var nodes []*compiledNode
-	var edges []*compiledEdge
-	labels := make(map[*Node]string)
-	for _, node := range d.nodes {
-		compiled, err := c.node(node)
-		if err != nil {
-			return Definition{}, err
-		}
-		nodes = append(nodes, compiled)
-		labels[node] = node.label
+	nodes, labels, err := c.compileNodes(d.nodes)
+	if err != nil {
+		return Definition{}, err
 	}
-	for _, edge := range d.edges {
-		compiled, err := c.edge(edge, labels)
-		if err != nil {
-			return Definition{}, err
-		}
-		edges = append(edges, compiled)
+	edges, err := c.compileEdges(d.edges, labels)
+	if err != nil {
+		return Definition{}, err
 	}
 	views, err := d.checkViews(c.policy)
 	if err != nil {
@@ -134,6 +129,32 @@ func (c *compiler) compile(d *declaration) (Definition, error) {
 	}
 	definition.data.views = views
 	return definition, nil
+}
+
+func (c *compiler) compileNodes(nodes []*Node) ([]*compiledNode, map[*Node]string, error) {
+	var result []*compiledNode
+	labels := make(map[*Node]string)
+	for _, node := range nodes {
+		compiled, err := c.node(node)
+		if err != nil {
+			return nil, nil, err
+		}
+		result = append(result, compiled)
+		labels[node] = node.label
+	}
+	return result, labels, nil
+}
+
+func (c *compiler) compileEdges(edges []*Edge, labels map[*Node]string) ([]*compiledEdge, error) {
+	var result []*compiledEdge
+	for _, edge := range edges {
+		compiled, err := c.edge(edge, labels)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, compiled)
+	}
+	return result, nil
 }
 
 func eventKey(ref events.TypeRef) string { return fmt.Sprintf("%s+%d", ref.ID, ref.Generation) }
@@ -154,6 +175,15 @@ func (c *compiler) keyExpression(element, what string, path string, set bool, ev
 // the event has under the same name. excluded is the key or identifying property,
 // which is never mapped automatically.
 func (c *compiler) mappings(element string, target *shape, excluded string, event *eventShape, explicit []mapping) (map[string]string, error) {
+	result, err := c.explicitMappings(element, target, event, explicit)
+	if err != nil {
+		return nil, err
+	}
+	addAutomaticMappings(result, target, excluded, event)
+	return result, nil
+}
+
+func (c *compiler) explicitMappings(element string, target *shape, event *eventShape, explicit []mapping) (map[string]string, error) {
 	result := make(map[string]string)
 	for _, m := range explicit {
 		property, ok := target.byName[m.property]
@@ -166,21 +196,31 @@ func (c *compiler) mappings(element string, target *shape, excluded string, even
 		}
 		result[m.property] = expression
 	}
+	return result, nil
+}
+
+func addAutomaticMappings(result map[string]string, target *shape, excluded string, event *eventShape) {
 	for _, property := range target.properties {
 		if _, mapped := result[property.name]; mapped || property.name == excluded {
 			continue
 		}
-		for _, field := range event.top {
-			if field.Name != property.name {
-				continue
-			}
-			if automatic(property, field) {
-				result[property.name] = field.Path
-			}
-			break
+		if path, ok := automaticPath(property, event.top); ok {
+			result[property.name] = path
 		}
 	}
-	return result, nil
+}
+
+func automaticPath(property property, fields []serialization.Field) (string, bool) {
+	for _, field := range fields {
+		if field.Name != property.name {
+			continue
+		}
+		if automatic(property, field) {
+			return field.Path, true
+		}
+		return "", false
+	}
+	return "", false
 }
 
 // automatic reports whether an event property maps to a property of the same name
@@ -208,58 +248,86 @@ func isPrimitiveList(field serialization.Field) bool {
 func (c *compiler) expression(element string, target property, m mapping, event *eventShape) (string, error) {
 	switch m.kind {
 	case setFromEvent:
-		if target.list {
-			return "", refuse(c.graph, element, ErrInvalidMapping, "property %s is a list; map it from the event property of the same name", m.property)
-		}
-		field, err := c.resolvePath(element, "event property", m.source, event)
-		if err != nil {
-			return "", err
-		}
-		if !assignable(target.scalar, field.Scalar) {
-			return "", refuse(c.graph, element, ErrInvalidMapping, "event property %q cannot be stored in property %s", m.source, m.property)
-		}
-		return field.Path, nil
+		return c.eventExpression(element, target, m, event)
 	case setFromContext:
-		scalar, ok := contextScalars[m.source]
-		if !ok {
-			return "", refuse(c.graph, element, ErrUnknownProperty, "event context property %q is unknown or not a primitive", m.source)
-		}
-		if target.list || !assignable(target.scalar, scalar) {
-			return "", refuse(c.graph, element, ErrInvalidMapping, "event context property %q cannot be stored in property %s", m.source, m.property)
-		}
-		return "$eventContext(" + m.source + ")", nil
+		return c.contextExpression(element, target, m)
 	case setFromEventSourceID:
-		if target.list || target.scalar != serialization.String {
-			return "", refuse(c.graph, element, ErrInvalidMapping, "the event source id can only be stored in a string property, not %s", m.property)
-		}
-		return "$eventSourceId", nil
+		return c.sourceIDExpression(element, target, m)
 	case setLiteral:
-		if target.list {
-			return "", refuse(c.graph, element, ErrInvalidMapping, "property %s is a list and cannot take a constant", m.property)
-		}
-		return m.literal, nil
+		return c.literalExpression(element, target, m)
 	case addFromEvent, subtractFromEvent:
-		field, err := c.resolvePath(element, "event property", m.source, event)
-		if err != nil {
-			return "", err
-		}
-		if !numeric(target.scalar) || !numeric(field.Scalar) || target.list {
-			return "", refuse(c.graph, element, ErrInvalidMapping, "adding and subtracting need numeric properties: %s and %q", m.property, m.source)
-		}
-		if !arithmeticPath.MatchString(field.Path) {
-			return "", refuse(c.graph, element, ErrInvalidMapping, "event property %q cannot be used in an arithmetic expression", m.source)
-		}
-		if m.kind == addFromEvent {
-			return "$add(" + field.Path + ")", nil
-		}
-		return "$subtract(" + field.Path + ")", nil
+		return c.arithmeticExpression(element, target, m, event)
 	case increment, decrement, count:
-		if target.list || !numeric(target.scalar) {
-			return "", refuse(c.graph, element, ErrInvalidMapping, "property %s must be numeric to be incremented, decremented or counted", m.property)
-		}
-		return map[mappingKind]string{increment: "$increment", decrement: "$decrement", count: "$count"}[m.kind], nil
+		return c.counterExpression(element, target, m)
 	case clearProperty:
 		return "$null", nil
 	}
 	return "", refuse(c.graph, element, ErrInvalidMapping, "unknown mapping")
+}
+
+func (c *compiler) eventExpression(element string, target property, m mapping, event *eventShape) (string, error) {
+	if target.list {
+		return "", refuse(c.graph, element, ErrInvalidMapping, "property %s is a list; map it from the event property of the same name", m.property)
+	}
+	field, err := c.resolvePath(element, "event property", m.source, event)
+	if err != nil {
+		return "", err
+	}
+	if !assignable(target.scalar, field.Scalar) {
+		return "", refuse(c.graph, element, ErrInvalidMapping, "event property %q cannot be stored in property %s", m.source, m.property)
+	}
+	return field.Path, nil
+}
+
+func (c *compiler) contextExpression(element string, target property, m mapping) (string, error) {
+	scalar, ok := contextScalars[m.source]
+	if !ok {
+		return "", refuse(c.graph, element, ErrUnknownProperty, "event context property %q is unknown or not a primitive", m.source)
+	}
+	if target.list || !assignable(target.scalar, scalar) {
+		return "", refuse(c.graph, element, ErrInvalidMapping, "event context property %q cannot be stored in property %s", m.source, m.property)
+	}
+	return "$eventContext(" + m.source + ")", nil
+}
+
+func (c *compiler) sourceIDExpression(element string, target property, m mapping) (string, error) {
+	if target.list || target.scalar != serialization.String {
+		return "", refuse(c.graph, element, ErrInvalidMapping, "the event source id can only be stored in a string property, not %s", m.property)
+	}
+	return "$eventSourceId", nil
+}
+
+func (c *compiler) literalExpression(element string, target property, m mapping) (string, error) {
+	if target.list {
+		return "", refuse(c.graph, element, ErrInvalidMapping, "property %s is a list and cannot take a constant", m.property)
+	}
+	return m.literal, nil
+}
+
+func (c *compiler) arithmeticExpression(element string, target property, m mapping, event *eventShape) (string, error) {
+	field, err := c.resolvePath(element, "event property", m.source, event)
+	if err != nil {
+		return "", err
+	}
+	if !numericMapping(target, field) {
+		return "", refuse(c.graph, element, ErrInvalidMapping, "adding and subtracting need numeric properties: %s and %q", m.property, m.source)
+	}
+	if !arithmeticPath.MatchString(field.Path) {
+		return "", refuse(c.graph, element, ErrInvalidMapping, "event property %q cannot be used in an arithmetic expression", m.source)
+	}
+	if m.kind == addFromEvent {
+		return "$add(" + field.Path + ")", nil
+	}
+	return "$subtract(" + field.Path + ")", nil
+}
+
+func numericMapping(target property, source serialization.Field) bool {
+	return numeric(target.scalar) && numeric(source.Scalar) && !target.list
+}
+
+func (c *compiler) counterExpression(element string, target property, m mapping) (string, error) {
+	if target.list || !numeric(target.scalar) {
+		return "", refuse(c.graph, element, ErrInvalidMapping, "property %s must be numeric to be incremented, decremented or counted", m.property)
+	}
+	return map[mappingKind]string{increment: "$increment", decrement: "$decrement", count: "$count"}[m.kind], nil
 }
