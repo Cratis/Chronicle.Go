@@ -149,36 +149,68 @@ func (b *Builder) Build() (Definition, error) {
 		return Definition{}, b.err
 	}
 	d := b.definition
-	if (d.kind != Unique && d.kind != UniqueEventType) || strings.TrimSpace(d.name) == "" || len(d.types) == 0 {
-		return Definition{}, fmt.Errorf("%w: constraint kind, name and event types are required", faults.ErrInvalidConfiguration)
-	}
-	for _, event := range append(d.EventTypes(), d.removers...) {
-		if event.GoType() == nil || event.Ref().ID == "" || event.Ref().Generation == 0 {
-			return Definition{}, fmt.Errorf("%w: empty constraint event descriptor", faults.ErrInvalidConfiguration)
-		}
-	}
-	for _, fields := range d.fields {
-		if len(fields.Properties) == 0 {
-			return Definition{}, fmt.Errorf("%w: properties required for %s", faults.ErrInvalidConfiguration, fields.Event.Ref().ID)
-		}
-		var schema propertySchema
-		if err := json.Unmarshal([]byte(fields.Event.Schema()), &schema); err != nil {
-			return Definition{}, fmt.Errorf("%w: invalid event schema: %v", faults.ErrInvalidConfiguration, err)
-		}
-		for _, path := range fields.Properties {
-			if !schema.hasPath(path) {
-				return Definition{}, fmt.Errorf("%w: property %q does not exist on event %s", faults.ErrInvalidConfiguration, path, fields.Event.Ref().ID)
-			}
-			field, ok := serialization.FieldAtWithCapability(fields.Event.Fields(), path, serialization.Field.ContainsBinary)
-			if ok && field.ContainsBinary() {
-				// The pinned kernel hashes value.ToString(), not the binary content
-				// (nor the contents of an ExpandoObject containing binary).
-				return Definition{}, fmt.Errorf("%w: binary unique property %q is not supported", faults.ErrUnsupported, path)
-			}
-		}
+	if err := d.validateConstraint(); err != nil {
+		return Definition{}, err
 	}
 	d.fields, d.types, d.removers, d.sequences = d.Fields(), d.EventTypes(), d.RemovalTypes(), d.EventSequences()
 	return d, nil
+}
+
+func (d Definition) hasRequiredMetadata() bool {
+	if d.kind != Unique && d.kind != UniqueEventType {
+		return false
+	}
+	return strings.TrimSpace(d.name) != "" && len(d.types) > 0
+}
+
+func (d Definition) validateConstraint() error {
+	if !d.hasRequiredMetadata() {
+		return fmt.Errorf("%w: constraint kind, name and event types are required", faults.ErrInvalidConfiguration)
+	}
+	for _, event := range append(d.EventTypes(), d.removers...) {
+		if !validConstraintEvent(event) {
+			return fmt.Errorf("%w: empty constraint event descriptor", faults.ErrInvalidConfiguration)
+		}
+	}
+	for _, fields := range d.fields {
+		if err := fields.validateProperties(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validConstraintEvent(event events.Descriptor) bool {
+	return event.GoType() != nil && event.Ref().ID != "" && event.Ref().Generation != 0
+}
+
+func (fields EventFields) validateProperties() error {
+	if len(fields.Properties) == 0 {
+		return fmt.Errorf("%w: properties required for %s", faults.ErrInvalidConfiguration, fields.Event.Ref().ID)
+	}
+	var schema propertySchema
+	if err := json.Unmarshal([]byte(fields.Event.Schema()), &schema); err != nil {
+		return fmt.Errorf("%w: invalid event schema: %v", faults.ErrInvalidConfiguration, err)
+	}
+	for _, path := range fields.Properties {
+		if err := fields.validateProperty(schema, path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (fields EventFields) validateProperty(schema propertySchema, path string) error {
+	if !schema.hasPath(path) {
+		return fmt.Errorf("%w: property %q does not exist on event %s", faults.ErrInvalidConfiguration, path, fields.Event.Ref().ID)
+	}
+	field, ok := serialization.FieldAtWithCapability(fields.Event.Fields(), path, serialization.Field.ContainsBinary)
+	if ok && field.ContainsBinary() {
+		// The pinned kernel hashes value.ToString(), not the binary content
+		// (nor the contents of an ExpandoObject containing binary).
+		return fmt.Errorf("%w: binary unique property %q is not supported", faults.ErrUnsupported, path)
+	}
+	return nil
 }
 
 func (b *Builder) invalid(format string, args ...any) {
