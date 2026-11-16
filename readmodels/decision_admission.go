@@ -126,13 +126,27 @@ func (r *DecisionReader[T]) assess() (admittedDecision, error) {
 	if kind, _ := d.Observer(); kind == Reducer {
 		return refuse(DecisionReducer)
 	}
-	s := r.reader.service
+	catalog, err := r.reader.service.decisionCatalogFor(d.Identifier())
+	if err != nil {
+		return admittedDecision{}, err
+	}
+	return assessDecisionModel(d, catalog)
+}
+
+func (s *Service) decisionCatalogFor(model Identifier) (*decision.Catalog, error) {
 	if s.decisions == nil || s.decisions.DecisionCatalog() == nil {
-		return refuse(DecisionUnavailable)
+		return nil, &DecisionReadRefused{Model: model, Reason: DecisionUnavailable}
 	}
 	catalog := s.decisions.DecisionCatalog()
 	if catalog.ExpectedEpoch != catalog.Epoch.Load() {
-		return admittedDecision{}, decision.ErrStale
+		return nil, decision.ErrStale
+	}
+	return catalog, nil
+}
+
+func assessDecisionModel(d Descriptor, catalog *decision.Catalog) (admittedDecision, error) {
+	refuse := func(reason DecisionReadRefusalReason) (admittedDecision, error) {
+		return admittedDecision{}, &DecisionReadRefused{Model: d.Identifier(), Reason: reason}
 	}
 	var matches []*contracts.ProjectionDefinition
 	for _, definition := range catalog.Projections {
@@ -158,54 +172,12 @@ func assessProjection(p *contracts.ProjectionDefinition, catalog *events.Catalog
 	if p == nil || p.Identifier == "" {
 		return nil, DecisionAmbiguousProjection
 	}
-	if p.EventSequenceId != string(events.EventLog) {
-		return nil, DecisionNotEventLog
+	if reason := assessProjectionShape(p); reason != "" {
+		return nil, reason
 	}
-	if len(p.Join)+len(p.RemovedWithJoin) != 0 {
-		return nil, DecisionJoin
-	}
-	if len(p.Children)+len(p.Nested) != 0 {
-		return nil, DecisionHierarchy
-	}
-	if p.SubscribesToAllEvents {
-		return nil, DecisionOpenEndedEventTypes
-	}
-	if len(p.FromEvery) != 0 {
-		return nil, DecisionDerivatives
-	}
-	if p.FromEventProperty != nil {
-		return nil, DecisionFromEventProperty
-	}
-	if !sourceExpression(p.All.GetKey()) {
-		return nil, DecisionNotEventSourceKeyed
-	}
-	var types []events.TypeRef
-	add := func(event *contracts.EventType) bool {
-		if event == nil || strings.TrimSpace(event.Id) == "" || strings.Contains(event.Id, ",") || event.Generation == 0 || catalog == nil {
-			return false
-		}
-		ref := events.TypeRef{ID: events.TypeID(event.Id), Generation: events.Generation(event.Generation)}
-		if _, found := catalog.LookupRef(ref); !found {
-			return false
-		}
-		types = append(types, ref)
-		return true
-	}
-	for _, from := range p.From {
-		if from == nil || from.Value == nil || !add(from.Key) {
-			return nil, DecisionUnsupportedEventType
-		}
-		if !sourceExpression(from.Value.Key) || !sourceExpression(from.Value.ParentKey) {
-			return nil, DecisionNotEventSourceKeyed
-		}
-	}
-	for _, removal := range p.RemovedWith {
-		if removal == nil || removal.Value == nil || !add(removal.Key) {
-			return nil, DecisionUnsupportedEventType
-		}
-		if !sourceExpression(removal.Value.Key) || !sourceExpression(removal.Value.ParentKey) {
-			return nil, DecisionNotEventSourceKeyed
-		}
+	types, reason := decisionProjectionEvents(p, catalog)
+	if reason != "" {
+		return nil, reason
 	}
 	if len(types) == 0 {
 		return nil, DecisionNoEventTypes
@@ -213,6 +185,95 @@ func assessProjection(p *contracts.ProjectionDefinition, catalog *events.Catalog
 	sort.Slice(types, func(i, j int) bool { return types[i].ID < types[j].ID })
 	return slices.CompactFunc(types, func(a, b events.TypeRef) bool { return a.ID == b.ID }), ""
 }
+func assessProjectionShape(p *contracts.ProjectionDefinition) DecisionReadRefusalReason {
+	if p.EventSequenceId != string(events.EventLog) {
+		return DecisionNotEventLog
+	}
+	if len(p.Join)+len(p.RemovedWithJoin) != 0 {
+		return DecisionJoin
+	}
+	if len(p.Children)+len(p.Nested) != 0 {
+		return DecisionHierarchy
+	}
+	if p.SubscribesToAllEvents {
+		return DecisionOpenEndedEventTypes
+	}
+	if len(p.FromEvery) != 0 {
+		return DecisionDerivatives
+	}
+	if p.FromEventProperty != nil {
+		return DecisionFromEventProperty
+	}
+	if !sourceExpression(p.All.GetKey()) {
+		return DecisionNotEventSourceKeyed
+	}
+	return ""
+}
+
+func decisionProjectionEvents(p *contracts.ProjectionDefinition, catalog *events.Catalog) ([]events.TypeRef, DecisionReadRefusalReason) {
+	var types []events.TypeRef
+	for _, from := range p.From {
+		ref, reason := decisionFromEvent(from, catalog)
+		if reason != "" {
+			return nil, reason
+		}
+		types = append(types, ref)
+	}
+	return appendDecisionRemovals(types, p.RemovedWith, catalog)
+}
+
+func appendDecisionRemovals(types []events.TypeRef, removals []*contracts.KeyValuePair_EventType_RemovedWithDefinition, catalog *events.Catalog) ([]events.TypeRef, DecisionReadRefusalReason) {
+	for _, removal := range removals {
+		ref, reason := decisionRemovalEvent(removal, catalog)
+		if reason != "" {
+			return nil, reason
+		}
+		types = append(types, ref)
+	}
+	return types, ""
+}
+
+func decisionFromEvent(from *contracts.KeyValuePair_EventType_FromDefinition, catalog *events.Catalog) (events.TypeRef, DecisionReadRefusalReason) {
+	if from == nil || from.Value == nil {
+		return events.TypeRef{}, DecisionUnsupportedEventType
+	}
+	return decisionInputEvent(from.Key, from.Value.Key, from.Value.ParentKey, catalog)
+}
+
+func decisionRemovalEvent(removal *contracts.KeyValuePair_EventType_RemovedWithDefinition, catalog *events.Catalog) (events.TypeRef, DecisionReadRefusalReason) {
+	if removal == nil || removal.Value == nil {
+		return events.TypeRef{}, DecisionUnsupportedEventType
+	}
+	return decisionInputEvent(removal.Key, removal.Value.Key, removal.Value.ParentKey, catalog)
+}
+
+func decisionInputEvent(event *contracts.EventType, key, parentKey string, catalog *events.Catalog) (events.TypeRef, DecisionReadRefusalReason) {
+	ref, ok := decisionEventRef(event, catalog)
+	if !ok {
+		return events.TypeRef{}, DecisionUnsupportedEventType
+	}
+	if !sourceExpression(key) || !sourceExpression(parentKey) {
+		return events.TypeRef{}, DecisionNotEventSourceKeyed
+	}
+	return ref, ""
+}
+
+func decisionEventRef(event *contracts.EventType, catalog *events.Catalog) (events.TypeRef, bool) {
+	if event == nil || catalog == nil {
+		return events.TypeRef{}, false
+	}
+	if !decisionEventIdentity(event) {
+		return events.TypeRef{}, false
+	}
+	ref := events.TypeRef{ID: events.TypeID(event.Id), Generation: events.Generation(event.Generation)}
+	_, found := catalog.LookupRef(ref)
+	return ref, found
+}
+
+func decisionEventIdentity(event *contracts.EventType) bool {
+	return strings.TrimSpace(event.Id) != "" && !strings.Contains(event.Id, ",") && event.Generation != 0
+}
+
 func sourceExpression(s string) bool { return s == "" || s == "$eventSourceId" }
 
 // The pinned kernel's actual key is schema property id, then Id. A Go Key tag
@@ -228,39 +289,63 @@ func decisionKeySchema(schema string) (keyShape, bool) {
 		name = "Id"
 	}
 	node, _ := properties[name].(map[string]any)
+	node = decisionSchemaNode(root, node)
+	if node == nil {
+		return keyShape{}, false
+	}
+	return decisionPrimitiveKey(name, node)
+}
+
+func decisionSchemaNode(root, node map[string]any) map[string]any {
 	for range 16 {
-		if node == nil {
-			return keyShape{}, false
-		}
 		ref, reference := node["$ref"].(string)
 		if !reference {
-			format, validFormat := node["format"].(string)
-			if _, present := node["format"]; present && !validFormat {
-				return keyShape{}, false
-			}
-			typ, _ := node["type"].(string)
-			nullable := false
-			if types, ok := node["type"].([]any); ok && len(types) == 2 {
-				first, _ := types[0].(string)
-				second, _ := types[1].(string)
-				if (first == "string" && second == "null") || (first == "null" && second == "string") {
-					typ, nullable = "string", true
-				}
-			}
-			return keyShape{name: name, format: format, nullable: nullable}, typ == "string" && (format == "" || format == "uuid" || format == "guid")
+			return node
 		}
-		if !strings.HasPrefix(ref, "#/definitions/") {
-			return keyShape{}, false
-		}
-		definitions, _ := root["definitions"].(map[string]any)
-		node, _ = definitions[strings.TrimPrefix(ref, "#/definitions/")].(map[string]any)
+		node = decisionSchemaTarget(root, ref)
 	}
-	return keyShape{}, false
+	return nil
+}
+
+func decisionSchemaTarget(root map[string]any, ref string) map[string]any {
+	if !strings.HasPrefix(ref, "#/definitions/") {
+		return nil
+	}
+	definitions, _ := root["definitions"].(map[string]any)
+	node, _ := definitions[strings.TrimPrefix(ref, "#/definitions/")].(map[string]any)
+	return node
+}
+
+func decisionPrimitiveKey(name string, node map[string]any) (keyShape, bool) {
+	format, validFormat := node["format"].(string)
+	if _, present := node["format"]; present && !validFormat {
+		return keyShape{}, false
+	}
+	typ, _ := node["type"].(string)
+	nullable := nullableStringSchema(node["type"])
+	if nullable {
+		typ = "string"
+	}
+	return keyShape{name: name, format: format, nullable: nullable}, typ == "string" && decisionKeyFormat(format)
+}
+
+func nullableStringSchema(raw any) bool {
+	types, ok := raw.([]any)
+	if !ok || len(types) != 2 {
+		return false
+	}
+	first, _ := types[0].(string)
+	second, _ := types[1].(string)
+	return first == "string" && second == "null" || first == "null" && second == "string"
+}
+
+func decisionKeyFormat(format string) bool {
+	return format == "" || format == "uuid" || format == "guid"
 }
 
 func validDecisionKey(key Key, shape keyShape) bool {
 	value := string(key)
-	if value == "" || value != strings.TrimSpace(value) || value == "*" || strings.Contains(value, "#") {
+	if !decisionKeyText(value) {
 		return false
 	}
 	if shape.format == "" {
@@ -268,4 +353,8 @@ func validDecisionKey(key Key, shape keyShape) bool {
 	}
 	id, err := uuid.Parse(value)
 	return err == nil && id.String() == value
+}
+
+func decisionKeyText(value string) bool {
+	return value != "" && value == strings.TrimSpace(value) && value != "*" && !strings.Contains(value, "#")
 }
