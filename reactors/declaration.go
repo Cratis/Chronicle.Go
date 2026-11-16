@@ -126,7 +126,7 @@ func Define[R any](factory any, options ...Option) (Declaration, error) {
 	if base.Kind() != reflect.Struct || base.Name() == "" {
 		return Declaration{}, invalid("named reactor struct or pointer required")
 	}
-	return define(typ, factory, false, ID(base.PkgPath()+"."+base.Name()), options)
+	return (Declaration{typ: typ, factory: factory}).configure(ID(base.PkgPath()+"."+base.Name()), options)
 }
 
 // DefineHandler declares a zero-container typed callback with an explicit stable ID.
@@ -142,9 +142,10 @@ func DefineHandlers(id ID, handlers []Handler, options ...Option) (Declaration, 
 	for _, handler := range handlers {
 		initial = append(initial, WithHandler(handler))
 	}
-	return define(nil, nil, true, id, append(initial, options...))
+	return (Declaration{explicit: true}).configure(id, append(initial, options...))
 }
-func define(typ reflect.Type, factory any, explicit bool, id ID, options []Option) (Declaration, error) {
+
+func (d Declaration) configure(id ID, options []Option) (Declaration, error) {
 	c := configuration{id: id, sequence: events.EventLog, replayable: true, streamType: "All", logger: slog.Default()}
 	for _, option := range options {
 		if option == nil {
@@ -152,15 +153,35 @@ func define(typ reflect.Type, factory any, explicit bool, id ID, options []Optio
 		}
 		option(&c)
 	}
-	if strings.TrimSpace(string(c.id)) == "" || strings.TrimSpace(string(c.sequence)) == "" || strings.TrimSpace(string(c.streamType)) == "" || (c.sourceType != "" && strings.TrimSpace(string(c.sourceType)) == "") || c.invalid || (c.sourceStore != "" && c.sequenceExplicit) {
-		return Declaration{}, invalid("invalid reactor options")
+	if err := c.validate(); err != nil {
+		return Declaration{}, err
 	}
-	for _, value := range append(append([]string(nil), c.tags...), c.filterTags...) {
+	d.config = c
+	return d, nil
+}
+
+func (c configuration) validate() error {
+	if c.invalidFields() || c.invalid || (c.sourceStore != "" && c.sequenceExplicit) {
+		return invalid("invalid reactor options")
+	}
+	if blankReactorValue(append(append([]string(nil), c.tags...), c.filterTags...)...) {
+		return invalid("blank reactor tag or filter")
+	}
+	return nil
+}
+
+func (c configuration) invalidFields() bool {
+	return blankReactorValue(string(c.id), string(c.sequence), string(c.streamType)) ||
+		(c.sourceType != "" && strings.TrimSpace(string(c.sourceType)) == "")
+}
+
+func blankReactorValue(values ...string) bool {
+	for _, value := range values {
 		if strings.TrimSpace(value) == "" {
-			return Declaration{}, invalid("blank reactor tag or filter")
+			return true
 		}
 	}
-	return Declaration{typ: typ, factory: factory, config: c, explicit: explicit}, nil
+	return false
 }
 
 // WithClientDiagnostics is a module-private binding seam. It returns a detached
