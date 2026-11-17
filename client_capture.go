@@ -81,6 +81,7 @@ func CaptureClient(options ...ClientOption) (*ClientPreparation, error) {
 		}
 		p.stores[name] = capture(config.stores[name])
 	}
+	config.skipKeepAlive = config.skipKeepAlive || uri.skipKeepAlive
 	if config.skipKeepAlive {
 		for _, declarations := range p.selected {
 			if declarations.hasObservers() {
@@ -102,6 +103,9 @@ func CaptureClient(options ...ClientOption) (*ClientPreparation, error) {
 		reducers:          reducerCatalogs{stores: make(map[StoreName][]*reducers.Plan)}}
 	if config.loadBalancer == nil {
 		c.balancer = connection.NewBalancer(uri.loadBalancer, tlsConfig)
+		if uri.disableTLS {
+			c.balancer.Plaintext()
+		}
 	}
 	c.hooks = connectionHooks{connected: slices.Clone(config.connectedHooks), disconnected: slices.Clone(config.disconnectedHooks), wake: make(chan struct{}, 1)}
 	c.config.connectedHooks, c.config.disconnectedHooks = nil, nil

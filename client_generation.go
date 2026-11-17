@@ -20,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -91,10 +92,16 @@ func (g *generation) configureAuthentication(address string) {
 	if g.tokens != nil {
 		return
 	}
-	if c.config.noAuth || c.uri.noAuth {
+	// An API key rides on the channel instead, and asking for no authentication beats
+	// everything else. Chronicle serves its token endpoint over TLS only, so a
+	// cleartext connection without explicit credentials authenticates with nothing.
+	if c.config.noAuth || c.uri.noAuth || c.uri.apiKey != "" || (c.uri.disableTLS && !c.uri.explicitCredentials) {
 		return
 	}
 	g.oauth = connection.NewOAuth(address, c.uri.clientID, c.uri.secret, c.tls)
+	if c.uri.disableTLS {
+		g.oauth.Plaintext()
+	}
 	g.tokens = g.oauth
 }
 
@@ -103,14 +110,25 @@ func (g *generation) openConnection(address string) error {
 		return nil
 	}
 	c := g.client
+	transport := credentials.NewTLS(c.tls)
+	if c.uri.disableTLS {
+		transport = insecure.NewCredentials()
+	}
 	options := []grpc.DialOption{
-		grpc.WithTransportCredentials(credentials.NewTLS(c.tls)),
+		grpc.WithTransportCredentials(transport),
 		grpc.WithDisableRetry(),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 60 * time.Second, Timeout: 30 * time.Second}),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(c.config.maxReceiveMessageSize), grpc.MaxCallSendMsgSize(c.config.maxSendMessageSize)),
 	}
 	if c.config.grpcStatsHandler != nil {
 		options = append(options, grpc.WithStatsHandler(c.config.grpcStatsHandler))
+	}
+	if c.uri.apiKey != "" {
+		key, err := connection.NewAPIKey(c.uri.apiKey, !c.uri.disableTLS)
+		if err != nil {
+			return fmt.Errorf("%w: connection string apiKey", ErrInvalidConfiguration)
+		}
+		options = append(options, grpc.WithPerRPCCredentials(key))
 	}
 	conn, err := grpc.NewClient("dns:///"+address, options...)
 	if err != nil {

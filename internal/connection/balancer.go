@@ -21,11 +21,12 @@ import (
 type Balancer struct {
 	client   *http.Client
 	strategy string
+	scheme   string
 	next     uint64
 }
 
 func NewBalancer(strategy string, config *tls.Config) *Balancer {
-	return &Balancer{strategy: strategy, next: rand.Uint64(), client: &http.Client{
+	return &Balancer{strategy: strategy, scheme: "https", next: rand.Uint64(), client: &http.Client{
 		Transport:     &http.Transport{TLSClientConfig: config.Clone(), Proxy: http.ProxyFromEnvironment},
 		Timeout:       2 * time.Second,
 		CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("chronicle: probe redirect refused") },
@@ -33,6 +34,13 @@ func NewBalancer(strategy string, config *tls.Config) *Balancer {
 }
 
 func (b *Balancer) Close() { b.client.CloseIdleConnections() }
+
+// Plaintext probes over HTTP, for a kernel reached through something that terminates
+// TLS (connection string disableTls=true). It returns the balancer for chaining.
+func (b *Balancer) Plaintext() *Balancer {
+	b.scheme = "http"
+	return b
+}
 
 func (b *Balancer) Next(ctx context.Context, addresses []string) (string, error) {
 	if len(addresses) == 0 || len(addresses) > 64 {
@@ -108,7 +116,7 @@ func (b *Balancer) count(ctx context.Context, address string) int64 {
 }
 
 func (b *Balancer) request(ctx context.Context, method, address, path string) (*http.Response, error) {
-	request, err := http.NewRequestWithContext(ctx, method, "https://"+address+path, nil)
+	request, err := http.NewRequestWithContext(ctx, method, b.scheme+"://"+address+path, nil)
 	if err != nil {
 		return nil, err
 	}

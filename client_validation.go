@@ -26,6 +26,7 @@ var optionRules = []optionRule{
 var uriRules = []uriRule{
 	validateLoadBalancer,
 	checkUnsupportedURIOptions,
+	checkTransportSecurityConflicts,
 	checkBorrowedEndpoints,
 	checkMessageSizes,
 	checkKeepAlive,
@@ -106,10 +107,21 @@ func checkBorrowedAuthentication(config clientConfig) error {
 }
 
 func checkUnsupportedURIOptions(_ clientConfig, uri ConnectionString) error {
-	if uri.apiKey != "" || len(uri.unsupported) > 0 {
-		return fmt.Errorf("%w: API keys and certificate/plaintext URI options; use WithTLS for PEM material", ErrUnsupported)
+	if uri.certificatePassword != "" {
+		return fmt.Errorf("%w: password-protected certificate files; use an unencrypted PEM file or WithTLS", ErrUnsupported)
 	}
 	return nil
+}
+
+// checkTransportSecurityConflicts keeps URI transport options from being silently
+// ignored: an explicit WithTLS policy or a borrowed channel owns transport
+// security, and a client certificate needs TLS.
+func checkTransportSecurityConflicts(config clientConfig, uri ConnectionString) error {
+	hasTLSMaterial := uri.certificatePath != "" || uri.caCertificatePath != ""
+	explicitTLS := config.tls != nil && (hasTLSMaterial || uri.disableTLS)
+	borrowed := config.borrowed != nil && (hasTLSMaterial || uri.disableTLS || uri.apiKey != "")
+	noTLSIdentity := uri.disableTLS && uri.certificatePath != ""
+	return rejectIf(explicitTLS || borrowed || noTLSIdentity, "URI TLS, certificate and API key options conflict with WithTLS, a borrowed connection or disableTls")
 }
 
 func checkBorrowedEndpoints(config clientConfig, uri ConnectionString) error {
@@ -121,8 +133,8 @@ func checkMessageSizes(config clientConfig, _ ConnectionString) error {
 	return rejectIf(messageSizesInvalid(config), "message sizes must be between 1 and 2147483647 bytes")
 }
 
-func checkKeepAlive(config clientConfig, _ ConnectionString) error {
-	return rejectIf(config.skipKeepAlive && config.keepAliveTimeoutSet, "SkipKeepAlive conflicts with an explicit keepalive timeout")
+func checkKeepAlive(config clientConfig, uri ConnectionString) error {
+	return rejectIf((config.skipKeepAlive || uri.skipKeepAlive) && config.keepAliveTimeoutSet, "SkipKeepAlive conflicts with an explicit keepalive timeout")
 }
 
 func checkLifecycle(config clientConfig, _ ConnectionString) error {
@@ -130,8 +142,8 @@ func checkLifecycle(config clientConfig, _ ConnectionString) error {
 }
 
 func checkAuthenticationConflicts(config clientConfig, uri ConnectionString) error {
-	noAuthConflict := config.noAuth && (uri.explicitCredentials || config.tokenSource != nil)
-	tokenConflict := config.tokenSource != nil && (uri.noAuth || uri.explicitCredentials)
+	noAuthConflict := config.noAuth && (uri.explicitCredentials || uri.apiKey != "" || config.tokenSource != nil)
+	tokenConflict := config.tokenSource != nil && (uri.noAuth || uri.explicitCredentials || uri.apiKey != "")
 	return rejectIf(noAuthConflict || tokenConflict, "conflicting authentication options")
 }
 
