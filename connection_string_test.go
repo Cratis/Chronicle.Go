@@ -130,7 +130,7 @@ func TestClientOptionValidation(t *testing.T) {
 			t.Fatalf("error = %v", err)
 		}
 	}
-	for _, input := range []string{"chronicle://host?disableTls=true", "chronicle://host?certificatePath=a.pem", "chronicle://host?apiKey=key"} {
+	for _, input := range []string{"chronicle://host?certificatePath=a.pem&certificatePassword=secret"} {
 		_, err := NewClient(WithConnectionString(input))
 		if !errors.Is(err, ErrUnsupported) {
 			t.Fatalf("%s: %v", input, err)

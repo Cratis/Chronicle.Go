@@ -64,6 +64,13 @@ func NewOAuth(address, id, secret string, config *tls.Config) *OAuth {
 
 func (s *OAuth) Close() { s.client.CloseIdleConnections() }
 
+// Plaintext exchanges tokens over HTTP, for a kernel reached through something that
+// terminates TLS (connection string disableTls=true). It returns the source for chaining.
+func (s *OAuth) Plaintext() *OAuth {
+	s.endpoint = "http://" + strings.TrimPrefix(s.endpoint, "https://")
+	return s
+}
+
 // Invalidate discards a rejected token on the next acquisition without waiting
 // for an in-flight HTTP refresh. Failed-refresh fallback must not reuse it.
 func (s *OAuth) Invalidate() { s.invalidated.Store(true) }

@@ -32,7 +32,9 @@ type ConnectionString struct {
 	clientID, secret, apiKey                 string
 	srv, noAuth, explicitCredentials         bool
 	skipTLS, tlsSpecified, skipCompatibility bool
-	unsupported                              []string
+	disableTLS, skipKeepAlive                bool
+	certificatePath, certificatePassword     string
+	caCertificatePath                        string
 	loadBalancer, nameServer                 string
 }
 
@@ -135,16 +137,17 @@ func ParseConnectionString(value string) (ConnectionString, error) {
 				return s, invalidURI("empty API key")
 			}
 			s.apiKey = value
-		case "skiptlsvalidation", "skipcompatibilitycheck":
-			value = strings.ToLower(strings.TrimSpace(value))
-			if value != "true" && value != "false" {
+		case "skiptlsvalidation", "skipcompatibilitycheck", "skipkeepalive", "disabletls":
+			flag := strings.ToLower(strings.TrimSpace(value))
+			if flag != "true" && flag != "false" {
 				return s, invalidURI("boolean option")
 			}
-			if name == "skiptlsvalidation" {
-				s.skipTLS, s.tlsSpecified = value == "true", true
-			} else {
-				s.skipCompatibility = value == "true"
+			s.setFlag(name, flag == "true")
+		case "certificatepath", "certificatepassword", "cacertificatepath":
+			if value == "" {
+				return s, invalidURI("empty " + name)
 			}
+			s.setPath(name, value)
 		case "loadbalancer":
 			if value != "least-connections" && value != "round-robin" && value != "random" {
 				return s, invalidURI("load balancer")
@@ -161,8 +164,6 @@ func ParseConnectionString(value string) (ConnectionString, error) {
 				return s, invalidURI("SRV name server")
 			}
 			s.nameServer = address.String()
-		case "certificatepath", "certificatepassword", "disabletls":
-			s.unsupported = append(s.unsupported, name)
 		default:
 			return s, invalidURI("unknown option")
 		}
@@ -171,6 +172,32 @@ func ParseConnectionString(value string) (ConnectionString, error) {
 		return s, invalidURI("conflicting authentication")
 	}
 	return s, nil
+}
+
+// setFlag records a boolean option already validated by the parser.
+func (s *ConnectionString) setFlag(name string, value bool) {
+	switch name {
+	case "skiptlsvalidation":
+		s.skipTLS, s.tlsSpecified = value, true
+	case "skipcompatibilitycheck":
+		s.skipCompatibility = value
+	case "skipkeepalive":
+		s.skipKeepAlive = value
+	case "disabletls":
+		s.disableTLS = value
+	}
+}
+
+// setPath records a certificate option already validated by the parser.
+func (s *ConnectionString) setPath(name, value string) {
+	switch name {
+	case "certificatepath":
+		s.certificatePath = value
+	case "certificatepassword":
+		s.certificatePassword = value
+	case "cacertificatepath":
+		s.caCertificatePath = value
+	}
 }
 
 func invalidURI(part string) error {

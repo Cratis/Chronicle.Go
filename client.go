@@ -132,6 +132,12 @@ func buildTLSConfig(config clientConfig, uri ConnectionString) (*tls.Config, err
 		}
 	} else {
 		tlsConfig.InsecureSkipVerify = uri.skipTLS || (config.development && !uri.tlsSpecified)
+		// The files are read whenever the options are set - also while validation is
+		// skipped or TLS is disabled - so a bad path fails here, not once validation
+		// is switched on.
+		if err := loadURITLSMaterial(tlsConfig, uri); err != nil {
+			return nil, err
+		}
 	}
 	return tlsConfig, nil
 }
