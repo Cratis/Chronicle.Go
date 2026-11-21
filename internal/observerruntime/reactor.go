@@ -31,6 +31,9 @@ type Reactor struct {
 	runtime   reactors.Runtime
 	store     metadata.StoreName
 	namespace metadata.Namespace
+	// EventTypes is the complete frozen catalog for identity-wide protection
+	// checks. Install before Run; generation mismatches fail closed without it.
+	EventTypes *events.Catalog
 	// OnDelivered runs on the Run goroutine for every message the kernel
 	// delivers. Install before Run. It must not block or call user code.
 	OnDelivered func()
@@ -182,7 +185,7 @@ func (r *Reactor) decode(appended *contracts.AppendedEvent) (events.Context, any
 	for generation, content := range appended.GenerationalContent {
 		generations[events.Generation(generation)] = json.RawMessage(content)
 	}
-	return DecodeContent(descriptor, ec, []byte(appended.Content), generations)
+	return DecodeContent(r.EventTypes, descriptor, events.Appended{Context: ec, Content: json.RawMessage(appended.Content), GenerationalContent: generations})
 }
 
 // ReactorInvocationContext applies the production identity and causation scope.

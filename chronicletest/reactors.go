@@ -240,7 +240,7 @@ func (s *ReactorScenario[R]) Given(ctx context.Context, source events.SourceID, 
 			return err
 		}
 		ec := synthetic(s.config, s.plan.EventSequence(), descriptor, source, s.next)
-		ec, content, err := observerruntime.DecodeContent(descriptor, ec, data, nil)
+		ec, content, err := observerruntime.DecodeContent(s.artifacts.Events, descriptor, events.Appended{Context: ec, Content: data})
 		if err != nil {
 			return err
 		}
@@ -292,7 +292,7 @@ func (s *ReactorScenario[R]) givenPage(ctx context.Context, source events.Source
 		if err != nil {
 			return err
 		}
-		ec, content, err := observerruntime.DecodeContent(descriptor, synthetic(s.config, s.plan.EventSequence(), descriptor, source, number), data, nil)
+		ec, content, err := observerruntime.DecodeContent(s.artifacts.Events, descriptor, events.Appended{Context: synthetic(s.config, s.plan.EventSequence(), descriptor, source, number), Content: data})
 		if err != nil {
 			return err
 		}

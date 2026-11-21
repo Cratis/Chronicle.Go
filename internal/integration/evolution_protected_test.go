@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -227,13 +226,21 @@ func assertProtectedPersonAlternateContent(t *testing.T, source events.SourceID,
 
 func assertProtectedPersonGenerationCiphertext(t *testing.T, source events.SourceID, generation events.Generation, content json.RawMessage) {
 	t.Helper()
-	if len(content) == 0 {
-		t.Fatalf("kernel witness has empty alternate generation %d for %s", generation, source)
+	var fields []string
+	switch generation {
+	case 1:
+		fields = []string{"Name", "Secret"}
+	case 2:
+		fields = []string{"FirstName", "LastName", "Secret"}
+	default:
+		t.Fatalf("kernel witness has unexpected alternate generation %d for %s", generation, source)
 	}
-	for _, plaintext := range []string{"Ada Lovelace", "Grace Hopper", "migrated-secret", "current-secret", `"Ada"`, `"Lovelace"`, `"Grace"`, `"Hopper"`} {
-		if strings.Contains(string(content), plaintext) {
-			t.Fatalf("Chronicle now releases generational content for %s; lift the protected-migration limit: generation %d", source, generation)
-		}
+	err := protectedGenerationContentError(content, fields)
+	if errors.Is(err, errProtectedPlaintext) {
+		t.Fatalf("Chronicle now releases generational content for %s; lift the protected-migration limit: generation %d", source, generation)
+	}
+	if err != nil {
+		t.Fatalf("kernel witness has invalid protected fields in alternate generation %d for %s: %v", generation, source, err)
 	}
 }
 

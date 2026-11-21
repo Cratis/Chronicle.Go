@@ -263,7 +263,7 @@ func (s *ReadModelScenario[M]) givenEvent(ctx context.Context, source events.Sou
 	}
 	sequence := s.model.EventSequence()
 	ec := synthetic(s.config, sequence, descriptor, source, events.SequenceNumber(len(s.history)))
-	ec, content, err := observerruntime.DecodeContent(descriptor, ec, data, nil)
+	ec, content, err := observerruntime.DecodeContent(s.artifacts.Events, descriptor, events.Appended{Context: ec, Content: data})
 	if err != nil {
 		return err
 	}

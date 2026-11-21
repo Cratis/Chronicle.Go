@@ -45,19 +45,34 @@ func TestObserverGenerationContentProtection(t *testing.T) {
 			if tc.alternate {
 				generations = map[events.Generation]json.RawMessage{1: json.RawMessage(`{"Value":"alternate-marker"}`)}
 			}
-			actualContext, value, err := observerruntime.DecodeContent(event.Descriptor(), ec, []byte(`{"Value":"released"}`), generations)
+			catalog := observerContentCatalog(t, event.Descriptor())
+			actualContext, value, err := observerruntime.DecodeContent(catalog, event.Descriptor(), events.Appended{Context: ec, Content: json.RawMessage(`{"Value":"released"}`), GenerationalContent: generations})
 			if !errors.Is(err, tc.wantErr) || actualContext.EventType.Generation != tc.wantGeneration {
 				t.Fatalf("context = %#v, error = %v", actualContext, err)
 			}
-			if tc.wantErr != nil {
-				if value != nil || strings.Contains(err.Error(), "alternate-marker") {
-					t.Fatalf("refused content = %#v, %v", value, err)
-				}
-				return
-			}
-			if decoded, ok := value.(*GenerationContent); !ok || decoded.Value != tc.want {
-				t.Fatalf("content = %#v", value)
-			}
+			assertObserverContentValue(t, value, err, tc.want)
 		})
+	}
+}
+
+func observerContentCatalog(t *testing.T, descriptors ...events.Descriptor) *events.Catalog {
+	t.Helper()
+	catalog, err := events.NewCatalog(descriptors...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return catalog
+}
+
+func assertObserverContentValue(t *testing.T, value any, err error, want string) {
+	t.Helper()
+	if err != nil {
+		if value != nil || strings.Contains(err.Error(), "alternate-marker") {
+			t.Fatalf("refused content = %#v, %v", value, err)
+		}
+		return
+	}
+	if decoded, ok := value.(*GenerationContent); !ok || decoded.Value != want {
+		t.Fatalf("content = %#v", value)
 	}
 }

@@ -149,7 +149,16 @@ in `GenerationalContent` reach the client as ciphertext. The SDK now refuses
 protected alternate-generation decoding and historical-generation reactor or
 reducer registration with `ErrUnsupported`, rather than handing ciphertext to
 typed fields or handlers. Dispatch also refuses a protected generation mismatch.
-Current-generation content and unprotected alternate generations are unaffected.
+Current-generation content and alternate generations of identities with **no
+protected registered generation** are unaffected. A protected sibling generation
+makes alternate decoding unsupported even when the requested generation's schema
+is unprotected.
+
+A current-generation reactor or reducer for a protected identity still compiles,
+but **fails at dispatch** if an event appended at an older generation arrives.
+This stops that partition until the kernel fix
+([Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623)); it is not a
+compile-time refusal of the current-generation observer.
 `TestKernelProtectedEventGenerationMigrationProfile` records the kernel behavior,
 tracked upstream as [Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623).
 Guard removal is tracked in
