@@ -4,10 +4,12 @@
 package events
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
 	"github.com/cratis/chronicle.go/internal/faults"
+	"github.com/cratis/chronicle.go/serialization"
 )
 
 // Decode selects T's registered generation from the kernel's alternate content,
@@ -15,6 +17,7 @@ import (
 // execute migrations locally or relabel the persisted context. T must be a
 // registered non-pointer event struct (except the built-in EventRedacted). Use a Client.Catalogs/EventStore catalog
 // to retain the selected naming policy. An unrelated ID is ErrProtocol.
+// Protected alternate-generation content is refused with ErrUnsupported.
 func Decode[T any](catalog *Catalog, appended Appended) (T, error) {
 	var result T
 	if catalog == nil {
@@ -31,14 +34,32 @@ func Decode[T any](catalog *Catalog, appended Appended) (T, error) {
 	if descriptor.ref.ID != appended.Context.EventType.ID {
 		return result, fmt.Errorf("%w: event identity mismatch", faults.ErrProtocol)
 	}
-	content := appended.Content
-	if descriptor.ref.Generation != appended.Context.EventType.Generation {
-		if alternate, ok := appended.GenerationalContent[descriptor.ref.Generation]; ok {
-			content = alternate
-		}
+	content, err := generationContent(descriptor, appended)
+	if err != nil {
+		return result, err
 	}
-	err := descriptor.Unmarshal(content, &result)
+	err = descriptor.Unmarshal(content, &result)
 	return result, err
+}
+
+func generationContent(descriptor Descriptor, appended Appended) (json.RawMessage, error) {
+	if descriptor.ref.Generation == appended.Context.EventType.Generation {
+		return appended.Content, nil
+	}
+	alternate, ok := appended.GenerationalContent[descriptor.ref.Generation]
+	if !ok {
+		return appended.Content, nil
+	}
+	roots, err := serialization.ProtectionRoots(descriptor.Schema())
+	if err != nil {
+		return nil, err
+	}
+	// Only current content is released: Cratis/Chronicle#4623;
+	// remove this guard with Cratis/Chronicle.Go#96.
+	if len(roots) > 0 {
+		return nil, fmt.Errorf("%w: protected alternate-generation event content", faults.ErrUnsupported)
+	}
+	return alternate, nil
 }
 
 // Decode selects the exact delivered generation's codec and returns a pointer to

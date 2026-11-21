@@ -206,7 +206,7 @@ func (pc *planCompiler) compileHandlers() error {
 		return pc.fail("", nil, invalid("no registered event handlers"))
 	}
 	pc.orderEventTypes()
-	return nil
+	return pc.validateGenerations()
 }
 
 func (pc *planCompiler) compileMethods() error {

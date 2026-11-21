@@ -193,6 +193,9 @@ func (p *Plan) finishCompilation(catalog *events.Catalog) (*Plan, error) {
 			p.ordered = append(p.ordered, descriptor.Ref())
 		}
 	}
+	if err := p.validateGenerations(catalog); err != nil {
+		return nil, err
+	}
 	if err := p.inferSource(); err != nil {
 		return nil, p.declarationError("", nil, err)
 	}
