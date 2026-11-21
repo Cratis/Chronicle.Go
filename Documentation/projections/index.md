@@ -82,6 +82,12 @@ The example creates a uniquely named store, appends a product event, then polls
 `readmodels.For(store.ReadModels(), model).Get(ctx, "item-1")` for up to 15 seconds.
 Active projections are eventually consistent; successful registration or append
 is not a sink-completion signal. Always check `Exists` before using `Value`.
+An open kernel issue,
+[Chronicle#4600](https://github.com/Cratis/Chronicle/issues/4600), tracks a
+projection catch-up that can skip an event for a catching-up partition. It is
+tracked separately from the reactor and reducer
+[catch-up limitation](../reactors.md#known-limitation-catch-up-across-partitions)
+and is not asserted to share its mechanism.
 The example uses development TLS settings and leaves its store in the development
 kernel; use a disposable kernel for repeat runs, not production credentials/data.
 
