@@ -203,6 +203,28 @@ projection variants and runtime ordinary-scalar profiles are unsupported. Read-m
 fallback properties cannot be binary, even without a projection. This includes
 all case variants of serialized `id` and the MongoDB `_id` property.
 
+### Property-name admission
+
+Every event and read-model plan rejects case-insensitively duplicate sibling
+property names, even without binary fields. For example, a field tagged
+`json:"payload"` alongside `Payload string` is ambiguous under preserve naming.
+Nested objects, collection elements, map values, references, and registered
+derivatives receive the same check after the selected naming policy is applied.
+Explicit `json` tags do not bypass it.
+
+Plans also reject reserved kernel property-path tokens as property names:
+`Week`, `$this`, `*NotSet*`, `true`, and `false`, case-insensitively. `Week` is the
+only calendar function in the pinned [v19.29.4 registry](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Properties/DerivedPropertyFunctions.cs).
+`WeekNumber`, `TrueValue`, and distinct names in separate objects remain valid.
+These refusals return `ErrUnsupported` with the offending serialized property
+path; existing exact-duplicate refusals remain `ErrInvalidConfiguration`.
+
+If an existing binary-free declaration now fails, choose unambiguous wire names
+with field names or explicit `json` tags before registering it. Coordinate any
+change to already-persisted schemas and consumers; the SDK does not silently
+rename properties or rewrite existing data. All naming policies, including
+`LegacyGoCamelCase`, enforce this admission rule.
+
 ### Names in binary-containing graphs
 
 If a type graph contains binary anywhere, **every serialized property name** in
@@ -250,8 +272,8 @@ case-insensitive comparison agrees with both CLR `OrdinalIgnoreCase` and Go's
 active naming policy are refused, not normalized by the admission check. Without this boundary decoding
 could populate multiple fields for one differently cased input property. Rename unsafe properties
 rather than relying on field order or an exact-case match. Types with **no binary**
-retain their existing naming, dotted-path lookup and exact-duplicate behavior;
-this rule does not fix their pre-existing kernel ambiguities. See the
+retain their dotted-path lookup and exact-duplicate behavior, but also enforce
+[general property-name admission](#property-name-admission). See the
 [binary admission source references](parity.md#baselines-and-evidence).
 
 Projection rebinding also rechecks model/variant keys, child identities and every
