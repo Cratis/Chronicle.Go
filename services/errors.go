@@ -298,9 +298,11 @@ func captureDiagnosticLeaf(node *diagnosticNode, err error) *diagnosticNode {
 }
 
 // standardDiagnosticTopology admits only the concrete join/fmt wrapper types
-// whose Unwrap methods return stored fields in supported Go 1.26/1.27. Package
-// path plus named pointer type prevents application lookalikes from qualifying;
-// new standard-library wrapper forms remain unsupported until explicitly reviewed.
+// whose Unwrap methods return stored fields in supported Go 1.26/1.27, plus the
+// reviewed Fundamentals.Go container wrapper for failed-value cleanup errors
+// (v0.3.2+), whose Unwrap also returns its stored field. Package path plus named
+// pointer type prevents application lookalikes from qualifying; new wrapper
+// forms remain unsupported until explicitly reviewed.
 func standardDiagnosticTopology(err error) bool {
 	typ := reflect.TypeOf(err)
 	if typ.Kind() != reflect.Pointer {
@@ -312,6 +314,8 @@ func standardDiagnosticTopology(err error) bool {
 		return typ.Name() == "joinError"
 	case "fmt":
 		return typ.Name() == "wrapError" || typ.Name() == "wrapErrors"
+	case "github.com/cratis/fundamentals.go/dependencyinjection/container":
+		return typ.Name() == "failedValueCleanupError"
 	default:
 		return false
 	}
