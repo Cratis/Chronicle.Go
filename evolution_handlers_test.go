@@ -56,7 +56,7 @@ func TestHistoricalConcreteHandlersKeepTheirOwnExpansion(t *testing.T) {
 	if !ok || descriptor.Ref() != old.Ref() {
 		t.Fatal("historical codec was replaced by current")
 	}
-	ec, content, err := observerruntime.DecodeContent(descriptor, events.Context{EventType: events.TypeRef{ID: old.Ref().ID, Generation: 2}}, []byte(`{"FirstName":"wrong"}`), map[events.Generation]json.RawMessage{1: json.RawMessage(`{"full_name":"Ada"}`)})
+	ec, content, err := observerruntime.DecodeContent(catalog, descriptor, events.Appended{Context: events.Context{EventType: events.TypeRef{ID: old.Ref().ID, Generation: 2}}, Content: json.RawMessage(`{"FirstName":"wrong"}`), GenerationalContent: map[events.Generation]json.RawMessage{1: json.RawMessage(`{"full_name":"Ada"}`)}})
 	if err != nil || ec.EventType != old.Ref() {
 		t.Fatalf("historical delivery context: %+v %v", ec, err)
 	}
@@ -88,8 +88,11 @@ func TestHistoricalConcreteHandlersKeepTheirOwnExpansion(t *testing.T) {
 	if !ok || reducerDescriptor.Ref() != old.Ref() {
 		t.Fatal("wrong reducer codec")
 	}
-	fallback, decoded, err := observerruntime.DecodeContent(reducerDescriptor, events.Context{EventType: events.TypeRef{ID: old.Ref().ID, Generation: 2}}, []byte(`{"full_name":"raw fallback"}`), nil)
-	if err != nil || fallback.EventType.Generation != 2 || decoded.(*evolutionV1).FullName != "raw fallback" {
+	fallback, decoded, err := observerruntime.DecodeContent(catalog, reducerDescriptor, events.Appended{Context: events.Context{EventType: events.TypeRef{ID: old.Ref().ID, Generation: 2}}, Content: json.RawMessage(`{"full_name":"raw fallback"}`)})
+	if err != nil || fallback.EventType.Generation != 2 {
+		t.Fatalf("raw fallback: %v %v %v", fallback, decoded, err)
+	}
+	if decoded.(*evolutionV1).FullName != "raw fallback" {
 		t.Fatalf("raw fallback: %v %v %v", fallback, decoded, err)
 	}
 }

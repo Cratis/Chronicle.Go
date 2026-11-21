@@ -30,6 +30,9 @@ type Reducer struct {
 	stream    grpc.BidiStreamingClient[contracts.ReducerMessage, contracts.ReduceOperationMessage]
 	store     metadata.StoreName
 	namespace metadata.Namespace
+	// EventTypes is the complete frozen catalog for identity-wide protection
+	// checks. Install before Run; generation mismatches fail closed without it.
+	EventTypes *events.Catalog
 	// OnChange receives successful local folds before kernel acknowledgement.
 	// Install before Run. It must not block or call user code.
 	OnChange func(string, json.RawMessage)
@@ -269,6 +272,6 @@ func (r *Reducer) decode(appended *contracts.AppendedEvent) (reducers.Event, err
 	for generation, content := range appended.GenerationalContent {
 		generations[events.Generation(generation)] = json.RawMessage(content)
 	}
-	ec, value, err := DecodeContent(descriptor, ec, []byte(appended.Content), generations)
+	ec, value, err := DecodeContent(r.EventTypes, descriptor, events.Appended{Context: ec, Content: json.RawMessage(appended.Content), GenerationalContent: generations})
 	return reducers.Event{Content: value, Context: ec}, err
 }

@@ -96,20 +96,9 @@ func (s *EventStore) foldReducerHistory(ctx context.Context, plan *reducers.Plan
 	if len(history) == 0 {
 		return empty, nil
 	}
-	batch := make([]reducers.Event, 0, len(history))
-	for _, appended := range history {
-		if err := ctx.Err(); err != nil {
-			return empty, err
-		}
-		descriptor, ok := plan.Descriptor(appended.Context.EventType.ID)
-		if !ok {
-			return empty, ErrProtocol
-		}
-		ec, content, err := observerruntime.DecodeContent(descriptor, appended.Context, appended.Content, appended.GenerationalContent)
-		if err != nil {
-			return empty, err
-		}
-		batch = append(batch, reducers.Event{Content: content, Context: ec})
+	batch, err := s.decodeReducerHistory(ctx, plan, history)
+	if err != nil {
+		return empty, err
 	}
 	if err := ctx.Err(); err != nil {
 		return empty, err
@@ -119,7 +108,37 @@ func (s *EventStore) foldReducerHistory(ctx context.Context, plan *reducers.Plan
 	if result.Err != nil {
 		return empty, result.Err
 	}
-	instance := empty
+	instance, err := reducerReadInstance(model, result)
+	if err != nil {
+		return empty, err
+	}
+	if err := ctx.Err(); err != nil {
+		return empty, err
+	}
+	return instance, nil
+}
+
+func (s *EventStore) decodeReducerHistory(ctx context.Context, plan *reducers.Plan, history []events.Appended) ([]reducers.Event, error) {
+	batch := make([]reducers.Event, 0, len(history))
+	for _, appended := range history {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		descriptor, ok := plan.Descriptor(appended.Context.EventType.ID)
+		if !ok {
+			return nil, ErrProtocol
+		}
+		ec, content, err := observerruntime.DecodeContent(s.catalog, descriptor, appended)
+		if err != nil {
+			return nil, err
+		}
+		batch = append(batch, reducers.Event{Content: content, Context: ec})
+	}
+	return batch, nil
+}
+
+func reducerReadInstance(model readmodels.Descriptor, result reducers.Result) (readmodels.Instance[json.RawMessage], error) {
+	instance := readmodels.Instance[json.RawMessage]{}
 	if result.LastSuccessful != events.Unavailable {
 		instance.LastHandled = &result.LastSuccessful
 	}
@@ -127,12 +146,9 @@ func (s *EventStore) foldReducerHistory(ctx context.Context, plan *reducers.Plan
 		var err error
 		instance.Value, err = model.Marshal(result.State)
 		if err != nil {
-			return empty, err
+			return readmodels.Instance[json.RawMessage]{}, err
 		}
 		instance.Exists = true
-	}
-	if err := ctx.Err(); err != nil {
-		return empty, err
 	}
 	return instance, nil
 }

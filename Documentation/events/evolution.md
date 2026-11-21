@@ -145,15 +145,24 @@ migrations transform PII and encrypted values as plaintext and protect every
 generation for the original subject. The event's current representation, and
 projections built from it, release correctly before and after erasure. The
 kernel still releases **only** that current representation: other generations
-in `GenerationalContent` reach the client as ciphertext. Decoding a protected
-event as another generation, or observing it with a historical-generation
-reactor or reducer, therefore returns ciphertext in classified fields. Do not
-read or observe classified events at a generation other than the one the
-kernel returns as current. `TestKernelProtectedEventGenerationMigrationProfile`
-records this kernel behavior, tracked upstream as
-[Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623). A fail-closed
-SDK guard for such decodes is tracked in
-[Chronicle.Go#90](https://github.com/Cratis/Chronicle.Go/issues/90).
+in `GenerationalContent` reach the client as ciphertext. The SDK now refuses
+protected alternate-generation decoding and historical-generation reactor or
+reducer registration with `ErrUnsupported`, rather than handing ciphertext to
+typed fields or handlers. Dispatch also refuses a protected generation mismatch.
+Current-generation content and alternate generations of identities with **no
+protected registered generation** are unaffected. A protected sibling generation
+makes alternate decoding unsupported even when the requested generation's schema
+is unprotected.
+
+A current-generation reactor or reducer for a protected identity still compiles,
+but **fails at dispatch** if an event appended at an older generation arrives.
+This stops that partition until the kernel fix
+([Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623)); it is not a
+compile-time refusal of the current-generation observer.
+`TestKernelProtectedEventGenerationMigrationProfile` records the kernel behavior,
+tracked upstream as [Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623).
+Guard removal is tracked in
+[Chronicle.Go#96](https://github.com/Cratis/Chronicle.Go/issues/96).
 
 Continue with [reading events](reading-events.md) and the
 [behavior-level parity map](../parity.md#event-evolution).

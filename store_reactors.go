@@ -28,6 +28,7 @@ func (s *EventStore) startReactors(ctx context.Context, g *generation, waitReady
 		plans = append(plans, observerPlan{id: string(plan.Identifier()), logger: plan.Logger(), operation: "reactor", open: func(ctx context.Context, g *generation, delivered func()) (observerStream, error) {
 			runtime, err := observerruntime.Open(ctx, g.transport, g.id, s.name, s.namespace, plan, reactorStoreRuntime{s})
 			if err == nil {
+				runtime.EventTypes = s.catalog
 				runtime.OnDelivered = delivered
 			}
 			return runtime, err

@@ -28,6 +28,7 @@ func (s *EventStore) startReducers(ctx context.Context, g *generation, waitReady
 		plans = append(plans, observerPlan{id: string(plan.Identifier()), logger: plan.Logger(), operation: "reducer", open: func(ctx context.Context, g *generation, delivered func()) (observerStream, error) {
 			runtime, err := observerruntime.OpenReducer(ctx, g.transport, g.id, s.name, s.namespace, plan)
 			if err == nil {
+				runtime.EventTypes = s.catalog
 				runtime.OnDelivered = delivered
 				runtime.OnChange = func(key string, value json.RawMessage) {
 					s.readModelChanges.Publish(g.ctx, plan.Model().Identifier(), readmodels.Key(key), value)
