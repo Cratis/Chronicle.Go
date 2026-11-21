@@ -97,6 +97,42 @@ any events exist for the keys involved. `observation.Active` means the observer 
 active, not necessarily caught up. The wait does not protect observers added later
 or after a reconnect.
 
+### Known limitation: catch-up across partitions
+
+Chronicle has an open defect,
+[Chronicle#4583](https://github.com/Cratis/Chronicle/issues/4583), that the
+pinned kernel does not fix. When an observer catches up several partitions (event
+source IDs) at once, an event for one partition that arrives after that
+partition's catch-up has finished, while another partition is still catching up,
+can be skipped. The observer's position moves past it and nothing reads it again.
+It applies to reactors and reducers:
+
+- a reactor can miss the side effect for that event;
+- a reducer's read model can stay stale for that partition.
+
+The client cannot repair this, and waiting for observers to be `Active` before
+appending is **not** a fix: `Active` does not mean caught up, and the catch-up can
+start after the wait. Until a kernel with a fix is pinned:
+
+- reconcile effects that matter against the authoritative event history, for
+  example by reading the partition with `store.EventLog().ReadSource`;
+- replay the observer when you detect a gap, and keep handlers idempotent so a
+  replay or repeat is safe.
+
+The upstream issue holds the code-path analysis. Events excluded by the
+observer's filters can move the catch-up position further and widen the window.
+`TestKernelCatchUpAcrossPartitionsDeliversEveryEvent` covers this case across
+several partitions, one of them with only filtered events left. It is skipped by
+default: the race depends on kernel scheduling and storage-cursor timing that the
+client cannot control, so it cannot be made to reproduce, or to rule the defect
+out, deterministically. Set `CHRONICLE_CATCHUP_PARTITION_WITNESS=1` to run it
+against a kernel. Earlier repeated-run symptoms, such as a stale projection while
+the observer had advanced, are unconfirmed for this mechanism. Projections catch
+up through a single step and their variant is tracked separately in
+[Chronicle#4600](https://github.com/Cratis/Chronicle/issues/4600). This section
+and the witness's default skip are removed when a kernel bump
+([#96](https://github.com/Cratis/Chronicle.Go/issues/96)) pins a fixed kernel.
+
 Events execute in received order, with no application queue. A failed event stops
 the batch; the result names only the last successful sequence number, or
 `events.Unavailable` when none succeeded. The kernel owns partition recovery and
