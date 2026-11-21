@@ -3,7 +3,7 @@ module github.com/cratis/chronicle.go
 go 1.26.0
 
 require (
-	github.com/cratis/fundamentals.go v0.1.0
+	github.com/cratis/fundamentals.go v0.3.2
 	github.com/google/uuid v1.6.0
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
