@@ -192,6 +192,9 @@ and blocked-versus-completed processing workflows above. Replay jobs can disappe
 before a terminal snapshot is read. Observed against 19.32.3-development: kernel 19.32.3 fixes the
 [reducer recovery](https://github.com/Cratis/Chronicle/issues/4540) and
 [catch-up race](https://github.com/Cratis/Chronicle/issues/4548) defects that
-19.29.4 had. The SDK does not clear failures, append replacement events
+19.29.4 had. A separate observer-wide catch-up defect,
+[Chronicle#4583](https://github.com/Cratis/Chronicle/issues/4583), is still open;
+see the [catch-up limitation](reactors.md#known-limitation-catch-up-across-partitions).
+The SDK does not clear failures, append replacement events
 or replay automatically to conceal them. See the per-feature
 [parity map](parity.md#observer-and-job-administration).

@@ -48,9 +48,16 @@ materialization; it does not turn reads into passive folds.
 
 ## Failure and shutdown
 
-A reducer that subscribes after events were appended to a key can trigger a kernel
-catch-up that drops later same-key events for other observers on the pinned
-kernel. See [Wait for observers before the first append](reactors.md#wait-for-observers-before-the-first-append).
+An open kernel defect,
+[Chronicle#4583](https://github.com/Cratis/Chronicle/issues/4583), can skip an
+event while a reducer catches up several partitions at once, leaving that
+partition's read model stale. Waiting for `Active` does not prevent it. Reconcile
+against the event history or replay the reducer; see the
+[catch-up limitation](reactors.md#known-limitation-catch-up-across-partitions).
+The earlier same-key catch-up drop
+([Chronicle#4558](https://github.com/Cratis/Chronicle/issues/4558)) is fixed from
+kernel 19.32.3; see
+[Wait for observers before the first append](reactors.md#wait-for-observers-before-the-first-append).
 
 Folds execute in event order. Failure returns no partial state and reports the
 last successful sequence position; cleanup failure resets it to unavailable.
