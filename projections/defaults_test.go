@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math"
 	"os"
+	"strconv"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
@@ -306,7 +307,8 @@ func TestInitialValuesHonorKernelIntegerGuards(t *testing.T) {
 		valid  bool
 	}{
 		{"unsigned limit", projections.WithInitialValue(projections.Path[integerDefaultModel, uint64]("Unsigned"), math.MaxInt64), true},
-		{"unsigned overflow", projections.WithInitialValue(projections.Path[integerDefaultModel, uint64]("Unsigned"), uint64(math.MaxInt64)+1), false},
+		{"unsigned above signed range", projections.WithInitialValue(projections.Path[integerDefaultModel, uint64]("Unsigned"), uint64(math.MaxInt64)+1), true},
+		{"unsigned maximum", projections.WithInitialValue(projections.Path[integerDefaultModel, uint64]("Unsigned"), math.MaxUint64), true},
 		{"signed minimum", projections.WithInitialValues(integerDefaultModel{Signed: math.MinInt64}), true},
 		{"signed maximum", projections.WithInitialValues(integerDefaultModel{Signed: math.MaxInt64}), true},
 		{"dictionary positive limit", projections.WithInitialValues(integerDefaultModel{Lookup: map[string]int64{"n": 1 << 53}}), true},
@@ -317,10 +319,56 @@ func TestInitialValuesHonorKernelIntegerGuards(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := projections.Compile(projections.ModelBound(model, projections.FromEvent(event), tc.option), catalog)
-			if tc.valid && err != nil || !tc.valid && !errors.Is(err, chronicle.ErrInvalidConfiguration) {
-				t.Fatalf("valid=%v error=%v", tc.valid, err)
+			if tc.valid {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if !errors.Is(err, chronicle.ErrInvalidConfiguration) {
+				t.Fatalf("error=%v, want ErrInvalidConfiguration", err)
 			}
 		})
+	}
+}
+
+func TestInitialValuesPreserveFullUnsignedRange(t *testing.T) {
+	_, event, catalog := defaultFixture(t)
+	model, err := readmodels.Define[integerDefaultModel]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, number := range []uint64{math.MaxInt64, math.MaxInt64 + 1, math.MaxUint64} {
+		t.Run(strconv.FormatUint(number, 10), func(t *testing.T) {
+			for _, option := range []projections.Option{
+				projections.WithInitialValue(projections.Path[integerDefaultModel, uint64]("Unsigned"), number),
+				projections.WithInitialValues(integerDefaultModel{Unsigned: number}),
+			} {
+				definition, err := projections.Compile(projections.ModelBound(model, projections.FromEvent(event), option), catalog)
+				if err != nil {
+					t.Fatal(err)
+				}
+				assertUnsignedInitialState(t, definition.KernelDefinition().InitialModelState, number)
+			}
+		})
+	}
+}
+
+func assertUnsignedInitialState(t *testing.T, state string, want uint64) {
+	t.Helper()
+	var properties map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(state), &properties); err != nil {
+		t.Fatal(err)
+	}
+	if string(properties["Unsigned"]) != strconv.FormatUint(want, 10) {
+		t.Fatalf("integer snapshot = %s, want %d", state, want)
+	}
+	var got integerDefaultModel
+	if err := json.Unmarshal([]byte(state), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Unsigned != want {
+		t.Fatalf("decoded snapshot = %d, want %d", got.Unsigned, want)
 	}
 }
 
