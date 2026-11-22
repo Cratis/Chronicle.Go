@@ -97,6 +97,31 @@ For a composite key, pass several paths in **one** `On`, such as `"tenant", "ema
 
 Group mutually exclusive event types in one `UniqueEventTypes` declaration. Registry names must be unique; separate same-named definitions are not implicitly merged. Empty names, missing events or properties, invalid paths and foreign/unregistered descriptors fail with `ErrInvalidConfiguration`. Build returns an immutable definition; the builder itself is not concurrency-safe.
 
+## Choose property-value retention
+
+`UniqueValues` defaults to `constraints.PerEventSource` (zero). The owner keeps
+one current value: claiming a replacement releases its previous value. Select
+`WithMode(constraints.PerValue)` to retain every value the source has claimed
+until its removal event. In either mode, the same owner may reclaim a value;
+other sources cannot claim a retained value.
+
+For example, an owner claims A, then B. With `PerEventSource`, another source
+can claim A, but not B. With `PerValue`, both A and B remain reserved to the
+owner. An owner's `RemovedWith` event releases all its retained values within
+the matching scope and sequence; it need not carry those properties. Another
+source's remover cannot release them.
+
+Mode is independent of `PerEventSourceType`, stream scope and sequence selection.
+It applies only to property constraints, not `UniqueEventTypes`. Repeated valid
+`WithMode` calls use the last selection. Unknown values and any use on an
+event-type builder fail `Build` with `ErrInvalidConfiguration`. `Definition.Mode()`
+returns the frozen selection; it is zero and meaningless for event-type constraints.
+
+Field `unique` tags keep the same zero default. To select retention for a
+tag-derived constraint, call `b.WithMode(constraints.PerValue)` inside the existing
+`Registry.ConfigureDeclaredConstraint` callback; there is no new tag option.
+See the [executable mode example](https://github.com/Cratis/Chronicle.Go/blob/main/constraints/example_test.go).
+
 ## Release and scope claims
 
 `RemovedWith(descriptors...)` applies to both kinds. Repeated calls are additive and duplicate IDs coalesce. Any declared remover releases the **appending source's** claim or lifecycle. Another source's removal cannot release the owner's claim. Removing a claim does not erase historical events.

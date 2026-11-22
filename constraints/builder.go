@@ -96,6 +96,22 @@ func (b *Builder) IgnoreCasing() *Builder {
 	return b
 }
 
+// WithMode selects property-value retention independently of scope. The default
+// is PerEventSource; repeated valid calls use the last selection. Unknown modes
+// or use on event-type constraints fail Build, preserving the first builder error.
+func (b *Builder) WithMode(mode UniqueMode) *Builder {
+	if b.definition.kind != Unique {
+		b.invalid("WithMode requires a property constraint")
+		return b
+	}
+	if mode != PerEventSource && mode != PerValue {
+		b.invalid("unknown unique constraint mode %d", mode)
+		return b
+	}
+	b.definition.mode = mode
+	return b
+}
+
 // RemovedWith adds events that release the appending source's claim or lifecycle.
 // Calls are additive; duplicate IDs are ignored. A different source cannot release
 // the owner's claim. Scope and sequence selection also apply to removal events.

@@ -48,6 +48,7 @@ type Definition struct {
 	scope           Scope
 	sequences       []events.SequenceID
 	ignoreCasing    bool
+	mode            UniqueMode
 	message         MessageProvider
 	messageProvider bool
 }
@@ -81,6 +82,10 @@ func (d Definition) EventSequences() []events.SequenceID { return slices.Clone(d
 
 // IgnoresCasing reports whether property comparisons ignore casing in the kernel.
 func (d Definition) IgnoresCasing() bool { return d.ignoreCasing }
+
+// Mode returns the property constraint's retention mode. The default is
+// PerEventSource. For event-type constraints it returns zero and has no meaning.
+func (d Definition) Mode() UniqueMode { return d.mode }
 
 // HasMessageProvider distinguishes runtime callbacks from static WithMessage
 // templates. Temporary definition factories cannot retain runtime collaborators.
