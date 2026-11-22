@@ -8,9 +8,13 @@ import (
 	"fmt"
 
 	seedcontracts "github.com/cratis/chronicle.go/contracts/seeding"
+	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/internal/registration"
 	"github.com/cratis/chronicle.go/internal/wire"
 	"github.com/cratis/chronicle.go/seeding"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (s *EventStore) seedDefinition() seeding.Definition {
@@ -41,11 +45,83 @@ func (s *EventStore) sendSeeds(ctx context.Context, g *generation, definition se
 	if definition.IsEmpty() {
 		return ctx.Err()
 	}
-	result, err := seedcontracts.NewEventSeedingClient(g.transport).SeedEvents(ctx, definition.Contract(s.name))
+	request := definition.Contract(s.name)
+	service := seedcontracts.NewEventSeedingClient(g.transport)
+	if seedRequestNeedsRouting(request) {
+		if err := checkSeedRoutingSupport(service.GetSeedingSupport(ctx, &emptypb.Empty{})); err != nil {
+			return err
+		}
+	}
+	result, err := service.SeedEvents(ctx, request)
 	if err != nil {
 		return err
 	}
 	return wire.CheckEnvelope(result)
+}
+
+func seedRequestNeedsRouting(request *seedcontracts.SeedEventsRequest) bool {
+	if seedGroupsNeedRouting(request.GlobalByEventSource) || seedGroupsNeedRouting(request.GlobalByEventType) {
+		return true
+	}
+	for _, group := range request.NamespacedEntries {
+		if seedGroupsNeedRouting(group.ByEventSource) || seedGroupsNeedRouting(group.ByEventType) {
+			return true
+		}
+	}
+	return false
+}
+
+func seedGroupsNeedRouting[T interface {
+	GetEntries() []*seedcontracts.SeedingEntry
+}](groups []T) bool {
+	for _, group := range groups {
+		if seedEntriesNeedRouting(group.GetEntries()) {
+			return true
+		}
+	}
+	return false
+}
+
+func seedEntriesNeedRouting(entries []*seedcontracts.SeedingEntry) bool {
+	for _, entry := range entries {
+		if seedEntryNeedsRouting(entry) {
+			return true
+		}
+	}
+	return false
+}
+
+func seedEntryNeedsRouting(entry *seedcontracts.SeedingEntry) bool {
+	return nonDefaultSeedRoute(entry.EventSourceType, string(events.DefaultSourceType)) ||
+		nonDefaultSeedRoute(entry.EventStreamType, string(events.AllStreamTypes)) ||
+		nonDefaultSeedRoute(entry.EventStreamId, string(events.DefaultStreamID))
+}
+
+func nonDefaultSeedRoute(value, defaultValue string) bool {
+	return value != "" && value != defaultValue
+}
+
+func checkSeedRoutingSupport(result *seedcontracts.QueryResult_EventSeedingSupportResponse, err error) error {
+	if status.Code(err) == codes.Unimplemented {
+		return seedRoutingUnsupported()
+	}
+	if err != nil {
+		return err
+	}
+	if err := wire.CheckEnvelope(result); err != nil {
+		return err
+	}
+	if err := wire.RequireMessage(result, "Data"); err != nil {
+		return err
+	}
+	if !result.Data.RoutingSupported {
+		return seedRoutingUnsupported()
+	}
+	return nil
+}
+
+func seedRoutingUnsupported() error {
+	return fmt.Errorf("%w: stream-targeted seeding requires kernel routing support; upgrade the Chronicle kernel or use default routing", ErrUnsupported)
 }
 
 // SeedBatch is a manually prepared, immutable batch bound to one store. It is
@@ -81,23 +157,27 @@ func (b *SeedBatch) Register(ctx context.Context) error {
 		return ctx.Err()
 	}
 	for {
-		g, attemptCtx, done, err := b.store.client.acquireReady(ctx)
-		if err != nil {
-			return err
-		}
-		if _, err = b.store.register(attemptCtx, g); err == nil {
-			outcome := b.registration.Run(attemptCtx, g.number, b.store.client.config.registrationRetry, retryRegistration, func(ctx context.Context) ([]ArtifactRegistration, error) {
-				err := b.store.sendSeeds(ctx, g, b.definition)
-				return []ArtifactRegistration{{Name: "seeding", Failure: err}}, err
-			})
-			if outcome.Failure != nil {
-				err = &RegistrationError{Outcome: outcome}
-			}
-		}
-		retry := g.ctx.Err() != nil && retryReadiness(ctx, err)
-		done()
+		retry, err := b.registerAttempt(ctx)
 		if !retry {
 			return err
 		}
 	}
+}
+
+func (b *SeedBatch) registerAttempt(ctx context.Context) (bool, error) {
+	g, attemptCtx, done, err := b.store.client.acquireReady(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer done()
+	if _, err = b.store.register(attemptCtx, g); err == nil {
+		outcome := b.registration.Run(attemptCtx, g.number, b.store.client.config.registrationRetry, retryRegistration, func(ctx context.Context) ([]ArtifactRegistration, error) {
+			err := b.store.sendSeeds(ctx, g, b.definition)
+			return []ArtifactRegistration{{Name: "seeding", Failure: err}}, err
+		})
+		if outcome.Failure != nil {
+			err = &RegistrationError{Outcome: outcome}
+		}
+	}
+	return g.ctx.Err() != nil && retryReadiness(ctx, err), err
 }
