@@ -25,7 +25,7 @@ func TestExplicitSinkSurvivesNamingAndDefaultCopies(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, fallback := range []readmodels.SinkType{readmodels.SQL, readmodels.InMemory, readmodels.MongoDB} {
+			for _, fallback := range []readmodels.SinkType{readmodels.SQL, readmodels.InMemory, readmodels.MongoDB, readmodels.NoSink} {
 				named, err = named.WithDefaultSinkType(fallback)
 				if err != nil || named.Sink() != want {
 					t.Fatalf("explicit=%v fallback=%s got=%v err=%v", want, fallback, named.Sink(), err)
@@ -48,7 +48,7 @@ func TestDefaultSinkCopyPreservesFrozenClassificationAndSchema(t *testing.T) {
 	if frozenCalls == 0 {
 		t.Fatal("provider not exercised")
 	}
-	for _, kind := range []readmodels.SinkType{readmodels.SQL, readmodels.InMemory} {
+	for _, kind := range []readmodels.SinkType{readmodels.SQL, readmodels.InMemory, readmodels.NoSink} {
 		named, err := model.Descriptor().WithNamingPolicy(serialization.CamelCase)
 		if err != nil {
 			t.Fatal(err)
@@ -57,12 +57,20 @@ func TestDefaultSinkCopyPreservesFrozenClassificationAndSchema(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if calls != frozenCalls || resolved.Schema() != named.Schema() || resolved.Generation() != named.Generation() || resolved.Sink().Type != kind {
-			t.Fatal("sink resolution rebuilt schema or reran classification")
+		if calls != frozenCalls || resolved.Sink().Type != kind {
+			t.Fatal("sink resolution reran classification or lost sink")
 		}
+		assertSinkSchemaUnchanged(t, named, resolved)
 		data, err := resolved.RebindJSON([]byte(`{"Id":"source","Name":"frozen"}`), model.Descriptor())
 		if err != nil || string(data) != `{"id":"source","name":"frozen"}` {
 			t.Fatalf("snapshot rebind: %s %v", data, err)
 		}
+	}
+}
+
+func assertSinkSchemaUnchanged(t *testing.T, before, after readmodels.Descriptor) {
+	t.Helper()
+	if after.Schema() != before.Schema() || after.Generation() != before.Generation() {
+		t.Fatal("sink resolution rebuilt schema")
 	}
 }

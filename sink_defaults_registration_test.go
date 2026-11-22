@@ -21,6 +21,13 @@ import (
 )
 
 func TestDefaultSinkRegistrationFrozenReconnectAndOriginalTypedHandle(t *testing.T) {
+	for _, kind := range []readmodels.SinkType{readmodels.SQL, readmodels.NoSink} {
+		t.Run(string(kind), func(t *testing.T) { defaultSinkRegistration(t, kind) })
+	}
+}
+
+func defaultSinkRegistration(t *testing.T, kind readmodels.SinkType) {
+	t.Helper()
 	r := NewRegistry()
 	event, err := RegisterEvent[sinkDefaultEvent](r)
 	if err != nil {
@@ -49,14 +56,18 @@ func TestDefaultSinkRegistrationFrozenReconnectAndOriginalTypedHandle(t *testing
 		},
 		projections: &projectionKernel{register: func(context.Context, *projectioncontracts.RegisterRequest) error { return nil }},
 	}
-	client, ctx := supervisionClient(t, kernel, WithRegistry(r), WithDefaultSinkType(readmodels.SQL))
+	client, ctx := supervisionClient(t, kernel, WithRegistry(r), WithDefaultSinkType(kind))
 	store, err := client.EventStore(ctx, "store")
 	if err != nil {
 		t.Fatal(err)
 	}
 	first := <-requests
-	if first.ReadModels[0].Sink.TypeId != "SQL" {
+	if first.ReadModels[0].Sink.TypeId != string(kind) {
 		t.Fatal("wire default not selected")
+	}
+	definition := client.projections[0].KernelDefinition()
+	if !definition.IsActive || !definition.IsRewindable {
+		t.Fatal("default changed authored producer flags")
 	}
 	_, offline, err := client.Catalogs("store")
 	if err != nil || !reflect.DeepEqual(offline.Descriptors(), store.ReadModels().Catalog().Descriptors()) {

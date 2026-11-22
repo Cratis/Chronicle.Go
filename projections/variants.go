@@ -103,82 +103,121 @@ func (e *GlobalFromHasNoProperties) Unwrap() error { return invalid("global From
 // sorted by identifier. The optional current store resolves local log vs inbox.
 // No subscription provisioning or callbacks are performed.
 func CompileGroup(declarations []Declaration, catalog *events.Catalog, currentStore ...string) ([]Definition, error) {
-	var compiled []Definition
-	groups := map[reflect.Type][]int{}
-	globals := map[reflect.Type][]Definition{}
-	ids := map[string]bool{}
-	models := map[reflect.Type]bool{}
-	for _, declaration := range declarations {
-		if declaration.data == nil {
-			return nil, invalid("projection declaration required")
-		}
-		d := declaration.data
-		if ids[d.id] || models[d.model.GoType()] {
-			return nil, invalid("duplicate projection identity or model")
-		}
-		ids[d.id], models[d.model.GoType()] = true, true
-		if d.variant != nil && d.globalFor != nil || d.variant == nil && (len(d.entering) > 0 || d.variantKey != "") {
-			return nil, declarationFailure(d.id, Provenance{Offset: -1}, invalid("incompatible variant/global options"))
-		}
-		definition, err := compileOrdinary(declaration, catalog)
-		if err != nil {
-			return nil, err
-		}
-		if d.globalFor != nil {
-			globals[d.globalFor] = append(globals[d.globalFor], definition)
-			continue
-		}
-		if d.variant != nil {
-			groups[d.variant] = append(groups[d.variant], len(compiled))
-		}
-		compiled = append(compiled, definition)
+	group, err := compileGroupMembers(declarations, catalog)
+	if err != nil {
+		return nil, err
 	}
 	for _, declaration := range declarations {
 		d := declaration.data
-		if d.globalFor != nil && len(groups[d.globalFor]) == 0 {
+		if d.globalFor != nil && len(group.variants[d.globalFor]) == 0 {
 			return nil, declarationFailure(d.id, Provenance{Offset: -1}, invalid("global handler has no registered variants"))
 		}
 	}
 	// Follow input order, not map iteration: diagnostics and shadowing are stable.
-	for _, definition := range compiled {
-		d := definition.data
-		if d.variant != nil {
-			for _, global := range globals[d.variant] {
-				if err := mergeGlobalHandler(d, global.data, catalog); err != nil {
-					return nil, declarationFailure(d.id, Provenance{Directive: "GlobalFor", Offset: -1}, err)
-				}
-			}
-			if err := lowerVariant(d); err != nil {
-				return nil, declarationFailure(d.id, Provenance{Directive: "VariantOf", Offset: -1}, err)
-			}
-		}
-		if err := inferSource(d, catalog, currentStore); err != nil {
+	for _, definition := range group.compiled {
+		if err := group.finalize(definition.data, catalog, currentStore); err != nil {
 			return nil, err
 		}
-		// Infer from the variant's own handlers before adding generated sibling
-		// removals: those must not reroute local creation to a sibling's inbox.
-		for _, sibling := range groups[d.variant] {
-			other := compiled[sibling].data
-			if other == d {
+	}
+	slices.SortFunc(group.compiled, func(a, b Definition) int { return strings.Compare(a.Identifier(), b.Identifier()) })
+	return group.compiled, nil
+}
+
+type compiledGroup struct {
+	compiled []Definition
+	variants map[reflect.Type][]int
+	globals  map[reflect.Type][]Definition
+}
+
+func compileGroupMembers(declarations []Declaration, catalog *events.Catalog) (compiledGroup, error) {
+	group := compiledGroup{variants: map[reflect.Type][]int{}, globals: map[reflect.Type][]Definition{}}
+	ids, models := map[string]bool{}, map[reflect.Type]bool{}
+	for _, declaration := range declarations {
+		if err := validateGroupMember(declaration, ids, models); err != nil {
+			return compiledGroup{}, err
+		}
+		d := declaration.data
+		ids[d.id], models[d.model.GoType()] = true, true
+		definition, err := compileOrdinary(declaration, catalog)
+		if err != nil {
+			return compiledGroup{}, err
+		}
+		if d.globalFor != nil {
+			group.globals[d.globalFor] = append(group.globals[d.globalFor], definition)
+			continue
+		}
+		if d.variant != nil {
+			group.variants[d.variant] = append(group.variants[d.variant], len(group.compiled))
+		}
+		group.compiled = append(group.compiled, definition)
+	}
+	return group, nil
+}
+
+func validateGroupMember(declaration Declaration, ids map[string]bool, models map[reflect.Type]bool) error {
+	if declaration.data == nil {
+		return invalid("projection declaration required")
+	}
+	d := declaration.data
+	if ids[d.id] || models[d.model.GoType()] {
+		return invalid("duplicate projection identity or model")
+	}
+	if d.variant != nil && d.globalFor != nil || d.variant == nil && (len(d.entering) > 0 || d.variantKey != "") {
+		return declarationFailure(d.id, Provenance{Offset: -1}, invalid("incompatible variant/global options"))
+	}
+	return nil
+}
+
+func (group compiledGroup) finalize(d *definition, catalog *events.Catalog, currentStore []string) error {
+	if d.variant != nil {
+		if err := mergeAndLowerVariant(d, group.globals[d.variant], catalog); err != nil {
+			return err
+		}
+	}
+	if err := inferSource(d, catalog, currentStore); err != nil {
+		return err
+	}
+	// Infer from the variant's own handlers before adding generated sibling
+	// removals: those must not reroute local creation to a sibling's inbox.
+	group.addSiblingRemovals(d)
+	if err := validateEnumGraph(d, catalog); err != nil {
+		return err
+	}
+	if err := validateBinaryGraph(d, catalog); err != nil {
+		return err
+	}
+	if err := validateNoSinkGraph(d); err != nil {
+		return err
+	}
+	sortNode(&d.nodeDefinition)
+	return nil
+}
+
+func mergeAndLowerVariant(d *definition, globals []Definition, catalog *events.Catalog) error {
+	for _, global := range globals {
+		if err := mergeGlobalHandler(d, global.data, catalog); err != nil {
+			return declarationFailure(d.id, Provenance{Directive: "GlobalFor", Offset: -1}, err)
+		}
+	}
+	if err := lowerVariant(d); err != nil {
+		return declarationFailure(d.id, Provenance{Directive: "VariantOf", Offset: -1}, err)
+	}
+	return nil
+}
+
+func (group compiledGroup) addSiblingRemovals(d *definition) {
+	for _, sibling := range group.variants[d.variant] {
+		other := group.compiled[sibling].data
+		if other == d {
+			continue
+		}
+		for _, entering := range other.entering {
+			if slices.ContainsFunc(d.removals, func(r removalDefinition) bool { return !r.join && r.event == entering.event }) {
 				continue
 			}
-			for _, entering := range other.entering {
-				if slices.ContainsFunc(d.removals, func(r removalDefinition) bool { return !r.join && r.event == entering.event }) {
-					continue
-				}
-				d.removals = append(d.removals, removalDefinition{event: entering.event, key: expression{kind: sourceExpression}, parent: expression{kind: sourceExpression}})
-			}
+			d.removals = append(d.removals, removalDefinition{event: entering.event, key: expression{kind: sourceExpression}, parent: expression{kind: sourceExpression}})
 		}
-		if err := validateEnumGraph(d, catalog); err != nil {
-			return nil, err
-		}
-		if err := validateBinaryGraph(d, catalog); err != nil {
-			return nil, err
-		}
-		sortNode(&d.nodeDefinition)
 	}
-	slices.SortFunc(compiled, func(a, b Definition) int { return strings.Compare(a.Identifier(), b.Identifier()) })
-	return compiled, nil
 }
 
 func mergeGlobalHandler(d, global *definition, catalog *events.Catalog) error {

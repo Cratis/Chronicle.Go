@@ -50,6 +50,9 @@ func (d Definition) Rebind(model readmodels.Descriptor, before, after *events.Ca
 	if err := validateBinaryGraph(&copy, after); err != nil {
 		return Definition{}, err
 	}
+	if err := validateNoSinkGraph(&copy); err != nil {
+		return Definition{}, err
+	}
 	return Definition{data: &copy}, nil
 }
 

@@ -10,11 +10,11 @@ import (
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
-// WithDefaultSinkType selects the kernel-owned materialized sink for models
-// without an explicit readmodels.WithSink. The default is MongoDB; SQL and
-// InMemory are also accepted. Last wins. NoSink and unknown types fail
-// CaptureClient or NewClient with ErrInvalidConfiguration before preparation or
-// connection work.
+// WithDefaultSinkType selects the kernel-owned sink for models without an
+// explicit readmodels.WithSink. The default is MongoDB; SQL, InMemory and NoSink
+// are also accepted. Last wins. NoSink enables immediate source-keyed projection
+// reads, not materialized windows. Unsupported correlation shapes fail during
+// preparation; unknown types fail CaptureClient or NewClient before preparation.
 // Passive producers still select NoSink. The option covers every selected
 // store registry, not individual namespaces, and borrows no database resources.
 // Selecting a provider does not configure or verify its server-side backend.
@@ -24,10 +24,10 @@ func WithDefaultSinkType(kind readmodels.SinkType) ClientOption {
 
 func validateDefaultSinkType(kind readmodels.SinkType) error {
 	switch kind {
-	case readmodels.MongoDB, readmodels.SQL, readmodels.InMemory:
+	case readmodels.MongoDB, readmodels.SQL, readmodels.InMemory, readmodels.NoSink:
 		return nil
 	default:
-		return fmt.Errorf("%w: default sink must be MongoDB, SQL or InMemory", ErrInvalidConfiguration)
+		return fmt.Errorf("%w: default sink must be MongoDB, SQL, InMemory or None", ErrInvalidConfiguration)
 	}
 }
 

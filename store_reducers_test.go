@@ -55,6 +55,12 @@ func (p passiveHistoryTransport) Invoke(ctx context.Context, method string, _ an
 }
 
 func TestPassiveReducerReadPreservesCallerIdentityForConstructionAndFold(t *testing.T) {
+	t.Run("explicit passive", func(t *testing.T) { passiveReducerReadPreservesIdentity(t, false) })
+	t.Run("inherited None", func(t *testing.T) { passiveReducerReadPreservesIdentity(t, true) })
+}
+
+func passiveReducerReadPreservesIdentity(t *testing.T, inheritedNone bool) {
+	t.Helper()
 	registry := NewRegistry()
 	if _, err := RegisterEvent[FoldChanged](registry); err != nil {
 		t.Fatal(err)
@@ -65,16 +71,22 @@ func TestPassiveReducerReadPreservesCallerIdentityForConstructionAndFold(t *test
 	}
 	identity := identities.Identity{Subject: "reader", Name: "Reader"}
 	constructed := false
+	reducerOptions := []reducers.Option{reducers.Passive()}
+	clientOptions := []ClientOption{WithRegistry(registry)}
+	if inheritedNone {
+		reducerOptions = nil
+		clientOptions = append(clientOptions, WithDefaultSinkType(readmodels.NoSink))
+	}
 	if err := RegisterReducer[*passiveIdentityFold](registry, model, func(ctx context.Context) *passiveIdentityFold {
 		if !reflect.DeepEqual(metadata.Identity(ctx), identity) {
 			t.Fatalf("constructor identity = %+v, want %+v", metadata.Identity(ctx), identity)
 		}
 		constructed = true
 		return &passiveIdentityFold{identity: identity}
-	}, reducers.Passive()); err != nil {
+	}, reducerOptions...); err != nil {
 		t.Fatal(err)
 	}
-	client, err := NewClient(WithRegistry(registry))
+	client, err := NewClient(clientOptions...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +106,13 @@ func TestPassiveReducerReadPreservesCallerIdentityForConstructionAndFold(t *test
 	}
 	ctx := metadata.WithIdentity(t.Context(), identity)
 	instance, err := readmodels.For(store.ReadModels(), model).Get(ctx, "source")
-	if err != nil || !constructed || !instance.Exists || instance.Value.Amount != 3 || instance.LastHandled == nil || *instance.LastHandled != 7 {
+	if err != nil || !constructed {
 		t.Fatalf("instance = %+v, constructed = %v, error = %v", instance, constructed, err)
+	}
+	if !instance.Exists || instance.Value.Amount != 3 {
+		t.Fatalf("unexpected local fold: %+v", instance)
+	}
+	if instance.LastHandled == nil || *instance.LastHandled != 7 {
+		t.Fatalf("unexpected local fold position: %+v", instance.LastHandled)
 	}
 }
