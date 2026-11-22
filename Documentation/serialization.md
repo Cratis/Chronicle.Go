@@ -31,7 +31,14 @@ construction before network I/O. Repeated policy options are last-wins.
 
 Explicit `json` tags always win, including inside nested structs and collections.
 For a shared C# `Id` / Go `ID` property, use `json:"Id"`; preserving spelling does
-not translate different source-language names. The executable
+not translate different source-language names. Read-model plans have one
+intentional exception: an untagged **root** Go `ID` becomes `Id` before the policy
+is applied (`Id` by default, `id` with camelCase), matching a conventional C# `Id`
+property. A C# property actually declared `ID` stays `ID` under both policies;
+event plans also retain `ID`. The packaged capture's
+`TestUntaggedReadModelIDMatchesDocumentedDifference` pins this difference without
+changing either side. Nested fields and explicitly tagged identities do not use
+that root identity convention. The executable
 [`ExampleNamingPolicy`](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/example_test.go) shows all three policies.
 
 Container naming is separate: read-model containers remain case-preserving,
@@ -51,6 +58,14 @@ C# Fundamentals' acronym-friendly policy is not System.Text.Json's built-in
 camelCase. The source and golden fixtures are pinned in [the parity map](parity.md).
 Go projection paths honor explicit tags throughout; some C# reflected projection
 paths consult only its naming policy, not `JsonPropertyName`.
+
+The [packaged C# naming capture](../serialization/testdata/naming/README.md)
+compares both policies, explicit names and nested paths with Go payloads, schema
+property names and field metadata. To regenerate it manually from the repository
+root, run `dotnet run --file serialization/testdata/naming/capture.cs -- .ai-work/naming-profile.json`
+with the SDK recorded in its provenance, review the output, then replace the
+checked-in fixture. Go tests read the fixture without running .NET. This naming
+comparison does not establish full schema compatibility or kernel interoperability.
 
 ## Upgrade an existing Go store safely
 
