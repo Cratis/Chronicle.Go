@@ -9,8 +9,13 @@ seed entries across client restarts. Ordinary, unprotected events do not require
 PII support.
 
 You need registered [event types](event-types.md) and a running Chronicle kernel.
-Global seeds reach existing namespaces; applying them to namespaces created later
-has a [known kernel limitation](../parity.md#event-seeding).
+Global seeds reach existing namespaces. Applying them to namespaces created later
+requires the kernel's durable `NamespaceAdded` seeding path
+([Chronicle#4547](https://github.com/Cratis/Chronicle/issues/4547)).
+`TestKernelGlobalSeedsReachFutureNamespaces` is a required regression gate against
+the CI kernel (`19.153.0-development`); runtime qualification remains pending until
+that integration check passes. Older kernels without this path are not covered.
+See the [seeding compatibility boundary](../parity.md#event-seeding).
 
 ## Declare and register seeds
 
@@ -82,7 +87,10 @@ the bounded registration retry policy. No ordinary append RPC is involved.
 The kernel owns deduplication. Two identical entries in one declaration represent
 two facts; Go does not discard either. Changing payloads, source IDs, event IDs or
 tags can describe new seed entries, not updates to previously appended events.
-Keep declarations stable across startups.
+Keep declarations stable across startups. The restart/reconnect integration gate
+checks namespace-scoped event counts, payloads, type/generation, static tags and
+unchanged sequence positions, including two equal entries in the global definition.
+This verifies persisted seed identity; it does not promise kernel crash atomicity.
 
 The seeding protocol carries event IDs but **no generation**; the kernel appends
 seeds as generation one, like C#. Use generation-one-compatible seed shapes. The
