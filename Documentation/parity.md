@@ -723,8 +723,20 @@ Go projection paths consistently honor exact JSON tags. C# reflected paths in
 `ModelBoundProjectionBuilder.cs:600–609` and `FromDefinitionExtensions.cs:26–31`
 do not universally honor `JsonPropertyName`; migrations do. This is an intentional
 Go consistency improvement, not a claim of equivalence for that C# limitation.
-No C# executable was run here: golden names are source-derived; round-trip
-execution uses the pinned Chronicle kernel and the Go client.
+The older golden names above remain source-derived. The separately pinned
+[packaged naming capture](../serialization/testdata/naming/README.md) runs
+Chronicle 19.153.0 and Fundamentals 7.33.1 without a kernel and compares actual
+payloads, schema property names and serializer fields; the explicit-name
+projection reflection paths are listed from the capture's documented C#
+reflection rules rather than derived from Go output. `TestNamingMatchesPackagedCSharpCapture` compares Go events with C# `ID`
+and Go read models with conventional C# `Id`, including nested/acronym names and
+explicit overrides under both policies.
+`TestUntaggedReadModelIDMatchesDocumentedDifference` preserves the intentional
+exception: a C# member declared `ID` emits `ID` under either policy, whereas an
+untagged root Go read-model `ID` emits `Id`/`id` as documented on
+`serialization.CompileReadModel`. This is not universal spelling parity. The
+capture also retains the explicit-name reflection-path difference described
+above; it does not establish full schema or cross-client kernel compatibility.
 
 ## Append configuration and declaration migration
 

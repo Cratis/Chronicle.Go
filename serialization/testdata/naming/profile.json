@@ -1,0 +1,645 @@
+{
+  "runtime": "11.0.0",
+  "chronicle": "19.153.0\u002B9157c14098688ac0c6946a335bfabf1f44220c7c.9157c14098688ac0c6946a335bfabf1f44220c7c",
+  "fundamentals": "1.0.0\u002B6ae7eb7d133afdb7adaf161ca185eaa189c7372b",
+  "profiles": [
+    {
+      "policy": "DefaultNamingPolicy",
+      "declaredType": "NamingEvent",
+      "payload": {
+        "URLValue": "url",
+        "ID": "identifier",
+        "Person": "Ada",
+        "Nested": {
+          "URLValue": "nested-url",
+          "Person": "Grace"
+        }
+      },
+      "eventSchema": {
+        "type": "object",
+        "properties": {
+          "URLValue": {
+            "type": "string"
+          },
+          "ID": {
+            "type": "string"
+          },
+          "Person": {
+            "type": "string"
+          },
+          "Nested": {
+            "type": "object",
+            "properties": {
+              "URLValue": {
+                "type": "string"
+              },
+              "Person": {
+                "type": "string"
+              }
+            },
+            "title": "NamingDetail"
+          }
+        },
+        "title": "NamingEvent"
+      },
+      "readModelSchema": {
+        "type": "object",
+        "properties": {
+          "URLValue": {
+            "type": "string"
+          },
+          "ID": {
+            "type": "string"
+          },
+          "Person": {
+            "type": "string"
+          },
+          "Nested": {
+            "type": "object",
+            "properties": {
+              "URLValue": {
+                "type": "string"
+              },
+              "Person": {
+                "type": "string"
+              }
+            },
+            "title": "NamingDetail"
+          }
+        },
+        "title": "NamingEvent"
+      },
+      "fields": [
+        {
+          "clrPath": "URLValue",
+          "name": "URLValue",
+          "serializedPath": "URLValue",
+          "sourcePath": "URLValue",
+          "targetPath": "URLValue"
+        },
+        {
+          "clrPath": "ID",
+          "name": "ID",
+          "serializedPath": "ID",
+          "sourcePath": "ID",
+          "targetPath": "ID"
+        },
+        {
+          "clrPath": "Person",
+          "name": "Person",
+          "serializedPath": "Person",
+          "sourcePath": "Person",
+          "targetPath": "Person"
+        },
+        {
+          "clrPath": "Nested",
+          "name": "Nested",
+          "serializedPath": "Nested",
+          "sourcePath": "Nested",
+          "targetPath": "Nested"
+        },
+        {
+          "clrPath": "Nested.URLValue",
+          "name": "URLValue",
+          "serializedPath": "Nested.URLValue",
+          "sourcePath": "Nested.URLValue",
+          "targetPath": "Nested.URLValue"
+        },
+        {
+          "clrPath": "Nested.Person",
+          "name": "Person",
+          "serializedPath": "Nested.Person",
+          "sourcePath": "Nested.Person",
+          "targetPath": "Nested.Person"
+        }
+      ]
+    },
+    {
+      "policy": "DefaultNamingPolicy",
+      "declaredType": "NamingReadModel",
+      "payload": {
+        "URLValue": "url",
+        "Id": "identifier",
+        "Person": "Ada",
+        "Nested": {
+          "URLValue": "nested-url",
+          "Person": "Grace"
+        }
+      },
+      "eventSchema": {
+        "type": "object",
+        "properties": {
+          "URLValue": {
+            "type": "string"
+          },
+          "Id": {
+            "type": "string"
+          },
+          "Person": {
+            "type": "string"
+          },
+          "Nested": {
+            "type": "object",
+            "properties": {
+              "URLValue": {
+                "type": "string"
+              },
+              "Person": {
+                "type": "string"
+              }
+            },
+            "title": "NamingDetail"
+          }
+        },
+        "title": "NamingReadModel"
+      },
+      "readModelSchema": {
+        "type": "object",
+        "properties": {
+          "URLValue": {
+            "type": "string"
+          },
+          "Id": {
+            "type": "string"
+          },
+          "Person": {
+            "type": "string"
+          },
+          "Nested": {
+            "type": "object",
+            "properties": {
+              "URLValue": {
+                "type": "string"
+              },
+              "Person": {
+                "type": "string"
+              }
+            },
+            "title": "NamingDetail"
+          }
+        },
+        "title": "NamingReadModel"
+      },
+      "fields": [
+        {
+          "clrPath": "URLValue",
+          "name": "URLValue",
+          "serializedPath": "URLValue",
+          "sourcePath": "URLValue",
+          "targetPath": "URLValue"
+        },
+        {
+          "clrPath": "Id",
+          "name": "Id",
+          "serializedPath": "Id",
+          "sourcePath": "Id",
+          "targetPath": "Id"
+        },
+        {
+          "clrPath": "Person",
+          "name": "Person",
+          "serializedPath": "Person",
+          "sourcePath": "Person",
+          "targetPath": "Person"
+        },
+        {
+          "clrPath": "Nested",
+          "name": "Nested",
+          "serializedPath": "Nested",
+          "sourcePath": "Nested",
+          "targetPath": "Nested"
+        },
+        {
+          "clrPath": "Nested.URLValue",
+          "name": "URLValue",
+          "serializedPath": "Nested.URLValue",
+          "sourcePath": "Nested.URLValue",
+          "targetPath": "Nested.URLValue"
+        },
+        {
+          "clrPath": "Nested.Person",
+          "name": "Person",
+          "serializedPath": "Nested.Person",
+          "sourcePath": "Nested.Person",
+          "targetPath": "Nested.Person"
+        }
+      ]
+    },
+    {
+      "policy": "DefaultNamingPolicy",
+      "declaredType": "ExplicitEvent",
+      "payload": {
+        "url_value": "url",
+        "Id": "shared-identifier",
+        "details": {
+          "uri": "nested-url",
+          "display_name": "Grace"
+        }
+      },
+      "eventSchema": {
+        "type": "object",
+        "properties": {
+          "url_value": {
+            "type": "string"
+          },
+          "Id": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string"
+              },
+              "display_name": {
+                "type": "string"
+              }
+            },
+            "title": "ExplicitDetail"
+          }
+        },
+        "title": "ExplicitEvent"
+      },
+      "readModelSchema": {
+        "type": "object",
+        "properties": {
+          "url_value": {
+            "type": "string"
+          },
+          "Id": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string"
+              },
+              "display_name": {
+                "type": "string"
+              }
+            },
+            "title": "ExplicitDetail"
+          }
+        },
+        "title": "ExplicitEvent"
+      },
+      "fields": [
+        {
+          "clrPath": "URLValue",
+          "name": "url_value",
+          "serializedPath": "url_value",
+          "sourcePath": "URLValue",
+          "targetPath": "URLValue"
+        },
+        {
+          "clrPath": "Id",
+          "name": "Id",
+          "serializedPath": "Id",
+          "sourcePath": "Id",
+          "targetPath": "Id"
+        },
+        {
+          "clrPath": "Nested",
+          "name": "details",
+          "serializedPath": "details",
+          "sourcePath": "Nested",
+          "targetPath": "Nested"
+        },
+        {
+          "clrPath": "Nested.URLValue",
+          "name": "uri",
+          "serializedPath": "details.uri",
+          "sourcePath": "Nested.URLValue",
+          "targetPath": "Nested.URLValue"
+        },
+        {
+          "clrPath": "Nested.Person",
+          "name": "display_name",
+          "serializedPath": "details.display_name",
+          "sourcePath": "Nested.Person",
+          "targetPath": "Nested.Person"
+        }
+      ]
+    },
+    {
+      "policy": "CamelCaseNamingPolicy",
+      "declaredType": "NamingEvent",
+      "payload": {
+        "URLValue": "url",
+        "ID": "identifier",
+        "person": "Ada",
+        "nested": {
+          "URLValue": "nested-url",
+          "person": "Grace"
+        }
+      },
+      "eventSchema": {
+        "type": "object",
+        "properties": {
+          "URLValue": {
+            "type": "string"
+          },
+          "ID": {
+            "type": "string"
+          },
+          "person": {
+            "type": "string"
+          },
+          "nested": {
+            "type": "object",
+            "properties": {
+              "URLValue": {
+                "type": "string"
+              },
+              "person": {
+                "type": "string"
+              }
+            },
+            "title": "NamingDetail"
+          }
+        },
+        "title": "NamingEvent"
+      },
+      "readModelSchema": {
+        "type": "object",
+        "properties": {
+          "URLValue": {
+            "type": "string"
+          },
+          "ID": {
+            "type": "string"
+          },
+          "person": {
+            "type": "string"
+          },
+          "nested": {
+            "type": "object",
+            "properties": {
+              "URLValue": {
+                "type": "string"
+              },
+              "person": {
+                "type": "string"
+              }
+            },
+            "title": "NamingDetail"
+          }
+        },
+        "title": "NamingEvent"
+      },
+      "fields": [
+        {
+          "clrPath": "URLValue",
+          "name": "URLValue",
+          "serializedPath": "URLValue",
+          "sourcePath": "URLValue",
+          "targetPath": "URLValue"
+        },
+        {
+          "clrPath": "ID",
+          "name": "ID",
+          "serializedPath": "ID",
+          "sourcePath": "ID",
+          "targetPath": "ID"
+        },
+        {
+          "clrPath": "Person",
+          "name": "person",
+          "serializedPath": "person",
+          "sourcePath": "person",
+          "targetPath": "person"
+        },
+        {
+          "clrPath": "Nested",
+          "name": "nested",
+          "serializedPath": "nested",
+          "sourcePath": "nested",
+          "targetPath": "nested"
+        },
+        {
+          "clrPath": "Nested.URLValue",
+          "name": "URLValue",
+          "serializedPath": "nested.URLValue",
+          "sourcePath": "nested.URLValue",
+          "targetPath": "nested.URLValue"
+        },
+        {
+          "clrPath": "Nested.Person",
+          "name": "person",
+          "serializedPath": "nested.person",
+          "sourcePath": "nested.person",
+          "targetPath": "nested.person"
+        }
+      ]
+    },
+    {
+      "policy": "CamelCaseNamingPolicy",
+      "declaredType": "NamingReadModel",
+      "payload": {
+        "URLValue": "url",
+        "id": "identifier",
+        "person": "Ada",
+        "nested": {
+          "URLValue": "nested-url",
+          "person": "Grace"
+        }
+      },
+      "eventSchema": {
+        "type": "object",
+        "properties": {
+          "URLValue": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "person": {
+            "type": "string"
+          },
+          "nested": {
+            "type": "object",
+            "properties": {
+              "URLValue": {
+                "type": "string"
+              },
+              "person": {
+                "type": "string"
+              }
+            },
+            "title": "NamingDetail"
+          }
+        },
+        "title": "NamingReadModel"
+      },
+      "readModelSchema": {
+        "type": "object",
+        "properties": {
+          "URLValue": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "person": {
+            "type": "string"
+          },
+          "nested": {
+            "type": "object",
+            "properties": {
+              "URLValue": {
+                "type": "string"
+              },
+              "person": {
+                "type": "string"
+              }
+            },
+            "title": "NamingDetail"
+          }
+        },
+        "title": "NamingReadModel"
+      },
+      "fields": [
+        {
+          "clrPath": "URLValue",
+          "name": "URLValue",
+          "serializedPath": "URLValue",
+          "sourcePath": "URLValue",
+          "targetPath": "URLValue"
+        },
+        {
+          "clrPath": "Id",
+          "name": "id",
+          "serializedPath": "id",
+          "sourcePath": "id",
+          "targetPath": "id"
+        },
+        {
+          "clrPath": "Person",
+          "name": "person",
+          "serializedPath": "person",
+          "sourcePath": "person",
+          "targetPath": "person"
+        },
+        {
+          "clrPath": "Nested",
+          "name": "nested",
+          "serializedPath": "nested",
+          "sourcePath": "nested",
+          "targetPath": "nested"
+        },
+        {
+          "clrPath": "Nested.URLValue",
+          "name": "URLValue",
+          "serializedPath": "nested.URLValue",
+          "sourcePath": "nested.URLValue",
+          "targetPath": "nested.URLValue"
+        },
+        {
+          "clrPath": "Nested.Person",
+          "name": "person",
+          "serializedPath": "nested.person",
+          "sourcePath": "nested.person",
+          "targetPath": "nested.person"
+        }
+      ]
+    },
+    {
+      "policy": "CamelCaseNamingPolicy",
+      "declaredType": "ExplicitEvent",
+      "payload": {
+        "url_value": "url",
+        "Id": "shared-identifier",
+        "details": {
+          "uri": "nested-url",
+          "display_name": "Grace"
+        }
+      },
+      "eventSchema": {
+        "type": "object",
+        "properties": {
+          "url_value": {
+            "type": "string"
+          },
+          "Id": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string"
+              },
+              "display_name": {
+                "type": "string"
+              }
+            },
+            "title": "ExplicitDetail"
+          }
+        },
+        "title": "ExplicitEvent"
+      },
+      "readModelSchema": {
+        "type": "object",
+        "properties": {
+          "url_value": {
+            "type": "string"
+          },
+          "Id": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string"
+              },
+              "display_name": {
+                "type": "string"
+              }
+            },
+            "title": "ExplicitDetail"
+          }
+        },
+        "title": "ExplicitEvent"
+      },
+      "fields": [
+        {
+          "clrPath": "URLValue",
+          "name": "url_value",
+          "serializedPath": "url_value",
+          "sourcePath": "URLValue",
+          "targetPath": "URLValue"
+        },
+        {
+          "clrPath": "Id",
+          "name": "Id",
+          "serializedPath": "Id",
+          "sourcePath": "id",
+          "targetPath": "id"
+        },
+        {
+          "clrPath": "Nested",
+          "name": "details",
+          "serializedPath": "details",
+          "sourcePath": "nested",
+          "targetPath": "nested"
+        },
+        {
+          "clrPath": "Nested.URLValue",
+          "name": "uri",
+          "serializedPath": "details.uri",
+          "sourcePath": "nested.URLValue",
+          "targetPath": "nested.URLValue"
+        },
+        {
+          "clrPath": "Nested.Person",
+          "name": "display_name",
+          "serializedPath": "details.display_name",
+          "sourcePath": "nested.person",
+          "targetPath": "nested.person"
+        }
+      ]
+    }
+  ]
+}
