@@ -210,14 +210,29 @@ property names, even without binary fields. For example, a field tagged
 `json:"payload"` alongside `Payload string` is ambiguous under preserve naming.
 Nested objects, collection elements, map values, references, and registered
 derivatives receive the same check after the selected naming policy is applied.
-Explicit `json` tags do not bypass it.
+Explicit `json` tags do not bypass it. The pinned kernel's
+[schema lookup](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Schemas/JsonSchemaExtensions.cs#L92-L97)
+uses `SingleOrDefault` with `OrdinalIgnoreCase`, so case-only siblings cannot be
+selected unambiguously.
 
-Plans also reject reserved kernel property-path tokens as property names:
-`Week`, `$this`, `*NotSet*`, `true`, and `false`, case-insensitively. `Week` is the
-only calendar function in the pinned [v19.29.4 registry](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Properties/DerivedPropertyFunctions.cs).
-`WeekNumber`, `TrueValue`, and distinct names in separate objects remain valid.
-These refusals return `ErrUnsupported` with the offending serialized property
-path; existing exact-duplicate refusals remain `ErrInvalidConfiguration`.
+Binary-free plans also reject exactly `Week`, `$this`, and `*NotSet*` as property
+names, case-sensitively, after naming is applied. The pinned kernel's
+[property-path parser and sentinel](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Properties/PropertyPath.cs)
+use exact matching; `Week` is the only function in its case-sensitive
+[derived-function registry](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Properties/DerivedPropertyFunctions.cs#L43-L56).
+Names such as `week`, `$This`, `*notset*`, `WeekNumber`, and distinct names in
+separate objects remain valid. These refusals return `ErrUnsupported` with the
+offending serialized property path; existing exact-duplicate refusals remain
+`ErrInvalidConfiguration`.
+
+Boolean names are **not** reserved declaration names in binary-free graphs.
+The kernel's [literal-expression resolver](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Kernel/Core/Projections/Engine/Expressions/EventValues/LiteralExpressionResolver.cs#L40-L44)
+intercepts exactly `true`, `True`, `false`, and `False` as source expressions.
+Existing source-expression and naming-rebind validation still refuses ambiguous
+uses there, without banning the fields at declaration construction. Case-only
+siblings such as `true` and `True` remain invalid under the separate sibling rule.
+The stricter [binary-containing policy](#names-in-binary-containing-graphs) below
+is unchanged.
 
 If an existing binary-free declaration now fails, choose unambiguous wire names
 with field names or explicit `json` tags before registering it. Coordinate any

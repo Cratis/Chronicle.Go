@@ -22,10 +22,10 @@ func TestScenarioKeyRequiresNormalizedDeclaredProperty(t *testing.T) {
 		key            readmodels.Key
 		err            error
 	}{
-		{"declared key wins", `{"Id":"person","_id":"sink","ID":"external"}`, "person", nil},
-		{"null key wins", `{"Id":null,"_id":"sink","ID":"external"}`, "", chronicle.ErrProtocol},
-		{"empty key wins", `{"Id":"","_id":"sink","ID":"external"}`, "", chronicle.ErrProtocol},
-		{"missing key", `{"ID":"external"}`, "", ErrFidelityUnavailable},
+		{"declared key wins", `{"Id":"person","_id":"sink","ExternalID":"external"}`, "person", nil},
+		{"null key wins", `{"Id":null,"_id":"sink","ExternalID":"external"}`, "", chronicle.ErrProtocol},
+		{"empty key wins", `{"Id":"","_id":"sink","ExternalID":"external"}`, "", chronicle.ErrProtocol},
+		{"missing key", `{"ExternalID":"external"}`, "", ErrFidelityUnavailable},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			key, err := modelKey(json.RawMessage(tc.document), model.Descriptor())

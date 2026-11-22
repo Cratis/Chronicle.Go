@@ -5,6 +5,7 @@ package chronicle_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
@@ -30,33 +31,13 @@ type DefaultsShadowedModel struct {
 	Other string `json:"name"`
 }
 
-func TestProjectionInitialStateRejectsLostFieldBeforeClientIO(t *testing.T) {
-	options := map[string]projections.Option{
-		"scalar promoted field": projections.WithInitialValue(projections.Path[DefaultsShadowedModel, string]("Name"), "promoted"),
-		"whole model":           projections.WithInitialValues(DefaultsShadowedModel{DefaultsPromoted: DefaultsPromoted{Name: "promoted"}, Other: "other"}),
-	}
-	for name, option := range options {
-		t.Run(name, func(t *testing.T) {
-			registry := chronicle.NewRegistry()
-			event, err := chronicle.RegisterEvent[DefaultsRegisteredEvent](registry)
-			if err != nil {
-				t.Fatal(err)
-			}
-			model, err := chronicle.RegisterReadModel[DefaultsShadowedModel](registry)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := registry.AddProjection(projections.ModelBound(model, projections.FromEvent(event), option)); err != nil {
-				t.Fatal(err)
-			}
-			// Construction must fail even offline: no Connect, resolver or RPC
-			// is needed to detect the naming-policy promotion change.
-			client, err := chronicle.NewClient(chronicle.WithRegistry(registry), chronicle.WithNamingPolicy(serialization.CamelCase))
-			var configuration *projections.DeclarationError
-			if client != nil || !errors.Is(err, chronicle.ErrInvalidConfiguration) || !errors.As(err, &configuration) || configuration.GoField != "DefaultsPromoted.Name" {
-				t.Fatalf("client=%v error=%v", client, err)
-			}
-		})
+func TestProjectionInitialStateRejectsAmbiguousPlanBeforeClientIO(t *testing.T) {
+	// Refuse the case-only promoted sibling before a projection or initial
+	// snapshot can be built, rather than waiting for rebinding to lose Name.
+	registry := chronicle.NewRegistry()
+	_, err := chronicle.RegisterReadModel[DefaultsShadowedModel](registry)
+	if !errors.Is(err, chronicle.ErrUnsupported) || !strings.Contains(err.Error(), `property "name"`) {
+		t.Fatalf("ambiguous plan admitted: %v", err)
 	}
 }
 

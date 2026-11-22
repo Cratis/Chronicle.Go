@@ -81,27 +81,37 @@ func TestFluentBuilderInheritsModelDefaults(t *testing.T) {
 	}
 }
 
-type BooleanPaths struct {
-	A string `json:"true"`
-	B string `json:"True"`
-	C string `json:"false"`
-	D string `json:"False"`
+type BooleanTruePath struct {
+	Value string `json:"true"`
+}
+type BooleanTitleTruePath struct {
+	Value string `json:"True"`
+}
+type BooleanFalsePath struct {
+	Value string `json:"false"`
+}
+type BooleanTitleFalsePath struct {
+	Value string `json:"False"`
 }
 
 func TestBooleanPropertyPathsRejectLiteralResolverAmbiguity(t *testing.T) {
-	event := mustEvent[BooleanPaths](t)
-	for _, path := range []string{"true", "True", "false", "False"} {
-		t.Run(path, func(t *testing.T) {
-			builder := projections.NewBuilder("boolean-path", mustModel[OptionalName](t))
-			projections.From(builder, event, func(from *projections.FromBuilder[OptionalName, BooleanPaths]) {
-				projections.MapAs(from, projections.Path[OptionalName, *string]("name"), projections.Path[BooleanPaths, string](path))
-			})
-			_, err := builder.Build()
-			var declaration *projections.DeclarationError
-			if !errors.As(err, &declaration) || declaration.Path != "name" {
-				t.Fatalf("boolean property path accepted: %v", err)
-			}
-		})
+	t.Run("true", func(t *testing.T) { rejectBooleanPropertyPath[BooleanTruePath](t, "true") })
+	t.Run("True", func(t *testing.T) { rejectBooleanPropertyPath[BooleanTitleTruePath](t, "True") })
+	t.Run("false", func(t *testing.T) { rejectBooleanPropertyPath[BooleanFalsePath](t, "false") })
+	t.Run("False", func(t *testing.T) { rejectBooleanPropertyPath[BooleanTitleFalsePath](t, "False") })
+}
+
+func rejectBooleanPropertyPath[E any](t *testing.T, path string) {
+	t.Helper()
+	event := mustEvent[E](t)
+	builder := projections.NewBuilder("boolean-path", mustModel[OptionalName](t))
+	projections.From(builder, event, func(from *projections.FromBuilder[OptionalName, E]) {
+		projections.MapAs(from, projections.Path[OptionalName, *string]("name"), projections.Path[E, string](path))
+	})
+	_, err := builder.Build()
+	var declaration *projections.DeclarationError
+	if !errors.As(err, &declaration) || declaration.Path != "name" {
+		t.Fatalf("boolean property path accepted: %v", err)
 	}
 }
 

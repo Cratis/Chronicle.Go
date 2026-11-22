@@ -5,6 +5,7 @@ package chronicle
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -195,12 +196,15 @@ type namingCollision struct {
 
 func TestClientNamingRejectsCollisionsBeforeIO(t *testing.T) {
 	r := NewRegistry()
-	if _, err := RegisterEvent[namingCollision](r); err != nil {
-		t.Fatal(err)
+	if _, err := RegisterEvent[namingCollision](r); !errors.Is(err, ErrUnsupported) {
+		t.Fatalf("case-only collision at registration: %v", err)
 	}
-	for _, policy := range []serialization.NamingPolicy{serialization.CamelCase, serialization.LegacyGoCamelCase, 255} {
-		if _, err := NewClient(WithRegistry(r), WithNamingPolicy(policy)); !errors.Is(err, ErrInvalidConfiguration) {
+	for _, policy := range []serialization.NamingPolicy{serialization.CamelCase, serialization.LegacyGoCamelCase} {
+		if _, err := serialization.Compile(reflect.TypeFor[namingCollision](), policy); !errors.Is(err, ErrInvalidConfiguration) {
 			t.Fatalf("policy %d: %v", policy, err)
 		}
+	}
+	if _, err := NewClient(WithRegistry(r), WithNamingPolicy(255)); !errors.Is(err, ErrInvalidConfiguration) {
+		t.Fatalf("invalid naming policy: %v", err)
 	}
 }

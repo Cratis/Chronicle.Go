@@ -44,7 +44,7 @@ func TestDeclarationOrderMatchesCSharpGolden(t *testing.T) {
 		Omitted string `json:",omitempty"`
 		Zeroed  int    `json:",omitzero"`
 		Zero    int
-		Enabled bool
+		False   bool
 		Empty   []string
 		Items   []person
 		When    time.Time

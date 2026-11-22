@@ -23,26 +23,17 @@ var propertyNamingPolicies = []struct {
 }
 
 func TestPropertyNamesRefuseReservedTokens(t *testing.T) {
-	// v19.29.4 DerivedPropertyFunctions.All contains only Week. The other
-	// tokens belong to PropertyPath and LiteralExpressionResolver.
-	for _, token := range []string{"Week", "$this", "*NotSet*", "true", "false"} {
-		for _, spelling := range []string{token, strings.ToUpper(token), strings.ToLower(token)} {
-			t.Run(spelling, func(t *testing.T) {
-				typ := reflect.StructOf([]reflect.StructField{{
-					Name: "Value", Type: reflect.TypeFor[string](), Tag: reflect.StructTag(`json:"` + spelling + `"`),
-				}})
-				assertPropertyNameRefused(t, typ, spelling)
-			})
-		}
-	}
-	for _, typ := range []reflect.Type{
-		reflect.TypeFor[struct{ Week int }](),
-		reflect.TypeFor[struct{ True bool }](),
-		reflect.TypeFor[struct{ False bool }](),
-	} {
-		t.Run("untagged/"+typ.Field(0).Name, func(t *testing.T) {
-			assertPropertyNameRefused(t, typ, "")
+	// v19.29.4 PropertyPath tokens are exact and case-sensitive.
+	for _, token := range []string{"Week", "$this", "*NotSet*"} {
+		t.Run(token, func(t *testing.T) {
+			typ := reflect.StructOf([]reflect.StructField{{
+				Name: "Value", Type: reflect.TypeFor[string](), Tag: reflect.StructTag(`json:"` + token + `"`),
+			}})
+			assertPropertyNameRefused(t, typ, token)
 		})
+	}
+	if _, err := serialization.Compile(reflect.TypeFor[struct{ Week int }]()); !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatalf("untagged Week: %v", err)
 	}
 }
 
@@ -55,6 +46,14 @@ func TestPropertyNamesRefuseCaseOnlySiblings(t *testing.T) {
 		"reversed": reflect.TypeFor[struct {
 			Payload string `json:"Payload"`
 			Note    string `json:"payload"`
+		}](),
+		"true siblings": reflect.TypeFor[struct {
+			Lower bool `json:"true"`
+			Title bool `json:"True"`
+		}](),
+		"false siblings": reflect.TypeFor[struct {
+			Lower bool `json:"false"`
+			Title bool `json:"False"`
 		}](),
 		"Unicode": reflect.TypeFor[struct {
 			Left  string `json:"é"`
@@ -113,7 +112,9 @@ func simplePropertyTestName(name string, policy serialization.NamingPolicy) stri
 	return strings.ToLower(name[:1]) + name[1:]
 }
 
-type reservedNameVariant struct{ Week int }
+type reservedNameVariant struct {
+	Week int `json:"Week"`
+}
 type caseSiblingVariant struct {
 	Note    string `json:"payload"`
 	Payload string `json:"Payload"`
@@ -184,6 +185,27 @@ func TestPropertyNamesKeepNonCollidingControls(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func TestPropertyNamesAdmitBooleanAndCaseVariantTokens(t *testing.T) {
+	for _, name := range []string{"true", "True", "TRUE", "false", "False", "FALSE", "week", "WEEK", "$This", "$THIS", "*notset*", "*NOTSET*"} {
+		t.Run(name, func(t *testing.T) {
+			typ := reflect.StructOf([]reflect.StructField{{Name: "Value", Type: reflect.TypeFor[bool](), Tag: reflect.StructTag(`json:"` + name + `"`)}})
+			for _, naming := range propertyNamingPolicies {
+				if _, err := serialization.Compile(typ, naming.policy); err != nil {
+					t.Fatalf("policy %s: %v", naming.name, err)
+				}
+				if _, err := serialization.CompileReadModel(typ, naming.policy); err != nil {
+					t.Fatalf("read model policy %s: %v", naming.name, err)
+				}
+			}
+		})
+	}
+	for _, policy := range []serialization.NamingPolicy{serialization.CamelCase, serialization.LegacyGoCamelCase} {
+		if _, err := serialization.Compile(reflect.TypeFor[struct{ Week int }](), policy); err != nil {
+			t.Fatalf("renamed Week: %v", err)
+		}
 	}
 }
 

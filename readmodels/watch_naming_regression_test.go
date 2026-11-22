@@ -16,7 +16,7 @@ import (
 
 type plannedWatchModel struct {
 	ID         string
-	ExternalID string `json:"ID"`
+	ExternalID string `json:"ExternalID"`
 }
 
 func TestWatchesAndWindowsRoundTripRegisteredNamingPlan(t *testing.T) {
@@ -33,7 +33,7 @@ func TestWatchesAndWindowsRoundTripRegisteredNamingPlan(t *testing.T) {
 	if err := json.Unmarshal(data, &fields); err != nil {
 		t.Fatal(err)
 	}
-	if fields["Id"] != want.ID || fields["ID"] != want.ExternalID {
+	if fields["Id"] != want.ID || fields["ExternalID"] != want.ExternalID {
 		t.Fatalf("serialized naming plan = %s", data)
 	}
 	t.Run("descriptor and differ", func(t *testing.T) {

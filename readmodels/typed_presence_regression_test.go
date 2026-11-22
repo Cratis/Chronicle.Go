@@ -23,9 +23,9 @@ func TestTypedNamingPlanPreservesMissingKeyAndDistinctID(t *testing.T) {
 		name, data string
 		want       plannedWatchModel
 	}{
-		{name: "missing key", data: `{"ID":"external"}`, want: plannedWatchModel{ExternalID: "external"}},
-		{name: "null key", data: `{"Id":null,"ID":"external"}`, want: plannedWatchModel{ExternalID: "external"}},
-		{name: "sink alias and distinct ID", data: `{"_id":"person","ID":"external"}`, want: plannedWatchModel{ID: "person", ExternalID: "external"}},
+		{name: "missing key", data: `{"ExternalID":"external"}`, want: plannedWatchModel{ExternalID: "external"}},
+		{name: "null key", data: `{"Id":null,"ExternalID":"external"}`, want: plannedWatchModel{ExternalID: "external"}},
+		{name: "sink alias and distinct ID", data: `{"_id":"person","ExternalID":"external"}`, want: plannedWatchModel{ID: "person", ExternalID: "external"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			service, ctx := serviceFixture(t, &modelKernel{get: func(context.Context, *contracts.GetInstanceByKeyRequest) (*contracts.GetInstanceByKeyResponse, error) {

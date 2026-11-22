@@ -10,8 +10,8 @@ import (
 	"github.com/cratis/chronicle.go/internal/faults"
 )
 
-// validatePropertyNames refuses names whose kernel lookup can select a function,
-// literal or different sibling, even when the graph contains no binary values.
+// validatePropertyNames refuses names whose kernel lookup can select a function
+// or a different sibling, even when the graph contains no binary values.
 func validatePropertyNames(candidates []*node, binary bool) error {
 	// Retain the existing binary diagnostics before checking the broader rule.
 	if binary {
@@ -72,7 +72,8 @@ func validateSiblingPropertyNames(fields []field, path string) error {
 
 func validatePropertyName(name string, previous []field, path string) error {
 	fieldPath := propertyNamePath(path, name)
-	if binaryReservedPropertyName(binaryPropertyNameKey(name)) {
+	switch name {
+	case "$this", "Week", "*NotSet*":
 		return fmt.Errorf("%w: property %q is a reserved kernel property-path token", faults.ErrUnsupported, fieldPath)
 	}
 	if sibling := caseInsensitiveSibling(name, previous); sibling != "" {

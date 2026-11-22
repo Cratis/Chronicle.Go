@@ -19,7 +19,7 @@ import (
 
 type projectedPlannedModel struct {
 	ID         string
-	ExternalID string `json:"ID"`
+	ExternalID string `json:"ExternalID"`
 }
 type plannedReplayResponse struct {
 	contracts.UnimplementedReadModelsServer
@@ -33,9 +33,8 @@ func (k *plannedReplayResponse) GetAllInstances(context.Context, *contracts.GetA
 	return &contracts.GetAllInstancesResponse{Instances: []string{k.data}}, nil
 }
 
-// This isolates scenario decoding, not projection execution. The pinned kernel
-// rejects a projection schema with both Id and ID; do not claim kernel projection
-// support for that shape merely because the Go descriptor supports decoding it.
+// This isolates scenario decoding, not projection execution. The independent
+// ExternalID uses a distinct wire name, not a case-only sibling of the root Id.
 func TestProjectionScenarioUsesFrozenNamingPlan(t *testing.T) {
 	for _, policy := range []serialization.NamingPolicy{serialization.PreservePropertyNames, serialization.CamelCase, serialization.LegacyGoCamelCase} {
 		t.Run([]string{"preserve", "camel", "legacy"}[policy], func(t *testing.T) {
@@ -87,7 +86,7 @@ func TestProjectionScenarioUsesFrozenNamingPlan(t *testing.T) {
 				t.Errorf("Instance = %+v, %v; want %+v", value, err, want)
 			}
 			t.Run("independent ID is not a missing key alias", func(t *testing.T) {
-				response.data = `{"ID":"external"}`
+				response.data = `{"ExternalID":"external"}`
 				values, err := s.Instances(t.Context())
 				if values != nil || !errors.Is(err, ErrFidelityUnavailable) {
 					t.Errorf("keyless replay = %+v, %v; want missing-key rejection", values, err)
@@ -98,7 +97,7 @@ func TestProjectionScenarioUsesFrozenNamingPlan(t *testing.T) {
 				}
 			})
 			t.Run("genuine sink alias is normalized first", func(t *testing.T) {
-				response.data = `{"_id":"person","ID":"external"}`
+				response.data = `{"_id":"person","ExternalID":"external"}`
 				values, err := s.Instances(t.Context())
 				if err != nil || len(values) != 1 || values["person"] != want {
 					t.Errorf("sink-key replay = %+v, %v; want %+v", values, err, want)
