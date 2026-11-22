@@ -102,6 +102,23 @@ fail rather than silently doing nothing.
   ignored fields still fail. Nested ownership cannot be inferred from an inner
   `subject` tag: use one subject per event and preserve read-model lineage.
 
+## Protected children and deferred projection futures
+
+Protected child members remain encrypted at rest when a child add or keyed child
+update arrives before its root and the kernel later resolves the deferred
+projection future. This requires Chronicle 19.128.0 or later
+([Chronicle#4599](https://github.com/Cratis/Chronicle/issues/4599)); earlier kernels
+could persist the deferred child's protected value in plaintext. This is a kernel
+fix, not an SDK admission check: the SDK does not refuse this route on older
+kernels. Use a kernel containing the fix.
+
+CI uses `19.153.0-development`. `TestKernelDeferredProtectedChildBeforeRoot` and
+`TestKernelDeferredProtectedChildUpdateBeforeRoot` check the released child value
+and inspect the raw MongoDB sink document, requiring a present, nonempty protected
+field unequal to the fixture plaintext. The update witness also checks the later
+child add, which may replace the email as in C#. Released read-back alone is not
+evidence of encryption at rest.
+
 ## Erase and deliberately reauthorize
 
 Given a connected `store`, a bounded `ctx` and the person's subject string:
