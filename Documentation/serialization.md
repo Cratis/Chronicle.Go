@@ -122,11 +122,19 @@ not interchangeable typed field/key declarations.
 Pointers preserve nullable formats (`uuid?`, `date?`, and so on); nil properties
 are omitted. Concepts work in slices and string-keyed map values. Missing, zero
 and `omitzero` retain the [event serialization rules](events/event-types.md).
-Unsigned integer concepts above `MaxInt64` fail before dispatch. Under maps,
-integer concepts must lie within ±2^53, including nested collections and pointers.
-These checks inspect the codec's actual scalar JSON, so a struct wrapper cannot
-bypass kernel limits. Concept map keys and arbitrary custom schema codecs are
-not supported by this slice.
+Ordinary typed unsigned fields and concepts support the full `uint64` range,
+including named primitives, nullable pointers, slices and fixed arrays. Values stay
+unquoted JSON integers. Lossless MongoDB event storage requires Chronicle v19.33.2
+or later ([Chronicle#4588](https://github.com/Cratis/Chronicle/issues/4588)).
+Generated unsigned schemas retain their integer format and minimum zero but no
+longer declare a `MaxInt64` maximum. Existing registered generations may therefore
+differ; review [generation validation and evolution](events/event-types.md#persisted-identities-and-generations)
+before upgrading an existing store rather than disabling validation to overwrite history.
+
+Under maps or open-derived subtrees, integer concepts must still lie within ±2^53,
+including nested collections and pointers. These checks inspect the codec's actual
+scalar JSON, so a struct wrapper cannot bypass kernel limits. Concept map keys and
+arbitrary custom schema codecs are not supported by this slice.
 
 ## Binary values
 

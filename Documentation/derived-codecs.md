@@ -121,8 +121,11 @@ single child with a one-element array is **not** an equivalent business model.
   it does not inspect concept/codec internals. Failed decoding publishes no partial
   target, model or decision token.
 - The kernel converts numbers inside open objects through doubles. Every integer
-  in an admitted family subtree must be within ±2^53. The existing unsigned
-  `MaxInt64` append guard and string-keyed-map restrictions also remain.
+  in an admitted family subtree must be within ±2^53, including nested pointers,
+  collections, structs and concepts. String-keyed-map restrictions also remain.
+  Chronicle v19.33.2 removed the signed-range storage limitation for ordinary typed
+  `uint64` fields, not this open-schema precision boundary; out-of-range family
+  values still return `ErrUnsupported` before dispatch.
 - Application codec, metadata-provider and `IsZero` failures have payload-free
   messages. Ordinary causes remain available through `errors.Is/As`; deliberate
   cause inspection can expose sensitive data or invoke application error methods.

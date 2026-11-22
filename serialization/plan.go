@@ -3,10 +3,10 @@
 
 // Package serialization compiles one immutable field plan for JSON and JSON Schema.
 // Primitive named values, structs, pointers, slices, arrays, string-keyed maps,
-// time.Time, uuid.UUID, binary byte slices, Fundamentals scalars and concepts are supported. Integers nested under maps are restricted
-// to -2^53 through 2^53 by the kernel's dictionary conversion; unsigned values
-// above MaxInt64 are rejected by the pinned kernel's MongoDB append path. Unsupported
-// custom/protected shapes fail closed.
+// time.Time, uuid.UUID, binary byte slices, Fundamentals scalars and concepts are
+// supported. Ordinary typed fields preserve the full uint64 range. Integers nested
+// under maps or open-derived values are restricted to -2^53 through 2^53 by the
+// kernel's schema-unknown conversion. Unsupported custom/protected shapes fail closed.
 package serialization
 
 import (

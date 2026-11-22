@@ -6,7 +6,9 @@ package serialization_test
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -73,15 +75,101 @@ func TestNullableScalars(t *testing.T) {
 	}
 }
 
-func TestUnsignedMongoDBRange(t *testing.T) {
-	for _, value := range []any{struct{ N uint64 }{1 << 63}, struct{ N Amount }{Amount(1<<64 - 1)}, struct{ N []uint64 }{[]uint64{1 << 63}}} {
-		plan, err := serialization.Compile(reflect.TypeOf(value))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err = plan.Marshal(value); !errors.Is(err, faults.ErrUnsupported) {
-			t.Fatalf("unsigned overflow accepted: %v", err)
-		}
+type unsignedValues struct {
+	Scalar  uint64
+	Named   Amount
+	Pointer *uint64
+	Slice   []uint64
+	Array   [2]uint64
+	Nested  struct{ Value uint64 }
+}
+
+func TestUnsignedFullRangeRoundTrips(t *testing.T) {
+	for _, number := range []uint64{0, math.MaxInt64, math.MaxInt64 + 1, math.MaxUint64} {
+		t.Run(strconv.FormatUint(number, 10), func(t *testing.T) {
+			want := unsignedValues{Scalar: number, Named: Amount(number), Pointer: &number, Slice: []uint64{number}, Array: [2]uint64{number, number}, Nested: struct{ Value uint64 }{number}}
+			assertUnsignedRoundTrip(t, want)
+		})
+	}
+}
+
+func assertUnsignedRoundTrip[T any](t *testing.T, want T) {
+	t.Helper()
+	plan, err := serialization.Compile(reflect.TypeFor[T]())
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := plan.Marshal(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	literal, err := json.Marshal(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != string(literal) {
+		t.Fatalf("integer JSON = %s, want %s", data, literal)
+	}
+	var got T
+	if err := plan.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("round trip = %#v, want %#v", got, want)
+	}
+}
+
+func TestNativeUnsignedFullRangeRoundTrips(t *testing.T) {
+	if strconv.IntSize != 64 {
+		t.Skip("full uint64 range requires a 64-bit uint")
+	}
+	for _, number := range []uint64{0, math.MaxInt64, math.MaxInt64 + 1, math.MaxUint64} {
+		assertUnsignedRoundTrip(t, struct{ Value uint }{uint(number)})
+	}
+}
+
+func TestUnsignedSchemasHaveNoSignedMaximum(t *testing.T) {
+	for _, value := range []any{uint(0), uint64(0), Amount(0), new(uint64), []uint64{}, [2]uint64{}} {
+		t.Run(reflect.TypeOf(value).String(), func(t *testing.T) {
+			typ := reflect.StructOf([]reflect.StructField{{Name: "Value", Type: reflect.TypeOf(value)}})
+			plan, err := serialization.Compile(typ)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var schema struct {
+				Properties map[string]json.RawMessage
+			}
+			if err := json.Unmarshal([]byte(plan.Schema()), &schema); err != nil {
+				t.Fatal(err)
+			}
+			assertUnsignedSchema(t, schema.Properties["Value"])
+		})
+	}
+}
+
+func assertUnsignedSchema(t *testing.T, data json.RawMessage) {
+	t.Helper()
+	type integerSchema struct {
+		Type    json.RawMessage
+		Format  string
+		Minimum *uint64
+		Maximum json.RawMessage
+		Items   json.RawMessage
+	}
+	var schema integerSchema
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if schema.Items != nil {
+		assertUnsignedSchema(t, schema.Items)
+		return
+	}
+	want := integerSchema{Type: json.RawMessage(`"integer"`), Format: "uint64", Minimum: new(uint64(0))}
+	if schema.Format == "uint64?" {
+		want.Format = "uint64?"
+	}
+	if !reflect.DeepEqual(schema, want) {
+		t.Fatalf("integer schema = %s, want type %s, format %s, minimum zero and no maximum", data, want.Type, want.Format)
 	}
 }
 
@@ -93,6 +181,10 @@ func TestDictionaryIntegerPrecision(t *testing.T) {
 	}{
 		{"unsigned boundary", struct{ Values map[string]uint64 }{map[string]uint64{"n": 1 << 53}}, false},
 		{"unsigned overflow", struct{ Values map[string]uint64 }{map[string]uint64{"n": 1<<53 + 1}}, true},
+		{"unsigned maximum", struct{ Values map[string]uint64 }{map[string]uint64{"n": math.MaxUint64}}, true},
+		{"signed positive boundary", struct{ Values map[string]int64 }{map[string]int64{"n": 1 << 53}}, false},
+		{"signed positive overflow", struct{ Values map[string]int64 }{map[string]int64{"n": 1<<53 + 1}}, true},
+		{"fixed array maximum", struct{ Values map[string][1]uint64 }{map[string][1]uint64{"n": {math.MaxUint64}}}, true},
 		{"signed boundary", struct{ Values map[string]int64 }{map[string]int64{"n": -(1 << 53)}}, false},
 		{"signed overflow", struct{ Values map[string]int64 }{map[string]int64{"n": -(1 << 53) - 1}}, true},
 		{"nested array", struct{ Values map[string][]Amount }{map[string][]Amount{"n": {1<<53 + 1}}}, true},
@@ -106,8 +198,14 @@ func TestDictionaryIntegerPrecision(t *testing.T) {
 				t.Fatal(err)
 			}
 			_, err = plan.Marshal(tc.value)
-			if tc.rejected && !errors.Is(err, faults.ErrUnsupported) || !tc.rejected && err != nil {
-				t.Fatalf("error = %v, rejected = %v", err, tc.rejected)
+			if tc.rejected {
+				if !errors.Is(err, faults.ErrUnsupported) {
+					t.Fatalf("error = %v, want ErrUnsupported", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

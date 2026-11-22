@@ -6,7 +6,9 @@ package chronicle_test
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"reflect"
+	"strconv"
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
@@ -122,6 +124,71 @@ func TestConceptCodecsAreCheckedBeforeDispatch(t *testing.T) {
 	}
 }
 
+type unsignedConceptValues struct {
+	Value   conceptfixtures.Unsigned
+	Pointer *conceptfixtures.Unsigned
+	Slice   []conceptfixtures.Unsigned
+	Array   [1]conceptfixtures.Unsigned
+}
+
+func TestUnsignedConceptFullRangeRoundTrips(t *testing.T) {
+	for _, number := range []uint64{0, math.MaxInt64, math.MaxInt64 + 1, math.MaxUint64} {
+		t.Run(strconv.FormatUint(number, 10), func(t *testing.T) {
+			value := conceptfixtures.Unsigned{Value: number}
+			want := unsignedConceptValues{Value: value, Pointer: &value, Slice: []conceptfixtures.Unsigned{value}, Array: [1]conceptfixtures.Unsigned{value}}
+			assertUnsignedConceptRoundTrip(t, want)
+		})
+	}
+}
+
+func assertUnsignedConceptRoundTrip(t *testing.T, want unsignedConceptValues) {
+	t.Helper()
+	plan, err := serialization.Compile(reflect.TypeFor[unsignedConceptValues]())
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := plan.Marshal(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	number := strconv.FormatUint(want.Value.Value, 10)
+	literal := `{"Value":` + number + `,"Pointer":` + number + `,"Slice":[` + number + `],"Array":[` + number + `]}`
+	if string(data) != literal {
+		t.Fatalf("concept integer JSON = %s, want %s", data, literal)
+	}
+	var got unsignedConceptValues
+	if err := plan.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("concept round trip = %#v, want %#v", got, want)
+	}
+}
+
+func TestUnsignedConceptSchemaHasNoSignedMaximum(t *testing.T) {
+	plan, err := serialization.Compile(reflect.TypeFor[unsignedConceptValues]())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct{ Properties map[string]map[string]any }
+	if err := json.Unmarshal([]byte(plan.Schema()), &schema); err != nil {
+		t.Fatal(err)
+	}
+	integer := map[string]any{"type": "integer", "format": "uint64", "minimum": float64(0)}
+	if !reflect.DeepEqual(schema.Properties["Value"], integer) {
+		t.Fatalf("concept schema = %s", plan.Schema())
+	}
+	for _, name := range []string{"Slice", "Array"} {
+		if !reflect.DeepEqual(schema.Properties[name]["items"], integer) {
+			t.Fatalf("concept collection schema = %s", plan.Schema())
+		}
+	}
+	integer["format"] = "uint64?"
+	if !reflect.DeepEqual(schema.Properties["Pointer"], integer) {
+		t.Fatalf("nullable concept schema = %s", plan.Schema())
+	}
+}
+
 func TestConceptIntegerRangesUseWireRepresentation(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
@@ -129,8 +196,14 @@ func TestConceptIntegerRangesUseWireRepresentation(t *testing.T) {
 		rejected bool
 	}{
 		{"uint boundary", struct{ Value conceptfixtures.Unsigned }{conceptfixtures.Unsigned{Value: 1<<63 - 1}}, false},
-		{"uint overflow", struct{ Value conceptfixtures.Unsigned }{conceptfixtures.Unsigned{Value: 1 << 63}}, true},
-		{"slice overflow", struct{ Values []conceptfixtures.Unsigned }{[]conceptfixtures.Unsigned{{Value: 1 << 63}}}, true},
+		{"uint above signed range", struct{ Value conceptfixtures.Unsigned }{conceptfixtures.Unsigned{Value: 1 << 63}}, false},
+		{"slice above signed range", struct{ Values []conceptfixtures.Unsigned }{[]conceptfixtures.Unsigned{{Value: 1 << 63}}}, false},
+		{"dictionary maximum", struct {
+			Values map[string]conceptfixtures.Unsigned
+		}{map[string]conceptfixtures.Unsigned{"n": {Value: math.MaxUint64}}}, true},
+		{"dictionary array", struct {
+			Values map[string][1]conceptfixtures.Unsigned
+		}{map[string][1]conceptfixtures.Unsigned{"n": {{Value: 1<<53 + 1}}}}, true},
 		{"dictionary positive", struct {
 			Values map[string]conceptfixtures.Number
 		}{map[string]conceptfixtures.Number{"n": 1<<53 + 1}}, true},
@@ -151,8 +224,14 @@ func TestConceptIntegerRangesUseWireRepresentation(t *testing.T) {
 				t.Fatal(err)
 			}
 			_, err = plan.Marshal(tc.value)
-			if tc.rejected != errors.Is(err, chronicle.ErrUnsupported) || !tc.rejected && err != nil {
-				t.Fatalf("error=%v, rejected=%v", err, tc.rejected)
+			if tc.rejected {
+				if !errors.Is(err, chronicle.ErrUnsupported) {
+					t.Fatalf("error=%v, want ErrUnsupported", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

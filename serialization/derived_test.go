@@ -17,6 +17,7 @@ import (
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/events"
+	"github.com/cratis/chronicle.go/internal/conceptfixtures"
 	"github.com/cratis/chronicle.go/internal/derivedfixtures"
 	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/serialization"
@@ -214,16 +215,41 @@ func TestDerivedNilNumericMapAndCycleBoundaries(t *testing.T) {
 	if err != nil || bytes.Contains(data, []byte(`"Primary"`)) {
 		t.Fatalf("nil interface not omitted: %s %v", data, err)
 	}
-	type unsigned struct{ Number uint64 }
+	if _, err := plan.Marshal(derivedfixtures.MembersChanged{Primary: unregisteredMember{}}); !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatalf("unknown dynamic type: %v", err)
+	}
+}
+
+func TestDerivedUnsignedPrecisionBoundaries(t *testing.T) {
+	type unsigned struct {
+		Number  uint64
+		Pointer *uint64
+		Array   [1]uint64
+		Nested  struct{ Number uint64 }
+		Concept conceptfixtures.Unsigned
+	}
 	codecs, err := serialization.NewCodecs(serialization.Derived[any, unsigned]("unsigned"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := derivedPlan[derivedEnvelope](t, codecs, 0).Marshal(derivedEnvelope{Value: unsigned{math.MaxUint64}}); !errors.Is(err, faults.ErrUnsupported) {
-		t.Fatalf("unsigned guard: %v", err)
+	plan := derivedPlan[derivedEnvelope](t, codecs, 0)
+	boundary := uint64(1 << 53)
+	valid := unsigned{Number: boundary, Pointer: &boundary, Array: [1]uint64{boundary}, Nested: struct{ Number uint64 }{boundary}, Concept: conceptfixtures.Unsigned{Value: boundary}}
+	if _, err := plan.Marshal(derivedEnvelope{Value: valid}); err != nil {
+		t.Fatalf("inclusive open-schema boundary rejected: %v", err)
 	}
-	if _, err := plan.Marshal(derivedfixtures.MembersChanged{Primary: unregisteredMember{}}); !errors.Is(err, faults.ErrUnsupported) {
-		t.Fatalf("unknown dynamic type: %v", err)
+	for _, number := range []uint64{1<<53 + 1, math.MaxInt64 + 1, math.MaxUint64} {
+		for _, invalid := range []unsigned{
+			{Number: number},
+			{Pointer: &number},
+			{Array: [1]uint64{number}},
+			{Nested: struct{ Number uint64 }{number}},
+			{Concept: conceptfixtures.Unsigned{Value: number}},
+		} {
+			if _, err := plan.Marshal(derivedEnvelope{Value: invalid}); !errors.Is(err, faults.ErrUnsupported) {
+				t.Fatalf("open-schema value %#v: error=%v, want ErrUnsupported", invalid, err)
+			}
+		}
 	}
 }
 
