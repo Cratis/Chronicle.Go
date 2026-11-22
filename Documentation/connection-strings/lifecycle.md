@@ -150,9 +150,10 @@ callback. A handler can still block or return an unsuitable context.
 TLS verification, authentication/admission, message limits, endpoint selection
 and retry policy remain unchanged. This option exposes neither arbitrary dial
 options nor unary/stream interceptors, does not replay writes, and makes no
-stronger outcome promises. The optional pinned OpenTelemetry recipe is separate
-from the root runtime module, tracked in
-[the otelgrpc recipe issue](https://github.com/Cratis/Chronicle.Go/issues/80).
+stronger outcome promises. The runnable
+[OpenTelemetry gRPC recipe](../../recipes/otelgrpc/README.md) lives in a separate,
+unpublished consumer module. It demonstrates application-owned provider/exporter
+setup and ordered shutdown, with validating TLS and owned-reconnect tests.
 
 ## Shutdown and ownership
 
