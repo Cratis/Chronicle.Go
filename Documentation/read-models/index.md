@@ -85,15 +85,16 @@ The store registers definitions after event types and before returning a ready h
 
 Pass `chronicle.WithDefaultSinkType(readmodels.SQL)` to `NewClient` to select
 SQL for models without `readmodels.WithSink`. Omitted means MongoDB; MongoDB,
-SQL and InMemory are the accepted materialized providers. Scalars are last-wins;
-unknown types, an empty type and `NoSink` fail with `ErrInvalidConfiguration`
-before factory preparation or network I/O. The option applies to the default
+SQL and InMemory are the accepted materialized providers. `NoSink` selects the
+kernel's `None` sink for supported source-keyed projections. Scalars are last-wins;
+unknown types and an empty type fail with `ErrInvalidConfiguration` before
+factory preparation or network I/O. The option applies to the default
 registry and every per-store replacement, never an individual namespace.
 
 Precedence is passive producer → `NoSink`; otherwise explicit model `WithSink`
 → client default → MongoDB. An explicit materialized sink conflicts with a
 passive producer, even when it is MongoDB. Explicit `NoSink` requires passive
-projection or reducer semantics; it is not a global materialized default.
+projection or reducer semantics; that explicit model option remains unchanged.
 Provider configuration UUIDs remain per-model and are never replaced by the
 client default.
 
@@ -103,6 +104,26 @@ different defaults. `Client.Catalogs(store)` reports the same final definitions
 as the store handles, without I/O; reconnect reuses their frozen registration.
 See the compiling `ExampleWithDefaultSinkType` for offline selection and an
 explicit MongoDB override.
+
+For immediate projection reads, use
+`chronicle.WithDefaultSinkType(readmodels.NoSink)`. This does not make a projection
+passive: its authored active and rewindable flags stay unchanged. `Get` uses the
+requested event-source identity to replay its state instead of reading a
+materialized document. Explicit materialized model sinks still override this
+default; passive projections and passive reducers still use None. Existing
+None-backed reducer behavior remains local, on-demand folding.
+
+Only source-keyed projection graphs are supported: root, child and nested keys
+and parent keys must be omitted or use event-source identity. Custom property,
+context, literal or composite keys, joins and remove-with-join correlations fail
+with `ErrInvalidConfiguration` during preparation, before dialing. The check also
+covers factory output and final merged variant/global handlers, not just authored
+root mappings. Use an explicit materialized sink for those shapes. Source-keyed
+variants and source-identity removals are supported.
+
+None does not provide materialized windows, counts, paging or live query
+semantics. Immediate reads are not evidence that those routes, or live SQL and
+InMemory backends, work.
 
 These options select kernel-owned providers, not client database drivers or
 connection configuration. A successful registration does not prove that the

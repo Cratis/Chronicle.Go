@@ -3,18 +3,19 @@
 
 package readmodels
 
-// WithDefaultSinkType returns detached metadata with a materialized client
-// default. Explicit WithSink selections and passive producer bindings win. This
-// registry-composition hook preserves declaration identity, schema and codec
-// snapshots; it performs no I/O and invokes no application callbacks.
+// WithDefaultSinkType returns detached metadata with a client default. Explicit
+// WithSink selections and passive producer bindings win. NoSink enables immediate
+// source-keyed projections, not materialized windows; projection preparation
+// rejects unsupported correlation shapes. This registry-composition hook preserves
+// declaration identity, schema and codec snapshots without I/O or callbacks.
 func (d Descriptor) WithDefaultSinkType(kind SinkType) (Descriptor, error) {
 	if d.definition == nil {
 		return Descriptor{}, invalid("model required")
 	}
 	switch kind {
-	case MongoDB, SQL, InMemory:
+	case MongoDB, SQL, InMemory, NoSink:
 	default:
-		return Descriptor{}, invalid("default sink must be MongoDB, SQL or InMemory")
+		return Descriptor{}, invalid("default sink must be MongoDB, SQL, InMemory or None")
 	}
 	copy := *d.definition
 	if !copy.config.sinkExplicit && copy.config.sink.Type != NoSink {

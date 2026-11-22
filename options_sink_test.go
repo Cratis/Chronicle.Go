@@ -50,7 +50,7 @@ func TestDefaultSinkSelectionIsDetachedAndStoreReplacementIsNotMerged(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, kind := range []readmodels.SinkType{readmodels.SQL, readmodels.InMemory} {
+	for _, kind := range []readmodels.SinkType{readmodels.SQL, readmodels.InMemory, readmodels.NoSink} {
 		client, err := NewClient(WithRegistry(registry), WithRegistryForStore("custom", replacement), WithRegistryForStore("empty", nil), WithDefaultSinkType(kind))
 		if err != nil {
 			t.Fatal(err)
@@ -88,8 +88,8 @@ func TestDefaultSinkSelectionIsDetachedAndStoreReplacementIsNotMerged(t *testing
 	}
 }
 
-func TestDefaultSinkRejectsUnknownAndNoneBeforePreparation(t *testing.T) {
-	for _, kind := range []readmodels.SinkType{"", "future", readmodels.NoSink} {
+func TestDefaultSinkRejectsUnknownBeforePreparation(t *testing.T) {
+	for _, kind := range []readmodels.SinkType{"", "future"} {
 		r := NewRegistry()
 		model, err := RegisterReadModel[sinkDefaultModel](r)
 		if err != nil {

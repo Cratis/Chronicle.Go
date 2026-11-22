@@ -75,7 +75,8 @@ func TestCaptureSinkDefaultsFreezeOptionsRegistriesCodecsAndFactoryModels(t *tes
 	options := []ClientOption{WithRegistry(r), WithRegistryForStore("shared", r), WithRegistryForStore("replacement", replacement), WithRegistryForStore("empty", nil), WithServices(services), WithNamingPolicy(serialization.CamelCase), func(c *clientConfig) { optionCalls++; optionConfig = c }}
 	sql := captureForTest(t, append(options, WithDefaultSinkType(readmodels.SQL))...)
 	memory := captureForTest(t, append(options, WithDefaultSinkType(readmodels.InMemory))...)
-	if defined != 0 || opened != 0 || resolved != 0 || closed != 0 || classified != declarationClassifications || optionCalls != 2 {
+	none := captureForTest(t, append(options, WithDefaultSinkType(readmodels.NoSink))...)
+	if defined != 0 || opened != 0 || resolved != 0 || closed != 0 || classified != declarationClassifications || optionCalls != 3 {
 		t.Fatal("capture invoked preparation callbacks")
 	}
 	// Mutating the option's original configuration, codec handle and selected
@@ -93,8 +94,8 @@ func TestCaptureSinkDefaultsFreezeOptionsRegistriesCodecsAndFactoryModels(t *tes
 	if _, err := RegisterReadModel[sinkOverrideModel](replacement); err != nil {
 		t.Fatal(err)
 	}
-	for i, p := range []*ClientPreparation{sql, memory} {
-		kind := []readmodels.SinkType{readmodels.SQL, readmodels.InMemory}[i]
+	for i, p := range []*ClientPreparation{sql, memory, none} {
+		kind := []readmodels.SinkType{readmodels.SQL, readmodels.InMemory, readmodels.NoSink}[i]
 		assertPreparationGuards(t, p.Client(), ErrNotPrepared)
 		client, err := p.Prepare(t.Context(), nil)
 		if err != nil || client != p.Client() {
@@ -155,7 +156,7 @@ func TestCaptureSinkDefaultsFreezeOptionsRegistriesCodecsAndFactoryModels(t *tes
 		}
 	}
 	member.Name = "mutated"
-	for _, p := range []*ClientPreparation{sql, memory} {
+	for _, p := range []*ClientPreparation{sql, memory, none} {
 		artifacts, err := p.Client().Artifacts("shared")
 		if err != nil {
 			t.Fatal(err)
@@ -169,7 +170,7 @@ func TestCaptureSinkDefaultsFreezeOptionsRegistriesCodecsAndFactoryModels(t *tes
 			}
 		}
 	}
-	if defined != 2 || opened != 2 || resolved != 2 || closed != 2 || optionCalls != 2 || classified != declarationClassifications {
+	if defined != 3 || opened != 3 || resolved != 3 || closed != 3 || optionCalls != 3 || classified != declarationClassifications {
 		t.Fatal("shared registries, services, options or classifications reprepared", defined, opened, resolved, closed, optionCalls, classified)
 	}
 	if model.Descriptor().Sink().Type != readmodels.MongoDB || passive.Descriptor().Sink().Type != readmodels.MongoDB {
@@ -178,7 +179,7 @@ func TestCaptureSinkDefaultsFreezeOptionsRegistriesCodecsAndFactoryModels(t *tes
 }
 
 func TestCaptureInvalidSinkRunsNoSchemaFactoryOrServiceCallbacks(t *testing.T) {
-	for _, kind := range []readmodels.SinkType{"", "unknown", readmodels.NoSink} {
+	for _, kind := range []readmodels.SinkType{"", "unknown"} {
 		r := NewRegistry()
 		calls := 0
 		model, err := RegisterReadModel[sinkDefaultModel](r, readmodels.WithProtection(compliance.Using(func(compliance.Target) (compliance.Classification, error) {
