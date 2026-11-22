@@ -30,28 +30,29 @@ type Declaration struct {
 	explicit bool
 }
 type configuration struct {
-	id               ID
-	sequence         events.SequenceID
-	sequenceExplicit bool
-	sourceStore      string
-	perEvent         bool
-	replayable       bool
-	startAtTail      bool
-	tags             []string
-	filterTags       []string
-	sourceType       events.SourceType
-	streamType       events.StreamType
-	streamID         events.StreamID
-	replayMethods    []string
-	onceMethods      []string
-	sideEffects      []SideEffectHandler
-	middlewares      []any
-	handlers         []Handler
-	batchMethods     map[string][]observation.Observed
-	key              func(context.Context, any, events.Context) (readmodels.Key, error)
-	logger           *slog.Logger
-	loggerSet        bool
-	invalid          bool
+	id                 ID
+	sequence           events.SequenceID
+	generationDelivery events.GenerationDelivery
+	sequenceExplicit   bool
+	sourceStore        string
+	perEvent           bool
+	replayable         bool
+	startAtTail        bool
+	tags               []string
+	filterTags         []string
+	sourceType         events.SourceType
+	streamType         events.StreamType
+	streamID           events.StreamID
+	replayMethods      []string
+	onceMethods        []string
+	sideEffects        []SideEffectHandler
+	middlewares        []any
+	handlers           []Handler
+	batchMethods       map[string][]observation.Observed
+	key                func(context.Context, any, events.Context) (readmodels.Key, error)
+	logger             *slog.Logger
+	loggerSet          bool
+	invalid            bool
 }
 
 // Option configures a reactor. Scalar options are last-wins; middleware and
@@ -60,6 +61,18 @@ type Option func(*configuration)
 
 // WithID overrides the default full Go import path plus type name.
 func WithID(id ID) Option { return func(c *configuration) { c.id = id } }
+
+// WithGenerationDelivery selects kernel event delivery. The default is
+// events.Compatibility; events.Pinned decodes delivered Content without local
+// generation selection. Repeated options are last-wins; unknown modes fail Define.
+func WithGenerationDelivery(mode events.GenerationDelivery) Option {
+	return func(c *configuration) { c.generationDelivery = mode }
+}
+
+// GenerationDelivery returns the frozen event delivery mode.
+func (p *Plan) GenerationDelivery() events.GenerationDelivery {
+	return p.declaration.config.generationDelivery
+}
 
 // WithEventSequence selects a sequence; the default is the event log.
 func WithEventSequence(id events.SequenceID) Option {
@@ -161,6 +174,9 @@ func (d Declaration) configure(id ID, options []Option) (Declaration, error) {
 }
 
 func (c configuration) validate() error {
+	if c.generationDelivery != events.Compatibility && c.generationDelivery != events.Pinned {
+		return invalid("invalid reactor options")
+	}
 	if c.invalidFields() || c.invalid || (c.sourceStore != "" && c.sequenceExplicit) {
 		return invalid("invalid reactor options")
 	}

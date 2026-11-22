@@ -41,4 +41,10 @@ The SDK never queries a newer tail after loading and substitutes it as your stat
 
 `Context` includes store/namespace/sequence, source and stream routing, type/generation/tombstone, position, occurrence, subject, actor chain, correlation, causation, ordinary/named tags, hash and observation state. Result maps and slices are not shared with the client.
 
+Observer contexts also expose `AppendedGeneration`: the original append
+generation, or zero when unknown for older persisted events. It is independent
+of the delivered `EventType.Generation`. This is not a history-read generation
+selector. Typed reads continue to select locally; reactor and reducer delivery
+can opt in to [kernel-pinned generations](evolution.md#opt-in-to-pinned-observer-delivery).
+
 The SDK sends occurrence at .NET-compatible 100 ns precision and preserves the timestamps it receives. The pinned **19.153.0-development MongoDB kernel** stores occurrence and causation dates at millisecond precision, so finer input precision does not survive a persisted read. This is a server storage limitation, not a promise that the Go client can restore lost digits. See [parity and limitations](../parity.md).

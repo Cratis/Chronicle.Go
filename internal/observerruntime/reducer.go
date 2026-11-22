@@ -49,7 +49,7 @@ func OpenReducer(ctx context.Context, conn grpc.ClientConnInterface, connectionI
 	if err != nil {
 		return nil, streamError(err)
 	}
-	definition := &contracts.ReducerDefinition{ReducerId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()), ReadModel: string(plan.Model().Identifier()), IsActive: plan.IsActive(), Tags: plan.Tags(), Filters: &contracts.ObserverFilters{FilterTags: plan.FilterTags(), EventSourceType: string(plan.EventSourceType()), EventStreamType: string(plan.EventStreamType())}, Hash: plan.Fingerprint()}
+	definition := &contracts.ReducerDefinition{ReducerId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()), ReadModel: string(plan.Model().Identifier()), IsActive: plan.IsActive(), Tags: plan.Tags(), Filters: &contracts.ObserverFilters{FilterTags: plan.FilterTags(), EventSourceType: string(plan.EventSourceType()), EventStreamType: string(plan.EventStreamType())}, Hash: plan.Fingerprint(), GenerationDelivery: contracts.EventGenerationDelivery(plan.GenerationDelivery())}
 	for _, ref := range plan.EventTypes() {
 		definition.EventTypes = append(definition.EventTypes, &contracts.EventTypeWithKeyExpression{EventType: &contracts.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Key: "$eventSourceId"})
 	}
@@ -272,6 +272,6 @@ func (r *Reducer) decode(appended *contracts.AppendedEvent) (reducers.Event, err
 	for generation, content := range appended.GenerationalContent {
 		generations[events.Generation(generation)] = json.RawMessage(content)
 	}
-	ec, value, err := DecodeContent(r.EventTypes, descriptor, events.Appended{Context: ec, Content: json.RawMessage(appended.Content), GenerationalContent: generations})
+	ec, value, err := decodeContent(r.EventTypes, descriptor, events.Appended{Context: ec, Content: json.RawMessage(appended.Content), GenerationalContent: generations}, r.plan.GenerationDelivery())
 	return reducers.Event{Content: value, Context: ec}, err
 }

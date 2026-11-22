@@ -38,8 +38,11 @@ type Context struct {
 	Namespace metadata.Namespace
 	// Sequence identifies the event sequence.
 	Sequence SequenceID
-	// EventType identifies the persisted generation.
+	// EventType identifies the representation delivered to the consumer.
 	EventType TypeRef
+	// AppendedGeneration is the original append generation, independent of the
+	// delivered representation. Zero means unknown for older persisted events.
+	AppendedGeneration Generation
 	// Tombstone preserves the kernel's tombstone type flag.
 	Tombstone bool
 	// SourceType classifies the event source.

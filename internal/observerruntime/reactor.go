@@ -57,7 +57,7 @@ func Open(ctx context.Context, conn grpc.ClientConnInterface, connectionID strin
 
 func reactorDefinition(plan *reactors.Plan) *contracts.ReactorDefinition {
 	definition := &contracts.ReactorDefinition{
-		ReactorId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()),
+		ReactorId: string(plan.Identifier()), EventSequenceId: string(plan.EventSequence()), GenerationDelivery: contracts.EventGenerationDelivery(plan.GenerationDelivery()),
 		IsReplayable: plan.IsReplayable(), StartAtTail: plan.StartsAtTail(), Tags: plan.Tags(),
 		Filters: &contracts.ObserverFilters{FilterTags: plan.FilterTags(), EventSourceType: string(plan.EventSourceType()), EventStreamType: string(plan.EventStreamType())},
 	}
@@ -185,7 +185,7 @@ func (r *Reactor) decode(appended *contracts.AppendedEvent) (events.Context, any
 	for generation, content := range appended.GenerationalContent {
 		generations[events.Generation(generation)] = json.RawMessage(content)
 	}
-	return DecodeContent(r.EventTypes, descriptor, events.Appended{Context: ec, Content: json.RawMessage(appended.Content), GenerationalContent: generations})
+	return decodeContent(r.EventTypes, descriptor, events.Appended{Context: ec, Content: json.RawMessage(appended.Content), GenerationalContent: generations}, r.plan.GenerationDelivery())
 }
 
 // ReactorInvocationContext applies the production identity and causation scope.
@@ -208,7 +208,7 @@ func eventContext(c *contracts.EventContext, store metadata.StoreName, namespace
 	if err != nil {
 		return events.Context{}, faults.ErrProtocol
 	}
-	ec := events.Context{Store: store, Namespace: namespace, Sequence: sequence, EventType: events.TypeRef{ID: events.TypeID(c.EventType.Id), Generation: events.Generation(c.EventType.Generation)}, Tombstone: c.EventType.Tombstone, SourceID: events.SourceID(c.EventSourceId), SourceType: events.SourceType(c.EventSourceType), StreamID: events.StreamID(c.EventStreamId), StreamType: events.StreamType(c.EventStreamType), SequenceNumber: events.SequenceNumber(c.SequenceNumber), Occurred: occurred, CorrelationID: wire.Correlation(c.CorrelationId), Subject: events.Subject(c.Subject), Hash: c.Hash, ObservationState: events.ObservationState(c.ObservationState), CompensationFor: events.CompensationTarget(c.CompensationFor), CausedBy: identity(c.CausedBy)}
+	ec := events.Context{Store: store, Namespace: namespace, Sequence: sequence, EventType: events.TypeRef{ID: events.TypeID(c.EventType.Id), Generation: events.Generation(c.EventType.Generation)}, AppendedGeneration: events.Generation(c.AppendedGeneration), Tombstone: c.EventType.Tombstone, SourceID: events.SourceID(c.EventSourceId), SourceType: events.SourceType(c.EventSourceType), StreamID: events.StreamID(c.EventStreamId), StreamType: events.StreamType(c.EventStreamType), SequenceNumber: events.SequenceNumber(c.SequenceNumber), Occurred: occurred, CorrelationID: wire.Correlation(c.CorrelationId), Subject: events.Subject(c.Subject), Hash: c.Hash, ObservationState: events.ObservationState(c.ObservationState), CompensationFor: events.CompensationTarget(c.CompensationFor), CausedBy: identity(c.CausedBy)}
 	if ec.Subject == "" {
 		ec.Subject = events.Subject(ec.SourceID)
 	}
