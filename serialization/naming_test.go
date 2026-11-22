@@ -46,7 +46,7 @@ func TestNamingPoliciesCompileOneFieldPlan(t *testing.T) {
 		ID       string
 		URLValue string
 		Person   string
-		Stable   string `json:"Id"`
+		Stable   string `json:"SharedId"`
 		Nested   nested
 	}
 	for _, tc := range []struct {
@@ -73,7 +73,7 @@ func TestNamingPoliciesCompileOneFieldPlan(t *testing.T) {
 		if err := json.Unmarshal([]byte(plan.Schema()), &schema); err != nil {
 			t.Fatal(err)
 		}
-		for _, name := range []string{tc.id, tc.url, tc.person, tc.nested, "Id"} {
+		for _, name := range []string{tc.id, tc.url, tc.person, tc.nested, "SharedId"} {
 			if content[name] == nil || schema.Properties[name] == nil {
 				t.Fatalf("missing %q: %s / %s", name, data, plan.Schema())
 			}
@@ -92,8 +92,8 @@ func TestNamingCollisionsAndInvalidPoliciesFailClosed(t *testing.T) {
 		Person   string
 		Explicit string `json:"person"`
 	}
-	if _, err := Compile(reflect.TypeFor[collision]()); err != nil {
-		t.Fatal(err)
+	if _, err := Compile(reflect.TypeFor[collision]()); !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatalf("case-only sibling collision: %v", err)
 	}
 	for _, policy := range []NamingPolicy{CamelCase, LegacyGoCamelCase, 255} {
 		if _, err := Compile(reflect.TypeFor[collision](), policy); !errors.Is(err, faults.ErrInvalidConfiguration) {

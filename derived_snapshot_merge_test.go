@@ -105,20 +105,8 @@ func TestDerivedInitialStateRejectsNestedPromotionLossBeforeIO(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	event, err := RegisterEvent[DecisionCodecChanged](registry)
-	if err != nil {
-		t.Fatal(err)
-	}
-	model, err := RegisterReadModel[derivedSnapshotCollisionModel](registry, readmodels.WithCodecs(codecs))
-	if err != nil {
-		t.Fatal(err)
-	}
-	initial := derivedSnapshotCollisionModel{Member: derivedSnapshotVariant{Nested: derivedSnapshotCollision{DerivedSnapshotPromoted: DerivedSnapshotPromoted{Name: "promoted"}, Other: "other"}}}
-	if err := registry.AddProjection(projections.ModelBound(model, projections.FromEvent(event), projections.WithInitialValues(initial))); err != nil {
-		t.Fatal(err)
-	}
-	client, err := NewClient(WithRegistry(registry), WithNamingPolicy(serialization.CamelCase))
-	if client != nil || !errors.Is(err, ErrInvalidConfiguration) {
-		t.Fatal("snapshot rebound a lost nested field", err)
+	_, err = RegisterReadModel[derivedSnapshotCollisionModel](registry, readmodels.WithCodecs(codecs))
+	if !errors.Is(err, ErrUnsupported) || !strings.Contains(err.Error(), `property "Member.nested.name"`) {
+		t.Fatal("ambiguous nested plan admitted before snapshot construction", err)
 	}
 }

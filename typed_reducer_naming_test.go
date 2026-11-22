@@ -17,7 +17,7 @@ import (
 
 type plannedReducerModel struct {
 	ID         string
-	ExternalID string `json:"ID"`
+	ExternalID string `json:"ExternalID"`
 	Items      []string
 	Optional   *[]string
 }

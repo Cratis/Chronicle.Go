@@ -218,6 +218,43 @@ projection variants and runtime ordinary-scalar profiles are unsupported. Read-m
 fallback properties cannot be binary, even without a projection. This includes
 all case variants of serialized `id` and the MongoDB `_id` property.
 
+### Property-name admission
+
+Every event and read-model plan rejects case-insensitively duplicate sibling
+property names, even without binary fields. For example, a field tagged
+`json:"payload"` alongside `Payload string` is ambiguous under preserve naming.
+Nested objects, collection elements, map values, references, and registered
+derivatives receive the same check after the selected naming policy is applied.
+Explicit `json` tags do not bypass it. The pinned kernel's
+[schema lookup](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Schemas/JsonSchemaExtensions.cs#L92-L97)
+uses `SingleOrDefault` with `OrdinalIgnoreCase`, so case-only siblings cannot be
+selected unambiguously.
+
+Binary-free plans also reject exactly `Week`, `$this`, and `*NotSet*` as property
+names, case-sensitively, after naming is applied. The pinned kernel's
+[property-path parser and sentinel](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Properties/PropertyPath.cs)
+use exact matching; `Week` is the only function in its case-sensitive
+[derived-function registry](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Properties/DerivedPropertyFunctions.cs#L43-L56).
+Names such as `week`, `$This`, `*notset*`, `WeekNumber`, and distinct names in
+separate objects remain valid. These refusals return `ErrUnsupported` with the
+offending serialized property path; existing exact-duplicate refusals remain
+`ErrInvalidConfiguration`.
+
+Boolean names are **not** reserved declaration names in binary-free graphs.
+The kernel's [literal-expression resolver](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Kernel/Core/Projections/Engine/Expressions/EventValues/LiteralExpressionResolver.cs#L40-L44)
+intercepts exactly `true`, `True`, `false`, and `False` as source expressions.
+Existing source-expression and naming-rebind validation still refuses ambiguous
+uses there, without banning the fields at declaration construction. Case-only
+siblings such as `true` and `True` remain invalid under the separate sibling rule.
+The stricter [binary-containing policy](#names-in-binary-containing-graphs) below
+is unchanged.
+
+If an existing binary-free declaration now fails, choose unambiguous wire names
+with field names or explicit `json` tags before registering it. Coordinate any
+change to already-persisted schemas and consumers; the SDK does not silently
+rename properties or rewrite existing data. All naming policies, including
+`LegacyGoCamelCase`, enforce this admission rule.
+
 ### Names in binary-containing graphs
 
 If a type graph contains binary anywhere, **every serialized property name** in
@@ -265,8 +302,8 @@ case-insensitive comparison agrees with both CLR `OrdinalIgnoreCase` and Go's
 active naming policy are refused, not normalized by the admission check. Without this boundary decoding
 could populate multiple fields for one differently cased input property. Rename unsafe properties
 rather than relying on field order or an exact-case match. Types with **no binary**
-retain their existing naming, dotted-path lookup and exact-duplicate behavior;
-this rule does not fix their pre-existing kernel ambiguities. See the
+retain their dotted-path lookup and exact-duplicate behavior, but also enforce
+[general property-name admission](#property-name-admission). See the
 [binary admission source references](parity.md#baselines-and-evidence).
 
 Projection rebinding also rechecks model/variant keys, child identities and every

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	chronicle "github.com/cratis/chronicle.go"
-	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/serialization"
 )
 
@@ -67,51 +66,40 @@ type snapshotIdentity struct {
 	Nested *snapshotIdentity
 }
 
-func TestSnapshotRebindRejectsFieldsLostToPromotion(t *testing.T) {
-	before, err := serialization.CompileReadModel(reflect.TypeFor[snapshotShadow]())
-	if err != nil {
-		t.Fatal(err)
-	}
-	after, err := serialization.CompileReadModel(reflect.TypeFor[snapshotShadow](), serialization.CamelCase)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, data := range []string{`{"Name":"embedded"}`, `{"Name":"embedded","name":"other"}`} {
-		_, err := before.RebindJSON([]byte(data), after)
-		var configuration *declarations.DeclarationError
-		if !errors.Is(err, chronicle.ErrInvalidConfiguration) || !errors.As(err, &configuration) || configuration.GoField != "snapshotEmbedded.Name" {
-			t.Fatalf("snapshot=%s error=%v", data, err)
+func TestSnapshotPlanRefusesCaseAmbiguousPromotedFields(t *testing.T) {
+	// These plans used to defer detection until snapshot rebinding lost the
+	// promoted Name to the tagged name. Refuse them before any snapshot exists.
+	for _, typ := range []reflect.Type{
+		reflect.TypeFor[snapshotShadow](),
+		reflect.TypeFor[snapshotIdentity](),
+	} {
+		if plan, err := serialization.CompileReadModel(typ); plan != nil || !errors.Is(err, chronicle.ErrUnsupported) {
+			t.Fatalf("plan=%v error=%v, want ErrUnsupported", plan, err)
 		}
-	}
-	bound, err := before.RebindJSON([]byte(`{"name":"other"}`), after)
-	if err != nil || string(bound) != `{"name":"other"}` {
-		t.Fatalf("surviving field rebound to another field: %s %v", bound, err)
 	}
 }
 
 func TestSnapshotRebindPreservesEmbeddedPointerAndRecursiveFieldIdentity(t *testing.T) {
-	before, err := serialization.CompileReadModel(reflect.TypeFor[snapshotIdentity]())
+	type stableIdentity struct {
+		*snapshotEmbedded
+		Other  string `json:"otherValue"`
+		Nested *stableIdentity
+	}
+	before, err := serialization.CompileReadModel(reflect.TypeFor[stableIdentity]())
 	if err != nil {
 		t.Fatal(err)
 	}
-	after, err := serialization.CompileReadModel(reflect.TypeFor[snapshotIdentity](), serialization.CamelCase)
+	after, err := before.WithNamingPolicy(serialization.CamelCase)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The promoted pointer field disappears at every recursive level, but
-	// Other retains its own Go index even though its traversal position changes.
-	bound, err := before.RebindJSON([]byte(`{"name":"root","Nested":{"name":"child","Nested":null}}`), after)
-	want := `{"name":"root","nested":{"name":"child","nested":null}}`
+	bound, err := before.RebindJSON([]byte(`{"Name":"root","otherValue":"other","Nested":{"Name":"child","Nested":null}}`), after)
+	want := `{"name":"root","nested":{"name":"child","nested":null},"otherValue":"other"}`
 	if err != nil || string(bound) != want {
 		t.Fatalf("snapshot=%s want=%s error=%v", bound, want, err)
 	}
-	if _, err := before.RebindJSON([]byte(`{"Nested":{"Name":"lost"}}`), after); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
-		t.Fatalf("lost nested identity accepted: %v", err)
-	}
-	// In the reverse direction promotion adds an earlier field. A null for
-	// Nested still belongs to Nested, not Other or the newly promoted Name.
-	bound, err = after.RebindJSON([]byte(`{"name":"other","nested":null}`), before)
-	if err != nil || string(bound) != `{"Nested":null,"name":"other"}` {
+	bound, err = after.RebindJSON([]byte(`{"name":"root","otherValue":"other","nested":null}`), before)
+	if err != nil || string(bound) != `{"Name":"root","Nested":null,"otherValue":"other"}` {
 		t.Fatalf("reverse snapshot=%s error=%v", bound, err)
 	}
 }

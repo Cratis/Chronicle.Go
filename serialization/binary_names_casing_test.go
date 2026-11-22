@@ -67,13 +67,9 @@ func TestBinaryFreeNamingRetainsExactDuplicateRefusal(t *testing.T) {
 		Note    string `json:"payload"`
 		Payload string
 	}
-	plan, err := serialization.Compile(reflect.TypeFor[document]())
-	if err != nil {
-		t.Fatal(err)
-	}
 	for _, policy := range []serialization.NamingPolicy{serialization.CamelCase, serialization.LegacyGoCamelCase} {
-		if next, err := plan.WithNamingPolicy(policy); next != nil || !errors.Is(err, faults.ErrInvalidConfiguration) {
-			t.Fatalf("existing exact-name duplicate behavior changed: %v, %v", next, err)
+		if plan, err := serialization.Compile(reflect.TypeFor[document](), policy); plan != nil || !errors.Is(err, faults.ErrInvalidConfiguration) {
+			t.Fatalf("existing exact-name duplicate behavior changed: %v, %v", plan, err)
 		}
 	}
 }

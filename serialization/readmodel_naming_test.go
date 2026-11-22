@@ -101,7 +101,7 @@ func TestReadModelPlanHonorsEveryExplicitJSONTag(t *testing.T) {
 func TestReadModelPlanChecksFinalPropertyNames(t *testing.T) {
 	type distinctNames struct {
 		ID    string
-		Other string `json:"ID"`
+		Other string `json:"ExternalID"`
 	}
 	for _, policy := range []serialization.NamingPolicy{serialization.PreservePropertyNames, serialization.CamelCase, serialization.LegacyGoCamelCase} {
 		plan, err := serialization.CompileReadModel(reflect.TypeFor[distinctNames](), policy)
@@ -120,7 +120,7 @@ func TestReadModelPlanChecksFinalPropertyNames(t *testing.T) {
 		if policy == serialization.PreservePropertyNames {
 			name = "Id"
 		}
-		if len(payload) != 2 || payload[name] != "owner" || payload["ID"] != "other" {
+		if len(payload) != 2 || payload[name] != "owner" || payload["ExternalID"] != "other" {
 			t.Fatalf("final names: %s", data)
 		}
 	}
