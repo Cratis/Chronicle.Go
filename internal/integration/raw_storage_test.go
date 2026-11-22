@@ -95,7 +95,7 @@ type storedChildStringProtection struct {
 const storedChildStringProtectionScript = `
 const store = process.env.RAW_STORE, target = JSON.parse(process.env.RAW_PROTECTED_CHILD);
 let documents = 0;
-for (const d of db.adminCommand({listDatabases: 1}).databases.filter(d => d.name.startsWith(store + "+"))) {
+for (const d of db.adminCommand({listDatabases: 1}).databases.filter(d => d.name === store || d.name.startsWith(store + "+"))) {
   const document = db.getSiblingDB(d.name).getCollection(target.collection).findOne({_id: target.key});
   if (document === null) continue;
   documents++;
