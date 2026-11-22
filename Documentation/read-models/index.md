@@ -121,6 +121,11 @@ covers factory output and final merged variant/global handlers, not just authore
 root mappings. Use an explicit materialized sink for those shapes. Source-keyed
 variants and source-identity removals are supported.
 
+Runtime `store.RegisterProjection` applies the same effective-sink shape check
+before publication or registration. Basic source-keyed projections may inherit
+None; custom-key projections are refused. The runtime API's existing restrictions
+on other shapes remain unchanged.
+
 None does not provide materialized windows, counts, paging or live query
 semantics. Immediate reads are not evidence that those routes, or live SQL and
 InMemory backends, work.

@@ -84,6 +84,33 @@ func TestNoSinkPreparationRefusesUnsupportedStaticAndFactoryShapes(t *testing.T)
 	}
 }
 
+func TestRuntimeProjectionPreparationUsesEffectiveNoneShape(t *testing.T) {
+	registry := NewRegistry()
+	event, err := RegisterEvent[sinkDefaultEvent](registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	custom := noSinkFluent(t, registry)
+	client, err := NewClient(WithRegistry(registry), WithDefaultSinkType(readmodels.NoSink))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = client.Close() })
+	store := &EventStore{storeOwner: &storeOwner{client: client, name: "store"}}
+	source := projections.ModelBoundDescriptor(custom.Model(), projections.FromEvent(event))
+	definition, err := store.prepareProjectionAddition(source)
+	if err != nil {
+		t.Fatal("source-keyed runtime None refused", err)
+	}
+	if definition.Model().Sink().Type != readmodels.NoSink || definition.IsPassive() {
+		t.Fatal("runtime None selection changed")
+	}
+	refused, err := store.prepareProjectionAddition(custom)
+	if !errors.Is(err, ErrInvalidConfiguration) || refused.KernelDefinition() != nil {
+		t.Fatal("custom-key runtime None accepted", err)
+	}
+}
+
 func boolName(value bool) string {
 	if value {
 		return "true"

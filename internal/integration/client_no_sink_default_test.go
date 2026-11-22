@@ -8,7 +8,6 @@ package integration_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	chronicle "github.com/cratis/chronicle.go"
 	projectioncontracts "github.com/cratis/chronicle.go/contracts/projections"
@@ -89,9 +88,8 @@ func TestKernelGlobalNoneKeepsExplicitMongoDBOverride(t *testing.T) {
 		t.Fatal("explicit materialized sink lost")
 	}
 	appendSuccessfully(t, f.ctx, store, events.SourceID("source"), SinkDefaultsCreated{Name: "materialized"})
-	waitUntil(t, f.ctx, 40*time.Second, "explicit MongoDB override", func() bool {
-		result, err := reader.Get(f.ctx, readmodels.Key("source"))
-		return err == nil && result.Exists && result.Value.Name == "materialized"
+	awaitProjection(t, f.ctx, reader, readmodels.Key("source"), func(value SinkDefaultsAccount) bool {
+		return value.Name == "materialized"
 	})
 }
 
@@ -103,7 +101,8 @@ func TestKernelGlobalNoneKeepsPassiveReducerLocal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	appendSuccessfully(t, f.ctx, store, events.SourceID("account"), ReducedAmountChanged{-100}, ReducedAmountChanged{40})
+	appendSuccessfully(t, f.ctx, store, events.SourceID("account"), ReducedAmountChanged{-100})
+	appendSuccessfully(t, f.ctx, store, events.SourceID("account"), ReducedAmountChanged{40})
 	reader := readmodels.For(store.ReadModels(), model)
 	result, err := reader.Get(f.ctx, readmodels.Key("account"))
 	if err != nil || !result.Exists {
