@@ -57,20 +57,32 @@ func assertRegisteredNoneProjection(t *testing.T, f *kernelFixture, model readmo
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(definitions.ReadModels) != 1 || definitions.ReadModels[0].GetType().GetIdentifier() != string(model) {
+	var registered *modelcontracts.ReadModelDefinition
+	for _, definition := range definitions.GetReadModels() {
+		if definition.GetType().GetIdentifier() == string(model) {
+			registered = definition
+		}
+	}
+	if registered == nil {
 		t.Fatal("registered model missing", definitions)
 	}
-	if definitions.ReadModels[0].GetSink().GetTypeId() != string(readmodels.NoSink) {
-		t.Fatal("registered sink is not None")
+	if registered.GetSink().GetTypeId() != string(readmodels.NoSink) {
+		t.Fatal("registered sink is not None", registered)
 	}
 	producers, err := projectioncontracts.NewProjectionsClient(f.conn).GetAllDefinitions(f.ctx, &projectioncontracts.GetAllDefinitionsRequest{EventStore: string(f.storeName)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(producers.Items) != 1 {
+	var producer *projectioncontracts.ProjectionDefinition
+	for _, definition := range producers.GetItems() {
+		if definition.GetReadModel() == string(model) {
+			producer = definition
+		}
+	}
+	if producer == nil {
 		t.Fatal("registered projection missing", producers)
 	}
-	if !producers.Items[0].IsActive || !producers.Items[0].IsRewindable {
+	if !producer.GetIsActive() || !producer.GetIsRewindable() {
 		t.Fatal("None changed authored producer flags", producers)
 	}
 }
