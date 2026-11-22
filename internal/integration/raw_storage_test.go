@@ -6,11 +6,13 @@
 package integration_test
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 )
 
 // rawStorageScan is what the kernel actually persisted for one event store,
@@ -79,5 +81,49 @@ func assertStoredWithout(t *testing.T, store, control string, secrets ...string)
 		if locations := scan.Hits[secret]; len(locations) != 0 {
 			t.Errorf("plaintext %q persisted in %v", secret, locations)
 		}
+	}
+}
+
+type storedChildStringProtection struct {
+	Collection string   `json:"collection"`
+	Key        string   `json:"key"`
+	Children   string   `json:"children"`
+	Property   string   `json:"property"`
+	Plaintexts []string `json:"plaintexts"`
+}
+
+const storedChildStringProtectionScript = `
+const store = process.env.RAW_STORE, target = JSON.parse(process.env.RAW_PROTECTED_CHILD);
+let documents = 0;
+for (const d of db.adminCommand({listDatabases: 1}).databases.filter(d => d.name === store || d.name.startsWith(store + "+"))) {
+  const document = db.getSiblingDB(d.name).getCollection(target.collection).findOne({_id: target.key});
+  if (document === null) continue;
+  documents++;
+  const items = document[target.children];
+  if (!Array.isArray(items) || items.length !== 1) quit(43);
+  const stored = items[0][target.property];
+  if (typeof stored !== "string" || stored.length === 0 || target.plaintexts.includes(stored)) quit(44);
+  const text = JSON.stringify(document);
+  if (target.plaintexts.some(value => text.includes(value))) quit(45);
+}
+if (documents !== 1) quit(46);`
+
+// assertStoredChildStringProtected inspects only the selected sink document,
+// without going through the SDK's release path or printing stored values.
+func assertStoredChildStringProtected(t *testing.T, f *kernelFixture, target storedChildStringProtection) {
+	t.Helper()
+	container := os.Getenv("CHRONICLE_INTEGRATION_CONTAINER")
+	if container == "" {
+		t.Fatal("raw storage assertion requires CHRONICLE_INTEGRATION_CONTAINER")
+	}
+	encoded, err := json.Marshal(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(f.ctx, 15*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "docker", "exec", "-e", "RAW_STORE="+string(f.storeName), "-e", "RAW_PROTECTED_CHILD="+string(encoded), container, "mongosh", "--quiet", "--eval", storedChildStringProtectionScript)
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("raw MongoDB protected child assertion failed: %v", err)
 	}
 }

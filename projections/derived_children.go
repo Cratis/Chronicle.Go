@@ -24,7 +24,9 @@ const derivedTypeDiscriminator = "_derivedTypeId"
 // any non-join From whose identity is absent, such as a keyed update after
 // removal or before creation. Go therefore stamps every From of the node, in
 // both front ends; rewriting the constant on an existing child is idempotent.
-// Joins never add a child and stay unstamped.
+// Joins never add a child and stay unstamped. Protection of children deferred
+// until their root exists is handled by the kernel (fixed in 19.128.0 for
+// Chronicle#4599), independently of this discriminator mapping.
 func (c *compiler) stampDerivedChild(n *nodeDefinition) error {
 	e := literalValue(declarations.Value{Kind: declarations.String, Text: n.derivative.ID})
 	if err := validateLiteral(e, serialization.Field{Type: reflect.TypeFor[string](), Scalar: serialization.String}); err != nil {
