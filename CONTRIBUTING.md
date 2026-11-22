@@ -15,7 +15,7 @@ The [Cratis contribution guide](https://github.com/Cratis/.github/blob/main/cont
 
 The runtime has one root module, `github.com/cratis/chronicle.go`, with package `chronicle`. The explicit [module allow-list](.github/go-modules.json) currently contains only that root; real nested tools, integrations or unpublished recipes can be added under the [module policy](Documentation/module-policy.md). Product documentation lives in `Documentation/`. Add packages and examples only as implementation needs them; use lowercase package directories, co-located `_test.go` files, and compiling `Example` tests for public usage.
 
-Install Go 1.26 or later, golangci-lint v2.14.0, actionlint v1.7.12, ShellCheck, and markdownlint-cli2. CI tests Go 1.26 and 1.27, including the latest patches; golangci-lint must be built with a Go version at least as new as the code it analyzes.
+Install Go 1.26 or later, golangci-lint v2.15.0, actionlint v1.7.12, ShellCheck, and markdownlint-cli2. CI tests Go 1.26 and 1.27, including the latest patches; golangci-lint must be built with a Go version at least as new as the code it analyzes.
 
 ## Verify your change
 
@@ -45,7 +45,7 @@ npx markdownlint-cli2 '*.md' 'Documentation/**/*.md' 'examples/**/*.md' '.github
 Race detection requires a supported platform and a C compiler. Run govulncheck with Go 1.27:
 
 ```sh
-go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
 govulncheck ./...
 ```
 

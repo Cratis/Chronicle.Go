@@ -160,8 +160,8 @@ func TestAbandonedStreamCancellationReleasesAdmission(t *testing.T) {
 					// Release the old implementation's lease before failing, so
 					// the regression cannot deadlock test cleanup.
 					stream.(*ownedStream).done()
-					<-closed
-					t.Fatal("abandoned stream blocked Close")
+					err := <-closed
+					t.Fatal("abandoned stream blocked Close", err)
 				}
 				if err := stream.RecvMsg(nil); !errors.Is(err, context.Canceled) {
 					t.Fatal(err)

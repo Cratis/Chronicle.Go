@@ -10,7 +10,7 @@ Keep optional tooling and ecosystem dependencies out of the Chronicle runtime.
 The checked-in [module manifest](https://github.com/Cratis/Chronicle.Go/blob/main/.github/go-modules.json) lists
 `github.com/cratis/chronicle.go` and the unpublished `recipes` module. The
 [OpenTelemetry gRPC recipe](../recipes/otelgrpc/README.md) pins published SDK
-`v0.18.0` and isolates its OpenTelemetry SDK/exporter dependencies from the root.
+`v0.21.0` and isolates its OpenTelemetry SDK/exporter dependencies from the root.
 It needs no replacement directives, `go.work`, or local checkout dependency.
 The existing module CI matrix runs its build, vet, tests, race checks, formatting,
 tidy, and lint gates; contract and kernel integration profiles remain root-only.

@@ -248,8 +248,8 @@ func TestPreparationCloseCancelsButDoesNotJoinCallerOwnedCleanup(t *testing.T) {
 			}
 			<-cleanup
 			select {
-			case <-result:
-				t.Fatal("preparation returned before cleanup")
+			case err := <-result:
+				t.Fatal("preparation returned before cleanup", err)
 			default:
 			}
 			if _, err := p.Prepare(nil, nil); !errors.Is(err, ErrPreparationInProgress) { //nolint:staticcheck // SA1012: cleanup retains admission despite invalid arguments.
@@ -260,8 +260,8 @@ func TestPreparationCloseCancelsButDoesNotJoinCallerOwnedCleanup(t *testing.T) {
 				t.Error(err)
 			}
 			select {
-			case <-result:
-				t.Error("Close claimed to join preparation")
+			case err := <-result:
+				t.Error("Close claimed to join preparation", err)
 			default:
 			}
 			close(finish)
@@ -339,8 +339,8 @@ func TestPreparationDeadlineWaitsForCooperativeCleanupRatherThanReturningFalseCo
 		go func() { _, err := p.Prepare(ctx, nil); result <- err }()
 		<-cleanup
 		select {
-		case <-result:
-			t.Fatal("deadline masqueraded as cleanup completion")
+		case err := <-result:
+			t.Fatal("deadline masqueraded as cleanup completion", err)
 		default:
 		}
 		close(finish)

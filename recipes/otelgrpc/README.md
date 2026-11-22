@@ -6,7 +6,7 @@
 This runnable consumer recipe uses `WithGRPCStatsHandler` to attach
 `otelgrpc.NewClientHandler` to every SDK-owned connection, including replacements
 created by Chronicle's reconnect supervisor. It pins the published Chronicle.Go
-`v0.18.0`, otelgrpc `v0.72.0`, and OpenTelemetry SDK/stdout exporter `v1.47.0`.
+`v0.21.0`, otelgrpc `v0.72.0`, and OpenTelemetry SDK/stdout exporter `v1.47.0`.
 Dependencies live only in the unpublished `recipes` module, not the root SDK.
 
 ## Run
