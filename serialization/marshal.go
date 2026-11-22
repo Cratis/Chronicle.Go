@@ -11,8 +11,9 @@ import (
 
 // Marshal serializes a value or non-nil pointer matching this plan. Nil object
 // properties are omitted, while false and zero are preserved unless explicitly
-// tagged omitempty/omitzero. Integers nested under maps outside -2^53 through
-// 2^53, and unsigned values above MaxInt64, return ErrUnsupported before dispatch.
+// tagged omitempty/omitzero. Ordinary typed fields preserve the full uint64 range.
+// Integers nested under maps or open-derived values outside -2^53 through 2^53
+// return ErrUnsupported before dispatch.
 // Object fields use declaration order (promoted fields use encoding/json order),
 // and strings use System.Text.Json's default escaping. Map keys are sorted, not
 // insertion-ordered like C# dictionaries. The caller must not mutate value during
@@ -40,14 +41,6 @@ func (p *Plan) Marshal(value any) ([]byte, error) {
 }
 
 func (n *node) checkInteger(value reflect.Value, dictionary bool) error {
-	// The pinned MongoDB append path parses payload JSON as BSON, whose bare
-	// integer parser cannot represent unsigned values above MaxInt64.
-	switch value.Kind() {
-	case reflect.Uint, reflect.Uint64:
-		if value.Uint() > 1<<63-1 {
-			return unsupported(n.typ, "kernel MongoDB append requires unsigned integers at most MaxInt64")
-		}
-	}
 	// The kernel ignores dictionary value schemas and reads all nested numbers
 	// as double. Reject outside its contiguous exact-integer range before RPC.
 	if !dictionary {

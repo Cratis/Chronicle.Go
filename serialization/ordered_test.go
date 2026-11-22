@@ -278,10 +278,16 @@ func TestDictionaryValuesRetainStructDeclarationOrder(t *testing.T) {
 	}
 }
 
+func TestPromotedUnsignedFieldsUseFullRange(t *testing.T) {
+	type promoted struct{ Value uint64 }
+	for _, number := range []uint64{0, math.MaxInt64, math.MaxInt64 + 1, math.MaxUint64} {
+		assertUnsignedRoundTrip(t, struct{ promoted }{promoted{number}})
+	}
+}
+
 func TestOrderedObjectsPreserveValidation(t *testing.T) {
 	type promoted struct{ Value uint64 }
 	for _, value := range []any{
-		struct{ promoted }{promoted{1 << 63}},
 		struct{ Values map[string]promoted }{map[string]promoted{"a": {1<<53 + 1}}},
 	} {
 		plan, err := serialization.Compile(reflect.TypeOf(value))

@@ -203,6 +203,8 @@ type ScalarValues struct {
 	NativeInt     int
 	NativeUint    uint
 	Values        []uint64
+	Fixed         [3]uint64
+	Wide          *uint64
 	Flag          *bool
 	Count         *int64
 	When          *time.Time
@@ -217,18 +219,17 @@ func TestKernelScalarAndNullableRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	populated := ScalarValues{Signed: math.MinInt64, Unsigned: math.MaxInt64, Named: 1<<53 + 1, SmallSigned: math.MinInt8, ShortSigned: math.MinInt16, Int32: math.MinInt32, SmallUnsigned: math.MaxUint8, ShortUnsigned: math.MaxUint16, Uint32: math.MaxUint32, NativeInt: 1<<31 + 1, NativeUint: 1<<32 + 1, Values: []uint64{1<<53 + 1, math.MaxInt64}, Flag: new(false), Count: new(int64(0)), When: new(time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)), ID: new(uuid.MustParse("00112233-4455-6677-8899-aabbccddeeff")), Omitted: new(OmittedNumber(-1))}
+	populated := ScalarValues{Signed: math.MinInt64, Unsigned: math.MaxUint64, Named: math.MaxInt64 + 1, SmallSigned: math.MinInt8, ShortSigned: math.MinInt16, Int32: math.MinInt32, SmallUnsigned: math.MaxUint8, ShortUnsigned: math.MaxUint16, Uint32: math.MaxUint32, NativeInt: 1<<31 + 1, NativeUint: 1<<32 + 1, Values: []uint64{0, math.MaxInt64, math.MaxInt64 + 1, math.MaxUint64}, Fixed: [3]uint64{math.MaxInt64, math.MaxInt64 + 1, math.MaxUint64}, Wide: new(uint64(math.MaxUint64)), Flag: new(false), Count: new(int64(0)), When: new(time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)), ID: new(uuid.MustParse("00112233-4455-6677-8899-aabbccddeeff")), Omitted: new(OmittedNumber(-1))}
 	appendSuccessfully(t, f.ctx, store, "values", ScalarValues{})
 	appendSuccessfully(t, f.ctx, store, "values", populated)
-	if _, err = store.EventLog().Append(f.ctx, "values", ScalarValues{Unsigned: math.MaxUint64}); !errors.Is(err, chronicle.ErrUnsupported) {
-		t.Fatalf("unsigned BSON overflow was not rejected locally: %v", err)
-	}
+	wide := ScalarValues{Unsigned: math.MaxInt64 + 1, Named: math.MaxUint64}
+	appendSuccessfully(t, f.ctx, store, "values", wide)
 	populated.Omitted = nil // IsZero deliberately omits this nonzero pointer value.
 	persisted := f.read("values")
-	if len(persisted) != 2 {
+	if len(persisted) != 3 {
 		t.Fatalf("events = %d", len(persisted))
 	}
-	for i, want := range []ScalarValues{{}, populated} {
+	for i, want := range []ScalarValues{{}, populated, wide} {
 		var got ScalarValues
 		if err = json.Unmarshal([]byte(persisted[i].Content), &got); err != nil {
 			t.Fatalf("decode %s: %v", persisted[i].Content, err)
