@@ -71,6 +71,52 @@ serialization failures stop construction; no partial batch is registered.
 Fluent builder errors are retained even when a seeder returns nil. Mutable input
 values are serialized when added; later changes cannot alter the snapshot.
 
+## Target a stream
+
+`WithStream(streamType, streamID)` returns an independent builder view. It works
+with both `seeding.For[E]` and heterogeneous `ForEventSource` calls:
+
+```go
+seeding.For(builder.WithStream("Catalog", "published"), "item-1", ReferenceItemAdded{Name: "Notebook"})
+builder.ForNamespace("demo").WithStream("Catalog", "draft").ForEventSource("item-1", ReferenceItemAdded{Name: "Draft notebook"})
+```
+
+The [compiled example](https://github.com/Cratis/Chronicle.Go/blob/main/example_seeding_streams_test.go)
+registers these declarations. Select the namespace before or after the stream;
+either order preserves both coordinates. Neither view changes its parent or
+siblings. This is stream **type and ID** routing, not a non-default event-source
+type API. Event source IDs and static tags remain unchanged.
+
+Only empty strings default: an empty stream type becomes `events.AllStreamTypes`
+(`All`), and an empty stream ID becomes `events.DefaultStreamID` (`Default`).
+Whitespace is opaque and preserved verbatim, including whitespace-only values;
+it is not trimmed or treated as a default. Builders that never use `WithStream`
+keep routing omitted on the wire, preserving existing seed snapshots.
+
+Before sending any batch containing non-default routing, the client calls
+`GetSeedingSupport` and requires an authorized, successful envelope with present
+`Data` and `RoutingSupported = true`. A false answer or an unimplemented RPC
+returns an error matching `chronicle.ErrUnsupported`: upgrade the kernel or use
+default routing. Missing data fails with `ErrProtocol`; authorization, validation,
+transport, cancellation and deadline failures propagate without sending seeds.
+Legacy and explicitly default-only batches do not query this capability. There
+is no fallback to the default stream, even for a mixed legacy/routed batch. The
+check runs again for each pending send, including retries and reconnects.
+
+Stream type and ID participate in kernel seed identity alongside source ID,
+event type, exact content bytes and the tag set. Equal payloads targeting two
+streams are distinct entries; repeated equal entries in one declaration remain
+repeated facts. Changing a route describes a new entry, not a move or update of
+an existing event. Go performs no local deduplication.
+
+Runtime qualification of stream-targeted seeding is **pending CI** against the
+pinned `19.153.0-development` kernel. The required
+`TestKernelStreamSeedsCSharpThenGoRestartAndNamespaceIsolation` witness checks
+both streams, exact namespace counts, repeated facts, no default-stream fallback,
+C#-derived/Go registration identity and unchanged positions after client restart.
+Its C# request is hand-derived, not emitted by .NET. An unsupported kernel is a
+failure, not a skip. See the [parity boundary](../parity.md#event-seeding).
+
 ## Register and restart
 
 `EventStore`, `Ready` and `WaitForRegistration` include seeding **last**, after event
