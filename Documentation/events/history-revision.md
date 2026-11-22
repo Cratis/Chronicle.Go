@@ -82,6 +82,13 @@ Reads expose current `Content`, `OriginalContent`, ordered `Revisions` and
 request a registered generation. Registering a new generation and migration alone
 is [event evolution](evolution.md), not a correction to one occurrence.
 
+A reactor or reducer's `Context.AppendedGeneration` identifies the original
+append generation even when revision changes the delivered representation;
+zero means unknown for older persisted events. It is distinct from
+`Context.EventType.Generation`. [Pinned observer delivery](evolution.md#opt-in-to-pinned-observer-delivery)
+requests the subscribed representation directly from the kernel. Compatibility
+mode remains the default and retains local alternate-generation selection.
+
 **Redaction removes content irreversibly from the targeted history.** It replaces
 the stored payload with `EventRedacted`, removes revisions and content hashes, and
 retains the position and routing. It is not a database-row deletion. The outer

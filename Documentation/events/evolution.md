@@ -119,20 +119,44 @@ downcast, and observers subscribed to each generation against the kernel.
 persisted generation and returns a pointer to its registered Go type.
 
 Reactor and reducer methods can accept either current or historical types. Their
-subscriptions select that generation; the runtime uses its codec and adjusts the
-delivered event context when alternate content is available. A historical concrete
+subscriptions select that generation. By default (`events.Compatibility`), the
+runtime uses its codec and adjusts the delivered event context when alternate
+content is available. This local selection is the compatibility path. A historical concrete
 handler remains discoverable on its own, unlike the C# generation-only expansion
 omission. Each reactor or reducer must select one generation per event ID,
 including live/replay bindings and interface families. Use separate observers to
 consume both generations. Go rejects an ambiguous selection instead of relying
 on C#'s first matching subscription or decoding into the wrong handler type.
 
+### Opt in to pinned observer delivery
+
+Use `reactors.WithGenerationDelivery(events.Pinned)` or
+`reducers.WithGenerationDelivery(events.Pinned)` in the observer's declaration or
+registration options. The default is `events.Compatibility`; repeated delivery
+options are last-wins, and an unknown mode fails declaration validation. A compiled
+plan freezes the mode and exposes it through `GenerationDelivery()`.
+
+Pinned delivery requires a kernel supporting `EventGenerationDelivery` (the CI
+kernel is `cratis/chronicle:19.153.0-development`). It requests the subscribed
+generation as `Content`. The runtime decodes that content directly, ignores
+`GenerationalContent`, and does not rewrite `Context.EventType.Generation`. There
+is no client-side fallback or emulated migration in Pinned mode. Older kernels
+may ignore the option; do not assume they provide pinned payloads. Typed history
+reads still use local generation selection, independent of observer delivery.
+
+For reactor and reducer delivery, `Context.EventType.Generation` identifies the
+delivered representation, while `Context.AppendedGeneration` preserves the
+original append generation. Zero means unknown for older persisted events; it is
+not inferred from the delivered generation. Revision can change the delivered
+representation without changing the original append generation. Existing
+protected-generation refusals remain in force in both modes.
+
 Historical backfill runs asynchronously in the kernel: registration readiness
 is not a backfill barrier. When upgrading an existing store, wait for historical
 representations before starting observers that require the new shape.
 
 If the kernel supplies no alternate for the requested generation, typed reads and
-observers retain C#'s raw-content fallback. They do not manufacture a migration or
+Compatibility observers retain C#'s raw-content fallback. They do not manufacture a migration or
 change the persisted read context. For strict callers, inspect
 `GenerationalContent` before requesting a different shape. Exact catalog lookup
 and `appended.Decode` reject unknown generations rather than silently guessing the

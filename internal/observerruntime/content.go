@@ -18,12 +18,16 @@ import (
 // with any protected generation is refused with ErrUnsupported. The complete
 // registered catalog is required for mismatches. JSON null is never an event.
 func DecodeContent(catalog *events.Catalog, descriptor events.Descriptor, appended events.Appended) (events.Context, any, error) {
+	return decodeContent(catalog, descriptor, appended, events.Compatibility)
+}
+
+func decodeContent(catalog *events.Catalog, descriptor events.Descriptor, appended events.Appended, delivery events.GenerationDelivery) (events.Context, any, error) {
 	ec := appended.Context
 	data := bytes.TrimSpace(appended.Content)
 	if len(data) == 0 || data[0] != '{' {
 		return ec, nil, faults.ErrProtocol
 	}
-	ec, content, err := observerGenerationContent(catalog, descriptor, appended)
+	ec, content, err := observerGenerationContent(catalog, descriptor, appended, delivery)
 	if err != nil {
 		return ec, nil, err
 	}
@@ -35,7 +39,7 @@ func DecodeContent(catalog *events.Catalog, descriptor events.Descriptor, append
 	return ec, value.Interface(), nil
 }
 
-func observerGenerationContent(catalog *events.Catalog, descriptor events.Descriptor, appended events.Appended) (events.Context, []byte, error) {
+func observerGenerationContent(catalog *events.Catalog, descriptor events.Descriptor, appended events.Appended, delivery events.GenerationDelivery) (events.Context, []byte, error) {
 	ec, content := appended.Context, appended.Content
 	target := descriptor.Ref().Generation
 	if target == ec.EventType.Generation {
@@ -52,6 +56,9 @@ func observerGenerationContent(catalog *events.Catalog, descriptor events.Descri
 	// remove this guard with Cratis/Chronicle.Go#96.
 	if protected {
 		return ec, nil, fmt.Errorf("%w: protected non-current observer generation", faults.ErrUnsupported)
+	}
+	if delivery == events.Pinned {
+		return ec, content, nil
 	}
 	if generational, ok := appended.GenerationalContent[target]; ok {
 		content = generational
