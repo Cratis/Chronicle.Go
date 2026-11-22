@@ -30,7 +30,7 @@ module aliases, or executable configuration.
 | `contracts` | Boolean `true`; pinned contract generation is root-only |
 | `kernelIntegration` | Boolean `true`; the existing store/client kernel tests are root-only |
 | `rootDependencies` | Unique canonical external module paths allowed in root `require` directives, including indirect and test dependencies |
-| `nested` | An array of implemented module records; currently empty |
+| `nested` | An array of implemented module records; currently the `recipes` module |
 
 The runtime dependency list preserves the existing SDK graph: Fundamentals,
 UUID, gRPC, protobuf and their current indirect modules. Versions remain in
