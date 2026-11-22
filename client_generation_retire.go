@@ -15,6 +15,7 @@ func (c *Client) retire(g *generation) {
 	if g.stream != nil {
 		drainStream(g.stream)
 	}
+	g.registrationWork.Wait()
 	g.work.Wait()
 	// The supervisor still holds c.work while admitting this retirement worker.
 	// Slow user handlers cannot prevent the next generation from connecting, but

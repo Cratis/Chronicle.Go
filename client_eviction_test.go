@@ -103,12 +103,12 @@ func TestEvictionDuringAcquisitionSharesRegistrationFlight(t *testing.T) {
 				}
 				if cancelStarter {
 					cancel()
-				} else {
-					close(release)
+					synctest.Wait() // The starter leaves without canceling the owned pass.
 				}
+				close(release)
 				a, b := <-first, <-second
 				if cancelStarter {
-					if !errors.Is(a.err, context.Canceled) || registrations != 2 {
+					if !errors.Is(a.err, context.Canceled) || registrations != 1 {
 						t.Fatal("starter cancellation contract", a.err, registrations)
 					}
 				} else if a.err != nil || a.store != old || registrations != 1 {
