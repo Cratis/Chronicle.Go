@@ -132,7 +132,7 @@ func (s *EventStore) RegisterProjection(ctx context.Context, declaration project
 			s.definitions.notifyLocked()
 			s.client.mu.Unlock()
 			result.Published = true
-			result.Outcome, err = s.WaitForRegistration(ctx)
+			result.Outcome, err = s.waitForRegistration(ctx, true)
 			s.client.mu.Lock()
 			unknown := s.definitions.destructiveUnknown
 			s.client.mu.Unlock()

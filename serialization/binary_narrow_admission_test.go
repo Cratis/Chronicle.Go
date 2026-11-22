@@ -139,7 +139,7 @@ func TestBinaryFreeSinkAndValueNamesRemainAdmitted(t *testing.T) {
 		Blob struct {
 			Value string `json:"value"`
 			ID    string
-			Id    string
+			Key   string
 			Mongo string `json:"_id"`
 		}
 		Watermark string `json:"__lastHandledEventSequenceNumber"`

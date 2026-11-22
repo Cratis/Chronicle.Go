@@ -98,7 +98,10 @@ func TestEnumAutoMapCaseInsensitiveProfiles(t *testing.T) {
 				enumBoundaryFailure(t, enumCaseMapping(t, mustEvent[enumCaseEvent](t, events.WithCodecs(projectionEnumCodecs(t, true))), join), "Status")
 			})
 			t.Run("ambiguous event names", func(t *testing.T) {
-				enumBoundaryFailure(t, enumCaseMapping(t, mustEvent[enumAmbiguousCaseEvent](t, events.WithCodecs(projectionEnumCodecs(t, false))), join), "Status")
+				_, err := events.Define[enumAmbiguousCaseEvent](events.WithCodecs(projectionEnumCodecs(t, false)))
+				if !errors.Is(err, chronicle.ErrUnsupported) {
+					t.Fatalf("ambiguous event plan admitted: %v", err)
+				}
 			})
 			t.Run("unqualified Unicode comparison", func(t *testing.T) {
 				enumBoundaryFailure(t, enumCaseMapping(t, mustEvent[enumUnicodeCaseEvent](t, events.WithCodecs(projectionEnumCodecs(t, false))), join), "Status")
@@ -108,11 +111,10 @@ func TestEnumAutoMapCaseInsensitiveProfiles(t *testing.T) {
 }
 
 func TestEnumAutoMapAmbiguousModelNames(t *testing.T) {
-	c := projectionEnumCodecs(t, false)
-	b := projections.NewBuilder("enum-ambiguous-model", mustModel[enumAmbiguousCaseModel](t, readmodels.WithCodecs(c)))
-	projections.From(b, mustEvent[enumCaseEvent](t, events.WithCodecs(c)), nil)
-	_, err := b.Build()
-	enumBoundaryFailure(t, err, "Status")
+	_, err := readmodels.Define[enumAmbiguousCaseModel](readmodels.WithCodecs(projectionEnumCodecs(t, false)))
+	if !errors.Is(err, chronicle.ErrUnsupported) {
+		t.Fatalf("ambiguous model plan admitted: %v", err)
+	}
 }
 
 func TestEnumVariantEntersOnFinalAutoMap(t *testing.T) {

@@ -57,10 +57,11 @@ type field struct {
 // Compile validates a struct shape before registration. Binary-free recursive
 // types use schema references; recursive graphs containing binary are refused.
 // Embedded fields follow encoding/json promotion and declaration order.
-// Custom marshalers, interface values, unsupported chronicle directives and
-// non-simple, reserved or case-insensitively duplicate property names in binary-
-// containing graphs are rejected rather than generating a schema that disagrees
-// with serialization or kernel property-path resolution.
+// Custom marshalers, interface values, unsupported chronicle directives, reserved
+// property-path tokens and case-insensitively duplicate sibling property names
+// are rejected rather than generating a schema that disagrees with serialization
+// or kernel property-path resolution. Binary-containing graphs additionally
+// require simple ASCII property names.
 // Recognized directives are metadata; artifact registries must also ValidateRole.
 // Naming defaults to PreservePropertyNames; the last optional policy wins.
 func Compile(typ reflect.Type, policies ...NamingPolicy) (*Plan, error) {
@@ -180,10 +181,7 @@ func validateCandidates(typ reflect.Type, readModel bool, state *compileState, c
 			return err
 		}
 	}
-	if binary {
-		return validateBinaryGraphs(candidates)
-	}
-	return nil
+	return validatePropertyNames(candidates, binary)
 }
 
 // finishSchema adds definitions and metadata to the root schema and returns it as JSON.

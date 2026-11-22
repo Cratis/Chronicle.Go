@@ -22,7 +22,7 @@ import (
 
 type plannedTypedModel struct {
 	ID         string
-	ExternalID string               `json:"ID"`
+	ExternalID string               `json:"ExternalID"`
 	Name       conceptfixtures.Name `chronicle:"pii"`
 	Items      []string
 	Optional   *[]string
@@ -60,7 +60,7 @@ func TestTypedReadsUseFrozenNamingPlan(t *testing.T) {
 			if err := json.Unmarshal(data, &fields); err != nil {
 				t.Fatal(err)
 			}
-			if string(fields[d.KeyProperty()]) != `"person"` || string(fields["ID"]) != `"external"` {
+			if string(fields[d.KeyProperty()]) != `"person"` || string(fields["ExternalID"]) != `"external"` {
 				t.Fatal(string(data))
 			}
 			var releaseFailure atomic.Bool

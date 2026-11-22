@@ -18,7 +18,7 @@ import (
 
 type historyTypedModel struct {
 	ID         string
-	ExternalID string `json:"ID"`
+	ExternalID string `json:"ExternalID"`
 	Name       *conceptfixtures.Name
 	Items      []string
 	Optional   *[]string

@@ -284,14 +284,19 @@ func TestShutdownStopsSupervisionBeforeGenerationConstruction(t *testing.T) {
 
 func TestLiveRegistrationJoinerThroughSharedStageAndInvoke(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		entered := make(chan struct{})
-		first := true
+		entered, release := make(chan struct{}), make(chan struct{})
+		calls := 0
 		client, _ := memoryLifecycleClient(t, func(ctx context.Context, method string) error {
-			if method == eventstores.EventStores_EnsureEventStore_FullMethodName && first {
-				first = false
-				close(entered)
-				<-ctx.Done()
-				return ctx.Err()
+			if method == eventstores.EventStores_EnsureEventStore_FullMethodName {
+				calls++
+				if calls == 1 {
+					close(entered)
+					select {
+					case <-release:
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+				}
 			}
 			return nil
 		}, WithRegistrationRetry(RegistrationRetry{MaxAttempts: 1, InitialDelay: time.Second, MaximumDelay: time.Minute, AttemptTimeout: time.Minute}))
@@ -315,10 +320,14 @@ func TestLiveRegistrationJoinerThroughSharedStageAndInvoke(t *testing.T) {
 		if err := <-starter; !errors.Is(err, context.Canceled) {
 			t.Fatal(err)
 		}
+		close(release)
 		for _, result := range []<-chan error{sameNamespace, otherNamespace} {
 			if err := <-result; err != nil {
 				t.Fatalf("live registration joiner inherited starter cancellation: %v", err)
 			}
+		}
+		if calls != 1 {
+			t.Fatalf("shared stage calls = %d, want 1", calls)
 		}
 	})
 }

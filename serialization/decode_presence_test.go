@@ -12,7 +12,7 @@ import (
 
 type distinctDecodeIDs struct {
 	ID         string
-	ExternalID string `json:"ID"`
+	ExternalID string `json:"ExternalID"`
 }
 
 func TestReadModelPlanDoesNotReuseAnotherFieldsExactName(t *testing.T) {
@@ -25,9 +25,9 @@ func TestReadModelPlanDoesNotReuseAnotherFieldsExactName(t *testing.T) {
 		want distinctDecodeIDs
 	}{
 		{`{"Id":"model"}`, distinctDecodeIDs{ID: "model"}},
-		{`{"ID":"external"}`, distinctDecodeIDs{ExternalID: "external"}},
-		{`{"Id":null,"ID":"external"}`, distinctDecodeIDs{ExternalID: "external"}},
-		{`{"Id":"model","ID":null}`, distinctDecodeIDs{ID: "model"}},
+		{`{"ExternalID":"external"}`, distinctDecodeIDs{ExternalID: "external"}},
+		{`{"Id":null,"ExternalID":"external"}`, distinctDecodeIDs{ExternalID: "external"}},
+		{`{"Id":"model","ExternalID":null}`, distinctDecodeIDs{ID: "model"}},
 	} {
 		t.Run(tc.data, func(t *testing.T) {
 			var got distinctDecodeIDs

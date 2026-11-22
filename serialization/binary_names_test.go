@@ -147,22 +147,10 @@ func TestBinaryFreeNamesKeepAdmissionAndRecompilation(t *testing.T) {
 				Alias string `json:"b.Value"`
 			} `json:"a"`
 		}](),
-		"reserved function": reflect.TypeFor[struct {
-			Week    string
-			Alias   int `json:"Payload.Week"`
-			Payload string
-		}](),
-		"case siblings": reflect.TypeFor[struct {
-			Note    string `json:"payload"`
-			Payload string `json:"Payload"`
-		}](),
-		"Unicode siblings": reflect.TypeFor[struct {
-			Note    string `json:"é"`
-			Payload string `json:"É"`
-		}](),
-		"case siblings reverse": reflect.TypeFor[struct {
-			Payload string `json:"Payload"`
-			Note    string `json:"payload"`
+		"dotted function suffix": reflect.TypeFor[struct {
+			WeekNumber string
+			Alias      int `json:"Payload.Week"`
+			Payload    string
 		}](),
 		"function reverse": reflect.TypeFor[struct {
 			Payload string

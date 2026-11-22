@@ -92,17 +92,11 @@ func (b *Barrier) Run(ctx context.Context, generation uint64, policy Policy, ret
 		}
 		if current := b.running; current != nil {
 			b.mu.Unlock()
-			select {
-			case <-ctx.Done():
-				return Outcome{Generation: generation, Failure: ctx.Err()}
-			case <-current.done:
-				// A starter's cancellation must not fail a live joiner. Attempt
-				// timeouts still retain the pass's bounded retry semantics.
-				if current.callerError != nil && errors.Is(current.outcome.Failure, current.callerError) && ctx.Err() == nil {
-					continue
-				}
-				return clone(current.outcome)
+			outcome := waitForAttempt(ctx, generation, current)
+			if retryCanceledStarter(ctx, current, outcome) {
+				continue
 			}
+			return outcome
 		}
 		break // Keep the lock while claiming the next pass.
 	}
@@ -110,6 +104,64 @@ func (b *Barrier) Run(ctx context.Context, generation uint64, policy Policy, ret
 	b.running = current
 	pass := b.outcome.Pass + 1
 	b.mu.Unlock()
+	return b.execute(ctx, current, generation, pass, policy, retryable, run)
+}
+
+// RunShared joins or starts a pass whose context and goroutine belong to start,
+// not to a waiter. start must either schedule work with its owner's context or
+// return an admission error, and the owner must cancel and join scheduled work.
+func (b *Barrier) RunShared(ctx context.Context, generation uint64, policy Policy, retryable func(error) bool, run func(context.Context) ([]Artifact, error), start func(func(context.Context)) error) Outcome {
+	for {
+		b.mu.Lock()
+		if b.outcome.IsSuccess() {
+			outcome := clone(b.outcome)
+			b.mu.Unlock()
+			return outcome
+		}
+		current := b.running
+		if current == nil {
+			current = &attempt{done: make(chan struct{})}
+			b.running = current
+			pass := b.outcome.Pass + 1
+			b.mu.Unlock()
+			err := start(func(ownedCtx context.Context) {
+				b.execute(ownedCtx, current, generation, pass, policy, retryable, run)
+			})
+			if err != nil {
+				b.complete(current, Outcome{Generation: generation, Pass: pass, Failure: err}, nil)
+			}
+		} else {
+			b.mu.Unlock()
+		}
+		outcome := waitForAttempt(ctx, generation, current)
+		// An explicit runtime mutation can have started the same root's pass
+		// with Run. Its caller cancellation must not fail a live readiness wait.
+		if retryCanceledStarter(ctx, current, outcome) {
+			continue
+		}
+		return outcome
+	}
+}
+
+func waitForAttempt(ctx context.Context, generation uint64, current *attempt) Outcome {
+	select {
+	case <-ctx.Done():
+		return Outcome{Generation: generation, Failure: ctx.Err()}
+	case <-current.done:
+		return clone(current.outcome)
+	}
+}
+
+func retryCanceledStarter(ctx context.Context, current *attempt, outcome Outcome) bool {
+	// Read completed attempt fields only after the completion signal. A canceled
+	// waiter can leave while the starter is still publishing its result.
+	if ctx.Err() != nil {
+		return false
+	}
+	return current.callerError != nil && errors.Is(outcome.Failure, current.callerError)
+}
+
+func (b *Barrier) execute(ctx context.Context, current *attempt, generation, pass uint64, policy Policy, retryable func(error) bool, run func(context.Context) ([]Artifact, error)) Outcome {
 	outcome := Outcome{Generation: generation, Pass: pass, HasRun: true}
 	for i := 1; i <= policy.MaxAttempts; i++ {
 		outcome.Attempts = i
@@ -117,7 +169,7 @@ func (b *Barrier) Run(ctx context.Context, generation uint64, policy Policy, ret
 		outcome.Artifacts, outcome.Failure = run(attemptCtx)
 		cancel()
 		outcome.RetryPending = retryable(outcome.Failure)
-		if outcome.Failure == nil || !outcome.RetryPending || ctx.Err() != nil || i == policy.MaxAttempts {
+		if !continueAttempt(ctx, outcome, policy) {
 			break
 		}
 		if err := connection.Wait(ctx, connection.Backoff(i, policy.InitialDelay, policy.MaximumDelay)); err != nil {
@@ -125,14 +177,22 @@ func (b *Barrier) Run(ctx context.Context, generation uint64, policy Policy, ret
 			break
 		}
 	}
+	b.complete(current, outcome, ctx.Err())
+	return outcome
+}
+
+func continueAttempt(ctx context.Context, outcome Outcome, policy Policy) bool {
+	return outcome.Failure != nil && outcome.RetryPending && ctx.Err() == nil && outcome.Attempts < policy.MaxAttempts
+}
+
+func (b *Barrier) complete(current *attempt, outcome Outcome, callerError error) {
 	b.mu.Lock()
+	defer b.mu.Unlock()
 	b.outcome = clone(outcome)
 	current.outcome = clone(outcome)
-	current.callerError = ctx.Err()
+	current.callerError = callerError
 	b.running = nil
 	close(current.done)
-	b.mu.Unlock()
-	return outcome
 }
 
 // Cache separates logical store and namespace barriers for one generation.

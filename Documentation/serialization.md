@@ -31,7 +31,14 @@ construction before network I/O. Repeated policy options are last-wins.
 
 Explicit `json` tags always win, including inside nested structs and collections.
 For a shared C# `Id` / Go `ID` property, use `json:"Id"`; preserving spelling does
-not translate different source-language names. The executable
+not translate different source-language names. Read-model plans have one
+intentional exception: an untagged **root** Go `ID` becomes `Id` before the policy
+is applied (`Id` by default, `id` with camelCase), matching a conventional C# `Id`
+property. A C# property actually declared `ID` stays `ID` under both policies;
+event plans also retain `ID`. The packaged capture's
+`TestUntaggedReadModelIDMatchesDocumentedDifference` pins this difference without
+changing either side. Nested fields and explicitly tagged identities do not use
+that root identity convention. The executable
 [`ExampleNamingPolicy`](https://github.com/Cratis/Chronicle.Go/blob/main/serialization/example_test.go) shows all three policies.
 
 Container naming is separate: read-model containers remain case-preserving,
@@ -51,6 +58,14 @@ C# Fundamentals' acronym-friendly policy is not System.Text.Json's built-in
 camelCase. The source and golden fixtures are pinned in [the parity map](parity.md).
 Go projection paths honor explicit tags throughout; some C# reflected projection
 paths consult only its naming policy, not `JsonPropertyName`.
+
+The [packaged C# naming capture](../serialization/testdata/naming/README.md)
+compares both policies, explicit names and nested paths with Go payloads, schema
+property names and field metadata. To regenerate it manually from the repository
+root, run `dotnet run --file serialization/testdata/naming/capture.cs -- .ai-work/naming-profile.json`
+with the SDK recorded in its provenance, review the output, then replace the
+checked-in fixture. Go tests read the fixture without running .NET. This naming
+comparison does not establish full schema compatibility or kernel interoperability.
 
 ## Upgrade an existing Go store safely
 
@@ -203,6 +218,43 @@ projection variants and runtime ordinary-scalar profiles are unsupported. Read-m
 fallback properties cannot be binary, even without a projection. This includes
 all case variants of serialized `id` and the MongoDB `_id` property.
 
+### Property-name admission
+
+Every event and read-model plan rejects case-insensitively duplicate sibling
+property names, even without binary fields. For example, a field tagged
+`json:"payload"` alongside `Payload string` is ambiguous under preserve naming.
+Nested objects, collection elements, map values, references, and registered
+derivatives receive the same check after the selected naming policy is applied.
+Explicit `json` tags do not bypass it. The pinned kernel's
+[schema lookup](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Schemas/JsonSchemaExtensions.cs#L92-L97)
+uses `SingleOrDefault` with `OrdinalIgnoreCase`, so case-only siblings cannot be
+selected unambiguously.
+
+Binary-free plans also reject exactly `Week`, `$this`, and `*NotSet*` as property
+names, case-sensitively, after naming is applied. The pinned kernel's
+[property-path parser and sentinel](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Properties/PropertyPath.cs)
+use exact matching; `Week` is the only function in its case-sensitive
+[derived-function registry](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Infrastructure/Properties/DerivedPropertyFunctions.cs#L43-L56).
+Names such as `week`, `$This`, `*notset*`, `WeekNumber`, and distinct names in
+separate objects remain valid. These refusals return `ErrUnsupported` with the
+offending serialized property path; existing exact-duplicate refusals remain
+`ErrInvalidConfiguration`.
+
+Boolean names are **not** reserved declaration names in binary-free graphs.
+The kernel's [literal-expression resolver](https://github.com/Cratis/Chronicle/blob/v19.29.4/Source/Kernel/Core/Projections/Engine/Expressions/EventValues/LiteralExpressionResolver.cs#L40-L44)
+intercepts exactly `true`, `True`, `false`, and `False` as source expressions.
+Existing source-expression and naming-rebind validation still refuses ambiguous
+uses there, without banning the fields at declaration construction. Case-only
+siblings such as `true` and `True` remain invalid under the separate sibling rule.
+The stricter [binary-containing policy](#names-in-binary-containing-graphs) below
+is unchanged.
+
+If an existing binary-free declaration now fails, choose unambiguous wire names
+with field names or explicit `json` tags before registering it. Coordinate any
+change to already-persisted schemas and consumers; the SDK does not silently
+rename properties or rewrite existing data. All naming policies, including
+`LegacyGoCamelCase`, enforce this admission rule.
+
 ### Names in binary-containing graphs
 
 If a type graph contains binary anywhere, **every serialized property name** in
@@ -250,8 +302,8 @@ case-insensitive comparison agrees with both CLR `OrdinalIgnoreCase` and Go's
 active naming policy are refused, not normalized by the admission check. Without this boundary decoding
 could populate multiple fields for one differently cased input property. Rename unsafe properties
 rather than relying on field order or an exact-case match. Types with **no binary**
-retain their existing naming, dotted-path lookup and exact-duplicate behavior;
-this rule does not fix their pre-existing kernel ambiguities. See the
+retain their dotted-path lookup and exact-duplicate behavior, but also enforce
+[general property-name admission](#property-name-admission). See the
 [binary admission source references](parity.md#baselines-and-evidence).
 
 Projection rebinding also rechecks model/variant keys, child identities and every

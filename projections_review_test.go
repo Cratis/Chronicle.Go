@@ -88,10 +88,16 @@ type SupplementaryLiteralModel struct {
 }
 
 type BooleanPathEvent struct {
-	LowerTrue  string `json:"true"`
-	UpperTrue  string `json:"True"`
-	LowerFalse string `json:"false"`
-	UpperFalse string `json:"False"`
+	Value string `json:"True"`
+}
+type BooleanLowerTruePathEvent struct {
+	Value string `json:"true"`
+}
+type BooleanLowerFalsePathEvent struct {
+	Value string `json:"false"`
+}
+type BooleanUpperFalsePathEvent struct {
+	Value string `json:"False"`
 }
 
 type BooleanPathModel struct {
@@ -127,29 +133,34 @@ func TestKernelUnrepresentableModelMappingsFailAtNewClient(t *testing.T) {
 }
 
 func TestKernelUnrepresentableKeysFailAtNewClient(t *testing.T) {
-	for _, path := range []string{"true", "True", "false", "False", "\U00010400"} {
-		t.Run(path, func(t *testing.T) {
-			registry := NewRegistry()
-			model, err := RegisterReadModel[ProjectionModel](registry)
-			if err != nil {
-				t.Fatal(err)
-			}
-			event, err := RegisterEvent[BooleanPathEvent](registry)
-			if err != nil {
-				t.Fatal(err)
-			}
-			option := projections.UsingKey(projections.Path[BooleanPathEvent, string](path))
-			if path == "\U00010400" {
-				option = projections.UsingConstantKey(path)
-			}
-			if err = registry.AddProjection(projections.ModelBound(model, projections.FromEvent(event, option))); err != nil {
-				t.Fatal(err)
-			}
-			client, err := NewClient(WithRegistry(registry))
-			var declaration *projections.DeclarationError
-			if client != nil || !errors.As(err, &declaration) || declaration.Directive != "FromEvent" {
-				t.Fatalf("invalid key accepted: %v", err)
-			}
-		})
+	t.Run("true", func(t *testing.T) { rejectKernelKey[BooleanLowerTruePathEvent](t, "true") })
+	t.Run("True", func(t *testing.T) { rejectKernelKey[BooleanPathEvent](t, "True") })
+	t.Run("false", func(t *testing.T) { rejectKernelKey[BooleanLowerFalsePathEvent](t, "false") })
+	t.Run("False", func(t *testing.T) { rejectKernelKey[BooleanUpperFalsePathEvent](t, "False") })
+	t.Run("\U00010400", func(t *testing.T) { rejectKernelKey[BooleanPathEvent](t, "\U00010400") })
+}
+
+func rejectKernelKey[E any](t *testing.T, path string) {
+	t.Helper()
+	registry := NewRegistry()
+	model, err := RegisterReadModel[ProjectionModel](registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event, err := RegisterEvent[E](registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	option := projections.UsingKey(projections.Path[E, string](path))
+	if path == "\U00010400" {
+		option = projections.UsingConstantKey(path)
+	}
+	if err = registry.AddProjection(projections.ModelBound(model, projections.FromEvent(event, option))); err != nil {
+		t.Fatal(err)
+	}
+	client, err := NewClient(WithRegistry(registry))
+	var declaration *projections.DeclarationError
+	if client != nil || !errors.As(err, &declaration) || declaration.Directive != "FromEvent" {
+		t.Fatalf("invalid key accepted: %v", err)
 	}
 }

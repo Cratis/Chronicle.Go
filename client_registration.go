@@ -39,15 +39,23 @@ func (e *RegistrationError) Unwrap() error { return e.Outcome.Failure }
 // WaitForRegistration connects if necessary and joins or starts a required pass
 // for this namespace and current generation. Failures are explicit and retryable
 // on a later call; successful store-wide definitions are shared across namespaces.
+// Definition passes use the generation's lifetime and configured registration retry
+// budget. Canceling ctx stops only this caller's wait, not the shared pass.
 // A failed reactor Open is reported with its ID while subscription retries continue;
 // a later call observes successful readiness once Open recovers.
 func (s *EventStore) WaitForRegistration(ctx context.Context) (RegistrationOutcome, error) {
+	return s.waitForRegistration(ctx, false)
+}
+
+// Explicit runtime publication retains its caller's authorization context and
+// stage-level cancellation outcome; ordinary readiness only waits on owned work.
+func (s *EventStore) waitForRegistration(ctx context.Context, callerOwned bool) (RegistrationOutcome, error) {
 	for {
 		g, attemptCtx, done, err := s.client.acquireRegistrationReady(ctx)
 		if err != nil {
 			return RegistrationOutcome{}, err
 		}
-		outcome, err := s.register(attemptCtx, g)
+		outcome, err := s.registerWithOwnership(attemptCtx, g, true, callerOwned)
 		if err == nil {
 			err = g.ctx.Err()
 		}
@@ -175,12 +183,16 @@ func (s *EventStore) register(ctx context.Context, g *generation) (RegistrationO
 }
 
 func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, waitReady bool) (RegistrationOutcome, error) {
+	return s.registerWithOwnership(ctx, g, waitReady, false)
+}
+
+func (s *EventStore) registerWithOwnership(ctx context.Context, g *generation, waitReady, callerOwned bool) (RegistrationOutcome, error) {
 	for {
 		if err := ctx.Err(); err != nil {
 			return RegistrationOutcome{}, err
 		}
 		root := s.definitionRoot()
-		outcome, err := s.registerRoot(ctx, g, waitReady, root)
+		outcome, err := s.registerRoot(ctx, g, waitReady, root, callerOwned)
 		if !s.definitionCurrent(root) || errors.Is(err, errDefinitionSuperseded) {
 			continue
 		}
@@ -188,12 +200,12 @@ func (s *EventStore) registerWithReadiness(ctx context.Context, g *generation, w
 	}
 }
 
-func (s *EventStore) registerRoot(ctx context.Context, g *generation, waitReady bool, root *definitionRoot) (RegistrationOutcome, error) {
+func (s *EventStore) registerRoot(ctx context.Context, g *generation, waitReady bool, root *definitionRoot, callerOwned bool) (RegistrationOutcome, error) {
 	// Registration is shared by every caller of this generation, whichever one
 	// drives it; a gated caller's needs would refuse, and fail, all artifacts.
 	// Stages that need a fix track it themselves (nestedProtectionAdmission).
 	ctx = kernelcapability.Without(ctx)
-	outcome := g.registrations.For(registrationKey(s.name, s.namespace, root.revision)).Run(ctx, g.number, s.client.config.registrationRetry, retryRegistration, func(ctx context.Context) ([]ArtifactRegistration, error) { return s.registerStages(ctx, g, root) })
+	outcome := s.registerDefinitionStages(ctx, g, root, callerOwned)
 	if outcome.Failure != nil {
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
@@ -223,6 +235,16 @@ func (s *EventStore) registerRoot(ctx context.Context, g *generation, waitReady 
 		return outcome, &RegistrationError{Outcome: outcome}
 	}
 	return outcome, nil
+}
+
+func (s *EventStore) registerDefinitionStages(ctx context.Context, g *generation, root *definitionRoot, callerOwned bool) RegistrationOutcome {
+	barrier := g.registrations.For(registrationKey(s.name, s.namespace, root.revision))
+	run := func(ctx context.Context) ([]ArtifactRegistration, error) { return s.registerStages(ctx, g, root) }
+	if callerOwned {
+		return barrier.Run(ctx, g.number, s.client.config.registrationRetry, retryRegistration, run)
+	}
+	return barrier.RunShared(ctx, g.number, s.client.config.registrationRetry, retryRegistration, run,
+		func(run func(context.Context)) error { return s.client.startRegistration(g, run) })
 }
 
 func (s *EventStore) registrationNeedsReadiness(waitReady, hasExternalSubscriptions bool) bool {

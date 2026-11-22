@@ -165,28 +165,32 @@ func enumRegistrationNoRPC(t *testing.T, registry *chronicle.Registry, path stri
 	}
 }
 
-type enumExcludedLiteralModel struct {
-	ID         string         `json:"ID"`
-	True       projectionEnum `json:"true" chronicle:"no-auto"`
-	TitleTrue  projectionEnum `json:"True" chronicle:"no-auto"`
-	False      projectionEnum `json:"false" chronicle:"no-auto"`
-	TitleFalse projectionEnum `json:"False" chronicle:"no-auto"`
+type enumExcludedTrueModel struct {
+	ID    string         `json:"ID"`
+	Value projectionEnum `json:"true" chronicle:"no-auto"`
 }
-type enumAllLiteralNamesEvent struct {
-	True       projectionEnum `json:"true"`
-	TitleTrue  projectionEnum `json:"True"`
-	False      projectionEnum `json:"false"`
-	TitleFalse projectionEnum `json:"False"`
+type enumExcludedTitleTrueModel struct {
+	ID    string         `json:"ID"`
+	Value projectionEnum `json:"True" chronicle:"no-auto"`
+}
+type enumExcludedFalseModel struct {
+	ID    string         `json:"ID"`
+	Value projectionEnum `json:"false" chronicle:"no-auto"`
+}
+type enumExcludedTitleFalseModel struct {
+	ID    string         `json:"ID"`
+	Value projectionEnum `json:"False" chronicle:"no-auto"`
 }
 
-func TestEnumAutoMapLiteralNamesHonorExclusionsAndOverrides(t *testing.T) {
+func enumLiteralExclusion[M, E any](t *testing.T) {
+	t.Helper()
 	codecs := projectionEnumCodecs(t, false)
-	event := mustEvent[enumAllLiteralNamesEvent](t, events.WithCodecs(codecs))
-	model := mustModel[enumExcludedLiteralModel](t, readmodels.WithCodecs(codecs))
+	event := mustEvent[E](t, events.WithCodecs(codecs))
+	model := mustModel[M](t, readmodels.WithCodecs(codecs))
 	for _, join := range []bool{false, true} {
 		b := projections.NewBuilder("excluded-enum-literals", model)
 		if join {
-			projections.Join(b, event, projections.Path[enumExcludedLiteralModel, string]("ID"), nil)
+			projections.Join(b, event, projections.Path[M, string]("ID"), nil)
 		} else {
 			projections.From(b, event, nil)
 		}
@@ -194,6 +198,14 @@ func TestEnumAutoMapLiteralNamesHonorExclusionsAndOverrides(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+}
+
+func TestEnumAutoMapLiteralNamesHonorExclusionsAndOverrides(t *testing.T) {
+	codecs := projectionEnumCodecs(t, false)
+	t.Run("exclude true", enumLiteralExclusion[enumExcludedTrueModel, enumTrueEvent])
+	t.Run("exclude True", enumLiteralExclusion[enumExcludedTitleTrueModel, enumTitleTrueEvent])
+	t.Run("exclude false", enumLiteralExclusion[enumExcludedFalseModel, enumFalseEvent])
+	t.Run("exclude False", enumLiteralExclusion[enumExcludedTitleFalseModel, enumTitleFalseEvent])
 	// An explicit target write suppresses name-AutoMap for both From and Join.
 	for _, join := range []bool{false, true} {
 		b := projections.NewBuilder("overridden-enum-literal", mustModel[enumTrueModel](t, readmodels.WithCodecs(codecs)))

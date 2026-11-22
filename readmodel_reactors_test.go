@@ -337,7 +337,7 @@ func TestReadModelReactorStartupReporterCanReenterSameStore(t *testing.T) {
 
 type plannedReactorModel struct {
 	ID         string
-	ExternalID string `json:"ID"`
+	ExternalID string `json:"ExternalID"`
 }
 
 func TestReadModelReactorDispatchUsesRegisteredNamingPlan(t *testing.T) {

@@ -6,6 +6,7 @@ package readmodels
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/cratis/chronicle.go/internal/faults"
@@ -90,12 +91,11 @@ func TestReadModelDescriptorRejectsRootIDCollision(t *testing.T) {
 		ID    string
 		Other string `json:"id"`
 	}
-	model, err := Define[policyCollision]()
-	if err != nil {
-		t.Fatal(err)
+	if _, err := Define[policyCollision](); !errors.Is(err, faults.ErrUnsupported) {
+		t.Fatalf("case-only collision at construction: %v", err)
 	}
 	for _, policy := range []serialization.NamingPolicy{serialization.CamelCase, serialization.LegacyGoCamelCase} {
-		if _, err := model.Descriptor().WithNamingPolicy(policy); !errors.Is(err, faults.ErrInvalidConfiguration) {
+		if _, err := serialization.CompileReadModel(reflect.TypeFor[policyCollision](), policy); !errors.Is(err, faults.ErrInvalidConfiguration) {
 			t.Fatalf("policy %v collision: %v", policy, err)
 		}
 	}
