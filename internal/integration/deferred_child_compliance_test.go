@@ -19,22 +19,25 @@ type DeferredComplianceRootCreated struct {
 }
 
 type DeferredComplianceChildAdded struct {
-	ID     string `json:"id"`
-	RootID string `json:"rootId"`
-	Email  string `json:"email" chronicle:"pii"`
-	Name   string `json:"name"`
+	ID              string `json:"id"`
+	RootID          string `json:"rootId"`
+	Email           string `json:"email" chronicle:"pii"`
+	NamespaceSecret string `json:"namespaceSecret" chronicle:"encrypted(scope=namespace)"`
+	Name            string `json:"name"`
 }
 
 type DeferredComplianceChildEmailChanged struct {
-	ID     string `json:"id"`
-	RootID string `json:"rootId"`
-	Email  string `json:"email" chronicle:"pii"`
+	ID              string `json:"id"`
+	RootID          string `json:"rootId"`
+	Email           string `json:"email" chronicle:"pii"`
+	NamespaceSecret string `json:"namespaceSecret" chronicle:"encrypted(scope=namespace)"`
 }
 
 type DeferredComplianceChild struct {
-	ID    string `json:"id" chronicle:"key"`
-	Email string `json:"email" chronicle:"pii"`
-	Name  string `json:"name"`
+	ID              string `json:"id" chronicle:"key"`
+	Email           string `json:"email" chronicle:"pii"`
+	NamespaceSecret string `json:"namespaceSecret" chronicle:"encrypted(scope=namespace)"`
+	Name            string `json:"name"`
 }
 
 type DeferredComplianceRoot struct {
@@ -45,29 +48,32 @@ type DeferredComplianceRoot struct {
 
 const deferredComplianceContainer = "deferred-protected-children"
 
-// These witnesses mirror the C# deferred-child PII scenarios for Chronicle#4599.
+// These witnesses extend the C# deferred-child PII scenarios for Chronicle#4599
+// with independent namespace encryption and subject erasure checks.
 // The root subscription ensures a child arriving first must wait in a future.
 func TestKernelDeferredProtectedChildBeforeRoot(t *testing.T) {
 	f := newDeferredChildComplianceFixture(t)
-	f.appendObserved(t, DeferredComplianceChildAdded{ID: "child", RootID: "root", Email: "initial@example.test", Name: "Child"})
+	f.appendObserved(t, DeferredComplianceChildAdded{ID: "child", RootID: "root", Email: "initial@example.test", NamespaceSecret: "initial-namespace-control", Name: "Child"})
 	f.assertRootAbsent(t)
 	f.appendObserved(t, DeferredComplianceRootCreated{Name: "Root"})
-	f.assertReleasedChild(t, "initial@example.test", "Child")
+	f.assertReleasedChild(t, DeferredComplianceChild{ID: "child", Email: "initial@example.test", NamespaceSecret: "initial-namespace-control", Name: "Child"})
 	f.assertStoredChildProtected(t)
+	f.assertChildAfterErasure(t)
 }
 
 func TestKernelDeferredProtectedChildUpdateBeforeRoot(t *testing.T) {
 	f := newDeferredChildComplianceFixture(t)
-	f.appendObserved(t, DeferredComplianceChildEmailChanged{ID: "child", RootID: "root", Email: "updated@example.test"})
+	f.appendObserved(t, DeferredComplianceChildEmailChanged{ID: "child", RootID: "root", Email: "updated@example.test", NamespaceSecret: "updated-namespace-control"})
 	f.assertRootAbsent(t)
 	f.appendObserved(t, DeferredComplianceRootCreated{Name: "Root"})
-	f.assertReleasedChild(t, "updated@example.test", "")
+	f.assertReleasedChild(t, DeferredComplianceChild{ID: "child", Email: "updated@example.test", NamespaceSecret: "updated-namespace-control"})
 	f.assertStoredChildProtected(t)
 
-	// As in C#, the later add may replace the email, but must still protect it.
-	f.appendObserved(t, DeferredComplianceChildAdded{ID: "child", RootID: "root", Email: "initial@example.test", Name: "Child"})
-	f.assertReleasedChild(t, "initial@example.test", "Child")
+	// As in C#, the later add may replace the values, but must still protect them.
+	f.appendObserved(t, DeferredComplianceChildAdded{ID: "child", RootID: "root", Email: "initial@example.test", NamespaceSecret: "initial-namespace-control", Name: "Child"})
+	f.assertReleasedChild(t, DeferredComplianceChild{ID: "child", Email: "initial@example.test", NamespaceSecret: "initial-namespace-control", Name: "Child"})
 	f.assertStoredChildProtected(t)
+	f.assertChildAfterErasure(t)
 }
 
 type deferredChildComplianceFixture struct {
@@ -131,24 +137,34 @@ func (f *deferredChildComplianceFixture) assertRootAbsent(t *testing.T) {
 	}
 }
 
-func (f *deferredChildComplianceFixture) assertReleasedChild(t *testing.T, email, name string) {
+func (f *deferredChildComplianceFixture) assertReleasedChild(t *testing.T, expected DeferredComplianceChild) {
 	t.Helper()
-	instance := awaitProjection(t, f.kernel.ctx, f.reader, "root", func(root DeferredComplianceRoot) bool {
-		return root.Name == "Root" && len(root.Children) == 1 && root.Children[0].Email == email
+	awaitProjection(t, f.kernel.ctx, f.reader, "root", func(root DeferredComplianceRoot) bool {
+		return root.Name == "Root" && len(root.Children) == 1 && root.Children[0] == expected
 	})
-	child := instance.Value.Children[0]
-	if child.ID != "child" || child.Name != name {
-		t.Fatal("deferred resolution changed the child identity or unprotected name")
-	}
 }
 
 func (f *deferredChildComplianceFixture) assertStoredChildProtected(t *testing.T) {
 	t.Helper()
-	assertStoredChildStringProtected(t, f.kernel, storedChildStringProtection{
-		Collection: deferredComplianceContainer,
-		Key:        "root",
-		Children:   "children",
-		Property:   "email",
-		Plaintexts: []string{"initial@example.test", "updated@example.test"},
-	})
+	for property, plaintexts := range map[string][]string{
+		"email":           {"initial@example.test", "updated@example.test"},
+		"namespaceSecret": {"initial-namespace-control", "updated-namespace-control"},
+	} {
+		assertStoredChildStringProtected(t, f.kernel, storedChildStringProtection{
+			Collection: deferredComplianceContainer,
+			Key:        "root",
+			Children:   "children",
+			Property:   property,
+			Plaintexts: plaintexts,
+		})
+	}
+}
+
+func (f *deferredChildComplianceFixture) assertChildAfterErasure(t *testing.T) {
+	t.Helper()
+	if err := f.store.Compliance().ErasePII(f.kernel.ctx, "root"); err != nil {
+		t.Fatal(err)
+	}
+	f.assertReleasedChild(t, DeferredComplianceChild{ID: "child", NamespaceSecret: "initial-namespace-control", Name: "Child"})
+	f.assertStoredChildProtected(t)
 }
