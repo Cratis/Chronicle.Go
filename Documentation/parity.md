@@ -726,8 +726,9 @@ Go consistency improvement, not a claim of equivalence for that C# limitation.
 The older golden names above remain source-derived. The separately pinned
 [packaged naming capture](../serialization/testdata/naming/README.md) runs
 Chronicle 19.153.0 and Fundamentals 7.33.1 without a kernel and compares actual
-payloads, schema property names, serializer fields and projection reflection
-paths. `TestNamingMatchesPackagedCSharpCapture` compares Go events with C# `ID`
+payloads, schema property names and serializer fields; the explicit-name
+projection reflection paths are listed from the capture's documented C#
+reflection rules rather than derived from Go output. `TestNamingMatchesPackagedCSharpCapture` compares Go events with C# `ID`
 and Go read models with conventional C# `Id`, including nested/acronym names and
 explicit overrides under both policies.
 `TestUntaggedReadModelIDMatchesDocumentedDifference` preserves the intentional
