@@ -62,11 +62,7 @@ func constraintContract(d constraints.Definition) *constraintcontracts.Constrain
 		}
 	}
 	if d.Kind() == constraints.Unique {
-		unique := &constraintcontracts.UniqueConstraintDefinition{IgnoreCasing: d.IgnoresCasing()}
-		for _, field := range d.Fields() {
-			unique.EventDefinitions = append(unique.EventDefinitions, &constraintcontracts.UniqueConstraintEventDefinition{EventTypeId: string(field.Event.Ref().ID), Properties: field.Properties})
-		}
-		result.Definition.Value0 = unique
+		result.Definition.Value0 = uniqueConstraintContract(d)
 	} else {
 		unique := &constraintcontracts.UniqueEventTypeConstraintDefinition{}
 		for _, event := range d.EventTypes() {
@@ -75,6 +71,16 @@ func constraintContract(d constraints.Definition) *constraintcontracts.Constrain
 		result.Definition.Value1 = unique
 	}
 	return result
+}
+
+func uniqueConstraintContract(d constraints.Definition) *constraintcontracts.UniqueConstraintDefinition {
+	unique := &constraintcontracts.UniqueConstraintDefinition{
+		IgnoreCasing: d.IgnoresCasing(), Mode: constraintcontracts.UniqueConstraintMode(d.Mode()),
+	}
+	for _, field := range d.Fields() {
+		unique.EventDefinitions = append(unique.EventDefinitions, &constraintcontracts.UniqueConstraintEventDefinition{EventTypeId: string(field.Event.Ref().ID), Properties: field.Properties})
+	}
+	return unique
 }
 
 func (s *EventStore) resolveConstraintMessages(reply any) {

@@ -38,3 +38,27 @@ func ExampleUniqueValues() {
 	// Supply chronicle.WithRegistry(registry) when constructing the client.
 	// Output: UniqueEmail true
 }
+
+func ExampleBuilder_WithMode() {
+	registry := chronicle.NewRegistry()
+	contact, err := chronicle.RegisterEvent[Contact](registry, events.WithID("contact-registered"))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	latest, err := constraints.UniqueValues("LatestEmail").
+		On(contact.Descriptor(), "emailAddress").WithMode(constraints.PerEventSource).Build()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	retained, err := constraints.UniqueValues("RetainedEmails").
+		On(contact.Descriptor(), "emailAddress").WithMode(constraints.PerValue).Build()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(latest.Mode(), retained.Mode())
+	// Register only the definition that matches the application's retention rule.
+	// Output: 0 1
+}

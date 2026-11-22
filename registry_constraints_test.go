@@ -104,6 +104,64 @@ func TestConstraintRegistrationMatchesCSharpGoldenRequest(t *testing.T) {
 	}
 }
 
+func TestUniqueModeRegistrationMatchesPinnedCSharpConverter(t *testing.T) {
+	// Source-derived from UniqueConstraintMode and ConstraintConverters at Chronicle
+	// 9157c14098688ac0c6946a335bfabf1f44220c7c, not an executed C# capture.
+	registry := NewRegistry()
+	reserved := constraintEvent[EmailReserved](t, registry, "email-reserved")
+	changed := constraintEvent[EmailChanged](t, registry, "email-changed")
+	released := constraintEvent[EmailReleased](t, registry, "email-released")
+	addConstraint(t, registry, constraints.UniqueValues("DefaultEmail").On(reserved, "email"))
+	addConstraint(t, registry, constraints.UniqueValues("SourceEmail").On(reserved, "email").WithMode(constraints.PerEventSource))
+	addConstraint(t, registry, constraints.UniqueValues("ValueEmail").On(reserved, "email").On(changed, "contact.emailAddress").
+		WithMode(constraints.PerValue).IgnoreCasing().RemovedWith(released).
+		PerEventSourceType().PerEventStreamType().PerEventStreamID().ForEventLog().ForEventSequences("outbox"))
+	want := &constraintcontracts.RegisterConstraintsRequest{}
+	if err := protojson.Unmarshal([]byte(`{
+		"EventStore": "mode-store",
+		"Constraints": [
+			{"Name": "DefaultEmail", "Type": "Unique", "Definition": {"Value0": {
+				"EventDefinitions": [{"EventTypeId": "email-reserved", "Properties": ["email"]}],
+				"Mode": "PerEventSource"
+			}}},
+			{"Name": "SourceEmail", "Type": "Unique", "Definition": {"Value0": {
+				"EventDefinitions": [{"EventTypeId": "email-reserved", "Properties": ["email"]}],
+				"Mode": "PerEventSource"
+			}}},
+			{"Name": "ValueEmail", "Type": "Unique", "RemovedWith": ["email-released"],
+				"Definition": {"Value0": {
+					"EventDefinitions": [
+						{"EventTypeId": "email-reserved", "Properties": ["email"]},
+						{"EventTypeId": "email-changed", "Properties": ["contact.emailAddress"]}
+					],
+					"IgnoreCasing": true, "Mode": "PerValue"
+				}},
+				"Scope": {"EventSourceType": "_scoped_", "EventStreamType": "_scoped_", "EventStreamId": "_scoped_"},
+				"EventSequences": ["event-log", "outbox"]
+			}
+		]
+	}`), want); err != nil {
+		t.Fatal(err)
+	}
+	requests := make(chan *constraintcontracts.RegisterConstraintsRequest, 1)
+	kernel := &supervisedKernel{registerConstraints: func(_ context.Context, request *constraintcontracts.RegisterConstraintsRequest) error {
+		requests <- proto.Clone(request).(*constraintcontracts.RegisterConstraintsRequest)
+		return nil
+	}}
+	client, ctx := supervisionClient(t, kernel, WithRegistry(registry))
+	if _, err := client.EventStore(ctx, "mode-store"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case got := <-requests:
+		if !proto.Equal(got, want) {
+			t.Fatalf("constraint request\ngot: %s\nwant: %s", protojson.Format(got), protojson.Format(want))
+		}
+	case <-ctx.Done():
+		t.Fatal("no constraint registration")
+	}
+}
+
 func TestConstraintRegistryRejectsInvalidOrForeignDeclarations(t *testing.T) {
 	registry := NewRegistry()
 	registered := constraintEvent[EmailReserved](t, registry, "registered")
