@@ -1317,6 +1317,22 @@ The kernel may fold the batch more than once during recovery; each attempt reloa
 the persisted state, so the result stays 6. Go does not change the failure wire
 contract independently.
 
+## Namespace removal
+
+References are pinned to Chronicle
+[`9157c14098688ac0c6946a335bfabf1f44220c7c`](https://github.com/Cratis/Chronicle/tree/9157c14098688ac0c6946a335bfabf1f44220c7c),
+the source for the generated contracts and the CI kernel image
+`19.153.0-development`. Paths below are relative to that checkout.
+The [operations guide](operations.md#remove-a-namespace) describes safe use.
+
+| Contract and pinned source | Go surface and evidence | Boundary |
+| --- | --- | --- |
+| `Source/Clients/DotNET/IEventStore.cs` (`RemoveNamespace`) and `EventStore.cs` (same method) | **Implemented** as `store.Namespaces().Remove(ctx, target)` using the existing generated `RemoveNamespace` RPC and shared command-envelope checks. `TestNamespaceRemovalRoutesExplicitTargetWithoutLifecycleWork` checks real bufconn serialization, store isolation and the explicit unchanged target | One caller-requested mutation; no C# overload or separate administrative handle. No automatic retry, confirmation or older-kernel fallback |
+| `Source/Kernel/Core/Namespaces/RemoveNamespace.cs`, `RemoveNamespaceValidator.cs` and `NamespaceRemover.cs` | Blank input is rejected locally; other targets reach the kernel. `TestNamespaceRemovalLeavesProtectedTargetsServerAuthoritative` preserves server refusals. `TestNamespaceRemovalPreservesCommandEnvelopeFailures` checks authorization, validation, execution and unknown severity diagnostics | Missing namespaces are a no-op; the kernel protects the default namespace case-insensitively and the system store. The remover forgets the namespace, removes observers and reminders, drops Chronicle-owned namespace data and deletes its record; arbitrary external sinks are not covered |
+| `Source/Kernel/Core/Security/StoreAccessMap.cs` and `StoreEntitlementEnforcement.cs` | **Kernel-owned authorization**: removal has no explicit access override, so defaults to store `Manage`; enforcement depends on authentication/entitlement configuration, including audit mode | The Go handle does not grant administrative permission or preflight authorization. Stopping every target client is a C#-documented operator prerequisite, not an enforced kernel quiescence barrier |
+| `Source/Kernel/Core.Specs/Namespaces/for_NamespaceRemover/when_removing_a_namespace.cs` | Upstream specs cover observer unsubscribe/removal, reminder-only observers, storage drop, record deletion and forgetting the namespace. Go's `TestKernelNamespaceRemoval` is a CI-only witness for listing disappearance, repeated missing removal, protected defaults, event-data isolation and empty data on recreation | The Go integration witness has not been run locally and does not witness observer/reminder teardown, external sink deletion or restart persistence. It fails rather than skipping a missing endpoint or unsupported RPC |
+| Caller lifecycle and error identity | `TestNamespaceRemovalCancellationAfterDispatch`, `TestNamespaceRemovalClosedOrCanceledClientDoesNotDispatch`, `TestNamespaceRemovalPreservesTransportErrorsWithoutRetry`, `TestNamespaceRemovalRejectsMalformedResponse` and the offline `ExampleNamespaces_Remove` | No cache eviction, handle invalidation, re-registration or client shutdown. Cancellation/error does not establish rollback. Nil-response protection is checked directly at the shared envelope guard because the generated client always allocates its response |
+
 ## Page delivery and batch methods
 
 References use C# `74f927603a6da4a2d6f86fe29768f8eac4370ac9` (Chronicle#5610),
