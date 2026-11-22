@@ -287,6 +287,11 @@ func (n *node) compilePrimitive() error {
 func (n *node) compileUnsigned() {
 	typ := n.typ
 	n.schema["type"], n.schema["format"], n.schema["minimum"] = "integer", integerFormat(typ), 0
+	// Preserve registered schemas; fixed kernels admit wider typed values without
+	// enforcing this legacy JSON Schema bound during event-content validation.
+	if typ.Kind() == reflect.Uint || typ.Kind() == reflect.Uint64 {
+		n.schema["maximum"] = uint64(1<<63 - 1)
+	}
 }
 
 func isSchemaNameRune(r rune) bool {

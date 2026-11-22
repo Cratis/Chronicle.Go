@@ -126,10 +126,14 @@ Ordinary typed unsigned fields and concepts support the full `uint64` range,
 including named primitives, nullable pointers, slices and fixed arrays. Values stay
 unquoted JSON integers. Lossless MongoDB event storage requires Chronicle v19.33.2
 or later ([Chronicle#4588](https://github.com/Cratis/Chronicle/issues/4588)).
-Generated unsigned schemas retain their integer format and minimum zero but no
-longer declare a `MaxInt64` maximum. Existing registered generations may therefore
-differ; review [generation validation and evolution](events/event-types.md#persisted-identities-and-generations)
-before upgrading an existing store rather than disabling validation to overwrite history.
+Generated `uint`/`uint64` schemas retain the legacy `MaxInt64` maximum, integer
+format and minimum zero byte-for-byte, including historical generations. No schema
+migration is required solely for this SDK upgrade. The inspected Chronicle append
+validator checks required fields and types, not numeric bounds; wide typed values
+are admitted despite the retained maximum. This is still a real JSON Schema
+constraint: an independent full JSON Schema validator can reject those payloads.
+The hosted upgrade witness separately checks validated re-registration and exact
+wide-value persistence; local native checks do not establish that hosted result.
 
 Under maps or open-derived subtrees, integer concepts must still lie within ±2^53,
 including nested collections and pointers. These checks inspect the codec's actual

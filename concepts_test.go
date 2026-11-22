@@ -165,26 +165,30 @@ func assertUnsignedConceptRoundTrip(t *testing.T, want unsignedConceptValues) {
 	}
 }
 
-func TestUnsignedConceptSchemaHasNoSignedMaximum(t *testing.T) {
+func TestUnsignedConceptSchemaRetainsLegacyMaximum(t *testing.T) {
 	plan, err := serialization.Compile(reflect.TypeFor[unsignedConceptValues]())
 	if err != nil {
 		t.Fatal(err)
 	}
-	var schema struct{ Properties map[string]map[string]any }
+	var schema struct{ Properties map[string]json.RawMessage }
 	if err := json.Unmarshal([]byte(plan.Schema()), &schema); err != nil {
 		t.Fatal(err)
 	}
-	integer := map[string]any{"type": "integer", "format": "uint64", "minimum": float64(0)}
-	if !reflect.DeepEqual(schema.Properties["Value"], integer) {
+	integer := `{"format":"uint64","maximum":9223372036854775807,"minimum":0,"type":"integer"}`
+	if string(schema.Properties["Value"]) != integer {
 		t.Fatalf("concept schema = %s", plan.Schema())
 	}
 	for _, name := range []string{"Slice", "Array"} {
-		if !reflect.DeepEqual(schema.Properties[name]["items"], integer) {
+		var collection struct{ Items json.RawMessage }
+		if err := json.Unmarshal(schema.Properties[name], &collection); err != nil {
+			t.Fatal(err)
+		}
+		if string(collection.Items) != integer {
 			t.Fatalf("concept collection schema = %s", plan.Schema())
 		}
 	}
-	integer["format"] = "uint64?"
-	if !reflect.DeepEqual(schema.Properties["Pointer"], integer) {
+	nullable := `{"format":"uint64?","maximum":9223372036854775807,"minimum":0,"type":"integer"}`
+	if string(schema.Properties["Pointer"]) != nullable {
 		t.Fatalf("nullable concept schema = %s", plan.Schema())
 	}
 }

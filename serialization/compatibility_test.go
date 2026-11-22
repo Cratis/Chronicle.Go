@@ -128,8 +128,10 @@ func TestNativeUnsignedFullRangeRoundTrips(t *testing.T) {
 	}
 }
 
-func TestUnsignedSchemasHaveNoSignedMaximum(t *testing.T) {
-	for _, value := range []any{uint(0), uint64(0), Amount(0), new(uint64), []uint64{}, [2]uint64{}} {
+type NativeAmount uint
+
+func TestUnsignedSchemasRetainLegacyMaximum(t *testing.T) {
+	for _, value := range []any{uint(0), uint64(0), Amount(0), NativeAmount(0), new(uint64), new(NativeAmount), []uint64{}, [2]uint64{}, struct{ Value uint64 }{}} {
 		t.Run(reflect.TypeOf(value).String(), func(t *testing.T) {
 			typ := reflect.StructOf([]reflect.StructField{{Name: "Value", Type: reflect.TypeOf(value)}})
 			plan, err := serialization.Compile(typ)
@@ -150,11 +152,12 @@ func TestUnsignedSchemasHaveNoSignedMaximum(t *testing.T) {
 func assertUnsignedSchema(t *testing.T, data json.RawMessage) {
 	t.Helper()
 	type integerSchema struct {
-		Type    json.RawMessage
-		Format  string
-		Minimum *uint64
-		Maximum json.RawMessage
-		Items   json.RawMessage
+		Type       json.RawMessage
+		Format     string
+		Minimum    *uint64
+		Maximum    json.RawMessage
+		Items      json.RawMessage
+		Properties map[string]json.RawMessage
 	}
 	var schema integerSchema
 	if err := json.Unmarshal(data, &schema); err != nil {
@@ -164,12 +167,49 @@ func assertUnsignedSchema(t *testing.T, data json.RawMessage) {
 		assertUnsignedSchema(t, schema.Items)
 		return
 	}
-	want := integerSchema{Type: json.RawMessage(`"integer"`), Format: "uint64", Minimum: new(uint64(0))}
+	if schema.Properties != nil {
+		for _, property := range schema.Properties {
+			assertUnsignedSchema(t, property)
+		}
+		return
+	}
+	want := integerSchema{Type: json.RawMessage(`"integer"`), Format: "uint64", Minimum: new(uint64(0)), Maximum: json.RawMessage(`9223372036854775807`)}
 	if schema.Format == "uint64?" {
 		want.Format = "uint64?"
 	}
 	if !reflect.DeepEqual(schema, want) {
-		t.Fatalf("integer schema = %s, want type %s, format %s, minimum zero and no maximum", data, want.Type, want.Format)
+		t.Fatalf("integer schema = %s, want type %s, format %s, minimum zero and legacy maximum %s", data, want.Type, want.Format, want.Maximum)
+	}
+}
+
+func TestOtherIntegerSchemasRemainUnchanged(t *testing.T) {
+	for _, tc := range []struct {
+		value any
+		want  string
+	}{
+		{uint8(0), `{"format":"byte","minimum":0,"type":"integer"}`},
+		{uint16(0), `{"format":"uint32","minimum":0,"type":"integer"}`},
+		{uint32(0), `{"format":"uint32","minimum":0,"type":"integer"}`},
+		{int8(0), `{"format":"int16","type":"integer"}`},
+		{int16(0), `{"format":"int16","type":"integer"}`},
+		{int32(0), `{"format":"int32","type":"integer"}`},
+		{int64(0), `{"format":"int64","type":"integer"}`},
+		{int(0), `{"format":"int64","type":"integer"}`},
+	} {
+		t.Run(reflect.TypeOf(tc.value).String(), func(t *testing.T) {
+			typ := reflect.StructOf([]reflect.StructField{{Name: "Value", Type: reflect.TypeOf(tc.value)}})
+			plan, err := serialization.Compile(typ)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var schema struct{ Properties map[string]json.RawMessage }
+			if err := json.Unmarshal([]byte(plan.Schema()), &schema); err != nil {
+				t.Fatal(err)
+			}
+			if string(schema.Properties["Value"]) != tc.want {
+				t.Fatalf("integer schema = %s, want %s", schema.Properties["Value"], tc.want)
+			}
+		})
 	}
 }
 
