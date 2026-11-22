@@ -37,6 +37,27 @@ func (n *Namespaces) List(ctx context.Context) ([]Namespace, error) {
 	return values, nil
 }
 
+// Remove irreversibly removes the explicit target namespace, its observers, their
+// reminders and the data Chronicle stores for it. It uses the handle's store and
+// credentials, not its selected namespace. Before calling, the operator must stop
+// every client using the target; neither the SDK nor the kernel enforces this
+// prerequisite. There is no confirmation, client-side authorization check or retry.
+// Kernel authorization applies; the handle is not an administrative permission.
+// Removing a missing namespace is a no-op. The kernel rejects the default
+// namespace (case-insensitively) and the system store. An error or cancellation
+// does not prove rollback; inspect server state before explicitly retrying.
+// Already-issued handles are not evicted, closed or invalidated by this call.
+func (n *Namespaces) Remove(ctx context.Context, namespace Namespace) error {
+	if strings.TrimSpace(string(namespace)) == "" {
+		return fmt.Errorf("%w: namespace must be nonblank", ErrInvalidConfiguration)
+	}
+	result, err := namespaces.NewNamespacesClient(n.store.client.transport).RemoveNamespace(ctx, &namespaces.RemoveNamespaceRequest{EventStore: string(n.store.name), Namespace: string(namespace)})
+	if err != nil {
+		return err
+	}
+	return wire.CheckEnvelope(result)
+}
+
 // Ensure idempotently creates a nonblank namespace in this store.
 func (n *Namespaces) Ensure(ctx context.Context, namespace Namespace) error {
 	if strings.TrimSpace(string(namespace)) == "" {

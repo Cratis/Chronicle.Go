@@ -42,9 +42,11 @@ func (f Func) Seed(builder *Builder) error {
 // not be shared across goroutines or retained after Seed returns. Errors from
 // fluent calls accumulate and are returned by Prepare, even if ignored by Seed.
 type Builder struct {
-	state     *builderState
-	namespace metadata.Namespace
-	scoped    bool
+	state      *builderState
+	namespace  metadata.Namespace
+	scoped     bool
+	streamType events.StreamType
+	streamID   events.StreamID
 }
 
 type builderState struct {
@@ -66,14 +68,7 @@ func For[E any](builder *Builder, source events.SourceID, values ...E) *Builder 
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	found := false
-	for _, descriptor := range builder.state.catalog.Descriptors() {
-		if descriptor.GoType() == typ {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !builder.hasEventType(typ) {
 		builder.fail(fmt.Errorf("%w: seed event type %s", faults.ErrNotRegistered, typ))
 		return builder
 	}
@@ -100,14 +95,46 @@ func (b *Builder) ForNamespace(namespace metadata.Namespace) *Builder {
 	if strings.TrimSpace(string(namespace)) == "" {
 		b.fail(fmt.Errorf("%w: blank seed namespace", faults.ErrInvalidConfiguration))
 	}
-	return &Builder{state: b.state, namespace: namespace, scoped: true}
+	view := *b
+	view.namespace, view.scoped = namespace, true
+	return &view
+}
+
+// WithStream returns an independent view selecting a stream type and ID for
+// subsequent typed or heterogeneous seeds. It preserves the namespace scope.
+// Only empty strings default to AllStreamTypes and DefaultStreamID; whitespace
+// and other opaque identifiers are preserved verbatim. Builders that never use
+// WithStream keep routing omitted on the wire. Non-default routing requires
+// positive kernel capability confirmation before any entries are registered.
+func (b *Builder) WithStream(streamType events.StreamType, streamID events.StreamID) *Builder {
+	if b == nil || b.state == nil {
+		return b
+	}
+	if streamType == "" {
+		streamType = events.AllStreamTypes
+	}
+	if streamID == "" {
+		streamID = events.DefaultStreamID
+	}
+	view := *b
+	view.streamType, view.streamID = streamType, streamID
+	return &view
+}
+
+func (b *Builder) hasEventType(typ reflect.Type) bool {
+	for _, descriptor := range b.state.catalog.Descriptors() {
+		if descriptor.GoType() == typ {
+			return true
+		}
+	}
+	return false
 }
 
 // ForEventSource adds heterogeneous registered event values, in input order.
 // Non-nil pointers are supported. Payloads and static tags use the client's
 // event descriptors and naming policy; event-source IDs are preserved verbatim.
 func (b *Builder) ForEventSource(source events.SourceID, values ...any) *Builder {
-	if b == nil || b.state == nil || b.state.sealed || b.state.err != nil {
+	if !b.canAdd() {
 		return b
 	}
 	if strings.TrimSpace(string(source)) == "" {
@@ -120,39 +147,54 @@ func (b *Builder) ForEventSource(source events.SourceID, values ...any) *Builder
 		return b
 	}
 	for _, value := range values {
-		descriptor, ok := b.state.catalog.Lookup(value)
-		if !ok {
-			b.fail(fmt.Errorf("%w: seed event %T", faults.ErrNotRegistered, value))
-			return b
-		}
-		content, err := descriptor.Marshal(value)
+		entry, err := b.entry(source, value)
 		if err != nil {
-			b.fail(fmt.Errorf("serialize seed %s: %w", descriptor.Ref().ID, err))
+			b.fail(err)
 			return b
-		}
-		entry := &seeding.SeedingEntry{EventSourceId: string(source), EventTypeId: string(descriptor.Ref().ID), Content: string(content)}
-		for _, tag := range descriptor.Tags() {
-			entry.Tags = append(entry.Tags, string(tag))
 		}
 		request := b.state.request
 		if !b.scoped {
 			addEntry(&request.GlobalByEventType, &request.GlobalByEventSource, entry)
 			continue
 		}
-		var group *seeding.NamespacedSeedEntries
-		for _, candidate := range request.NamespacedEntries {
-			if candidate.Namespace == string(b.namespace) {
-				group = candidate
-				break
-			}
-		}
-		if group == nil {
-			group = &seeding.NamespacedSeedEntries{Namespace: string(b.namespace)}
-			request.NamespacedEntries = append(request.NamespacedEntries, group)
-		}
+		group := b.namespaceGroup()
 		addEntry(&group.ByEventType, &group.ByEventSource, entry)
 	}
 	return b
+}
+
+func (b *Builder) entry(source events.SourceID, value any) (*seeding.SeedingEntry, error) {
+	descriptor, ok := b.state.catalog.Lookup(value)
+	if !ok {
+		return nil, fmt.Errorf("%w: seed event %T", faults.ErrNotRegistered, value)
+	}
+	content, err := descriptor.Marshal(value)
+	if err != nil {
+		return nil, fmt.Errorf("serialize seed %s: %w", descriptor.Ref().ID, err)
+	}
+	entry := &seeding.SeedingEntry{
+		EventSourceId: string(source), EventTypeId: string(descriptor.Ref().ID), Content: string(content),
+		EventStreamType: string(b.streamType), EventStreamId: string(b.streamID),
+	}
+	for _, tag := range descriptor.Tags() {
+		entry.Tags = append(entry.Tags, string(tag))
+	}
+	return entry, nil
+}
+
+func (b *Builder) canAdd() bool {
+	return b != nil && b.state != nil && !b.state.sealed && b.state.err == nil
+}
+
+func (b *Builder) namespaceGroup() *seeding.NamespacedSeedEntries {
+	for _, group := range b.state.request.NamespacedEntries {
+		if group.Namespace == string(b.namespace) {
+			return group
+		}
+	}
+	group := &seeding.NamespacedSeedEntries{Namespace: string(b.namespace)}
+	b.state.request.NamespacedEntries = append(b.state.request.NamespacedEntries, group)
+	return group
 }
 
 func (b *Builder) fail(err error) {
@@ -199,7 +241,7 @@ func Prepare(catalog *events.Catalog, seeders ...Seeder) (definition Definition,
 	}()
 	builder := &Builder{state: state}
 	for _, seeder := range seeders {
-		if seeder == nil || (reflect.ValueOf(seeder).Kind() == reflect.Pointer && reflect.ValueOf(seeder).IsNil()) {
+		if nilSeeder(seeder) {
 			return Definition{}, fmt.Errorf("%w: nil seeder", faults.ErrInvalidConfiguration)
 		}
 		if err := seeder.Seed(builder); err != nil {
@@ -212,29 +254,39 @@ func Prepare(catalog *events.Catalog, seeders ...Seeder) (definition Definition,
 	return Definition{request: state.request}, nil
 }
 
+func nilSeeder(seeder Seeder) bool {
+	if seeder == nil {
+		return true
+	}
+	value := reflect.ValueOf(seeder)
+	return value.Kind() == reflect.Pointer && value.IsNil()
+}
+
 func addEntry(byType *[]*seeding.EventTypeSeedEntries, bySource *[]*seeding.EventSourceSeedEntries, entry *seeding.SeedingEntry) {
-	var typeGroup *seeding.EventTypeSeedEntries
-	for _, group := range *byType {
-		if group.EventTypeId == entry.EventTypeId {
-			typeGroup = group
-			break
-		}
-	}
-	if typeGroup == nil {
-		typeGroup = &seeding.EventTypeSeedEntries{EventTypeId: entry.EventTypeId}
-		*byType = append(*byType, typeGroup)
-	}
+	typeGroup := typeEntries(byType, entry.EventTypeId)
 	typeGroup.Entries = append(typeGroup.Entries, entry)
-	var sourceGroup *seeding.EventSourceSeedEntries
-	for _, group := range *bySource {
-		if group.EventSourceId == entry.EventSourceId {
-			sourceGroup = group
-			break
+	sourceGroup := sourceEntries(bySource, entry.EventSourceId)
+	sourceGroup.Entries = append(sourceGroup.Entries, entry)
+}
+
+func typeEntries(byType *[]*seeding.EventTypeSeedEntries, id string) *seeding.EventTypeSeedEntries {
+	for _, group := range *byType {
+		if group.EventTypeId == id {
+			return group
 		}
 	}
-	if sourceGroup == nil {
-		sourceGroup = &seeding.EventSourceSeedEntries{EventSourceId: entry.EventSourceId}
-		*bySource = append(*bySource, sourceGroup)
+	group := &seeding.EventTypeSeedEntries{EventTypeId: id}
+	*byType = append(*byType, group)
+	return group
+}
+
+func sourceEntries(bySource *[]*seeding.EventSourceSeedEntries, id string) *seeding.EventSourceSeedEntries {
+	for _, group := range *bySource {
+		if group.EventSourceId == id {
+			return group
+		}
 	}
-	sourceGroup.Entries = append(sourceGroup.Entries, entry)
+	group := &seeding.EventSourceSeedEntries{EventSourceId: id}
+	*bySource = append(*bySource, group)
+	return group
 }

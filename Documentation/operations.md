@@ -1,6 +1,6 @@
 ---
-title: Observer and job administration
-description: Inspect failed work, request a replay and distinguish accepted requests from confirmed processing completion when operating Chronicle from Go.
+title: Namespace, observer and job administration
+description: Remove a namespace, inspect failed work and distinguish accepted requests from confirmed processing completion when operating Chronicle from Go.
 ---
 
 Use `store.Observers()` to inspect observer state and failures, and `store.Jobs()`
@@ -12,6 +12,49 @@ This reference assumes a connected `*chronicle.EventStore`; see
 [Get started](clients/go/getting-started.md) for registration and connection setup.
 The [executable examples](https://github.com/Cratis/Chronicle.Go/blob/main/observation/example_test.go)
 use an offline transport to demonstrate result handling without a server.
+
+## Remove a namespace
+
+`store.Namespaces().Remove(ctx, target)` irreversibly removes the **explicit target**
+from the handle's logical event store. Namespace selection is not authorization:
+a handle selected for the default namespace or a different namespace still sends
+`target`, unchanged. The SDK rejects only blank or whitespace-only targets locally.
+It does not ask for confirmation, grant permissions or perform an authorization
+preflight. There is no automatic retry or older-kernel fallback; an older kernel
+can return gRPC `Unimplemented`.
+
+**Before calling, stop every client using the target namespace.** This is an
+operator prerequisite from C# `IEventStore.RemoveNamespace`, not a kernel-enforced
+quiescence check or an SDK barrier. Use a separate handle selected for the default
+or another namespace to avoid using the target yourself; that handle is not an
+administrative credential and proves nothing about other clients being stopped.
+The pinned kernel maps this command to store `Manage` access by default. Whether
+that access is enforced depends on the kernel's authentication and entitlement
+configuration, including audit mode. Do not assume a role check from the Go handle.
+
+The kernel forgets the namespace, unsubscribes and removes its observers, removes
+their persistent reminders (including observers found only through reminders),
+drops the data Chronicle stores for the namespace and deletes its namespace record.
+This does **not** promise to erase arbitrary application-owned external read-model
+sinks. Removing a missing namespace does nothing. The kernel rejects the default
+namespace case-insensitively and rejects the system event store.
+
+A successful call means the kernel returned an authorized command envelope without
+fatal validation or execution diagnostics. Failed envelopes remain inspectable as
+`*chronicle.EnvelopeError`; context and gRPC status identities are preserved. An
+error, cancellation or lost reply does **not** prove rollback: removal may already
+have started or partially completed. Inspect state before an explicit retry.
+
+The call does not evict cached stores, close or invalidate already-issued handles,
+cancel watches or stop registrations, seeders or other clients. Opening or using a
+target-scoped `EventStore` can ensure and recreate that namespace. Keep it stopped
+until removal has been verified; do not use it to check that the namespace is gone.
+Use `Namespaces().List(ctx)` from a separate scope instead.
+
+The [offline executable removal example](https://github.com/Cratis/Chronicle.Go/blob/main/example_namespaces_removal_test.go)
+demonstrates the call without deleting real data. The pinned source contracts and
+the distinction between local transport checks and CI-only kernel evidence are in
+[namespace removal parity](parity.md#namespace-removal).
 
 ## Read observer state and failures
 

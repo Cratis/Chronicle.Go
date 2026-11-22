@@ -517,6 +517,15 @@ C112 and the C03/C08 final registration stage reference
 paths at that revision. Integration uses `19.32.3-development`.
 See [Seed reference events](events/seeding.md) for the workflow.
 
+Stream-routing references additionally use Chronicle
+`9157c14098688ac0c6946a335bfabf1f44220c7c`:
+`Source/Clients/DotNET/Seeding/EventSeeding.cs` (`Register`, `ConfirmRoutingSupport`)
+and kernel `Source/Kernel/Core/Seeding/{SeedRouting,SeededEventEntryIdentity,SeedEvents}.cs`.
+Routed runtime qualification is pending CI against `19.153.0-development`; no
+local Docker/kernel run is claimed. C# routing requests below are hand-derived,
+not executed .NET output. Global-set ownership/removal semantics remain outside
+this stream-targeted change.
+
 | Behavior / C# source | Go surface and status | Executable evidence / exact boundary |
 | --- | --- | --- |
 | Seeder discovery / `ICanSeedEvents`, `EventSeeding.Discover` | **Go-specific**: `RegisterSeeder`, `RegisterSeederFunc`, `RegisterSeederFactory`; explicit admission instead of assembly discovery | `TestSeederInstancesAndConstructorsHaveExplicitOwnership`, `ExampleRegisterSeeder`; duplicate concrete types fail, plain callbacks accumulate. Borrowed instances are not disposed; constructor results are |
@@ -525,6 +534,9 @@ See [Seed reference events](events/seeding.md) for the workflow.
 | Typed and heterogeneous declarations / `IEventSeedingBuilder.For<TEvent>`, `ForEventSource` | **Implemented**: `seeding.For[E]`, `Builder.ForEventSource` | `TestSeedRequestMatchesHandDerivedCSharpGolden`, `TestSeedPreparationFailsAtomically`; event IDs, non-nil pointers, payload serialization and static tags; fluent errors cannot silently discard invalid entries |
 | Scoped declarations / `IEventSeedingScopeBuilder`, `ForNamespace` | **Implemented**: independent scoped builder views, explicit default namespace distinct from global | Golden test and `TestKernelSeedingRestartReconnectNamespaceIsolationAndObserverVisibility`; red-only seeds never appear in default/blue. Namespace selection is not authorization |
 | Wire grouping / `EventSeeding.Register` | **Implemented**: authoritative `SeedEvents` request, both global and namespaced source/type indexes in first-seen order | `TestSeedRequestMatchesHandDerivedCSharpGolden`; fixture is **hand-derived**, not emitted by .NET. `TestSeedSnapshotAndRepeatedFacts` preserves repeated equal entries and owns input/output snapshots |
+| Stream routing / `EventSeeding.Register`, `ConfirmRoutingSupport` at the routing revision above | **Implemented client/wire; runtime pending CI**: `Builder.WithStream(type, id)` composes independent namespace views for typed and heterogeneous declarations | `TestStreamRoutingInBothSeedIndexes`, `TestStreamViewsComposeWithoutMutatingParentsOrSiblings`, `TestStreamDefaultsOnlyEmptyStrings`; both indexes, first-seen order, unchanged IDs/tags/payload bytes, repeated facts and immutable snapshots. Only empty strings default to All/Default; whitespace is preserved. No public non-default source-type seeding API |
+| Capability negotiation / `ConfirmRoutingSupport` | **Implemented fail closed** for non-default routing only; no legacy/default-only probe and no fallback | `TestSeedingRoutingProbesOnlyNonDefaultBatchesBeforeSend`, `TestSeedingRoutingRefusalSendsNoPartOfMixedBatch`, `TestSeedingRoutingNilSupportFailsProtocol`, `TestSeedingRoutingProbeHonorsCancellationAndDeadline`; authorized envelope and present Data required. False/Unimplemented matches `ErrUnsupported`; malformed data, authorization/validation and transport errors remain distinct; no part of a refused batch is sent |
+| Routed retries and kernel identity / `SeedRouting`, `SeededEventEntryIdentity`, `SeedEvents.Handle` | **Client behavior implemented; kernel regression gate pending CI** | `TestSeedingRoutingManualRetryRetainsPreparationAndConsumesSuccess`, `TestSeedingRoutingReconnectReprobesFrozenBatch`; re-probe before pending sends, no callback rerun or ordinary append. `TestKernelStreamSeedsCSharpThenGoRestartAndNamespaceIsolation` requires both target streams, no default fallback, repeated equal entries, namespace isolation, C#-derived then Go idempotence and unchanged positions across restart. Stream type and ID join source/type/content/tag-set identity. No crash-atomicity or local deduplication claim |
 | Registration order / `EventStore.RegisterAllArtifacts` | **Implemented** for supported observers: seeding last, including background reconnect replay | `TestSeedingIsLastAfterEveryObserverRegistrationSend`; event types/read models precede constraints/projections and reactor/reducer registration sends. Streams have no kernel registration acknowledgement. External subscriptions now precede read-model reactors and seeding; see [External integrations](#external-integrations) |
 | Failed sends, consumption and replay / `EventSeeding.Register` | **Implemented**: store-wide generation single-flight, retained snapshot on failure, successful send cached, same snapshot replayed on reconnect | `TestSeedFailureRetainsSnapshotAndManualBatchConsumesOnlySuccess`, `TestSeedSendIsSingleFlightAndWaiterCancellationDoesNotConsumeWork`, `TestSeedPreparationOnceAndReconnectReplaysFrozenRequest`; bounded retry and inspectable `RegistrationError`/envelopes, never startup `Append` |
 | Manual seeding buffers / `IEventStore.Seeding`, `EventStoreSeedingExtensions.CreateEventSeeding` | **Go-specific**: `EventStore.PrepareSeeds` → `SeedBatch.Register(ctx)` | `TestSeedFailureRetainsSnapshotAndManualBatchConsumesOnlySuccess`; each buffer prepares once, retries retained entries and consumes only success. New buffer for corrected definitions; unscoped entries remain global |
@@ -1304,6 +1316,22 @@ whole batch again from 1 and the materialized balance settles at 6 rather than 5
 The kernel may fold the batch more than once during recovery; each attempt reloads
 the persisted state, so the result stays 6. Go does not change the failure wire
 contract independently.
+
+## Namespace removal
+
+References are pinned to Chronicle
+[`9157c14098688ac0c6946a335bfabf1f44220c7c`](https://github.com/Cratis/Chronicle/tree/9157c14098688ac0c6946a335bfabf1f44220c7c),
+the source for the generated contracts and the CI kernel image
+`19.153.0-development`. Paths below are relative to that checkout.
+The [operations guide](operations.md#remove-a-namespace) describes safe use.
+
+| Contract and pinned source | Go surface and evidence | Boundary |
+| --- | --- | --- |
+| `Source/Clients/DotNET/IEventStore.cs` (`RemoveNamespace`) and `EventStore.cs` (same method) | **Implemented** as `store.Namespaces().Remove(ctx, target)` using the existing generated `RemoveNamespace` RPC and shared command-envelope checks. `TestNamespaceRemovalRoutesExplicitTargetWithoutLifecycleWork` checks real bufconn serialization, store isolation and the explicit unchanged target | One caller-requested mutation; no C# overload or separate administrative handle. No automatic retry, confirmation or older-kernel fallback |
+| `Source/Kernel/Core/Namespaces/RemoveNamespace.cs`, `RemoveNamespaceValidator.cs` and `NamespaceRemover.cs` | Blank input is rejected locally; other targets reach the kernel. `TestNamespaceRemovalLeavesProtectedTargetsServerAuthoritative` preserves server refusals. `TestNamespaceRemovalPreservesCommandEnvelopeFailures` checks authorization, validation, execution and unknown severity diagnostics | Missing namespaces are a no-op; the kernel protects the default namespace case-insensitively and the system store. The remover forgets the namespace, removes observers and reminders, drops Chronicle-owned namespace data and deletes its record; arbitrary external sinks are not covered |
+| `Source/Kernel/Core/Security/StoreAccessMap.cs` and `StoreEntitlementEnforcement.cs` | **Kernel-owned authorization**: removal has no explicit access override, so defaults to store `Manage`; enforcement depends on authentication/entitlement configuration, including audit mode | The Go handle does not grant administrative permission or preflight authorization. Stopping every target client is a C#-documented operator prerequisite, not an enforced kernel quiescence barrier |
+| `Source/Kernel/Core.Specs/Namespaces/for_NamespaceRemover/when_removing_a_namespace.cs` | Upstream specs cover observer unsubscribe/removal, reminder-only observers, storage drop, record deletion and forgetting the namespace. Go's `TestKernelNamespaceRemoval` is a CI-only witness for listing disappearance, repeated missing removal, protected defaults, event-data isolation and empty data on recreation | The Go integration witness has not been run locally and does not witness observer/reminder teardown, external sink deletion or restart persistence. It fails rather than skipping a missing endpoint or unsupported RPC |
+| Caller lifecycle and error identity | `TestNamespaceRemovalCancellationAfterDispatch`, `TestNamespaceRemovalClosedOrCanceledClientDoesNotDispatch`, `TestNamespaceRemovalPreservesTransportErrorsWithoutRetry`, `TestNamespaceRemovalRejectsMalformedResponse` and the offline `ExampleNamespaces_Remove` | No cache eviction, handle invalidation, re-registration or client shutdown. Cancellation/error does not establish rollback. Nil-response protection is checked directly at the shared envelope guard because the generated client always allocates its response |
 
 ## Page delivery and batch methods
 
