@@ -40,23 +40,24 @@ type Declaration struct {
 	explicit bool
 }
 type configuration struct {
-	id               ID
-	sequence         events.SequenceID
-	sequenceExplicit bool
-	sourceStore      string
-	version          string
-	active           bool
-	passive          bool
-	tags, filterTags []string
-	sourceType       events.SourceType
-	streamType       events.StreamType
-	handlers         []Handler
-	batchMethods     map[string][]observation.Observed
-	maxConcurrency   int
-	replay           ReplayCallbacks
-	logger           *slog.Logger
-	loggerSet        bool
-	invalid          bool
+	id                 ID
+	sequence           events.SequenceID
+	generationDelivery events.GenerationDelivery
+	sequenceExplicit   bool
+	sourceStore        string
+	version            string
+	active             bool
+	passive            bool
+	tags, filterTags   []string
+	sourceType         events.SourceType
+	streamType         events.StreamType
+	handlers           []Handler
+	batchMethods       map[string][]observation.Observed
+	maxConcurrency     int
+	replay             ReplayCallbacks
+	logger             *slog.Logger
+	loggerSet          bool
+	invalid            bool
 }
 
 // Option configures a reducer. Scalars are last-wins; handlers accumulate and
@@ -70,6 +71,18 @@ func WithID(id ID) Option { return func(c *configuration) { c.id = id } }
 // Bump it whenever fold/helper logic changes: Go cannot inspect method bodies.
 func WithVersion(version string) Option {
 	return func(c *configuration) { c.version = version; c.invalid = c.invalid || strings.TrimSpace(version) == "" }
+}
+
+// WithGenerationDelivery selects kernel event delivery. The default is
+// events.Compatibility; events.Pinned decodes delivered Content without local
+// generation selection. Repeated options are last-wins; unknown modes fail Define.
+func WithGenerationDelivery(mode events.GenerationDelivery) Option {
+	return func(c *configuration) { c.generationDelivery = mode }
+}
+
+// GenerationDelivery returns the frozen event delivery mode.
+func (p *Plan) GenerationDelivery() events.GenerationDelivery {
+	return p.declaration.config.generationDelivery
 }
 
 // WithEventSequence selects the source sequence; the default is event-log.
@@ -177,15 +190,29 @@ func define(typ reflect.Type, model readmodels.Descriptor, factory any, explicit
 		}
 		option(&c)
 	}
-	if model.GoType() == nil || strings.TrimSpace(string(c.id)) == "" || strings.TrimSpace(string(c.sequence)) == "" || c.invalid || (c.sourceStore != "" && c.sequenceExplicit) {
-		return Declaration{}, invalid("invalid reducer options or model")
+	if err := c.validate(model); err != nil {
+		return Declaration{}, err
+	}
+	return Declaration{typ, model, factory, c, explicit}, nil
+}
+
+func (c configuration) validate(model readmodels.Descriptor) error {
+	if c.generationDelivery != events.Compatibility && c.generationDelivery != events.Pinned {
+		return invalid("invalid reducer options or model")
+	}
+	if model.GoType() == nil || c.invalidFields() || c.invalid || (c.sourceStore != "" && c.sequenceExplicit) {
+		return invalid("invalid reducer options or model")
 	}
 	for _, tag := range append(slices.Clone(c.tags), c.filterTags...) {
 		if strings.TrimSpace(tag) == "" {
-			return Declaration{}, invalid("blank tag")
+			return invalid("blank tag")
 		}
 	}
-	return Declaration{typ, model, factory, c, explicit}, nil
+	return nil
+}
+
+func (c configuration) invalidFields() bool {
+	return strings.TrimSpace(string(c.id)) == "" || strings.TrimSpace(string(c.sequence)) == ""
 }
 
 // WithClientDiagnostics is a module-private binding seam. It returns a detached

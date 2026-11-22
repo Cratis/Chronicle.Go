@@ -13,5 +13,14 @@
     "golang.org/x/text",
     "google.golang.org/genproto/googleapis/rpc"
   ],
-  "nested": []
+  "nested": [
+    {
+      "dir": "recipes",
+      "kind": "recipe",
+      "publish": false,
+      "tagPrefix": "recipes/v",
+      "contracts": false,
+      "kernelIntegration": false
+    }
+  ]
 }

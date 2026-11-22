@@ -433,6 +433,10 @@ func (p *Plan) fingerprint() string {
 			shape = append(shape, replayNames[i])
 		}
 	}
+	// Preserve existing Compatibility fingerprints while distinguishing opt-in delivery.
+	if p.GenerationDelivery() != events.Compatibility {
+		shape = append(shape, []any{"generation-delivery", p.GenerationDelivery()})
+	}
 	encoded, _ := json.Marshal(shape) // Only closed scalar/slice metadata above.
 	hash := sha256.Sum256(encoded)
 	return hex.EncodeToString(hash[:])

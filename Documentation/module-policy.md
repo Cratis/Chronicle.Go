@@ -7,9 +7,15 @@ description: Learn the module allow-list grammar, how the independent Go gates a
 <!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
 
 Keep optional tooling and ecosystem dependencies out of the Chronicle runtime.
-The checked-in [module manifest](https://github.com/Cratis/Chronicle.Go/blob/main/.github/go-modules.json) currently lists only
-`github.com/cratis/chronicle.go`. It does not create or publish tools, integrations,
-or recipes. Use this reference when adding a real, independently compiled module.
+The checked-in [module manifest](https://github.com/Cratis/Chronicle.Go/blob/main/.github/go-modules.json) lists
+`github.com/cratis/chronicle.go` and the unpublished `recipes` module. The
+[OpenTelemetry gRPC recipe](../recipes/otelgrpc/README.md) pins published SDK
+`v0.18.0` and isolates its OpenTelemetry SDK/exporter dependencies from the root.
+It needs no replacement directives, `go.work`, or local checkout dependency.
+The existing module CI matrix runs its build, vet, tests, race checks, formatting,
+tidy, and lint gates; contract and kernel integration profiles remain root-only.
+Tools and integrations remain absent until concrete work adds them. Use this
+reference when adding a real, independently compiled module.
 
 ## Manifest grammar
 
@@ -24,7 +30,7 @@ module aliases, or executable configuration.
 | `contracts` | Boolean `true`; pinned contract generation is root-only |
 | `kernelIntegration` | Boolean `true`; the existing store/client kernel tests are root-only |
 | `rootDependencies` | Unique canonical external module paths allowed in root `require` directives, including indirect and test dependencies |
-| `nested` | An array of implemented module records; currently empty |
+| `nested` | An array of implemented module records; currently the `recipes` module |
 
 The runtime dependency list preserves the existing SDK graph: Fundamentals,
 UUID, gRPC, protobuf and their current indirect modules. Versions remain in
