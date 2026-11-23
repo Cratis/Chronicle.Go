@@ -63,8 +63,8 @@ func TestFacadeAdmittedProviderWaiterCancellationWhileSelectionBlocked(t *testin
 		// provider's in-flight entry before cancellation, not pre-admission.
 		synctest.Wait()
 		select {
-		case <-waiter:
-			t.Fatal("waiter did not wait for leader")
+		case err := <-waiter:
+			t.Fatal("waiter did not wait for leader", err)
 		default:
 		}
 		cancel()
@@ -72,8 +72,8 @@ func TestFacadeAdmittedProviderWaiterCancellationWhileSelectionBlocked(t *testin
 			t.Fatal(err)
 		}
 		select {
-		case <-leader:
-			t.Fatal("waiter cancellation released leader")
+		case err := <-leader:
+			t.Fatal("waiter cancellation released leader", err)
 		default:
 		}
 		close(release)
@@ -145,8 +145,8 @@ func TestFacadeScopeCloseJoinsBlockedSelectionAfterCallbackClientClose(t *testin
 		go func() { closed <- scope.Close(context.Background()) }()
 		synctest.Wait()
 		select {
-		case <-closed:
-			t.Fatal("scope close failed to join selection")
+		case err := <-closed:
+			t.Fatal("scope close failed to join selection", err)
 		default:
 		}
 		if _, err := di.Resolve[*chronicle.EventStore](context.Background(), scope); !errors.Is(err, di.ErrClosed) {

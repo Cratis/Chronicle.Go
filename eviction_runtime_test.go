@@ -60,8 +60,8 @@ func TestEvictionReturnsDuringHandlerAndClientStillJoins(t *testing.T) {
 				t.Fatal(ctx.Err())
 			}
 			select {
-			case <-done:
-				t.Fatal("owner returned without joining handler")
+			case err := <-done:
+				t.Fatal("owner returned without joining handler", err)
 			default:
 			}
 			released.Do(func() { close(release) })

@@ -6,6 +6,7 @@ package chronicle
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -33,6 +34,20 @@ func (*bindingEffects) CanHandle(_ reactors.SideEffectContext, value any) bool {
 func (h *bindingEffects) Handle(_ context.Context, ctx reactors.SideEffectContext, _ any) error {
 	h.calls <- ctx
 	return nil
+}
+
+func awaitCanceledJoin(t *testing.T, done <-chan error) {
+	t.Helper()
+	timer := time.NewTimer(2 * time.Second)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Error(err)
+		}
+	case <-timer.C:
+		t.Error("materialized dispatch did not join")
+	}
 }
 
 func TestReadModelReactorsBindCallbackAndEffectMetadataToSelectedStore(t *testing.T) {
@@ -110,13 +125,7 @@ func TestReadModelReactorsBindCallbackAndEffectMetadataToSelectedStore(t *testin
 						go func() { done <- run.Run(runCtx) }()
 						t.Cleanup(func() {
 							cancel()
-							timer := time.NewTimer(2 * time.Second)
-							defer timer.Stop()
-							select {
-							case <-done:
-							case <-timer.C:
-								t.Error("materialized dispatch did not join")
-							}
+							awaitCanceledJoin(t, done)
 						})
 					} else {
 						change := readmodels.Change[json.RawMessage]{Type: readmodels.Added, HasValue: true, Value: json.RawMessage(`{"id":"item"}`), Context: events.Context{Store: storeName, Namespace: DefaultNamespace, Sequence: want, SourceID: "item"}}

@@ -120,6 +120,9 @@ type modelDispatch struct {
 	ns    string
 	count int
 }
+
+var errConventionDispatch = errors.New("dispatch failure")
+
 type ConventionModelReactor struct {
 	calls  chan modelDispatch
 	closed *atomic.Int32
@@ -131,12 +134,25 @@ func (r *ConventionModelReactor) Added(_ context.Context, m *ProjectionModel, ec
 }
 func (r *ConventionModelReactor) Modified(models []ProjectionModel, ec events.Context) error {
 	r.calls <- modelDispatch{"modified", string(ec.Namespace), len(models)}
-	return errors.New("dispatch failure")
+	return errConventionDispatch
 }
 func (r *ConventionModelReactor) Removed(models []*ProjectionModel, ec events.Context) {
 	r.calls <- modelDispatch{"removed", string(ec.Namespace), len(models)}
 }
 func (r *ConventionModelReactor) Close() error { r.closed.Add(1); return nil }
+
+func awaitReported(t *testing.T, ctx context.Context, reported <-chan error, target error) bool {
+	t.Helper()
+	select {
+	case err := <-reported:
+		if !errors.Is(err, target) {
+			t.Fatal(err)
+		}
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
 
 func TestReadModelReactorConventionsReadyEffectsScopesAndNoRetry(t *testing.T) {
 	registry, model := projectionRegistry(t)
@@ -198,18 +214,11 @@ func TestReadModelReactorConventionsReadyEffectsScopesAndNoRetry(t *testing.T) {
 			t.Fatal(ctx.Err())
 		}
 	}
-	select {
-	case <-reported:
-	case <-ctx.Done():
+	if !awaitReported(t, ctx, reported, errConventionDispatch) {
 		t.Fatal("missing dispatch failure")
 	}
 	session.end <- status.Error(codes.Unavailable, "watch lost")
-	select {
-	case err := <-reported:
-		if !errors.Is(err, readmodels.ErrInterrupted) {
-			t.Fatal(err)
-		}
-	case <-ctx.Done():
+	if !awaitReported(t, ctx, reported, readmodels.ErrInterrupted) {
 		t.Fatal("missing terminal error")
 	}
 	// Joining via unregister proves no callback/activation outlives the handle.

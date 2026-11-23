@@ -85,7 +85,9 @@ there is nothing to review under a red build.
 - Logging lives in a `*Logging.cs` partial with `[LoggerMessage]`, not inline in
   domain code.
 - No shared mutable state between commands.
-- Read protection is `Off` by default; new code sets `<CratisReadProtection>On</CratisReadProtection>`.
+- Read protection is `On` by default from Arc 23. Flag an explicit `<CratisReadProtection>On</CratisReadProtection>` or
+  `[ReadProtection(ReadProtectionMode.On)]` as redundant, and any `Off`, `Measure` or `[Unprotected]` without a stated reason
+  (legacy: on Arc 22 new code had to set `On`).
   Under `Off` an injected model or validator read is advisory, not a concurrency guard.
   Under `On`, review that state rules sit in validators or handlers with the model as
   a parameter and `[Unprotected("why")]` carries a real reason. Apply
@@ -163,7 +165,11 @@ degradations a reviewer can see without measuring:
   per-artifact decision table of `specs.scenarios.csharp.md` (pipeline and
   authorization, constraints, projection and reducer dispatch, reactor dispatch
   and routing) and none beyond it. A rule that must hold under concurrent
-  writers is proven from supplied read-model state, not a race scenario.
+  writers is proven from supplied read-model state, not a race scenario
+  re-proving the platform matrix. For an unusual application-owned explicit
+  guard policy, accept only a focused regression a plain call cannot prove;
+  check the [decision guidance](../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
+  for the assembly-level admission check, body-read limits and advanced hook boundary.
 - Every State Change command has a happy-path specification.
 - Every validation rule has a direct-call failure spec. Pipeline validation
   specs assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`.
