@@ -44,13 +44,14 @@ type fakeKernel struct {
 	named            func(context.Context, *sequences.AppendWithNamedTagsRequest) (*sequences.CommandResult_AppendResponse, error)
 	tail             func(context.Context, *sequences.TailSequenceNumberRequest) (*sequences.QueryResult_EventSequenceTailResponse, error)
 	compatibility    func(context.Context, *clients.CompatibilityRequest)
+	capabilities     []string
 }
 
 func (s *fakeKernel) CheckCompatibility(ctx context.Context, request *clients.CompatibilityRequest) (*clients.CompatibilityResponse, error) {
 	if s.compatibility != nil {
 		s.compatibility(ctx, request)
 	}
-	return &clients.CompatibilityResponse{IsCompatible: !s.incompatible, ServerVersion: "test-kernel"}, nil
+	return &clients.CompatibilityResponse{IsCompatible: !s.incompatible, ServerVersion: "test-kernel", Capabilities: s.capabilities}, nil
 }
 func (s *fakeKernel) Connect(request *clients.ConnectRequest, stream grpc.ServerStreamingServer[clients.ConnectionKeepAlive]) error {
 	s.connectCalls.Add(1)

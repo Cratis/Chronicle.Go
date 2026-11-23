@@ -50,6 +50,7 @@ type clientConfig struct {
 	connectTimeout                                  time.Duration
 	keepAliveTimeout                                time.Duration
 	keepAliveTimeoutSet, skipKeepAlive              bool
+	multiplexedObservationOff                       bool
 	maxSendMessageSize, maxReceiveMessageSize       int
 	maxSendMessageSizeSet, maxReceiveMessageSizeSet bool
 	registrationRetry                               RegistrationRetry
