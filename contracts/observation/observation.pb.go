@@ -26,9 +26,10 @@ const (
 type ClearPartitionQuarantineOutcome int32
 
 const (
-	ClearPartitionQuarantineOutcome_Cleared        ClearPartitionQuarantineOutcome = 0
-	ClearPartitionQuarantineOutcome_NotFound       ClearPartitionQuarantineOutcome = 1
-	ClearPartitionQuarantineOutcome_NotQuarantined ClearPartitionQuarantineOutcome = 2
+	ClearPartitionQuarantineOutcome_Cleared                                     ClearPartitionQuarantineOutcome = 0
+	ClearPartitionQuarantineOutcome_NotFound                                    ClearPartitionQuarantineOutcome = 1
+	ClearPartitionQuarantineOutcome_NotQuarantined                              ClearPartitionQuarantineOutcome = 2
+	ClearPartitionQuarantineOutcome_CLEAR_PARTITION_QUARANTINE_OUTCOME_Accepted ClearPartitionQuarantineOutcome = 3
 )
 
 // Enum value maps for ClearPartitionQuarantineOutcome.
@@ -37,11 +38,13 @@ var (
 		0: "Cleared",
 		1: "NotFound",
 		2: "NotQuarantined",
+		3: "CLEAR_PARTITION_QUARANTINE_OUTCOME_Accepted",
 	}
 	ClearPartitionQuarantineOutcome_value = map[string]int32{
 		"Cleared":        0,
 		"NotFound":       1,
 		"NotQuarantined": 2,
+		"CLEAR_PARTITION_QUARANTINE_OUTCOME_Accepted": 3,
 	}
 )
 
@@ -130,10 +133,11 @@ func (FailureKind) EnumDescriptor() ([]byte, []int) {
 type FastForwardOutcome int32
 
 const (
-	FastForwardOutcome_FastForwarded     FastForwardOutcome = 0
-	FastForwardOutcome_AlreadyAtTail     FastForwardOutcome = 1
-	FastForwardOutcome_ObserverReplaying FastForwardOutcome = 2
-	FastForwardOutcome_NotAvailable      FastForwardOutcome = 3
+	FastForwardOutcome_FastForwarded                 FastForwardOutcome = 0
+	FastForwardOutcome_AlreadyAtTail                 FastForwardOutcome = 1
+	FastForwardOutcome_ObserverReplaying             FastForwardOutcome = 2
+	FastForwardOutcome_NotAvailable                  FastForwardOutcome = 3
+	FastForwardOutcome_FAST_FORWARD_OUTCOME_Accepted FastForwardOutcome = 4
 )
 
 // Enum value maps for FastForwardOutcome.
@@ -143,12 +147,14 @@ var (
 		1: "AlreadyAtTail",
 		2: "ObserverReplaying",
 		3: "NotAvailable",
+		4: "FAST_FORWARD_OUTCOME_Accepted",
 	}
 	FastForwardOutcome_value = map[string]int32{
-		"FastForwarded":     0,
-		"AlreadyAtTail":     1,
-		"ObserverReplaying": 2,
-		"NotAvailable":      3,
+		"FastForwarded":                 0,
+		"AlreadyAtTail":                 1,
+		"ObserverReplaying":             2,
+		"NotAvailable":                  3,
+		"FAST_FORWARD_OUTCOME_Accepted": 4,
 	}
 )
 
@@ -396,10 +402,11 @@ func (ObserverType) EnumDescriptor() ([]byte, []int) {
 type PartitionRecoveryOutcome int32
 
 const (
-	PartitionRecoveryOutcome_Started              PartitionRecoveryOutcome = 0
-	PartitionRecoveryOutcome_PartitionNotFound    PartitionRecoveryOutcome = 1
-	PartitionRecoveryOutcome_ObserverQuarantined  PartitionRecoveryOutcome = 2
-	PartitionRecoveryOutcome_PartitionQuarantined PartitionRecoveryOutcome = 3
+	PartitionRecoveryOutcome_Started                             PartitionRecoveryOutcome = 0
+	PartitionRecoveryOutcome_PartitionNotFound                   PartitionRecoveryOutcome = 1
+	PartitionRecoveryOutcome_ObserverQuarantined                 PartitionRecoveryOutcome = 2
+	PartitionRecoveryOutcome_PartitionQuarantined                PartitionRecoveryOutcome = 3
+	PartitionRecoveryOutcome_PARTITION_RECOVERY_OUTCOME_Accepted PartitionRecoveryOutcome = 4
 )
 
 // Enum value maps for PartitionRecoveryOutcome.
@@ -409,12 +416,14 @@ var (
 		1: "PartitionNotFound",
 		2: "ObserverQuarantined",
 		3: "PartitionQuarantined",
+		4: "PARTITION_RECOVERY_OUTCOME_Accepted",
 	}
 	PartitionRecoveryOutcome_value = map[string]int32{
-		"Started":              0,
-		"PartitionNotFound":    1,
-		"ObserverQuarantined":  2,
-		"PartitionQuarantined": 3,
+		"Started":                             0,
+		"PartitionNotFound":                   1,
+		"ObserverQuarantined":                 2,
+		"PartitionQuarantined":                3,
+		"PARTITION_RECOVERY_OUTCOME_Accepted": 4,
 	}
 )
 
@@ -2783,22 +2792,24 @@ const file_observation_proto_rawDesc = "" +
 	"\tIsSuccess\x18\x01 \x01(\bR\tIsSuccess\x12c\n" +
 	"\x10FailedPartitions\x18\x02 \x03(\v27.Cratis.Chronicle.Contracts.Observation.FailedPartitionR\x10FailedPartitions\x12\x1a\n" +
 	"\bTimedOut\x18\x03 \x01(\bR\bTimedOut\x122\n" +
-	"\x14OutstandingObservers\x18\x04 \x03(\tR\x14OutstandingObservers*P\n" +
+	"\x14OutstandingObservers\x18\x04 \x03(\tR\x14OutstandingObservers*\x81\x01\n" +
 	"\x1fClearPartitionQuarantineOutcome\x12\v\n" +
 	"\aCleared\x10\x00\x12\f\n" +
 	"\bNotFound\x10\x01\x12\x12\n" +
-	"\x0eNotQuarantined\x10\x02*x\n" +
+	"\x0eNotQuarantined\x10\x02\x12/\n" +
+	"+CLEAR_PARTITION_QUARANTINE_OUTCOME_Accepted\x10\x03*x\n" +
 	"\vFailureKind\x12\x18\n" +
 	"\x14FAILURE_KIND_Unknown\x10\x00\x12\f\n" +
 	"\bHandling\x10\x01\x12\v\n" +
 	"\aTimeout\x10\x02\x12\x1d\n" +
 	"\x19FAILURE_KIND_Disconnected\x10\x03\x12\x15\n" +
-	"\x11WaitingForHandler\x10\x04*c\n" +
+	"\x11WaitingForHandler\x10\x04*\x86\x01\n" +
 	"\x12FastForwardOutcome\x12\x11\n" +
 	"\rFastForwarded\x10\x00\x12\x11\n" +
 	"\rAlreadyAtTail\x10\x01\x12\x15\n" +
 	"\x11ObserverReplaying\x10\x02\x12\x10\n" +
-	"\fNotAvailable\x10\x03*1\n" +
+	"\fNotAvailable\x10\x03\x12!\n" +
+	"\x1dFAST_FORWARD_OUTCOME_Accepted\x10\x04*1\n" +
 	"\rObserverOwner\x12\b\n" +
 	"\x04None\x10\x00\x12\n" +
 	"\n" +
@@ -2824,12 +2835,13 @@ const file_observation_proto_rawDesc = "" +
 	"\n" +
 	"Projection\x10\x02\x12\v\n" +
 	"\aReducer\x10\x03\x12\f\n" +
-	"\bExternal\x10\x04*q\n" +
+	"\bExternal\x10\x04*\x9a\x01\n" +
 	"\x18PartitionRecoveryOutcome\x12\v\n" +
 	"\aStarted\x10\x00\x12\x15\n" +
 	"\x11PartitionNotFound\x10\x01\x12\x17\n" +
 	"\x13ObserverQuarantined\x10\x02\x12\x18\n" +
-	"\x14PartitionQuarantined\x10\x032\xda\x02\n" +
+	"\x14PartitionQuarantined\x10\x03\x12'\n" +
+	"#PARTITION_RECOVERY_OUTCOME_Accepted\x10\x042\xda\x02\n" +
 	"\x10FailedPartitions\x12\x9e\x01\n" +
 	"\x13GetFailedPartitions\x12B.Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest\x1aC.Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition\x12\xa4\x01\n" +
 	"\x17ObserveFailedPartitions\x12B.Cratis.Chronicle.Contracts.Observation.GetFailedPartitionsRequest\x1aC.Cratis.Chronicle.Contracts.Observation.IEnumerable_FailedPartition0\x012\x9f\x11\n" +

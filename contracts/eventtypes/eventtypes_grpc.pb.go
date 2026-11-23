@@ -19,12 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EventTypes_AllEventTypeGenerations_FullMethodName = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/AllEventTypeGenerations"
-	EventTypes_AllEventTypes_FullMethodName           = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/AllEventTypes"
-	EventTypes_CreateEventType_FullMethodName         = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/CreateEventType"
-	EventTypes_ObserveEventTypes_FullMethodName       = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/ObserveEventTypes"
-	EventTypes_RegisterEventTypes_FullMethodName      = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/RegisterEventTypes"
-	EventTypes_RegisterSingleEventType_FullMethodName = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/RegisterSingleEventType"
+	EventTypes_AllEventTypeGenerations_FullMethodName      = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/AllEventTypeGenerations"
+	EventTypes_AllEventTypes_FullMethodName                = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/AllEventTypes"
+	EventTypes_CheckEventTypeRegistrations_FullMethodName  = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/CheckEventTypeRegistrations"
+	EventTypes_CreateEventType_FullMethodName              = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/CreateEventType"
+	EventTypes_GetEventTypesWithAnnotations_FullMethodName = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/GetEventTypesWithAnnotations"
+	EventTypes_NormalizeEventTypeSchemas_FullMethodName    = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/NormalizeEventTypeSchemas"
+	EventTypes_ObserveEventTypes_FullMethodName            = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/ObserveEventTypes"
+	EventTypes_RegisterEventTypes_FullMethodName           = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/RegisterEventTypes"
+	EventTypes_RegisterSingleEventType_FullMethodName      = "/Cratis.Chronicle.Contracts.EventTypes.EventTypes/RegisterSingleEventType"
 )
 
 // EventTypesClient is the client API for EventTypes service.
@@ -33,7 +36,10 @@ const (
 type EventTypesClient interface {
 	AllEventTypeGenerations(ctx context.Context, in *AllEventTypeGenerationsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventTypeDetailsResponse, error)
 	AllEventTypes(ctx context.Context, in *AllEventTypesRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventTypeDetailsResponse, error)
+	CheckEventTypeRegistrations(ctx context.Context, in *CheckEventTypeRegistrationsRequest, opts ...grpc.CallOption) (*CommandResult_CheckEventTypeRegistrationsResponse, error)
 	CreateEventType(ctx context.Context, in *CreateEventTypeRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	GetEventTypesWithAnnotations(ctx context.Context, in *GetEventTypesWithAnnotationsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventTypesWithAnnotationsResponse, error)
+	NormalizeEventTypeSchemas(ctx context.Context, in *NormalizeEventTypeSchemasRequest, opts ...grpc.CallOption) (*CommandResult_NormalizeEventTypeSchemasResponse, error)
 	ObserveEventTypes(ctx context.Context, in *ObserveEventTypesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_EventTypeDetailsResponse], error)
 	RegisterEventTypes(ctx context.Context, in *RegisterEventTypesRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	RegisterSingleEventType(ctx context.Context, in *RegisterSingleEventTypeRequest, opts ...grpc.CallOption) (*CommandResult, error)
@@ -67,10 +73,40 @@ func (c *eventTypesClient) AllEventTypes(ctx context.Context, in *AllEventTypesR
 	return out, nil
 }
 
+func (c *eventTypesClient) CheckEventTypeRegistrations(ctx context.Context, in *CheckEventTypeRegistrationsRequest, opts ...grpc.CallOption) (*CommandResult_CheckEventTypeRegistrationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_CheckEventTypeRegistrationsResponse)
+	err := c.cc.Invoke(ctx, EventTypes_CheckEventTypeRegistrations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventTypesClient) CreateEventType(ctx context.Context, in *CreateEventTypeRequest, opts ...grpc.CallOption) (*CommandResult, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CommandResult)
 	err := c.cc.Invoke(ctx, EventTypes_CreateEventType_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventTypesClient) GetEventTypesWithAnnotations(ctx context.Context, in *GetEventTypesWithAnnotationsRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_EventTypesWithAnnotationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_IEnumerable_EventTypesWithAnnotationsResponse)
+	err := c.cc.Invoke(ctx, EventTypes_GetEventTypesWithAnnotations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventTypesClient) NormalizeEventTypeSchemas(ctx context.Context, in *NormalizeEventTypeSchemasRequest, opts ...grpc.CallOption) (*CommandResult_NormalizeEventTypeSchemasResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult_NormalizeEventTypeSchemasResponse)
+	err := c.cc.Invoke(ctx, EventTypes_NormalizeEventTypeSchemas_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +158,10 @@ func (c *eventTypesClient) RegisterSingleEventType(ctx context.Context, in *Regi
 type EventTypesServer interface {
 	AllEventTypeGenerations(context.Context, *AllEventTypeGenerationsRequest) (*QueryResult_IEnumerable_EventTypeDetailsResponse, error)
 	AllEventTypes(context.Context, *AllEventTypesRequest) (*QueryResult_IEnumerable_EventTypeDetailsResponse, error)
+	CheckEventTypeRegistrations(context.Context, *CheckEventTypeRegistrationsRequest) (*CommandResult_CheckEventTypeRegistrationsResponse, error)
 	CreateEventType(context.Context, *CreateEventTypeRequest) (*CommandResult, error)
+	GetEventTypesWithAnnotations(context.Context, *GetEventTypesWithAnnotationsRequest) (*QueryResult_IEnumerable_EventTypesWithAnnotationsResponse, error)
+	NormalizeEventTypeSchemas(context.Context, *NormalizeEventTypeSchemasRequest) (*CommandResult_NormalizeEventTypeSchemasResponse, error)
 	ObserveEventTypes(*ObserveEventTypesRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_EventTypeDetailsResponse]) error
 	RegisterEventTypes(context.Context, *RegisterEventTypesRequest) (*CommandResult, error)
 	RegisterSingleEventType(context.Context, *RegisterSingleEventTypeRequest) (*CommandResult, error)
@@ -142,8 +181,17 @@ func (UnimplementedEventTypesServer) AllEventTypeGenerations(context.Context, *A
 func (UnimplementedEventTypesServer) AllEventTypes(context.Context, *AllEventTypesRequest) (*QueryResult_IEnumerable_EventTypeDetailsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AllEventTypes not implemented")
 }
+func (UnimplementedEventTypesServer) CheckEventTypeRegistrations(context.Context, *CheckEventTypeRegistrationsRequest) (*CommandResult_CheckEventTypeRegistrationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckEventTypeRegistrations not implemented")
+}
 func (UnimplementedEventTypesServer) CreateEventType(context.Context, *CreateEventTypeRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateEventType not implemented")
+}
+func (UnimplementedEventTypesServer) GetEventTypesWithAnnotations(context.Context, *GetEventTypesWithAnnotationsRequest) (*QueryResult_IEnumerable_EventTypesWithAnnotationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetEventTypesWithAnnotations not implemented")
+}
+func (UnimplementedEventTypesServer) NormalizeEventTypeSchemas(context.Context, *NormalizeEventTypeSchemasRequest) (*CommandResult_NormalizeEventTypeSchemasResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method NormalizeEventTypeSchemas not implemented")
 }
 func (UnimplementedEventTypesServer) ObserveEventTypes(*ObserveEventTypesRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_EventTypeDetailsResponse]) error {
 	return status.Error(codes.Unimplemented, "method ObserveEventTypes not implemented")
@@ -211,6 +259,24 @@ func _EventTypes_AllEventTypes_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventTypes_CheckEventTypeRegistrations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckEventTypeRegistrationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventTypesServer).CheckEventTypeRegistrations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventTypes_CheckEventTypeRegistrations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventTypesServer).CheckEventTypeRegistrations(ctx, req.(*CheckEventTypeRegistrationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventTypes_CreateEventType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateEventTypeRequest)
 	if err := dec(in); err != nil {
@@ -225,6 +291,42 @@ func _EventTypes_CreateEventType_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EventTypesServer).CreateEventType(ctx, req.(*CreateEventTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventTypes_GetEventTypesWithAnnotations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEventTypesWithAnnotationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventTypesServer).GetEventTypesWithAnnotations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventTypes_GetEventTypesWithAnnotations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventTypesServer).GetEventTypesWithAnnotations(ctx, req.(*GetEventTypesWithAnnotationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventTypes_NormalizeEventTypeSchemas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NormalizeEventTypeSchemasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventTypesServer).NormalizeEventTypeSchemas(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventTypes_NormalizeEventTypeSchemas_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventTypesServer).NormalizeEventTypeSchemas(ctx, req.(*NormalizeEventTypeSchemasRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -292,8 +394,20 @@ var EventTypes_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EventTypes_AllEventTypes_Handler,
 		},
 		{
+			MethodName: "CheckEventTypeRegistrations",
+			Handler:    _EventTypes_CheckEventTypeRegistrations_Handler,
+		},
+		{
 			MethodName: "CreateEventType",
 			Handler:    _EventTypes_CreateEventType_Handler,
+		},
+		{
+			MethodName: "GetEventTypesWithAnnotations",
+			Handler:    _EventTypes_GetEventTypesWithAnnotations_Handler,
+		},
+		{
+			MethodName: "NormalizeEventTypeSchemas",
+			Handler:    _EventTypes_NormalizeEventTypeSchemas_Handler,
 		},
 		{
 			MethodName: "RegisterEventTypes",

@@ -17,14 +17,21 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 
 
+SOURCE_DIRECTORY = None
+
+
 def fetch_input(item, manifest, destination):
     name, expected = item
     if Path(name).is_absolute() or '..' in Path(name).parts:
         raise ValueError('unsafe input path')
-    url = (f"https://raw.githubusercontent.com/{manifest['repository']}/"
-           f"{manifest['commit']}/{manifest['sourcePath']}/{name}")
-    with urllib.request.urlopen(url, timeout=30) as response:
-        data = response.read(8 * 1024 * 1024 + 1)
+    if SOURCE_DIRECTORY is not None:
+        # Unreleased schemas: read the checked-out Chronicle protos instead of the pinned commit.
+        data = (SOURCE_DIRECTORY / name).read_bytes()
+    else:
+        url = (f"https://raw.githubusercontent.com/{manifest['repository']}/"
+               f"{manifest['commit']}/{manifest['sourcePath']}/{name}")
+        with urllib.request.urlopen(url, timeout=30) as response:
+            data = response.read(8 * 1024 * 1024 + 1)
     if hashlib.sha256(data).hexdigest() != expected['sha256']:
         raise ValueError(f'upstream checksum mismatch: {name}')
     if name.endswith('.proto'):
@@ -74,7 +81,12 @@ def owned_files(directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true', help='compare without changing generated files')
+    parser.add_argument('--source-dir', type=Path,
+                        help='read the protos from a local Chronicle Source/Kernel/Protobuf directory '
+                             '(still verified against the manifest hashes) instead of the pinned commit')
     args = parser.parse_args()
+    global SOURCE_DIRECTORY
+    SOURCE_DIRECTORY = args.source_dir.resolve() if args.source_dir else None
     manifest = json.loads((ROOT / 'contracts-source.json').read_text())
     work = ROOT / '.ai-work/contracts-generation'
     work.mkdir(parents=True, exist_ok=True)

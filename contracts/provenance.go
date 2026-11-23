@@ -8,4 +8,4 @@ package contracts
 const ProtocolVersion = "19.153.0"
 
 // ProtocolCommit is the immutable schema source revision.
-const ProtocolCommit = "9157c14098688ac0c6946a335bfabf1f44220c7c"
+const ProtocolCommit = "52e90a7c4c0f13eae283e173370aababdccacd70"

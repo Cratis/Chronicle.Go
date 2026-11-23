@@ -175,6 +175,150 @@ func (ValidationResultSeverity) EnumDescriptor() ([]byte, []int) {
 	return file_observation_webhooks_proto_rawDescGZIP(), []int{2}
 }
 
+type WebhookSigningAlgorithm int32
+
+const (
+	WebhookSigningAlgorithm_WEBHOOK_SIGNING_ALGORITHM_Ed25519 WebhookSigningAlgorithm = 0
+	WebhookSigningAlgorithm_HmacSha256                        WebhookSigningAlgorithm = 1
+)
+
+// Enum value maps for WebhookSigningAlgorithm.
+var (
+	WebhookSigningAlgorithm_name = map[int32]string{
+		0: "WEBHOOK_SIGNING_ALGORITHM_Ed25519",
+		1: "HmacSha256",
+	}
+	WebhookSigningAlgorithm_value = map[string]int32{
+		"WEBHOOK_SIGNING_ALGORITHM_Ed25519": 0,
+		"HmacSha256":                        1,
+	}
+)
+
+func (x WebhookSigningAlgorithm) Enum() *WebhookSigningAlgorithm {
+	p := new(WebhookSigningAlgorithm)
+	*p = x
+	return p
+}
+
+func (x WebhookSigningAlgorithm) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WebhookSigningAlgorithm) Descriptor() protoreflect.EnumDescriptor {
+	return file_observation_webhooks_proto_enumTypes[3].Descriptor()
+}
+
+func (WebhookSigningAlgorithm) Type() protoreflect.EnumType {
+	return &file_observation_webhooks_proto_enumTypes[3]
+}
+
+func (x WebhookSigningAlgorithm) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WebhookSigningAlgorithm.Descriptor instead.
+func (WebhookSigningAlgorithm) EnumDescriptor() ([]byte, []int) {
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{3}
+}
+
+type WebhookSigningKeyStatus int32
+
+const (
+	WebhookSigningKeyStatus_Active  WebhookSigningKeyStatus = 0
+	WebhookSigningKeyStatus_Overlap WebhookSigningKeyStatus = 1
+	WebhookSigningKeyStatus_Retired WebhookSigningKeyStatus = 2
+)
+
+// Enum value maps for WebhookSigningKeyStatus.
+var (
+	WebhookSigningKeyStatus_name = map[int32]string{
+		0: "Active",
+		1: "Overlap",
+		2: "Retired",
+	}
+	WebhookSigningKeyStatus_value = map[string]int32{
+		"Active":  0,
+		"Overlap": 1,
+		"Retired": 2,
+	}
+)
+
+func (x WebhookSigningKeyStatus) Enum() *WebhookSigningKeyStatus {
+	p := new(WebhookSigningKeyStatus)
+	*p = x
+	return p
+}
+
+func (x WebhookSigningKeyStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WebhookSigningKeyStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_observation_webhooks_proto_enumTypes[4].Descriptor()
+}
+
+func (WebhookSigningKeyStatus) Type() protoreflect.EnumType {
+	return &file_observation_webhooks_proto_enumTypes[4]
+}
+
+func (x WebhookSigningKeyStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WebhookSigningKeyStatus.Descriptor instead.
+func (WebhookSigningKeyStatus) EnumDescriptor() ([]byte, []int) {
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{4}
+}
+
+type WebhookSigningMode int32
+
+const (
+	WebhookSigningMode_Unspecified                  WebhookSigningMode = 0
+	WebhookSigningMode_Disabled                     WebhookSigningMode = 1
+	WebhookSigningMode_WEBHOOK_SIGNING_MODE_Ed25519 WebhookSigningMode = 2
+)
+
+// Enum value maps for WebhookSigningMode.
+var (
+	WebhookSigningMode_name = map[int32]string{
+		0: "Unspecified",
+		1: "Disabled",
+		2: "WEBHOOK_SIGNING_MODE_Ed25519",
+	}
+	WebhookSigningMode_value = map[string]int32{
+		"Unspecified":                  0,
+		"Disabled":                     1,
+		"WEBHOOK_SIGNING_MODE_Ed25519": 2,
+	}
+)
+
+func (x WebhookSigningMode) Enum() *WebhookSigningMode {
+	p := new(WebhookSigningMode)
+	*p = x
+	return p
+}
+
+func (x WebhookSigningMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WebhookSigningMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_observation_webhooks_proto_enumTypes[5].Descriptor()
+}
+
+func (WebhookSigningMode) Type() protoreflect.EnumType {
+	return &file_observation_webhooks_proto_enumTypes[5]
+}
+
+func (x WebhookSigningMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WebhookSigningMode.Descriptor instead.
+func (WebhookSigningMode) EnumDescriptor() ([]byte, []int) {
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{5}
+}
+
 type AddWebhookRequest struct {
 	state                   protoimpl.MessageState  `protogen:"open.v1"`
 	EventStore              string                  `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -655,6 +799,50 @@ func (x *EventType) GetTombstone() bool {
 	return false
 }
 
+type GetWebhookSigningKeysRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWebhookSigningKeysRequest) Reset() {
+	*x = GetWebhookSigningKeysRequest{}
+	mi := &file_observation_webhooks_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWebhookSigningKeysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWebhookSigningKeysRequest) ProtoMessage() {}
+
+func (x *GetWebhookSigningKeysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_webhooks_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWebhookSigningKeysRequest.ProtoReflect.Descriptor instead.
+func (*GetWebhookSigningKeysRequest) Descriptor() ([]byte, []int) {
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetWebhookSigningKeysRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
 type GetWebhooksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -664,7 +852,7 @@ type GetWebhooksRequest struct {
 
 func (x *GetWebhooksRequest) Reset() {
 	*x = GetWebhooksRequest{}
-	mi := &file_observation_webhooks_proto_msgTypes[6]
+	mi := &file_observation_webhooks_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -676,7 +864,7 @@ func (x *GetWebhooksRequest) String() string {
 func (*GetWebhooksRequest) ProtoMessage() {}
 
 func (x *GetWebhooksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[6]
+	mi := &file_observation_webhooks_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -689,7 +877,7 @@ func (x *GetWebhooksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWebhooksRequest.ProtoReflect.Descriptor instead.
 func (*GetWebhooksRequest) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{6}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetWebhooksRequest) GetEventStore() string {
@@ -709,7 +897,7 @@ type ManagedIdentityAuthorization struct {
 
 func (x *ManagedIdentityAuthorization) Reset() {
 	*x = ManagedIdentityAuthorization{}
-	mi := &file_observation_webhooks_proto_msgTypes[7]
+	mi := &file_observation_webhooks_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -721,7 +909,7 @@ func (x *ManagedIdentityAuthorization) String() string {
 func (*ManagedIdentityAuthorization) ProtoMessage() {}
 
 func (x *ManagedIdentityAuthorization) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[7]
+	mi := &file_observation_webhooks_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -734,7 +922,7 @@ func (x *ManagedIdentityAuthorization) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ManagedIdentityAuthorization.ProtoReflect.Descriptor instead.
 func (*ManagedIdentityAuthorization) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{7}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ManagedIdentityAuthorization) GetClientId() string {
@@ -763,7 +951,7 @@ type OAuthAuthorization struct {
 
 func (x *OAuthAuthorization) Reset() {
 	*x = OAuthAuthorization{}
-	mi := &file_observation_webhooks_proto_msgTypes[8]
+	mi := &file_observation_webhooks_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -775,7 +963,7 @@ func (x *OAuthAuthorization) String() string {
 func (*OAuthAuthorization) ProtoMessage() {}
 
 func (x *OAuthAuthorization) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[8]
+	mi := &file_observation_webhooks_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -788,7 +976,7 @@ func (x *OAuthAuthorization) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OAuthAuthorization.ProtoReflect.Descriptor instead.
 func (*OAuthAuthorization) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{8}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *OAuthAuthorization) GetAuthority() string {
@@ -828,7 +1016,7 @@ type ObserveWebhooksRequest struct {
 
 func (x *ObserveWebhooksRequest) Reset() {
 	*x = ObserveWebhooksRequest{}
-	mi := &file_observation_webhooks_proto_msgTypes[9]
+	mi := &file_observation_webhooks_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -840,7 +1028,7 @@ func (x *ObserveWebhooksRequest) String() string {
 func (*ObserveWebhooksRequest) ProtoMessage() {}
 
 func (x *ObserveWebhooksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[9]
+	mi := &file_observation_webhooks_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -853,7 +1041,7 @@ func (x *ObserveWebhooksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObserveWebhooksRequest.ProtoReflect.Descriptor instead.
 func (*ObserveWebhooksRequest) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{9}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ObserveWebhooksRequest) GetEventStore() string {
@@ -874,7 +1062,7 @@ type OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization struct
 
 func (x *OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization) Reset() {
 	*x = OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization{}
-	mi := &file_observation_webhooks_proto_msgTypes[10]
+	mi := &file_observation_webhooks_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -886,7 +1074,7 @@ func (x *OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization) S
 func (*OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization) ProtoMessage() {}
 
 func (x *OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[10]
+	mi := &file_observation_webhooks_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -899,7 +1087,7 @@ func (x *OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization) P
 
 // Deprecated: Use OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.ProtoReflect.Descriptor instead.
 func (*OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{10}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization) GetValue0() *BasicAuthorization {
@@ -937,7 +1125,7 @@ type QueryResult_IEnumerable_WebhookDetailsResponse struct {
 
 func (x *QueryResult_IEnumerable_WebhookDetailsResponse) Reset() {
 	*x = QueryResult_IEnumerable_WebhookDetailsResponse{}
-	mi := &file_observation_webhooks_proto_msgTypes[11]
+	mi := &file_observation_webhooks_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -949,7 +1137,7 @@ func (x *QueryResult_IEnumerable_WebhookDetailsResponse) String() string {
 func (*QueryResult_IEnumerable_WebhookDetailsResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_WebhookDetailsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[11]
+	mi := &file_observation_webhooks_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -962,7 +1150,7 @@ func (x *QueryResult_IEnumerable_WebhookDetailsResponse) ProtoReflect() protoref
 
 // Deprecated: Use QueryResult_IEnumerable_WebhookDetailsResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_WebhookDetailsResponse) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{11}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *QueryResult_IEnumerable_WebhookDetailsResponse) GetCorrelationId() *bcl.Guid {
@@ -1007,6 +1195,90 @@ func (x *QueryResult_IEnumerable_WebhookDetailsResponse) GetData() []*WebhookDet
 	return nil
 }
 
+type QueryResult_IEnumerable_WebhookSigningPublicKeyResponse struct {
+	state               protoimpl.MessageState             `protogen:"open.v1"`
+	CorrelationId       *bcl.Guid                          `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized        bool                               `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults   []*ValidationResult                `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages   []string                           `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace string                             `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	Data                []*WebhookSigningPublicKeyResponse `protobuf:"bytes,6,rep,name=Data,proto3" json:"Data,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) Reset() {
+	*x = QueryResult_IEnumerable_WebhookSigningPublicKeyResponse{}
+	mi := &file_observation_webhooks_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) ProtoMessage() {}
+
+func (x *QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_webhooks_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryResult_IEnumerable_WebhookSigningPublicKeyResponse.ProtoReflect.Descriptor instead.
+func (*QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) Descriptor() ([]byte, []int) {
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *QueryResult_IEnumerable_WebhookSigningPublicKeyResponse) GetData() []*WebhookSigningPublicKeyResponse {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type RemoveWebhookRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -1017,7 +1289,7 @@ type RemoveWebhookRequest struct {
 
 func (x *RemoveWebhookRequest) Reset() {
 	*x = RemoveWebhookRequest{}
-	mi := &file_observation_webhooks_proto_msgTypes[12]
+	mi := &file_observation_webhooks_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1029,7 +1301,7 @@ func (x *RemoveWebhookRequest) String() string {
 func (*RemoveWebhookRequest) ProtoMessage() {}
 
 func (x *RemoveWebhookRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[12]
+	mi := &file_observation_webhooks_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1042,7 +1314,7 @@ func (x *RemoveWebhookRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveWebhookRequest.ProtoReflect.Descriptor instead.
 func (*RemoveWebhookRequest) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{12}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RemoveWebhookRequest) GetEventStore() string {
@@ -1069,7 +1341,7 @@ type RemoveWebhooksRequest struct {
 
 func (x *RemoveWebhooksRequest) Reset() {
 	*x = RemoveWebhooksRequest{}
-	mi := &file_observation_webhooks_proto_msgTypes[13]
+	mi := &file_observation_webhooks_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1081,7 +1353,7 @@ func (x *RemoveWebhooksRequest) String() string {
 func (*RemoveWebhooksRequest) ProtoMessage() {}
 
 func (x *RemoveWebhooksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[13]
+	mi := &file_observation_webhooks_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1094,7 +1366,7 @@ func (x *RemoveWebhooksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveWebhooksRequest.ProtoReflect.Descriptor instead.
 func (*RemoveWebhooksRequest) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{13}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RemoveWebhooksRequest) GetEventStore() string {
@@ -1111,6 +1383,111 @@ func (x *RemoveWebhooksRequest) GetWebhooks() []string {
 	return nil
 }
 
+type RotateWebhookSigningKeyRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	EventStore          string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	OverlapSeconds      float64                `protobuf:"fixed64,2,opt,name=OverlapSeconds,proto3" json:"OverlapSeconds,omitempty"`
+	UseSpecifiedOverlap bool                   `protobuf:"varint,3,opt,name=UseSpecifiedOverlap,proto3" json:"UseSpecifiedOverlap,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *RotateWebhookSigningKeyRequest) Reset() {
+	*x = RotateWebhookSigningKeyRequest{}
+	mi := &file_observation_webhooks_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateWebhookSigningKeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateWebhookSigningKeyRequest) ProtoMessage() {}
+
+func (x *RotateWebhookSigningKeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_webhooks_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateWebhookSigningKeyRequest.ProtoReflect.Descriptor instead.
+func (*RotateWebhookSigningKeyRequest) Descriptor() ([]byte, []int) {
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RotateWebhookSigningKeyRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *RotateWebhookSigningKeyRequest) GetOverlapSeconds() float64 {
+	if x != nil {
+		return x.OverlapSeconds
+	}
+	return 0
+}
+
+func (x *RotateWebhookSigningKeyRequest) GetUseSpecifiedOverlap() bool {
+	if x != nil {
+		return x.UseSpecifiedOverlap
+	}
+	return false
+}
+
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
+type SerializableDateTimeOffset struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Value         string                 `protobuf:"bytes,1,opt,name=Value,proto3" json:"Value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SerializableDateTimeOffset) Reset() {
+	*x = SerializableDateTimeOffset{}
+	mi := &file_observation_webhooks_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SerializableDateTimeOffset) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SerializableDateTimeOffset) ProtoMessage() {}
+
+func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_webhooks_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
+func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *SerializableDateTimeOffset) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
 type ValidationResult struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Severity      ValidationResultSeverity `protobuf:"varint,1,opt,name=Severity,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverity" json:"Severity,omitempty"` // default value could not be applied: Error
@@ -1122,7 +1499,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_observation_webhooks_proto_msgTypes[14]
+	mi := &file_observation_webhooks_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1134,7 +1511,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[14]
+	mi := &file_observation_webhooks_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1147,7 +1524,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{14}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -1182,13 +1559,14 @@ type WebhookDefinition struct {
 	IsNotReplayable    bool                    `protobuf:"varint,7,opt,name=IsNotReplayable,proto3" json:"IsNotReplayable,omitempty"`
 	IsInactive         bool                    `protobuf:"varint,8,opt,name=IsInactive,proto3" json:"IsInactive,omitempty"`
 	GenerationDelivery EventGenerationDelivery `protobuf:"varint,9,opt,name=GenerationDelivery,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery" json:"GenerationDelivery,omitempty"`
+	Signing            WebhookSigningMode      `protobuf:"varint,10,opt,name=Signing,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode" json:"Signing,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
 
 func (x *WebhookDefinition) Reset() {
 	*x = WebhookDefinition{}
-	mi := &file_observation_webhooks_proto_msgTypes[15]
+	mi := &file_observation_webhooks_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1200,7 +1578,7 @@ func (x *WebhookDefinition) String() string {
 func (*WebhookDefinition) ProtoMessage() {}
 
 func (x *WebhookDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[15]
+	mi := &file_observation_webhooks_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1213,7 +1591,7 @@ func (x *WebhookDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WebhookDefinition.ProtoReflect.Descriptor instead.
 func (*WebhookDefinition) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{15}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *WebhookDefinition) GetEventSequenceId() string {
@@ -1279,6 +1657,13 @@ func (x *WebhookDefinition) GetGenerationDelivery() EventGenerationDelivery {
 	return EventGenerationDelivery_Compatibility
 }
 
+func (x *WebhookDefinition) GetSigning() WebhookSigningMode {
+	if x != nil {
+		return x.Signing
+	}
+	return WebhookSigningMode_Unspecified
+}
+
 type WebhookDetailsResponse struct {
 	state              protoimpl.MessageState  `protogen:"open.v1"`
 	Identifier         string                  `protobuf:"bytes,1,opt,name=Identifier,proto3" json:"Identifier,omitempty"`
@@ -1291,13 +1676,14 @@ type WebhookDetailsResponse struct {
 	IsActive           bool                    `protobuf:"varint,8,opt,name=IsActive,proto3" json:"IsActive,omitempty"`
 	Id                 string                  `protobuf:"bytes,9,opt,name=Id,proto3" json:"Id,omitempty"`
 	GenerationDelivery EventGenerationDelivery `protobuf:"varint,10,opt,name=GenerationDelivery,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery" json:"GenerationDelivery,omitempty"`
+	Signing            WebhookSigningMode      `protobuf:"varint,11,opt,name=Signing,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode" json:"Signing,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
 
 func (x *WebhookDetailsResponse) Reset() {
 	*x = WebhookDetailsResponse{}
-	mi := &file_observation_webhooks_proto_msgTypes[16]
+	mi := &file_observation_webhooks_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1309,7 +1695,7 @@ func (x *WebhookDetailsResponse) String() string {
 func (*WebhookDetailsResponse) ProtoMessage() {}
 
 func (x *WebhookDetailsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[16]
+	mi := &file_observation_webhooks_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1322,7 +1708,7 @@ func (x *WebhookDetailsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WebhookDetailsResponse.ProtoReflect.Descriptor instead.
 func (*WebhookDetailsResponse) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{16}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *WebhookDetailsResponse) GetIdentifier() string {
@@ -1395,6 +1781,97 @@ func (x *WebhookDetailsResponse) GetGenerationDelivery() EventGenerationDelivery
 	return EventGenerationDelivery_Compatibility
 }
 
+func (x *WebhookDetailsResponse) GetSigning() WebhookSigningMode {
+	if x != nil {
+		return x.Signing
+	}
+	return WebhookSigningMode_Unspecified
+}
+
+type WebhookSigningPublicKeyResponse struct {
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	KeyId         string                      `protobuf:"bytes,1,opt,name=KeyId,proto3" json:"KeyId,omitempty"`
+	Algorithm     WebhookSigningAlgorithm     `protobuf:"varint,2,opt,name=Algorithm,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningAlgorithm" json:"Algorithm,omitempty"`
+	PublicKey     string                      `protobuf:"bytes,3,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
+	Status        WebhookSigningKeyStatus     `protobuf:"varint,4,opt,name=Status,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningKeyStatus" json:"Status,omitempty"`
+	CreatedAt     *SerializableDateTimeOffset `protobuf:"bytes,5,opt,name=CreatedAt,proto3" json:"CreatedAt,omitempty"`
+	OverlapEndsAt *SerializableDateTimeOffset `protobuf:"bytes,6,opt,name=OverlapEndsAt,proto3" json:"OverlapEndsAt,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WebhookSigningPublicKeyResponse) Reset() {
+	*x = WebhookSigningPublicKeyResponse{}
+	mi := &file_observation_webhooks_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebhookSigningPublicKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebhookSigningPublicKeyResponse) ProtoMessage() {}
+
+func (x *WebhookSigningPublicKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_observation_webhooks_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebhookSigningPublicKeyResponse.ProtoReflect.Descriptor instead.
+func (*WebhookSigningPublicKeyResponse) Descriptor() ([]byte, []int) {
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *WebhookSigningPublicKeyResponse) GetKeyId() string {
+	if x != nil {
+		return x.KeyId
+	}
+	return ""
+}
+
+func (x *WebhookSigningPublicKeyResponse) GetAlgorithm() WebhookSigningAlgorithm {
+	if x != nil {
+		return x.Algorithm
+	}
+	return WebhookSigningAlgorithm_WEBHOOK_SIGNING_ALGORITHM_Ed25519
+}
+
+func (x *WebhookSigningPublicKeyResponse) GetPublicKey() string {
+	if x != nil {
+		return x.PublicKey
+	}
+	return ""
+}
+
+func (x *WebhookSigningPublicKeyResponse) GetStatus() WebhookSigningKeyStatus {
+	if x != nil {
+		return x.Status
+	}
+	return WebhookSigningKeyStatus_Active
+}
+
+func (x *WebhookSigningPublicKeyResponse) GetCreatedAt() *SerializableDateTimeOffset {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *WebhookSigningPublicKeyResponse) GetOverlapEndsAt() *SerializableDateTimeOffset {
+	if x != nil {
+		return x.OverlapEndsAt
+	}
+	return nil
+}
+
 type WebhookTarget struct {
 	state           protoimpl.MessageState                                                `protogen:"open.v1"`
 	Url             string                                                                `protobuf:"bytes,1,opt,name=Url,proto3" json:"Url,omitempty"`
@@ -1407,7 +1884,7 @@ type WebhookTarget struct {
 
 func (x *WebhookTarget) Reset() {
 	*x = WebhookTarget{}
-	mi := &file_observation_webhooks_proto_msgTypes[17]
+	mi := &file_observation_webhooks_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1419,7 +1896,7 @@ func (x *WebhookTarget) String() string {
 func (*WebhookTarget) ProtoMessage() {}
 
 func (x *WebhookTarget) ProtoReflect() protoreflect.Message {
-	mi := &file_observation_webhooks_proto_msgTypes[17]
+	mi := &file_observation_webhooks_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1432,7 +1909,7 @@ func (x *WebhookTarget) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WebhookTarget.ProtoReflect.Descriptor instead.
 func (*WebhookTarget) Descriptor() ([]byte, []int) {
-	return file_observation_webhooks_proto_rawDescGZIP(), []int{17}
+	return file_observation_webhooks_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *WebhookTarget) GetUrl() string {
@@ -1520,7 +1997,11 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\n" +
 	"Generation\x18\x02 \x01(\rR\n" +
 	"Generation\x12\x1c\n" +
-	"\tTombstone\x18\x03 \x01(\bR\tTombstone\"4\n" +
+	"\tTombstone\x18\x03 \x01(\bR\tTombstone\">\n" +
+	"\x1cGetWebhookSigningKeysRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\"4\n" +
 	"\x12GetWebhooksRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1547,7 +2028,14 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\x11ValidationResults\x18\x03 \x03(\v2A.Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12[\n" +
-	"\x04Data\x18\x06 \x03(\v2G.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponseR\x04Data\"T\n" +
+	"\x04Data\x18\x06 \x03(\v2G.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponseR\x04Data\"\xc5\x03\n" +
+	"7QueryResult_IEnumerable_WebhookSigningPublicKeyResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12o\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v2A.Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12d\n" +
+	"\x04Data\x18\x06 \x03(\v2P.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponseR\x04Data\"T\n" +
 	"\x14RemoveWebhookRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1557,11 +2045,19 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
 	"EventStore\x12\x1a\n" +
-	"\bWebhooks\x18\x02 \x03(\tR\bWebhooks\"\xad\x01\n" +
+	"\bWebhooks\x18\x02 \x03(\tR\bWebhooks\"\x9a\x01\n" +
+	"\x1eRotateWebhookSigningKeyRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12&\n" +
+	"\x0eOverlapSeconds\x18\x02 \x01(\x01R\x0eOverlapSeconds\x120\n" +
+	"\x13UseSpecifiedOverlap\x18\x03 \x01(\bR\x13UseSpecifiedOverlap\"2\n" +
+	"\x1aSerializableDateTimeOffset\x12\x14\n" +
+	"\x05Value\x18\x01 \x01(\tR\x05Value\"\xad\x01\n" +
 	"\x10ValidationResult\x12e\n" +
 	"\bSeverity\x18\x01 \x01(\x0e2I.Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverityR\bSeverity\x12\x18\n" +
 	"\aMessage\x18\x02 \x01(\tR\aMessage\x12\x18\n" +
-	"\aMembers\x18\x03 \x03(\tR\aMembers\"\x95\x04\n" +
+	"\aMembers\x18\x03 \x03(\tR\aMembers\"\xf4\x04\n" +
 	"\x11WebhookDefinition\x12(\n" +
 	"\x0fEventSequenceId\x18\x01 \x01(\tR\x0fEventSequenceId\x12\x1e\n" +
 	"\n" +
@@ -1577,7 +2073,9 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\n" +
 	"IsInactive\x18\b \x01(\bR\n" +
 	"IsInactive\x12x\n" +
-	"\x12GenerationDelivery\x18\t \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDeliveryR\x12GenerationDelivery\"\xb8\x05\n" +
+	"\x12GenerationDelivery\x18\t \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDeliveryR\x12GenerationDelivery\x12]\n" +
+	"\aSigning\x18\n" +
+	" \x01(\x0e2C.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningModeR\aSigning\"\x97\x06\n" +
 	"\x16WebhookDetailsResponse\x12\x1e\n" +
 	"\n" +
 	"Identifier\x18\x01 \x01(\tR\n" +
@@ -1593,10 +2091,18 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\bIsActive\x18\b \x01(\bR\bIsActive\x12\x0e\n" +
 	"\x02Id\x18\t \x01(\tR\x02Id\x12x\n" +
 	"\x12GenerationDelivery\x18\n" +
-	" \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDeliveryR\x12GenerationDelivery\x1a:\n" +
+	" \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDeliveryR\x12GenerationDelivery\x12]\n" +
+	"\aSigning\x18\v \x01(\x0e2C.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningModeR\aSigning\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdb\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfd\x03\n" +
+	"\x1fWebhookSigningPublicKeyResponse\x12\x14\n" +
+	"\x05KeyId\x18\x01 \x01(\tR\x05KeyId\x12f\n" +
+	"\tAlgorithm\x18\x02 \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningAlgorithmR\tAlgorithm\x12\x1c\n" +
+	"\tPublicKey\x18\x03 \x01(\tR\tPublicKey\x12`\n" +
+	"\x06Status\x18\x04 \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningKeyStatusR\x06Status\x12i\n" +
+	"\tCreatedAt\x18\x05 \x01(\v2K.Cratis.Chronicle.Contracts.Observation.Webhooks.SerializableDateTimeOffsetR\tCreatedAt\x12q\n" +
+	"\rOverlapEndsAt\x18\x06 \x01(\v2K.Cratis.Chronicle.Contracts.Observation.Webhooks.SerializableDateTimeOffsetR\rOverlapEndsAt\"\xdb\x03\n" +
 	"\rWebhookTarget\x12\x10\n" +
 	"\x03Url\x18\x01 \x01(\tR\x03Url\x12\x9b\x01\n" +
 	"\rAuthorization\x18\x02 \x01(\v2u.Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorizationR\rAuthorization\x12e\n" +
@@ -1620,15 +2126,31 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\aUnknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\xdc\a\n" +
+	"\x05Error\x10\x03*P\n" +
+	"\x17WebhookSigningAlgorithm\x12%\n" +
+	"!WEBHOOK_SIGNING_ALGORITHM_Ed25519\x10\x00\x12\x0e\n" +
+	"\n" +
+	"HmacSha256\x10\x01*?\n" +
+	"\x17WebhookSigningKeyStatus\x12\n" +
+	"\n" +
+	"\x06Active\x10\x00\x12\v\n" +
+	"\aOverlap\x10\x01\x12\v\n" +
+	"\aRetired\x10\x02*U\n" +
+	"\x12WebhookSigningMode\x12\x0f\n" +
+	"\vUnspecified\x10\x00\x12\f\n" +
+	"\bDisabled\x10\x01\x12 \n" +
+	"\x1cWEBHOOK_SIGNING_MODE_Ed25519\x10\x022\xdc\n" +
+	"\n" +
 	"\bWebhooks\x12\x90\x01\n" +
 	"\n" +
 	"AddWebhook\x12B.Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest\x1a>.Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult\x12\x92\x01\n" +
 	"\vAddWebhooks\x12C.Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest\x1a>.Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult\x12\xb3\x01\n" +
-	"\vGetWebhooks\x12C.Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest\x1a_.Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse\x12\xbd\x01\n" +
+	"\vGetWebhooks\x12C.Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest\x1a_.Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse\x12\xd0\x01\n" +
+	"\x15GetWebhookSigningKeys\x12M.Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhookSigningKeysRequest\x1ah.Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse\x12\xbd\x01\n" +
 	"\x0fObserveWebhooks\x12G.Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest\x1a_.Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse0\x01\x12\x96\x01\n" +
 	"\rRemoveWebhook\x12E.Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest\x1a>.Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult\x12\x98\x01\n" +
-	"\x0eRemoveWebhooks\x12F.Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest\x1a>.Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResultB\xf0\x02\n" +
+	"\x0eRemoveWebhooks\x12F.Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest\x1a>.Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult\x12\xaa\x01\n" +
+	"\x17RotateWebhookSigningKey\x12O.Cratis.Chronicle.Contracts.Observation.Webhooks.RotateWebhookSigningKeyRequest\x1a>.Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResultB\xf0\x02\n" +
 	"3com.Cratis.Chronicle.Contracts.Observation.WebhooksB\x18ObservationWebhooksProtoP\x01Z=github.com/cratis/chronicle.go/contracts/observation/webhooks\xa2\x02\x05CCCOW\xaa\x02/Cratis.Chronicle.Contracts.Observation.Webhooks\xca\x02/Cratis\\Chronicle\\Contracts\\Observation\\Webhooks\xe2\x02;Cratis\\Chronicle\\Contracts\\Observation\\Webhooks\\GPBMetadata\xea\x023Cratis::Chronicle::Contracts::Observation::Webhooksb\x06proto3"
 
 var (
@@ -1643,77 +2165,98 @@ func file_observation_webhooks_proto_rawDescGZIP() []byte {
 	return file_observation_webhooks_proto_rawDescData
 }
 
-var file_observation_webhooks_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_observation_webhooks_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_observation_webhooks_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_observation_webhooks_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_observation_webhooks_proto_goTypes = []any{
 	(AuthorizationType)(0),               // 0: Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType
 	(EventGenerationDelivery)(0),         // 1: Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
 	(ValidationResultSeverity)(0),        // 2: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverity
-	(*AddWebhookRequest)(nil),            // 3: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
-	(*AddWebhooksRequest)(nil),           // 4: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
-	(*BasicAuthorization)(nil),           // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
-	(*BearerTokenAuthorization)(nil),     // 6: Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
-	(*CommandResult)(nil),                // 7: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	(*EventType)(nil),                    // 8: Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
-	(*GetWebhooksRequest)(nil),           // 9: Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
-	(*ManagedIdentityAuthorization)(nil), // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.ManagedIdentityAuthorization
-	(*OAuthAuthorization)(nil),           // 11: Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
-	(*ObserveWebhooksRequest)(nil),       // 12: Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
-	(*OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization)(nil), // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
-	(*QueryResult_IEnumerable_WebhookDetailsResponse)(nil),                       // 14: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
-	(*RemoveWebhookRequest)(nil),                                                 // 15: Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
-	(*RemoveWebhooksRequest)(nil),                                                // 16: Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
-	(*ValidationResult)(nil),                                                     // 17: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
-	(*WebhookDefinition)(nil),                                                    // 18: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition
-	(*WebhookDetailsResponse)(nil),                                               // 19: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse
-	(*WebhookTarget)(nil),                                                        // 20: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget
-	nil,                                                                          // 21: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
-	nil,                                                                          // 22: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
-	nil,                                                                          // 23: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
-	(*bcl.Guid)(nil),                                                             // 24: bcl.Guid
+	(WebhookSigningAlgorithm)(0),         // 3: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningAlgorithm
+	(WebhookSigningKeyStatus)(0),         // 4: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningKeyStatus
+	(WebhookSigningMode)(0),              // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode
+	(*AddWebhookRequest)(nil),            // 6: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
+	(*AddWebhooksRequest)(nil),           // 7: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
+	(*BasicAuthorization)(nil),           // 8: Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
+	(*BearerTokenAuthorization)(nil),     // 9: Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
+	(*CommandResult)(nil),                // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	(*EventType)(nil),                    // 11: Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
+	(*GetWebhookSigningKeysRequest)(nil), // 12: Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhookSigningKeysRequest
+	(*GetWebhooksRequest)(nil),           // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
+	(*ManagedIdentityAuthorization)(nil), // 14: Cratis.Chronicle.Contracts.Observation.Webhooks.ManagedIdentityAuthorization
+	(*OAuthAuthorization)(nil),           // 15: Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
+	(*ObserveWebhooksRequest)(nil),       // 16: Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
+	(*OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization)(nil), // 17: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
+	(*QueryResult_IEnumerable_WebhookDetailsResponse)(nil),                       // 18: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
+	(*QueryResult_IEnumerable_WebhookSigningPublicKeyResponse)(nil),              // 19: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse
+	(*RemoveWebhookRequest)(nil),                                                 // 20: Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
+	(*RemoveWebhooksRequest)(nil),                                                // 21: Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
+	(*RotateWebhookSigningKeyRequest)(nil),                                       // 22: Cratis.Chronicle.Contracts.Observation.Webhooks.RotateWebhookSigningKeyRequest
+	(*SerializableDateTimeOffset)(nil),                                           // 23: Cratis.Chronicle.Contracts.Observation.Webhooks.SerializableDateTimeOffset
+	(*ValidationResult)(nil),                                                     // 24: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
+	(*WebhookDefinition)(nil),                                                    // 25: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition
+	(*WebhookDetailsResponse)(nil),                                               // 26: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse
+	(*WebhookSigningPublicKeyResponse)(nil),                                      // 27: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse
+	(*WebhookTarget)(nil),                                                        // 28: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget
+	nil,                                                                          // 29: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
+	nil,                                                                          // 30: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
+	nil,                                                                          // 31: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
+	(*bcl.Guid)(nil),                                                             // 32: bcl.Guid
 }
 var file_observation_webhooks_proto_depIdxs = []int32{
-	8,  // 0: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
+	11, // 0: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
 	0,  // 1: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.AuthorizationType:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType
-	21, // 2: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
+	29, // 2: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
 	1,  // 3: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
-	18, // 4: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest.Webhooks:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition
-	24, // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.CorrelationId:type_name -> bcl.Guid
-	17, // 6: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
-	5,  // 7: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value0:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
-	6,  // 8: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value1:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
-	11, // 9: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value2:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
-	24, // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.CorrelationId:type_name -> bcl.Guid
-	17, // 11: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
-	19, // 12: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse
-	2,  // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverity
-	8,  // 14: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
-	20, // 15: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.Target:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget
-	1,  // 16: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
-	8,  // 17: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
-	0,  // 18: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.AuthorizationType:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType
-	22, // 19: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
-	1,  // 20: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
-	13, // 21: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Authorization:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
-	23, // 22: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
-	10, // 23: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.ManagedIdentity:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ManagedIdentityAuthorization
-	3,  // 24: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
-	4,  // 25: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
-	9,  // 26: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
-	12, // 27: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
-	15, // 28: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
-	16, // 29: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
-	7,  // 30: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	7,  // 31: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	14, // 32: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
-	14, // 33: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
-	7,  // 34: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	7,  // 35: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	30, // [30:36] is the sub-list for method output_type
-	24, // [24:30] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	25, // 4: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest.Webhooks:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition
+	32, // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.CorrelationId:type_name -> bcl.Guid
+	24, // 6: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
+	8,  // 7: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value0:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
+	9,  // 8: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value1:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
+	15, // 9: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value2:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
+	32, // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.CorrelationId:type_name -> bcl.Guid
+	24, // 11: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
+	26, // 12: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse
+	32, // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse.CorrelationId:type_name -> bcl.Guid
+	24, // 14: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
+	27, // 15: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse.Data:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse
+	2,  // 16: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverity
+	11, // 17: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
+	28, // 18: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.Target:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget
+	1,  // 19: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
+	5,  // 20: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition.Signing:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode
+	11, // 21: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
+	0,  // 22: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.AuthorizationType:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType
+	30, // 23: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
+	1,  // 24: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
+	5,  // 25: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.Signing:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode
+	3,  // 26: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.Algorithm:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningAlgorithm
+	4,  // 27: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.Status:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningKeyStatus
+	23, // 28: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.CreatedAt:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.SerializableDateTimeOffset
+	23, // 29: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.OverlapEndsAt:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.SerializableDateTimeOffset
+	17, // 30: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Authorization:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
+	31, // 31: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
+	14, // 32: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.ManagedIdentity:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ManagedIdentityAuthorization
+	6,  // 33: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
+	7,  // 34: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
+	13, // 35: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
+	12, // 36: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhookSigningKeys:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhookSigningKeysRequest
+	16, // 37: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
+	20, // 38: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
+	21, // 39: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
+	22, // 40: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RotateWebhookSigningKey:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RotateWebhookSigningKeyRequest
+	10, // 41: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	10, // 42: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	18, // 43: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
+	19, // 44: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhookSigningKeys:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse
+	18, // 45: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
+	10, // 46: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	10, // 47: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	10, // 48: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RotateWebhookSigningKey:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	41, // [41:49] is the sub-list for method output_type
+	33, // [33:41] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_observation_webhooks_proto_init() }
@@ -1726,8 +2269,8 @@ func file_observation_webhooks_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_observation_webhooks_proto_rawDesc), len(file_observation_webhooks_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   21,
+			NumEnums:      6,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

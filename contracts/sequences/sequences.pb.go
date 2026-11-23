@@ -1095,6 +1095,8 @@ type AppendManyOnceResponse struct {
 	Errors                    []string                  `protobuf:"bytes,10,rep,name=Errors,proto3" json:"Errors,omitempty"`
 	ConcurrencyViolations     []*ConcurrencyViolation   `protobuf:"bytes,11,rep,name=ConcurrencyViolations,proto3" json:"ConcurrencyViolations,omitempty"`
 	IdempotencyConflicts      []*IdempotencyKeyConflict `protobuf:"bytes,12,rep,name=IdempotencyConflicts,proto3" json:"IdempotencyConflicts,omitempty"`
+	IsRetryable               bool                      `protobuf:"varint,13,opt,name=IsRetryable,proto3" json:"IsRetryable,omitempty"`
+	RetryAfter                *bcl.TimeSpan             `protobuf:"bytes,14,opt,name=RetryAfter,proto3" json:"RetryAfter,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -1209,6 +1211,20 @@ func (x *AppendManyOnceResponse) GetConcurrencyViolations() []*ConcurrencyViolat
 func (x *AppendManyOnceResponse) GetIdempotencyConflicts() []*IdempotencyKeyConflict {
 	if x != nil {
 		return x.IdempotencyConflicts
+	}
+	return nil
+}
+
+func (x *AppendManyOnceResponse) GetIsRetryable() bool {
+	if x != nil {
+		return x.IsRetryable
+	}
+	return false
+}
+
+func (x *AppendManyOnceResponse) GetRetryAfter() *bcl.TimeSpan {
+	if x != nil {
+		return x.RetryAfter
 	}
 	return nil
 }
@@ -1467,6 +1483,8 @@ type AppendManyResponse struct {
 	ConcurrencyViolations     []*ConcurrencyViolation `protobuf:"bytes,10,rep,name=ConcurrencyViolations,proto3" json:"ConcurrencyViolations,omitempty"`
 	EffectReceipt             *EffectReceiptDetails   `protobuf:"bytes,11,opt,name=EffectReceipt,proto3" json:"EffectReceipt,omitempty"`
 	EffectAlreadyRecorded     bool                    `protobuf:"varint,12,opt,name=EffectAlreadyRecorded,proto3" json:"EffectAlreadyRecorded,omitempty"`
+	IsRetryable               bool                    `protobuf:"varint,13,opt,name=IsRetryable,proto3" json:"IsRetryable,omitempty"`
+	RetryAfter                *bcl.TimeSpan           `protobuf:"bytes,14,opt,name=RetryAfter,proto3" json:"RetryAfter,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -1583,6 +1601,20 @@ func (x *AppendManyResponse) GetEffectAlreadyRecorded() bool {
 		return x.EffectAlreadyRecorded
 	}
 	return false
+}
+
+func (x *AppendManyResponse) GetIsRetryable() bool {
+	if x != nil {
+		return x.IsRetryable
+	}
+	return false
+}
+
+func (x *AppendManyResponse) GetRetryAfter() *bcl.TimeSpan {
+	if x != nil {
+		return x.RetryAfter
+	}
+	return nil
 }
 
 type AppendManyWithNamedTagsRequest struct {
@@ -1911,6 +1943,8 @@ type AppendOnceResponse struct {
 	Errors                    []string                  `protobuf:"bytes,10,rep,name=Errors,proto3" json:"Errors,omitempty"`
 	ConcurrencyViolation      *ConcurrencyViolation     `protobuf:"bytes,11,opt,name=ConcurrencyViolation,proto3" json:"ConcurrencyViolation,omitempty"`
 	IdempotencyConflicts      []*IdempotencyKeyConflict `protobuf:"bytes,12,rep,name=IdempotencyConflicts,proto3" json:"IdempotencyConflicts,omitempty"`
+	IsRetryable               bool                      `protobuf:"varint,13,opt,name=IsRetryable,proto3" json:"IsRetryable,omitempty"`
+	RetryAfter                *bcl.TimeSpan             `protobuf:"bytes,14,opt,name=RetryAfter,proto3" json:"RetryAfter,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -2025,6 +2059,20 @@ func (x *AppendOnceResponse) GetConcurrencyViolation() *ConcurrencyViolation {
 func (x *AppendOnceResponse) GetIdempotencyConflicts() []*IdempotencyKeyConflict {
 	if x != nil {
 		return x.IdempotencyConflicts
+	}
+	return nil
+}
+
+func (x *AppendOnceResponse) GetIsRetryable() bool {
+	if x != nil {
+		return x.IsRetryable
+	}
+	return false
+}
+
+func (x *AppendOnceResponse) GetRetryAfter() *bcl.TimeSpan {
+	if x != nil {
+		return x.RetryAfter
 	}
 	return nil
 }
@@ -2411,6 +2459,8 @@ type AppendResponse struct {
 	ConcurrencyViolation      *ConcurrencyViolation  `protobuf:"bytes,10,opt,name=ConcurrencyViolation,proto3" json:"ConcurrencyViolation,omitempty"`
 	EffectReceipt             *EffectReceiptDetails  `protobuf:"bytes,11,opt,name=EffectReceipt,proto3" json:"EffectReceipt,omitempty"`
 	EffectAlreadyRecorded     bool                   `protobuf:"varint,12,opt,name=EffectAlreadyRecorded,proto3" json:"EffectAlreadyRecorded,omitempty"`
+	IsRetryable               bool                   `protobuf:"varint,13,opt,name=IsRetryable,proto3" json:"IsRetryable,omitempty"`
+	RetryAfter                *bcl.TimeSpan          `protobuf:"bytes,14,opt,name=RetryAfter,proto3" json:"RetryAfter,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -2527,6 +2577,20 @@ func (x *AppendResponse) GetEffectAlreadyRecorded() bool {
 		return x.EffectAlreadyRecorded
 	}
 	return false
+}
+
+func (x *AppendResponse) GetIsRetryable() bool {
+	if x != nil {
+		return x.IsRetryable
+	}
+	return false
+}
+
+func (x *AppendResponse) GetRetryAfter() *bcl.TimeSpan {
+	if x != nil {
+		return x.RetryAfter
+	}
+	return nil
 }
 
 type AppendWithNamedTagsRequest struct {
@@ -9919,7 +9983,7 @@ const file_sequences_proto_rawDesc = "" +
 	"\x04Tags\x18\x06 \x03(\tR\x04Tags\x12M\n" +
 	"\tCausation\x18\a \x03(\v2/.Cratis.Chronicle.Contracts.Sequences.CausationR\tCausation\x12J\n" +
 	"\bCausedBy\x18\b \x01(\v2..Cratis.Chronicle.Contracts.Sequences.IdentityR\bCausedBy\x12o\n" +
-	"\x11ConcurrencyScopes\x18\t \x03(\v2A.Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScopeR\x11ConcurrencyScopes\"\xa7\x06\n" +
+	"\x11ConcurrencyScopes\x18\t \x03(\v2A.Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScopeR\x11ConcurrencyScopes\"\xf8\x06\n" +
 	"\x16AppendManyOnceResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12,\n" +
 	"\x0fSequenceNumbers\x18\x02 \x03(\x04B\x02\x10\x00R\x0fSequenceNumbers\x12S\n" +
@@ -9933,7 +9997,11 @@ const file_sequences_proto_rawDesc = "" +
 	"\x06Errors\x18\n" +
 	" \x03(\tR\x06Errors\x12p\n" +
 	"\x15ConcurrencyViolations\x18\v \x03(\v2:.Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolationR\x15ConcurrencyViolations\x12p\n" +
-	"\x14IdempotencyConflicts\x18\f \x03(\v2<.Cratis.Chronicle.Contracts.Sequences.IdempotencyKeyConflictR\x14IdempotencyConflicts\"\xc4\x04\n" +
+	"\x14IdempotencyConflicts\x18\f \x03(\v2<.Cratis.Chronicle.Contracts.Sequences.IdempotencyKeyConflictR\x14IdempotencyConflicts\x12 \n" +
+	"\vIsRetryable\x18\r \x01(\bR\vIsRetryable\x12-\n" +
+	"\n" +
+	"RetryAfter\x18\x0e \x01(\v2\r.bcl.TimeSpanR\n" +
+	"RetryAfter\"\xc4\x04\n" +
 	"\"AppendManyOnceWithNamedTagsRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -9961,7 +10029,7 @@ const file_sequences_proto_rawDesc = "" +
 	"\x10ConcurrencyScope\x18\n" +
 	" \x01(\v26.Cratis.Chronicle.Contracts.Sequences.ConcurrencyScopeR\x10ConcurrencyScope\x12\\\n" +
 	"\bOccurred\x18\v \x01(\v2@.Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffsetR\bOccurred\x12Y\n" +
-	"\rEffectReceipt\x18\f \x01(\v23.Cratis.Chronicle.Contracts.Sequences.EffectReceiptR\rEffectReceipt\"\xf4\x05\n" +
+	"\rEffectReceipt\x18\f \x01(\v23.Cratis.Chronicle.Contracts.Sequences.EffectReceiptR\rEffectReceipt\"\xc5\x06\n" +
 	"\x12AppendManyResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12,\n" +
 	"\x0fSequenceNumbers\x18\x02 \x03(\x04B\x02\x10\x00R\x0fSequenceNumbers\x12\x1c\n" +
@@ -9975,7 +10043,11 @@ const file_sequences_proto_rawDesc = "" +
 	"\x15ConcurrencyViolations\x18\n" +
 	" \x03(\v2:.Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolationR\x15ConcurrencyViolations\x12`\n" +
 	"\rEffectReceipt\x18\v \x01(\v2:.Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetailsR\rEffectReceipt\x124\n" +
-	"\x15EffectAlreadyRecorded\x18\f \x01(\bR\x15EffectAlreadyRecorded\"\x85\x06\n" +
+	"\x15EffectAlreadyRecorded\x18\f \x01(\bR\x15EffectAlreadyRecorded\x12 \n" +
+	"\vIsRetryable\x18\r \x01(\bR\vIsRetryable\x12-\n" +
+	"\n" +
+	"RetryAfter\x18\x0e \x01(\v2\r.bcl.TimeSpanR\n" +
+	"RetryAfter\"\x85\x06\n" +
 	"\x1eAppendManyWithNamedTagsRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -10013,7 +10085,7 @@ const file_sequences_proto_rawDesc = "" +
 	"\tCausation\x18\x0f \x03(\v2/.Cratis.Chronicle.Contracts.Sequences.CausationR\tCausation\x12J\n" +
 	"\bCausedBy\x18\x10 \x01(\v2..Cratis.Chronicle.Contracts.Sequences.IdentityR\bCausedBy\x12b\n" +
 	"\x10ConcurrencyScope\x18\x11 \x01(\v26.Cratis.Chronicle.Contracts.Sequences.ConcurrencyScopeR\x10ConcurrencyScope\x12 \n" +
-	"\vEventSource\x18\x12 \x01(\tR\vEventSource\"\x95\x06\n" +
+	"\vEventSource\x18\x12 \x01(\tR\vEventSource\"\xe6\x06\n" +
 	"\x12AppendOnceResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12&\n" +
 	"\x0eSequenceNumber\x18\x02 \x01(\x04R\x0eSequenceNumber\x12M\n" +
@@ -10027,7 +10099,11 @@ const file_sequences_proto_rawDesc = "" +
 	"\x06Errors\x18\n" +
 	" \x03(\tR\x06Errors\x12n\n" +
 	"\x14ConcurrencyViolation\x18\v \x01(\v2:.Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolationR\x14ConcurrencyViolation\x12p\n" +
-	"\x14IdempotencyConflicts\x18\f \x03(\v2<.Cratis.Chronicle.Contracts.Sequences.IdempotencyKeyConflictR\x14IdempotencyConflicts\"\xe5\a\n" +
+	"\x14IdempotencyConflicts\x18\f \x03(\v2<.Cratis.Chronicle.Contracts.Sequences.IdempotencyKeyConflictR\x14IdempotencyConflicts\x12 \n" +
+	"\vIsRetryable\x18\r \x01(\bR\vIsRetryable\x12-\n" +
+	"\n" +
+	"RetryAfter\x18\x0e \x01(\v2\r.bcl.TimeSpanR\n" +
+	"RetryAfter\"\xe5\a\n" +
 	"\x1eAppendOnceWithNamedTagsRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -10072,7 +10148,7 @@ const file_sequences_proto_rawDesc = "" +
 	"\bCausedBy\x18\x0f \x01(\v2..Cratis.Chronicle.Contracts.Sequences.IdentityR\bCausedBy\x12b\n" +
 	"\x10ConcurrencyScope\x18\x10 \x01(\v26.Cratis.Chronicle.Contracts.Sequences.ConcurrencyScopeR\x10ConcurrencyScope\x12 \n" +
 	"\vEventSource\x18\x11 \x01(\tR\vEventSource\x12Y\n" +
-	"\rEffectReceipt\x18\x12 \x01(\v23.Cratis.Chronicle.Contracts.Sequences.EffectReceiptR\rEffectReceipt\"\xe8\x05\n" +
+	"\rEffectReceipt\x18\x12 \x01(\v23.Cratis.Chronicle.Contracts.Sequences.EffectReceiptR\rEffectReceipt\"\xb9\x06\n" +
 	"\x0eAppendResponse\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12&\n" +
 	"\x0eSequenceNumber\x18\x02 \x01(\x04R\x0eSequenceNumber\x12\x1c\n" +
@@ -10086,7 +10162,11 @@ const file_sequences_proto_rawDesc = "" +
 	"\x14ConcurrencyViolation\x18\n" +
 	" \x01(\v2:.Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolationR\x14ConcurrencyViolation\x12`\n" +
 	"\rEffectReceipt\x18\v \x01(\v2:.Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetailsR\rEffectReceipt\x124\n" +
-	"\x15EffectAlreadyRecorded\x18\f \x01(\bR\x15EffectAlreadyRecorded\"\x94\b\n" +
+	"\x15EffectAlreadyRecorded\x18\f \x01(\bR\x15EffectAlreadyRecorded\x12 \n" +
+	"\vIsRetryable\x18\r \x01(\bR\vIsRetryable\x12-\n" +
+	"\n" +
+	"RetryAfter\x18\x0e \x01(\v2\r.bcl.TimeSpanR\n" +
+	"RetryAfter\"\x94\b\n" +
 	"\x1aAppendWithNamedTagsRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -11061,6 +11141,7 @@ var file_sequences_proto_goTypes = []any{
 	nil,                                                             // 112: Cratis.Chronicle.Contracts.Sequences.Causation.PropertiesEntry
 	nil,                                                             // 113: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.DetailsEntry
 	(*bcl.Guid)(nil),                                                // 114: bcl.Guid
+	(*bcl.TimeSpan)(nil),                                            // 115: bcl.TimeSpan
 }
 var file_sequences_proto_depIdxs = []int32{
 	54,  // 0: Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId
@@ -11085,289 +11166,293 @@ var file_sequences_proto_depIdxs = []int32{
 	48,  // 19: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
 	47,  // 20: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceResponse.ConcurrencyViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
 	72,  // 21: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceResponse.IdempotencyConflicts:type_name -> Cratis.Chronicle.Contracts.Sequences.IdempotencyKeyConflict
-	77,  // 22: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.KeyedEventForEventSourceIdWithNamedTags
-	114, // 23: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
-	30,  // 24: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 25: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	61,  // 26: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.ConcurrencyScopes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope
-	63,  // 27: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventToAppend
-	114, // 28: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.CorrelationId:type_name -> bcl.Guid
-	30,  // 29: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 30: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	46,  // 31: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	106, // 32: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	50,  // 33: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	114, // 34: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.CorrelationId:type_name -> bcl.Guid
-	48,  // 35: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
-	47,  // 36: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.ConcurrencyViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
-	51,  // 37: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
-	64,  // 38: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags
-	114, // 39: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
-	106, // 40: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	30,  // 41: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 42: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	46,  // 43: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	50,  // 44: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	65,  // 45: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	114, // 46: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.CorrelationId:type_name -> bcl.Guid
-	106, // 47: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	30,  // 48: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 49: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	46,  // 50: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	114, // 51: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.CorrelationId:type_name -> bcl.Guid
-	0,   // 52: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendOutcome
-	48,  // 53: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
-	47,  // 54: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.ConcurrencyViolation:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
-	72,  // 55: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.IdempotencyConflicts:type_name -> Cratis.Chronicle.Contracts.Sequences.IdempotencyKeyConflict
-	65,  // 56: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	79,  // 57: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	114, // 58: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
-	106, // 59: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	30,  // 60: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 61: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	46,  // 62: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	65,  // 63: Cratis.Chronicle.Contracts.Sequences.AppendRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	114, // 64: Cratis.Chronicle.Contracts.Sequences.AppendRequest.CorrelationId:type_name -> bcl.Guid
-	106, // 65: Cratis.Chronicle.Contracts.Sequences.AppendRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	30,  // 66: Cratis.Chronicle.Contracts.Sequences.AppendRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 67: Cratis.Chronicle.Contracts.Sequences.AppendRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	46,  // 68: Cratis.Chronicle.Contracts.Sequences.AppendRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	50,  // 69: Cratis.Chronicle.Contracts.Sequences.AppendRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	114, // 70: Cratis.Chronicle.Contracts.Sequences.AppendResponse.CorrelationId:type_name -> bcl.Guid
-	48,  // 71: Cratis.Chronicle.Contracts.Sequences.AppendResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
-	47,  // 72: Cratis.Chronicle.Contracts.Sequences.AppendResponse.ConcurrencyViolation:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
-	51,  // 73: Cratis.Chronicle.Contracts.Sequences.AppendResponse.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
-	65,  // 74: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	79,  // 75: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	114, // 76: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
-	106, // 77: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	30,  // 78: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 79: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	46,  // 80: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	50,  // 81: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
-	53,  // 82: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.Context:type_name -> Cratis.Chronicle.Contracts.Sequences.EventContext
-	57,  // 83: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.Revisions:type_name -> Cratis.Chronicle.Contracts.Sequences.EventRevision
-	75,  // 84: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.GenerationalContent:type_name -> Cratis.Chronicle.Contracts.Sequences.KeyValuePair_Int32_String
-	106, // 85: Cratis.Chronicle.Contracts.Sequences.Causation.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	112, // 86: Cratis.Chronicle.Contracts.Sequences.Causation.Properties:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation.PropertiesEntry
-	1,   // 87: Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse.Origin:type_name -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamOrigin
-	106, // 88: Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse.ClosedAt:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	114, // 89: Cratis.Chronicle.Contracts.Sequences.CommandResult.CorrelationId:type_name -> bcl.Guid
-	109, // 90: Cratis.Chronicle.Contracts.Sequences.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	114, // 91: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 92: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	17,  // 93: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendManyOnceResponse
-	114, // 94: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 95: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	20,  // 96: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendManyResponse
-	114, // 97: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 98: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	23,  // 99: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse
-	114, // 100: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 101: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	26,  // 102: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendResponse
-	114, // 103: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 104: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	44,  // 105: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse
-	114, // 106: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid.CorrelationId:type_name -> bcl.Guid
-	109, // 107: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	114, // 108: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid.Response:type_name -> bcl.Guid
-	114, // 109: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 110: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	100, // 111: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse
-	114, // 112: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 113: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	111, // 114: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse
-	65,  // 115: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	114, // 116: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.CorrelationId:type_name -> bcl.Guid
-	106, // 117: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	30,  // 118: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 119: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	2,   // 120: Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse.Error:type_name -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamError
-	65,  // 121: Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope.EventTypes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	46,  // 122: Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation.Scope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	3,   // 123: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.ConstraintType:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintType
-	113, // 124: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.Details:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.DetailsEntry
-	5,   // 125: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails.Outcome:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectOutcome
-	106, // 126: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	106, // 127: Cratis.Chronicle.Contracts.Sequences.EndOfRequest.Start:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	7,   // 128: Cratis.Chronicle.Contracts.Sequences.EndOfRequest.Resolution:type_name -> Cratis.Chronicle.Contracts.Sequences.HistogramResolution
-	65,  // 129: Cratis.Chronicle.Contracts.Sequences.EventContext.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	106, // 130: Cratis.Chronicle.Contracts.Sequences.EventContext.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	114, // 131: Cratis.Chronicle.Contracts.Sequences.EventContext.CorrelationId:type_name -> bcl.Guid
-	30,  // 132: Cratis.Chronicle.Contracts.Sequences.EventContext.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 133: Cratis.Chronicle.Contracts.Sequences.EventContext.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	6,   // 134: Cratis.Chronicle.Contracts.Sequences.EventContext.ObservationState:type_name -> Cratis.Chronicle.Contracts.Sequences.EventObservationState
-	79,  // 135: Cratis.Chronicle.Contracts.Sequences.EventContext.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	65,  // 136: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	106, // 137: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	30,  // 138: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	65,  // 139: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	79,  // 140: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	106, // 141: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	30,  // 142: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	106, // 143: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	114, // 144: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.CorrelationId:type_name -> bcl.Guid
-	30,  // 145: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	101, // 146: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
-	10,  // 147: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.InitiatorType:type_name -> Cratis.Chronicle.Contracts.Sequences.InitiatorType
-	73,  // 148: Cratis.Chronicle.Contracts.Sequences.EventRevision.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	106, // 149: Cratis.Chronicle.Contracts.Sequences.EventRevision.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	28,  // 150: Cratis.Chronicle.Contracts.Sequences.EventSequencePageResponse.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse
-	46,  // 151: Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope.Scope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
-	65,  // 152: Cratis.Chronicle.Contracts.Sequences.EventToAppend.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	65,  // 153: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	79,  // 154: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	106, // 155: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	106, // 156: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	106, // 157: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	79,  // 158: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
-	8,   // 159: Cratis.Chronicle.Contracts.Sequences.IdempotencyKeyConflict.Reason:type_name -> Cratis.Chronicle.Contracts.Sequences.IdempotencyConflictReason
-	73,  // 160: Cratis.Chronicle.Contracts.Sequences.Identity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	54,  // 161: Cratis.Chronicle.Contracts.Sequences.KeyedEventForEventSourceId.Event:type_name -> Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId
-	55,  // 162: Cratis.Chronicle.Contracts.Sequences.KeyedEventForEventSourceIdWithNamedTags.Event:type_name -> Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags
-	106, // 163: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	106, // 164: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	80,  // 165: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
-	106, // 166: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	106, // 167: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	114, // 168: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequencePageResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 169: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequencePageResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	59,  // 170: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequencePageResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequencePageResponse
-	114, // 171: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 172: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	60,  // 173: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse
-	114, // 174: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 175: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	62,  // 176: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceEventsResponse
-	114, // 177: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.CorrelationId:type_name -> bcl.Guid
-	109, // 178: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	7,   // 179: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.HistogramResolution
-	114, // 180: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 181: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	28,  // 182: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse
-	114, // 183: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 184: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	31,  // 185: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse
-	114, // 186: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 187: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	56,  // 188: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse
-	114, // 189: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 190: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	58,  // 191: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse
-	114, // 192: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 193: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	67,  // 194: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse
-	114, // 195: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 196: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	103, // 197: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse
-	114, // 198: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.CorrelationId:type_name -> bcl.Guid
-	109, // 199: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	106, // 200: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	114, // 201: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.CorrelationId:type_name -> bcl.Guid
-	109, // 202: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
-	107, // 203: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.StreamScopeCompletionResponse
-	30,  // 204: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 205: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	30,  // 206: Cratis.Chronicle.Contracts.Sequences.RedactRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 207: Cratis.Chronicle.Contracts.Sequences.RedactRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	30,  // 208: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 209: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	11,  // 210: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse.Error:type_name -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeError
-	9,   // 211: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity.Resolution:type_name -> Cratis.Chronicle.Contracts.Sequences.IdentityResolution
-	101, // 212: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
-	65,  // 213: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	30,  // 214: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
-	73,  // 215: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
-	106, // 216: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse.From:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	106, // 217: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse.To:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	106, // 218: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	106, // 219: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	80,  // 220: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
-	106, // 221: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	106, // 222: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
-	12,  // 223: Cratis.Chronicle.Contracts.Sequences.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResultSeverity
-	65,  // 224: Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
-	4,   // 225: Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse.Result:type_name -> Cratis.Chronicle.Contracts.Sequences.ContentVerificationResult
-	13,  // 226: Cratis.Chronicle.Contracts.Sequences.EventSequences.AllEventSequences:input_type -> Cratis.Chronicle.Contracts.Sequences.AllEventSequencesRequest
-	25,  // 227: Cratis.Chronicle.Contracts.Sequences.EventSequences.Append:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendRequest
-	29,  // 228: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendedEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendedEventsRequest
-	19,  // 229: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendMany:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyRequest
-	14,  // 230: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSources:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest
-	15,  // 231: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSourcesWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest
-	16,  // 232: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyOnce:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyOnceRequest
-	18,  // 233: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyOnceWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest
-	21,  // 234: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest
-	22,  // 235: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendOnce:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest
-	24,  // 236: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendOnceWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest
-	27,  // 237: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest
-	32,  // 238: Cratis.Chronicle.Contracts.Sequences.EventSequences.ClosedStreams:input_type -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamsRequest
-	42,  // 239: Cratis.Chronicle.Contracts.Sequences.EventSequences.Compensate:input_type -> Cratis.Chronicle.Contracts.Sequences.CompensateRequest
-	43,  // 240: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStream:input_type -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest
-	45,  // 241: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStreamScope:input_type -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamScopeRequest
-	49,  // 242: Cratis.Chronicle.Contracts.Sequences.EventSequences.CopyEventsForEventSource:input_type -> Cratis.Chronicle.Contracts.Sequences.CopyEventsForEventSourceRequest
-	52,  // 243: Cratis.Chronicle.Contracts.Sequences.EventSequences.EndOf:input_type -> Cratis.Chronicle.Contracts.Sequences.EndOfRequest
-	66,  // 244: Cratis.Chronicle.Contracts.Sequences.EventSequences.ExportEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest
-	68,  // 245: Cratis.Chronicle.Contracts.Sequences.EventSequences.ForEventSourceIdAndEventTypes:input_type -> Cratis.Chronicle.Contracts.Sequences.ForEventSourceIdAndEventTypesRequest
-	69,  // 246: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumber:input_type -> Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberRequest
-	70,  // 247: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumberWithErasedProperties:input_type -> Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberWithErasedPropertiesRequest
-	71,  // 248: Cratis.Chronicle.Contracts.Sequences.EventSequences.HasEventsForEventSourceId:input_type -> Cratis.Chronicle.Contracts.Sequences.HasEventsForEventSourceIdRequest
-	74,  // 249: Cratis.Chronicle.Contracts.Sequences.EventSequences.IsStreamScopeCompleted:input_type -> Cratis.Chronicle.Contracts.Sequences.IsStreamScopeCompletedRequest
-	78,  // 250: Cratis.Chronicle.Contracts.Sequences.EventSequences.MetadataAt:input_type -> Cratis.Chronicle.Contracts.Sequences.MetadataAtRequest
-	81,  // 251: Cratis.Chronicle.Contracts.Sequences.EventSequences.Page:input_type -> Cratis.Chronicle.Contracts.Sequences.PageRequest
-	82,  // 252: Cratis.Chronicle.Contracts.Sequences.EventSequences.ParseResolution:input_type -> Cratis.Chronicle.Contracts.Sequences.ParseResolutionRequest
-	83,  // 253: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest
-	84,  // 254: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEventsWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest
-	98,  // 255: Cratis.Chronicle.Contracts.Sequences.EventSequences.Redact:input_type -> Cratis.Chronicle.Contracts.Sequences.RedactRequest
-	97,  // 256: Cratis.Chronicle.Contracts.Sequences.EventSequences.RedactForEventSource:input_type -> Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest
-	99,  // 257: Cratis.Chronicle.Contracts.Sequences.EventSequences.ReopenStreamScope:input_type -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest
-	102, // 258: Cratis.Chronicle.Contracts.Sequences.EventSequences.Revise:input_type -> Cratis.Chronicle.Contracts.Sequences.ReviseRequest
-	104, // 259: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogram:input_type -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest
-	105, // 260: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogramWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest
-	108, // 261: Cratis.Chronicle.Contracts.Sequences.EventSequences.TailSequenceNumber:input_type -> Cratis.Chronicle.Contracts.Sequences.TailSequenceNumberRequest
-	110, // 262: Cratis.Chronicle.Contracts.Sequences.EventSequences.VerifyContent:input_type -> Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest
-	92,  // 263: Cratis.Chronicle.Contracts.Sequences.EventSequences.AllEventSequences:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse
-	37,  // 264: Cratis.Chronicle.Contracts.Sequences.EventSequences.Append:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
-	89,  // 265: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendedEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	35,  // 266: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendMany:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
-	35,  // 267: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSources:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
-	35,  // 268: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSourcesWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
-	34,  // 269: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyOnce:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse
-	34,  // 270: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyOnceWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse
-	35,  // 271: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
-	36,  // 272: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendOnce:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse
-	36,  // 273: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendOnceWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse
-	37,  // 274: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
-	90,  // 275: Cratis.Chronicle.Contracts.Sequences.EventSequences.ClosedStreams:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse
-	37,  // 276: Cratis.Chronicle.Contracts.Sequences.EventSequences.Compensate:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
-	38,  // 277: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStream:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse
-	38,  // 278: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStreamScope:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse
-	39,  // 279: Cratis.Chronicle.Contracts.Sequences.EventSequences.CopyEventsForEventSource:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid
-	95,  // 280: Cratis.Chronicle.Contracts.Sequences.EventSequences.EndOf:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset
-	93,  // 281: Cratis.Chronicle.Contracts.Sequences.EventSequences.ExportEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse
-	89,  // 282: Cratis.Chronicle.Contracts.Sequences.EventSequences.ForEventSourceIdAndEventTypes:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	89,  // 283: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumber:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	89,  // 284: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumberWithErasedProperties:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	87,  // 285: Cratis.Chronicle.Contracts.Sequences.EventSequences.HasEventsForEventSourceId:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse
-	96,  // 286: Cratis.Chronicle.Contracts.Sequences.EventSequences.IsStreamScopeCompleted:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse
-	91,  // 287: Cratis.Chronicle.Contracts.Sequences.EventSequences.MetadataAt:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse
-	85,  // 288: Cratis.Chronicle.Contracts.Sequences.EventSequences.Page:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequencePageResponse
-	88,  // 289: Cratis.Chronicle.Contracts.Sequences.EventSequences.ParseResolution:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution
-	89,  // 290: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	89,  // 291: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEventsWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
-	33,  // 292: Cratis.Chronicle.Contracts.Sequences.EventSequences.Redact:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
-	33,  // 293: Cratis.Chronicle.Contracts.Sequences.EventSequences.RedactForEventSource:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
-	40,  // 294: Cratis.Chronicle.Contracts.Sequences.EventSequences.ReopenStreamScope:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse
-	33,  // 295: Cratis.Chronicle.Contracts.Sequences.EventSequences.Revise:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
-	94,  // 296: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogram:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
-	94,  // 297: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogramWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
-	86,  // 298: Cratis.Chronicle.Contracts.Sequences.EventSequences.TailSequenceNumber:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse
-	41,  // 299: Cratis.Chronicle.Contracts.Sequences.EventSequences.VerifyContent:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse
-	263, // [263:300] is the sub-list for method output_type
-	226, // [226:263] is the sub-list for method input_type
-	226, // [226:226] is the sub-list for extension type_name
-	226, // [226:226] is the sub-list for extension extendee
-	0,   // [0:226] is the sub-list for field type_name
+	115, // 22: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceResponse.RetryAfter:type_name -> bcl.TimeSpan
+	77,  // 23: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.KeyedEventForEventSourceIdWithNamedTags
+	114, // 24: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
+	30,  // 25: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 26: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	61,  // 27: Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest.ConcurrencyScopes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope
+	63,  // 28: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventToAppend
+	114, // 29: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.CorrelationId:type_name -> bcl.Guid
+	30,  // 30: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 31: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	46,  // 32: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	106, // 33: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	50,  // 34: Cratis.Chronicle.Contracts.Sequences.AppendManyRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	114, // 35: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.CorrelationId:type_name -> bcl.Guid
+	48,  // 36: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
+	47,  // 37: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.ConcurrencyViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
+	51,  // 38: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
+	115, // 39: Cratis.Chronicle.Contracts.Sequences.AppendManyResponse.RetryAfter:type_name -> bcl.TimeSpan
+	64,  // 40: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags
+	114, // 41: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
+	106, // 42: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	30,  // 43: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 44: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	46,  // 45: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	50,  // 46: Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	65,  // 47: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	114, // 48: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.CorrelationId:type_name -> bcl.Guid
+	106, // 49: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	30,  // 50: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 51: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	46,  // 52: Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	114, // 53: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.CorrelationId:type_name -> bcl.Guid
+	0,   // 54: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.Outcome:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendOutcome
+	48,  // 55: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
+	47,  // 56: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.ConcurrencyViolation:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
+	72,  // 57: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.IdempotencyConflicts:type_name -> Cratis.Chronicle.Contracts.Sequences.IdempotencyKeyConflict
+	115, // 58: Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse.RetryAfter:type_name -> bcl.TimeSpan
+	65,  // 59: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	79,  // 60: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	114, // 61: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
+	106, // 62: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	30,  // 63: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 64: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	46,  // 65: Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	65,  // 66: Cratis.Chronicle.Contracts.Sequences.AppendRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	114, // 67: Cratis.Chronicle.Contracts.Sequences.AppendRequest.CorrelationId:type_name -> bcl.Guid
+	106, // 68: Cratis.Chronicle.Contracts.Sequences.AppendRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	30,  // 69: Cratis.Chronicle.Contracts.Sequences.AppendRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 70: Cratis.Chronicle.Contracts.Sequences.AppendRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	46,  // 71: Cratis.Chronicle.Contracts.Sequences.AppendRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	50,  // 72: Cratis.Chronicle.Contracts.Sequences.AppendRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	114, // 73: Cratis.Chronicle.Contracts.Sequences.AppendResponse.CorrelationId:type_name -> bcl.Guid
+	48,  // 74: Cratis.Chronicle.Contracts.Sequences.AppendResponse.ConstraintViolations:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation
+	47,  // 75: Cratis.Chronicle.Contracts.Sequences.AppendResponse.ConcurrencyViolation:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation
+	51,  // 76: Cratis.Chronicle.Contracts.Sequences.AppendResponse.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails
+	115, // 77: Cratis.Chronicle.Contracts.Sequences.AppendResponse.RetryAfter:type_name -> bcl.TimeSpan
+	65,  // 78: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	79,  // 79: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	114, // 80: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.CorrelationId:type_name -> bcl.Guid
+	106, // 81: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	30,  // 82: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 83: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	46,  // 84: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.ConcurrencyScope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	50,  // 85: Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest.EffectReceipt:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectReceipt
+	53,  // 86: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.Context:type_name -> Cratis.Chronicle.Contracts.Sequences.EventContext
+	57,  // 87: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.Revisions:type_name -> Cratis.Chronicle.Contracts.Sequences.EventRevision
+	75,  // 88: Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse.GenerationalContent:type_name -> Cratis.Chronicle.Contracts.Sequences.KeyValuePair_Int32_String
+	106, // 89: Cratis.Chronicle.Contracts.Sequences.Causation.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	112, // 90: Cratis.Chronicle.Contracts.Sequences.Causation.Properties:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation.PropertiesEntry
+	1,   // 91: Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse.Origin:type_name -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamOrigin
+	106, // 92: Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse.ClosedAt:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	114, // 93: Cratis.Chronicle.Contracts.Sequences.CommandResult.CorrelationId:type_name -> bcl.Guid
+	109, // 94: Cratis.Chronicle.Contracts.Sequences.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	114, // 95: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 96: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	17,  // 97: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendManyOnceResponse
+	114, // 98: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 99: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	20,  // 100: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendManyResponse
+	114, // 101: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 102: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	23,  // 103: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendOnceResponse
+	114, // 104: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 105: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	26,  // 106: Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendResponse
+	114, // 107: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 108: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	44,  // 109: Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse
+	114, // 110: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid.CorrelationId:type_name -> bcl.Guid
+	109, // 111: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	114, // 112: Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid.Response:type_name -> bcl.Guid
+	114, // 113: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 114: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	100, // 115: Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse
+	114, // 116: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 117: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	111, // 118: Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse.Response:type_name -> Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse
+	65,  // 119: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	114, // 120: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.CorrelationId:type_name -> bcl.Guid
+	106, // 121: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	30,  // 122: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 123: Cratis.Chronicle.Contracts.Sequences.CompensateRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	2,   // 124: Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse.Error:type_name -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamError
+	65,  // 125: Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope.EventTypes:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	46,  // 126: Cratis.Chronicle.Contracts.Sequences.ConcurrencyViolation.Scope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	3,   // 127: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.ConstraintType:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintType
+	113, // 128: Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.Details:type_name -> Cratis.Chronicle.Contracts.Sequences.ConstraintViolation.DetailsEntry
+	5,   // 129: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails.Outcome:type_name -> Cratis.Chronicle.Contracts.Sequences.EffectOutcome
+	106, // 130: Cratis.Chronicle.Contracts.Sequences.EffectReceiptDetails.RecordedAt:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	106, // 131: Cratis.Chronicle.Contracts.Sequences.EndOfRequest.Start:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	7,   // 132: Cratis.Chronicle.Contracts.Sequences.EndOfRequest.Resolution:type_name -> Cratis.Chronicle.Contracts.Sequences.HistogramResolution
+	65,  // 133: Cratis.Chronicle.Contracts.Sequences.EventContext.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	106, // 134: Cratis.Chronicle.Contracts.Sequences.EventContext.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	114, // 135: Cratis.Chronicle.Contracts.Sequences.EventContext.CorrelationId:type_name -> bcl.Guid
+	30,  // 136: Cratis.Chronicle.Contracts.Sequences.EventContext.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 137: Cratis.Chronicle.Contracts.Sequences.EventContext.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	6,   // 138: Cratis.Chronicle.Contracts.Sequences.EventContext.ObservationState:type_name -> Cratis.Chronicle.Contracts.Sequences.EventObservationState
+	79,  // 139: Cratis.Chronicle.Contracts.Sequences.EventContext.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	65,  // 140: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	106, // 141: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	30,  // 142: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	65,  // 143: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	79,  // 144: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	106, // 145: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	30,  // 146: Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	106, // 147: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	114, // 148: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.CorrelationId:type_name -> bcl.Guid
+	30,  // 149: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	101, // 150: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
+	10,  // 151: Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse.InitiatorType:type_name -> Cratis.Chronicle.Contracts.Sequences.InitiatorType
+	73,  // 152: Cratis.Chronicle.Contracts.Sequences.EventRevision.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	106, // 153: Cratis.Chronicle.Contracts.Sequences.EventRevision.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	28,  // 154: Cratis.Chronicle.Contracts.Sequences.EventSequencePageResponse.Events:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse
+	46,  // 155: Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope.Scope:type_name -> Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope
+	65,  // 156: Cratis.Chronicle.Contracts.Sequences.EventToAppend.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	65,  // 157: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	79,  // 158: Cratis.Chronicle.Contracts.Sequences.EventToAppendWithNamedTags.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	106, // 159: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	106, // 160: Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	106, // 161: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse.Occurred:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	79,  // 162: Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTag
+	8,   // 163: Cratis.Chronicle.Contracts.Sequences.IdempotencyKeyConflict.Reason:type_name -> Cratis.Chronicle.Contracts.Sequences.IdempotencyConflictReason
+	73,  // 164: Cratis.Chronicle.Contracts.Sequences.Identity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	54,  // 165: Cratis.Chronicle.Contracts.Sequences.KeyedEventForEventSourceId.Event:type_name -> Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId
+	55,  // 166: Cratis.Chronicle.Contracts.Sequences.KeyedEventForEventSourceIdWithNamedTags.Event:type_name -> Cratis.Chronicle.Contracts.Sequences.EventForEventSourceIdWithNamedTags
+	106, // 167: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	106, // 168: Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	80,  // 169: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
+	106, // 170: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	106, // 171: Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	114, // 172: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequencePageResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 173: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequencePageResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	59,  // 174: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequencePageResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequencePageResponse
+	114, // 175: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 176: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	60,  // 177: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse
+	114, // 178: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 179: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	62,  // 180: Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSourceEventsResponse
+	114, // 181: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.CorrelationId:type_name -> bcl.Guid
+	109, // 182: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	7,   // 183: Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.HistogramResolution
+	114, // 184: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 185: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	28,  // 186: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse
+	114, // 187: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 188: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	31,  // 189: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse
+	114, // 190: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 191: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	56,  // 192: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse
+	114, // 193: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 194: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	58,  // 195: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse
+	114, // 196: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 197: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	67,  // 198: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.ExportedEventResponse
+	114, // 199: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 200: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	103, // 201: Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse
+	114, // 202: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.CorrelationId:type_name -> bcl.Guid
+	109, // 203: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	106, // 204: Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	114, // 205: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.CorrelationId:type_name -> bcl.Guid
+	109, // 206: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResult
+	107, // 207: Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse.Data:type_name -> Cratis.Chronicle.Contracts.Sequences.StreamScopeCompletionResponse
+	30,  // 208: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 209: Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	30,  // 210: Cratis.Chronicle.Contracts.Sequences.RedactRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 211: Cratis.Chronicle.Contracts.Sequences.RedactRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	30,  // 212: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 213: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	11,  // 214: Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse.Error:type_name -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeError
+	9,   // 215: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity.Resolution:type_name -> Cratis.Chronicle.Contracts.Sequences.IdentityResolution
+	101, // 216: Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity.OnBehalfOf:type_name -> Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity
+	65,  // 217: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	30,  // 218: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.Causation:type_name -> Cratis.Chronicle.Contracts.Sequences.Causation
+	73,  // 219: Cratis.Chronicle.Contracts.Sequences.ReviseRequest.CausedBy:type_name -> Cratis.Chronicle.Contracts.Sequences.Identity
+	106, // 220: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse.From:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	106, // 221: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse.To:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	106, // 222: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	106, // 223: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	80,  // 224: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.NamedTags:type_name -> Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion
+	106, // 225: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.OccurredFrom:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	106, // 226: Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest.OccurredTo:type_name -> Cratis.Chronicle.Contracts.Sequences.SerializableDateTimeOffset
+	12,  // 227: Cratis.Chronicle.Contracts.Sequences.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Sequences.ValidationResultSeverity
+	65,  // 228: Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest.EventType:type_name -> Cratis.Chronicle.Contracts.Sequences.EventType
+	4,   // 229: Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse.Result:type_name -> Cratis.Chronicle.Contracts.Sequences.ContentVerificationResult
+	13,  // 230: Cratis.Chronicle.Contracts.Sequences.EventSequences.AllEventSequences:input_type -> Cratis.Chronicle.Contracts.Sequences.AllEventSequencesRequest
+	25,  // 231: Cratis.Chronicle.Contracts.Sequences.EventSequences.Append:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendRequest
+	29,  // 232: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendedEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendedEventsRequest
+	19,  // 233: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendMany:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyRequest
+	14,  // 234: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSources:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest
+	15,  // 235: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSourcesWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest
+	16,  // 236: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyOnce:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyOnceRequest
+	18,  // 237: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyOnceWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyOnceWithNamedTagsRequest
+	21,  // 238: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendManyWithNamedTagsRequest
+	22,  // 239: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendOnce:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendOnceRequest
+	24,  // 240: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendOnceWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendOnceWithNamedTagsRequest
+	27,  // 241: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.AppendWithNamedTagsRequest
+	32,  // 242: Cratis.Chronicle.Contracts.Sequences.EventSequences.ClosedStreams:input_type -> Cratis.Chronicle.Contracts.Sequences.ClosedStreamsRequest
+	42,  // 243: Cratis.Chronicle.Contracts.Sequences.EventSequences.Compensate:input_type -> Cratis.Chronicle.Contracts.Sequences.CompensateRequest
+	43,  // 244: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStream:input_type -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest
+	45,  // 245: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStreamScope:input_type -> Cratis.Chronicle.Contracts.Sequences.CompleteStreamScopeRequest
+	49,  // 246: Cratis.Chronicle.Contracts.Sequences.EventSequences.CopyEventsForEventSource:input_type -> Cratis.Chronicle.Contracts.Sequences.CopyEventsForEventSourceRequest
+	52,  // 247: Cratis.Chronicle.Contracts.Sequences.EventSequences.EndOf:input_type -> Cratis.Chronicle.Contracts.Sequences.EndOfRequest
+	66,  // 248: Cratis.Chronicle.Contracts.Sequences.EventSequences.ExportEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.ExportEventsRequest
+	68,  // 249: Cratis.Chronicle.Contracts.Sequences.EventSequences.ForEventSourceIdAndEventTypes:input_type -> Cratis.Chronicle.Contracts.Sequences.ForEventSourceIdAndEventTypesRequest
+	69,  // 250: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumber:input_type -> Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberRequest
+	70,  // 251: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumberWithErasedProperties:input_type -> Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberWithErasedPropertiesRequest
+	71,  // 252: Cratis.Chronicle.Contracts.Sequences.EventSequences.HasEventsForEventSourceId:input_type -> Cratis.Chronicle.Contracts.Sequences.HasEventsForEventSourceIdRequest
+	74,  // 253: Cratis.Chronicle.Contracts.Sequences.EventSequences.IsStreamScopeCompleted:input_type -> Cratis.Chronicle.Contracts.Sequences.IsStreamScopeCompletedRequest
+	78,  // 254: Cratis.Chronicle.Contracts.Sequences.EventSequences.MetadataAt:input_type -> Cratis.Chronicle.Contracts.Sequences.MetadataAtRequest
+	81,  // 255: Cratis.Chronicle.Contracts.Sequences.EventSequences.Page:input_type -> Cratis.Chronicle.Contracts.Sequences.PageRequest
+	82,  // 256: Cratis.Chronicle.Contracts.Sequences.EventSequences.ParseResolution:input_type -> Cratis.Chronicle.Contracts.Sequences.ParseResolutionRequest
+	83,  // 257: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEvents:input_type -> Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest
+	84,  // 258: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEventsWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.QueryEventsWithNamedTagsRequest
+	98,  // 259: Cratis.Chronicle.Contracts.Sequences.EventSequences.Redact:input_type -> Cratis.Chronicle.Contracts.Sequences.RedactRequest
+	97,  // 260: Cratis.Chronicle.Contracts.Sequences.EventSequences.RedactForEventSource:input_type -> Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest
+	99,  // 261: Cratis.Chronicle.Contracts.Sequences.EventSequences.ReopenStreamScope:input_type -> Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest
+	102, // 262: Cratis.Chronicle.Contracts.Sequences.EventSequences.Revise:input_type -> Cratis.Chronicle.Contracts.Sequences.ReviseRequest
+	104, // 263: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogram:input_type -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramRequest
+	105, // 264: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogramWithNamedTags:input_type -> Cratis.Chronicle.Contracts.Sequences.SequenceHistogramWithNamedTagsRequest
+	108, // 265: Cratis.Chronicle.Contracts.Sequences.EventSequences.TailSequenceNumber:input_type -> Cratis.Chronicle.Contracts.Sequences.TailSequenceNumberRequest
+	110, // 266: Cratis.Chronicle.Contracts.Sequences.EventSequences.VerifyContent:input_type -> Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest
+	92,  // 267: Cratis.Chronicle.Contracts.Sequences.EventSequences.AllEventSequences:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventSequenceNamesResponse
+	37,  // 268: Cratis.Chronicle.Contracts.Sequences.EventSequences.Append:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
+	89,  // 269: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendedEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	35,  // 270: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendMany:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
+	35,  // 271: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSources:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
+	35,  // 272: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyForEventSourcesWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
+	34,  // 273: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyOnce:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse
+	34,  // 274: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyOnceWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyOnceResponse
+	35,  // 275: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendManyWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendManyResponse
+	36,  // 276: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendOnce:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse
+	36,  // 277: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendOnceWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendOnceResponse
+	37,  // 278: Cratis.Chronicle.Contracts.Sequences.EventSequences.AppendWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
+	90,  // 279: Cratis.Chronicle.Contracts.Sequences.EventSequences.ClosedStreams:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ClosedStreamResponse
+	37,  // 280: Cratis.Chronicle.Contracts.Sequences.EventSequences.Compensate:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_AppendResponse
+	38,  // 281: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStream:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse
+	38,  // 282: Cratis.Chronicle.Contracts.Sequences.EventSequences.CompleteStreamScope:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_CompleteStreamResponse
+	39,  // 283: Cratis.Chronicle.Contracts.Sequences.EventSequences.CopyEventsForEventSource:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_Guid
+	95,  // 284: Cratis.Chronicle.Contracts.Sequences.EventSequences.EndOf:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_SerializableDateTimeOffset
+	93,  // 285: Cratis.Chronicle.Contracts.Sequences.EventSequences.ExportEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_ExportedEventResponse
+	89,  // 286: Cratis.Chronicle.Contracts.Sequences.EventSequences.ForEventSourceIdAndEventTypes:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	89,  // 287: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumber:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	89,  // 288: Cratis.Chronicle.Contracts.Sequences.EventSequences.FromSequenceNumberWithErasedProperties:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	87,  // 289: Cratis.Chronicle.Contracts.Sequences.EventSequences.HasEventsForEventSourceId:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSourceEventsResponse
+	96,  // 290: Cratis.Chronicle.Contracts.Sequences.EventSequences.IsStreamScopeCompleted:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_StreamScopeCompletionResponse
+	91,  // 291: Cratis.Chronicle.Contracts.Sequences.EventSequences.MetadataAt:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_EventMetadataResponse
+	85,  // 292: Cratis.Chronicle.Contracts.Sequences.EventSequences.Page:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequencePageResponse
+	88,  // 293: Cratis.Chronicle.Contracts.Sequences.EventSequences.ParseResolution:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_HistogramResolution
+	89,  // 294: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEvents:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	89,  // 295: Cratis.Chronicle.Contracts.Sequences.EventSequences.QueryEventsWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_AppendedEventResponse
+	33,  // 296: Cratis.Chronicle.Contracts.Sequences.EventSequences.Redact:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
+	33,  // 297: Cratis.Chronicle.Contracts.Sequences.EventSequences.RedactForEventSource:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
+	40,  // 298: Cratis.Chronicle.Contracts.Sequences.EventSequences.ReopenStreamScope:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_ReopenStreamScopeResponse
+	33,  // 299: Cratis.Chronicle.Contracts.Sequences.EventSequences.Revise:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult
+	94,  // 300: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogram:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
+	94,  // 301: Cratis.Chronicle.Contracts.Sequences.EventSequences.SequenceHistogramWithNamedTags:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_IEnumerable_SequenceHistogramBucketResponse
+	86,  // 302: Cratis.Chronicle.Contracts.Sequences.EventSequences.TailSequenceNumber:output_type -> Cratis.Chronicle.Contracts.Sequences.QueryResult_EventSequenceTailResponse
+	41,  // 303: Cratis.Chronicle.Contracts.Sequences.EventSequences.VerifyContent:output_type -> Cratis.Chronicle.Contracts.Sequences.CommandResult_VerifyContentResponse
+	267, // [267:304] is the sub-list for method output_type
+	230, // [230:267] is the sub-list for method input_type
+	230, // [230:230] is the sub-list for extension type_name
+	230, // [230:230] is the sub-list for extension extendee
+	0,   // [0:230] is the sub-list for field type_name
 }
 
 func init() { file_sequences_proto_init() }

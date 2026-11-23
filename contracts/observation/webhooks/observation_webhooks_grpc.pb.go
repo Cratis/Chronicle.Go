@@ -19,12 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Webhooks_AddWebhook_FullMethodName      = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/AddWebhook"
-	Webhooks_AddWebhooks_FullMethodName     = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/AddWebhooks"
-	Webhooks_GetWebhooks_FullMethodName     = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/GetWebhooks"
-	Webhooks_ObserveWebhooks_FullMethodName = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/ObserveWebhooks"
-	Webhooks_RemoveWebhook_FullMethodName   = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/RemoveWebhook"
-	Webhooks_RemoveWebhooks_FullMethodName  = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/RemoveWebhooks"
+	Webhooks_AddWebhook_FullMethodName              = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/AddWebhook"
+	Webhooks_AddWebhooks_FullMethodName             = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/AddWebhooks"
+	Webhooks_GetWebhooks_FullMethodName             = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/GetWebhooks"
+	Webhooks_GetWebhookSigningKeys_FullMethodName   = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/GetWebhookSigningKeys"
+	Webhooks_ObserveWebhooks_FullMethodName         = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/ObserveWebhooks"
+	Webhooks_RemoveWebhook_FullMethodName           = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/RemoveWebhook"
+	Webhooks_RemoveWebhooks_FullMethodName          = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/RemoveWebhooks"
+	Webhooks_RotateWebhookSigningKey_FullMethodName = "/Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks/RotateWebhookSigningKey"
 )
 
 // WebhooksClient is the client API for Webhooks service.
@@ -34,9 +36,11 @@ type WebhooksClient interface {
 	AddWebhook(ctx context.Context, in *AddWebhookRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	AddWebhooks(ctx context.Context, in *AddWebhooksRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	GetWebhooks(ctx context.Context, in *GetWebhooksRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_WebhookDetailsResponse, error)
+	GetWebhookSigningKeys(ctx context.Context, in *GetWebhookSigningKeysRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_WebhookSigningPublicKeyResponse, error)
 	ObserveWebhooks(ctx context.Context, in *ObserveWebhooksRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[QueryResult_IEnumerable_WebhookDetailsResponse], error)
 	RemoveWebhook(ctx context.Context, in *RemoveWebhookRequest, opts ...grpc.CallOption) (*CommandResult, error)
 	RemoveWebhooks(ctx context.Context, in *RemoveWebhooksRequest, opts ...grpc.CallOption) (*CommandResult, error)
+	RotateWebhookSigningKey(ctx context.Context, in *RotateWebhookSigningKeyRequest, opts ...grpc.CallOption) (*CommandResult, error)
 }
 
 type webhooksClient struct {
@@ -71,6 +75,16 @@ func (c *webhooksClient) GetWebhooks(ctx context.Context, in *GetWebhooksRequest
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryResult_IEnumerable_WebhookDetailsResponse)
 	err := c.cc.Invoke(ctx, Webhooks_GetWebhooks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *webhooksClient) GetWebhookSigningKeys(ctx context.Context, in *GetWebhookSigningKeysRequest, opts ...grpc.CallOption) (*QueryResult_IEnumerable_WebhookSigningPublicKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResult_IEnumerable_WebhookSigningPublicKeyResponse)
+	err := c.cc.Invoke(ctx, Webhooks_GetWebhookSigningKeys_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +130,16 @@ func (c *webhooksClient) RemoveWebhooks(ctx context.Context, in *RemoveWebhooksR
 	return out, nil
 }
 
+func (c *webhooksClient) RotateWebhookSigningKey(ctx context.Context, in *RotateWebhookSigningKeyRequest, opts ...grpc.CallOption) (*CommandResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult)
+	err := c.cc.Invoke(ctx, Webhooks_RotateWebhookSigningKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WebhooksServer is the server API for Webhooks service.
 // All implementations must embed UnimplementedWebhooksServer
 // for forward compatibility.
@@ -123,9 +147,11 @@ type WebhooksServer interface {
 	AddWebhook(context.Context, *AddWebhookRequest) (*CommandResult, error)
 	AddWebhooks(context.Context, *AddWebhooksRequest) (*CommandResult, error)
 	GetWebhooks(context.Context, *GetWebhooksRequest) (*QueryResult_IEnumerable_WebhookDetailsResponse, error)
+	GetWebhookSigningKeys(context.Context, *GetWebhookSigningKeysRequest) (*QueryResult_IEnumerable_WebhookSigningPublicKeyResponse, error)
 	ObserveWebhooks(*ObserveWebhooksRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_WebhookDetailsResponse]) error
 	RemoveWebhook(context.Context, *RemoveWebhookRequest) (*CommandResult, error)
 	RemoveWebhooks(context.Context, *RemoveWebhooksRequest) (*CommandResult, error)
+	RotateWebhookSigningKey(context.Context, *RotateWebhookSigningKeyRequest) (*CommandResult, error)
 	mustEmbedUnimplementedWebhooksServer()
 }
 
@@ -145,6 +171,9 @@ func (UnimplementedWebhooksServer) AddWebhooks(context.Context, *AddWebhooksRequ
 func (UnimplementedWebhooksServer) GetWebhooks(context.Context, *GetWebhooksRequest) (*QueryResult_IEnumerable_WebhookDetailsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetWebhooks not implemented")
 }
+func (UnimplementedWebhooksServer) GetWebhookSigningKeys(context.Context, *GetWebhookSigningKeysRequest) (*QueryResult_IEnumerable_WebhookSigningPublicKeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetWebhookSigningKeys not implemented")
+}
 func (UnimplementedWebhooksServer) ObserveWebhooks(*ObserveWebhooksRequest, grpc.ServerStreamingServer[QueryResult_IEnumerable_WebhookDetailsResponse]) error {
 	return status.Error(codes.Unimplemented, "method ObserveWebhooks not implemented")
 }
@@ -153,6 +182,9 @@ func (UnimplementedWebhooksServer) RemoveWebhook(context.Context, *RemoveWebhook
 }
 func (UnimplementedWebhooksServer) RemoveWebhooks(context.Context, *RemoveWebhooksRequest) (*CommandResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveWebhooks not implemented")
+}
+func (UnimplementedWebhooksServer) RotateWebhookSigningKey(context.Context, *RotateWebhookSigningKeyRequest) (*CommandResult, error) {
+	return nil, status.Error(codes.Unimplemented, "method RotateWebhookSigningKey not implemented")
 }
 func (UnimplementedWebhooksServer) mustEmbedUnimplementedWebhooksServer() {}
 func (UnimplementedWebhooksServer) testEmbeddedByValue()                  {}
@@ -229,6 +261,24 @@ func _Webhooks_GetWebhooks_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Webhooks_GetWebhookSigningKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWebhookSigningKeysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WebhooksServer).GetWebhookSigningKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Webhooks_GetWebhookSigningKeys_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WebhooksServer).GetWebhookSigningKeys(ctx, req.(*GetWebhookSigningKeysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Webhooks_ObserveWebhooks_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(ObserveWebhooksRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -276,6 +326,24 @@ func _Webhooks_RemoveWebhooks_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Webhooks_RotateWebhookSigningKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotateWebhookSigningKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WebhooksServer).RotateWebhookSigningKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Webhooks_RotateWebhookSigningKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WebhooksServer).RotateWebhookSigningKey(ctx, req.(*RotateWebhookSigningKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Webhooks_ServiceDesc is the grpc.ServiceDesc for Webhooks service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -296,12 +364,20 @@ var Webhooks_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Webhooks_GetWebhooks_Handler,
 		},
 		{
+			MethodName: "GetWebhookSigningKeys",
+			Handler:    _Webhooks_GetWebhookSigningKeys_Handler,
+		},
+		{
 			MethodName: "RemoveWebhook",
 			Handler:    _Webhooks_RemoveWebhook_Handler,
 		},
 		{
 			MethodName: "RemoveWebhooks",
 			Handler:    _Webhooks_RemoveWebhooks_Handler,
+		},
+		{
+			MethodName: "RotateWebhookSigningKey",
+			Handler:    _Webhooks_RotateWebhookSigningKey_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
