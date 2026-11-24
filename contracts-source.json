@@ -1,7 +1,7 @@
 {
   "repository": "Cratis/Chronicle",
-  "version": "19.188.0",
-  "commit": "61f6e7abd57c9986b19bb29b75df19e4dfef6a1d",
+  "version": "19.189.2",
+  "commit": "2591454d7ab9e3469c177437e90ff3e11f016199",
   "sourcePath": "Source/Kernel/Protobuf",
   "tools": {
     "buf": "1.73.0",

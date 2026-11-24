@@ -13,7 +13,7 @@ Global seeds reach existing namespaces. Applying them to namespaces created late
 requires the kernel's durable `NamespaceAdded` seeding path
 ([Chronicle#4547](https://github.com/Cratis/Chronicle/issues/4547)).
 `TestKernelGlobalSeedsReachFutureNamespaces` is a required regression gate against
-the CI kernel (`19.188.0-development`); runtime qualification remains pending until
+the CI kernel (`19.189.2-development`); runtime qualification remains pending until
 that integration check passes. Older kernels without this path are not covered.
 See the [seeding compatibility boundary](../parity.md#event-seeding).
 
@@ -110,7 +110,7 @@ repeated facts. Changing a route describes a new entry, not a move or update of
 an existing event. Go performs no local deduplication.
 
 Runtime qualification of stream-targeted seeding is **pending CI** against the
-pinned `19.188.0-development` kernel. The required
+pinned `19.189.2-development` kernel. The required
 `TestKernelStreamSeedsCSharpThenGoRestartAndNamespaceIsolation` witness checks
 both streams, exact namespace counts, repeated facts, no default-stream fallback,
 C#-derived/Go registration identity and unchanged positions after client restart.

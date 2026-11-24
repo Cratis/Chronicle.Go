@@ -47,4 +47,4 @@ of the delivered `EventType.Generation`. This is not a history-read generation
 selector. Typed reads continue to select locally; reactor and reducer delivery
 can opt in to [kernel-pinned generations](evolution.md#opt-in-to-pinned-observer-delivery).
 
-The SDK sends occurrence at .NET-compatible 100 ns precision and preserves the timestamps it receives. The pinned **19.188.0-development MongoDB kernel** stores occurrence and causation dates at millisecond precision, so finer input precision does not survive a persisted read. This is a server storage limitation, not a promise that the Go client can restore lost digits. See [parity and limitations](../parity.md).
+The SDK sends occurrence at .NET-compatible 100 ns precision and preserves the timestamps it receives. The pinned **19.189.2-development MongoDB kernel** stores occurrence and causation dates at millisecond precision, so finer input precision does not survive a persisted read. This is a server storage limitation, not a promise that the Go client can restore lost digits. See [parity and limitations](../parity.md).
