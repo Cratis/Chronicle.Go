@@ -5,41 +5,29 @@ package events_test
 
 import (
 	"encoding/json"
-	"errors"
 	"testing"
 
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/events"
-	"github.com/cratis/chronicle.go/internal/faults"
 )
 
 type MixedProtectionCurrent struct{ Value string }
 type MixedProtectionPrevious MixedProtectionCurrent
 
-func TestDecodeAlternateUsesIdentityWideProtection(t *testing.T) {
+func TestDecodeAlternateSelectsKernelContentWhateverTheIdentityProtection(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		classification compliance.Classification
-		wantErr        error
 	}{
-		{"plain identity", compliance.Classification{}, nil},
-		{"PII sibling", compliance.Classification{PII: true}, faults.ErrUnsupported},
-		{"encrypted sibling", compliance.Classification{Encrypted: true}, faults.ErrUnsupported},
+		{"plain identity", compliance.Classification{}},
+		{"PII sibling", compliance.Classification{PII: true}},
+		{"encrypted sibling", compliance.Classification{Encrypted: true}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			catalog, appended := mixedProtectionDecodeFixture(t, tc.classification)
 			value, err := events.Decode[MixedProtectionPrevious](catalog, appended)
-			if !errors.Is(err, tc.wantErr) {
-				t.Fatalf("decode = %v", err)
-			}
-			if tc.wantErr != nil {
-				if value != (MixedProtectionPrevious{}) {
-					t.Fatalf("refused value = %#v", value)
-				}
-				return
-			}
-			if value.Value != "alternate" {
-				t.Fatalf("plain alternate = %#v", value)
+			if err != nil || value.Value != "alternate" {
+				t.Fatalf("alternate = %#v, %v", value, err)
 			}
 		})
 	}

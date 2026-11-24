@@ -11,13 +11,14 @@ import (
 
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/events"
-	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/internal/observerruntime"
 )
 
 type GenerationContent struct{ Value string }
 
-func TestObserverGenerationContentProtection(t *testing.T) {
+// The kernel releases protected values in every generation, so protection does not
+// change which representation an observer receives (Cratis/Chronicle#4623).
+func TestObserverGenerationContentSelectsReleasedProtectedContent(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		classification compliance.Classification
@@ -27,9 +28,9 @@ func TestObserverGenerationContentProtection(t *testing.T) {
 		wantGeneration events.Generation
 		wantErr        error
 	}{
-		{"pii alternate", compliance.Classification{PII: true}, 2, true, "", 2, faults.ErrUnsupported},
-		{"encrypted alternate", compliance.Classification{Encrypted: true}, 2, true, "", 2, faults.ErrUnsupported},
-		{"protected fallback refused", compliance.Classification{PII: true}, 2, false, "", 2, faults.ErrUnsupported},
+		{"pii alternate", compliance.Classification{PII: true}, 2, true, "alternate-marker", 1, nil},
+		{"encrypted alternate", compliance.Classification{Encrypted: true}, 2, true, "alternate-marker", 1, nil},
+		{"protected fallback", compliance.Classification{PII: true}, 2, false, "released", 2, nil},
 		{"pii current", compliance.Classification{PII: true}, 1, true, "released", 1, nil},
 		{"encrypted current", compliance.Classification{Encrypted: true}, 1, true, "released", 1, nil},
 		{"plain alternate", compliance.Classification{}, 2, true, "alternate-marker", 1, nil},
