@@ -1677,6 +1677,7 @@ type WebhookDetailsResponse struct {
 	Id                 string                  `protobuf:"bytes,9,opt,name=Id,proto3" json:"Id,omitempty"`
 	GenerationDelivery EventGenerationDelivery `protobuf:"varint,10,opt,name=GenerationDelivery,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery" json:"GenerationDelivery,omitempty"`
 	Signing            WebhookSigningMode      `protobuf:"varint,11,opt,name=Signing,proto3,enum=Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode" json:"Signing,omitempty"`
+	HeaderValuesSet    map[string]bool         `protobuf:"bytes,12,rep,name=HeaderValuesSet,proto3" json:"HeaderValuesSet,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -1786,6 +1787,13 @@ func (x *WebhookDetailsResponse) GetSigning() WebhookSigningMode {
 		return x.Signing
 	}
 	return WebhookSigningMode_Unspecified
+}
+
+func (x *WebhookDetailsResponse) GetHeaderValuesSet() map[string]bool {
+	if x != nil {
+		return x.HeaderValuesSet
+	}
+	return nil
 }
 
 type WebhookSigningPublicKeyResponse struct {
@@ -2075,7 +2083,7 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"IsInactive\x12x\n" +
 	"\x12GenerationDelivery\x18\t \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDeliveryR\x12GenerationDelivery\x12]\n" +
 	"\aSigning\x18\n" +
-	" \x01(\x0e2C.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningModeR\aSigning\"\x97\x06\n" +
+	" \x01(\x0e2C.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningModeR\aSigning\"\xe4\a\n" +
 	"\x16WebhookDetailsResponse\x12\x1e\n" +
 	"\n" +
 	"Identifier\x18\x01 \x01(\tR\n" +
@@ -2092,10 +2100,14 @@ const file_observation_webhooks_proto_rawDesc = "" +
 	"\x02Id\x18\t \x01(\tR\x02Id\x12x\n" +
 	"\x12GenerationDelivery\x18\n" +
 	" \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDeliveryR\x12GenerationDelivery\x12]\n" +
-	"\aSigning\x18\v \x01(\x0e2C.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningModeR\aSigning\x1a:\n" +
+	"\aSigning\x18\v \x01(\x0e2C.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningModeR\aSigning\x12\x86\x01\n" +
+	"\x0fHeaderValuesSet\x18\f \x03(\v2\\.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeaderValuesSetEntryR\x0fHeaderValuesSet\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfd\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aB\n" +
+	"\x14HeaderValuesSetEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xfd\x03\n" +
 	"\x1fWebhookSigningPublicKeyResponse\x12\x14\n" +
 	"\x05KeyId\x18\x01 \x01(\tR\x05KeyId\x12f\n" +
 	"\tAlgorithm\x18\x02 \x01(\x0e2H.Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningAlgorithmR\tAlgorithm\x12\x1c\n" +
@@ -2166,7 +2178,7 @@ func file_observation_webhooks_proto_rawDescGZIP() []byte {
 }
 
 var file_observation_webhooks_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_observation_webhooks_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_observation_webhooks_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_observation_webhooks_proto_goTypes = []any{
 	(AuthorizationType)(0),               // 0: Cratis.Chronicle.Contracts.Observation.Webhooks.AuthorizationType
 	(EventGenerationDelivery)(0),         // 1: Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
@@ -2199,8 +2211,9 @@ var file_observation_webhooks_proto_goTypes = []any{
 	(*WebhookTarget)(nil),                                                        // 28: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget
 	nil,                                                                          // 29: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
 	nil,                                                                          // 30: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
-	nil,                                                                          // 31: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
-	(*bcl.Guid)(nil),                                                             // 32: bcl.Guid
+	nil,                                                                          // 31: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeaderValuesSetEntry
+	nil,                                                                          // 32: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
+	(*bcl.Guid)(nil),                                                             // 33: bcl.Guid
 }
 var file_observation_webhooks_proto_depIdxs = []int32{
 	11, // 0: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.EventTypes:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventType
@@ -2208,15 +2221,15 @@ var file_observation_webhooks_proto_depIdxs = []int32{
 	29, // 2: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.HeadersEntry
 	1,  // 3: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
 	25, // 4: Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest.Webhooks:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition
-	32, // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.CorrelationId:type_name -> bcl.Guid
+	33, // 5: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.CorrelationId:type_name -> bcl.Guid
 	24, // 6: Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
 	8,  // 7: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value0:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
 	9,  // 8: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value1:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
 	15, // 9: Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value2:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
-	32, // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.CorrelationId:type_name -> bcl.Guid
+	33, // 10: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.CorrelationId:type_name -> bcl.Guid
 	24, // 11: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
 	26, // 12: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse
-	32, // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse.CorrelationId:type_name -> bcl.Guid
+	33, // 13: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse.CorrelationId:type_name -> bcl.Guid
 	24, // 14: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult
 	27, // 15: Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse.Data:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse
 	2,  // 16: Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ValidationResultSeverity
@@ -2229,34 +2242,35 @@ var file_observation_webhooks_proto_depIdxs = []int32{
 	30, // 23: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeadersEntry
 	1,  // 24: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.EventGenerationDelivery
 	5,  // 25: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.Signing:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode
-	3,  // 26: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.Algorithm:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningAlgorithm
-	4,  // 27: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.Status:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningKeyStatus
-	23, // 28: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.CreatedAt:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.SerializableDateTimeOffset
-	23, // 29: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.OverlapEndsAt:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.SerializableDateTimeOffset
-	17, // 30: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Authorization:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
-	31, // 31: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
-	14, // 32: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.ManagedIdentity:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ManagedIdentityAuthorization
-	6,  // 33: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
-	7,  // 34: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
-	13, // 35: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
-	12, // 36: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhookSigningKeys:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhookSigningKeysRequest
-	16, // 37: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
-	20, // 38: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
-	21, // 39: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
-	22, // 40: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RotateWebhookSigningKey:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RotateWebhookSigningKeyRequest
-	10, // 41: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	10, // 42: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	18, // 43: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
-	19, // 44: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhookSigningKeys:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse
-	18, // 45: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
-	10, // 46: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	10, // 47: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	10, // 48: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RotateWebhookSigningKey:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
-	41, // [41:49] is the sub-list for method output_type
-	33, // [33:41] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	31, // 26: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeaderValuesSet:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse.HeaderValuesSetEntry
+	3,  // 27: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.Algorithm:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningAlgorithm
+	4,  // 28: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.Status:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningKeyStatus
+	23, // 29: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.CreatedAt:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.SerializableDateTimeOffset
+	23, // 30: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse.OverlapEndsAt:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.SerializableDateTimeOffset
+	17, // 31: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Authorization:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
+	32, // 32: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.Headers:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.HeadersEntry
+	14, // 33: Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget.ManagedIdentity:type_name -> Cratis.Chronicle.Contracts.Observation.Webhooks.ManagedIdentityAuthorization
+	6,  // 34: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest
+	7,  // 35: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest
+	13, // 36: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest
+	12, // 37: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhookSigningKeys:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhookSigningKeysRequest
+	16, // 38: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest
+	20, // 39: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest
+	21, // 40: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest
+	22, // 41: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RotateWebhookSigningKey:input_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.RotateWebhookSigningKeyRequest
+	10, // 42: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	10, // 43: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.AddWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	18, // 44: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
+	19, // 45: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.GetWebhookSigningKeys:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookSigningPublicKeyResponse
+	18, // 46: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.ObserveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.QueryResult_IEnumerable_WebhookDetailsResponse
+	10, // 47: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhook:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	10, // 48: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RemoveWebhooks:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	10, // 49: Cratis.Chronicle.Contracts.Observation.Webhooks.Webhooks.RotateWebhookSigningKey:output_type -> Cratis.Chronicle.Contracts.Observation.Webhooks.CommandResult
+	42, // [42:50] is the sub-list for method output_type
+	34, // [34:42] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_observation_webhooks_proto_init() }
@@ -2270,7 +2284,7 @@ func file_observation_webhooks_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_observation_webhooks_proto_rawDesc), len(file_observation_webhooks_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   26,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

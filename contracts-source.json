@@ -1,7 +1,7 @@
 {
   "repository": "Cratis/Chronicle",
-  "version": "19.153.0",
-  "commit": "52e90a7c4c0f13eae283e173370aababdccacd70",
+  "version": "19.188.0",
+  "commit": "61f6e7abd57c9986b19bb29b75df19e4dfef6a1d",
   "sourcePath": "Source/Kernel/Protobuf",
   "tools": {
     "buf": "1.73.0",
@@ -20,7 +20,7 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/captures"
     },
     "chronicle.desc": {
-      "sha256": "399176da449dd82fa1385d5dfa63bd0763d63e23618ef0f1d14a4c02435fc96f"
+      "sha256": "1d78bc7ea43c32392669909254aeae83747840f260bc067d0d1acf18dd588b29"
     },
     "clients.proto": {
       "sha256": "a177040597f65243db473a6cc96df9a5722b970c5948ecea737b0eaeb78560e9",
@@ -58,7 +58,7 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/eventtypes"
     },
     "externalservices.proto": {
-      "sha256": "eaa57b4afb6b39ca116f6d97f404c9901ae50eb6ef4e1bade128ac34becd23f2",
+      "sha256": "ffcfaf72665ab4eb58ebfa099cc549704cdc13301aa88d551378f3412e688aaa",
       "package": "Cratis.Chronicle.Contracts.ExternalServices",
       "goPackage": "github.com/cratis/chronicle.go/contracts/externalservices"
     },
@@ -113,7 +113,7 @@
       "goPackage": "github.com/cratis/chronicle.go/contracts/observation/reducers"
     },
     "observation_webhooks.proto": {
-      "sha256": "50a9b4e423a4925366e53c68d8767c67d2123025a88f7d3d07c77b66009d3f2e",
+      "sha256": "77eaa761e5fb056ba9a9dcc36531b1f00876c70cca1070910d3a4cd53a08e9ae",
       "package": "Cratis.Chronicle.Contracts.Observation.Webhooks",
       "goPackage": "github.com/cratis/chronicle.go/contracts/observation/webhooks"
     },

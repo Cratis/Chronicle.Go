@@ -137,7 +137,7 @@ options are last-wins, and an unknown mode fails declaration validation. A compi
 plan freezes the mode and exposes it through `GenerationDelivery()`.
 
 Pinned delivery requires a kernel supporting `EventGenerationDelivery` (the CI
-kernel is `cratis/chronicle:19.153.0-development`). It requests the subscribed
+kernel is `cratis/chronicle:19.188.0-development`). It requests the subscribed
 generation as `Content`. The runtime decodes that content directly, ignores
 `GenerationalContent`, and does not rewrite `Context.EventType.Generation`. There
 is no client-side fallback or emulated migration in Pinned mode. Older kernels

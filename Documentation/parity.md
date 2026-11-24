@@ -19,13 +19,13 @@ Chronicle.Go is a v0.x client for Chronicle, a component of Cratis Platform. You
 | Reactors, reducers and projections | **Conditional/restricted**: event reactors, local/passive reducer folds, kernel materialization and bounded projection authoring | Handler effects can repeat after a retry: make them idempotent. Reducer body changes need an explicit `WithVersion`; no C# IL-hash equivalence is implied. Use the [reactor](#reactors-part-1), [reducer](#reducers) and projection profiles below, not a blanket parity claim. Open kernel defect [Chronicle#4583](https://github.com/Cratis/Chronicle/issues/4583): an observer-wide catch-up across partitions can skip an event, so a reactor can miss a side effect and a reducer can keep stale state. Waiting for `Active` does not prevent it. See the [catch-up limitation](reactors.md#known-limitation-catch-up-across-partitions). |
 | Graph projections | **Conditional/restricted**: declaration, validation and registration of nodes and edges; the kernel runs the observer and stores the graph | The client has no graph read API and no model-bound tag form; read the graph with the database tooling. Graph views are declared, validated and emitted as a canonical definition, but not executed: no read host exists for Go yet. Neo4j needs kernel-side configuration; the in-memory graph sink needs none. See [graph projections](projections/graphs.md) and the [parity map](#graph-projections) |
 | Read-model watches | **Conditional/restricted** for unclassified models; classified projection and local-reducer Watch are **unavailable/refused** | Watch readiness is not a current snapshot; interruptions are terminal. See [watch contracts and protection limits](#read-model-watches-and-reactions). Classified decision admission does not enable classified Watch. |
-| Decision reads and owned commits | **Conditional/restricted**: server version exactly `19.153.0` or `19.153.0-development`, **and** protocol exactly `19.153.0`, plus admitted projection shape and ownership | This is an exact allowlist, not a minimum version. Skipped compatibility cannot enable decisions. Guards are optimistic SDK evidence, not authenticated read proofs. See [decision prerequisites and limits](read-models/decision-reads.md). |
+| Decision reads and owned commits | **Conditional/restricted**: server version exactly `19.188.0` or `19.188.0-development`, **and** protocol exactly `19.188.0`, plus admitted projection shape and ownership | This is an exact allowlist, not a minimum version. Skipped compatibility cannot enable decisions. Guards are optimistic SDK evidence, not authenticated read proofs. See [decision prerequisites and limits](read-models/decision-reads.md). |
 | Normal-session recovery | **Available in source**: generation replacement and registration replay for normal logical sessions. Shared definition passes use the generation lifetime and `WithRegistrationRetry` attempt timeout/backoff; caller deadlines bound only waiting, including on-demand registration after reconnect. Retirement and shutdown cancel and join owned passes. Explicit runtime mutation acknowledgements retain caller cancellation and authorization context | Registration sent is not observer attachment or catch-up, and a generation can fail later. Recovery does not replay ambiguous appends. `TestRegistrationPassCallerCancellationOnlyStopsWaiting`, `TestRegistrationPassFailureIsSharedWithoutJoinerRetries`, `TestRegistrationPassRetirementCancelsAndJoins` and `TestGenerationRegistrationCloseAndShutdownCancelAndJoin` cover ownership with deterministic fake transport, not real-kernel throttling. See [lifecycle and readiness](connection-strings/lifecycle.md). |
 | Short-lived clients without a logical session | **Conditional/restricted**: `WithSkipKeepAlive` omits the application session, heartbeat and watchdog | Configured reactors, all reducers including passive reducers, read-model reactors and explicit keepalive timeout are refused. Transport reconnection alone does not guarantee registration replay. See [one-shot and process ownership](connection-strings/lifecycle.md#short-lived-clients-and-process-ownership). |
 | Protected data and event evolution | **Conditional/restricted** to the documented route and generation profiles | Classified Watch, protected child shapes and other-generation protected reads must not inherit support from an unrelated successful route. The SDK refuses protected alternate-generation decoding and historical protected observers with `ErrUnsupported` until Chronicle#4623 is fixed. See [compliance](#compliance-and-confidentiality) and [event evolution](#event-evolution). |
 | Sequence numbers | **Available in source**: unsigned values, reserved sentinels and checked pure arithmetic | Sentinels are not actual positions; retain range checks instead of narrowing values to signed integers. See the sequence-number row in [baselines and evidence](#baselines-and-evidence). |
 
-Generated contracts come from Chronicle **19.153.0**, and real-kernel tests run against **19.153.0-development**. That pin is not a supported kernel range. To start a kernel, see [getting started](clients/go/getting-started.md). The normal-client example there is not a runnable `WithSkipKeepAlive` example.
+Generated contracts come from Chronicle **19.188.0**, and real-kernel tests run against **19.188.0-development**. That pin is not a supported kernel range. To start a kernel, see [getting started](clients/go/getting-started.md). The normal-client example there is not a runnable `WithSkipKeepAlive` example.
 
 ## Identity display-name observation
 
@@ -408,7 +408,7 @@ String values, property names, dictionary keys and string-valued concepts use `J
 C102–C106 references below use `Source/Clients/DotNET` at
 `2e31b0dfba489159b3db323238f16d0f277056b4`; kernel paths are repository-root
 paths at the same revision. [Compliance reference](compliance.md) documents the
-public workflow. CI runtime fixtures use `19.153.0-development` with a disposable
+public workflow. CI runtime fixtures use `19.188.0-development` with a disposable
 server encryption certificate; ordinary Go tests remain container-free.
 
 | Behavior / C# source | Status and Go surface | Executable evidence / boundary |
@@ -440,11 +440,11 @@ This section records feature-specific admission and historical fix profiles, not
 
 Protected children written through deferred projection futures require kernel
 19.128.0 or later ([Chronicle#4599](https://github.com/Cratis/Chronicle/issues/4599)).
-The positive raw-MongoDB witnesses above run against CI's `19.153.0-development`.
+The positive raw-MongoDB witnesses above run against CI's `19.188.0-development`.
 This requirement is documented, not an SDK admission gate; it does not change the
 existing route checks below.
 
-Decision reads require server version exactly `19.153.0` or `19.153.0-development` and protocol exactly `19.153.0`, after successful compatibility preflight. `WithSkipCompatibilityCheck` leaves them disabled. This gate is separate from the historical per-route fix profiles below; neither is a whole-client support matrix.
+Decision reads require server version exactly `19.188.0` or `19.188.0-development` and protocol exactly `19.188.0`, after successful compatibility preflight. `WithSkipCompatibilityCheck` leaves them disabled. This gate is separate from the historical per-route fix profiles below; neither is a whole-client support matrix.
 
 Historical Chronicle 19.32.0 through 19.32.3 share wire contracts, so compatibility alone
 does not show which kernel fixes are present. The client records them from the
@@ -483,7 +483,7 @@ kernel; call it again (`TestProtectedReviseOnIncapableKernelRefusesBeforeProvide
 | Revising an event with a protected replacement | 19.32.2 | [Chronicle#4525](https://github.com/Cratis/Chronicle/issues/4525) |
 | Classified models on projection replay, history, hydration sessions and immediate reads | 19.32.2 | [Chronicle#4561](https://github.com/Cratis/Chronicle/issues/4561) |
 | Registering protection beneath maps or on list- or map-valued array elements | 19.32.2 | [Chronicle#4551](https://github.com/Cratis/Chronicle/issues/4551), [Chronicle#4552](https://github.com/Cratis/Chronicle/issues/4552) |
-| Decision reads (admitted models only) | Server exactly 19.153.0 or 19.153.0-development AND protocol exactly 19.153.0 | Current enforced admission; see [decision prerequisites](read-models/decision-reads.md) |
+| Decision reads (admitted models only) | Server exactly 19.188.0 or 19.188.0-development AND protocol exactly 19.188.0 | Current enforced admission; see [decision prerequisites](read-models/decision-reads.md) |
 
 ## Definition factories
 
@@ -521,7 +521,7 @@ Stream-routing references additionally use Chronicle
 `9157c14098688ac0c6946a335bfabf1f44220c7c`:
 `Source/Clients/DotNET/Seeding/EventSeeding.cs` (`Register`, `ConfirmRoutingSupport`)
 and kernel `Source/Kernel/Core/Seeding/{SeedRouting,SeededEventEntryIdentity,SeedEvents}.cs`.
-Routed runtime qualification is pending CI against `19.153.0-development`; no
+Routed runtime qualification is pending CI against `19.188.0-development`; no
 local Docker/kernel run is claimed. C# routing requests below are hand-derived,
 not executed .NET output. Global-set ownership/removal semantics remain outside
 this stream-targeted change.
@@ -544,7 +544,7 @@ this stream-targeted change.
 | Seed observer visibility / kernel `Observation/Observer.Catchup.cs`, `Observation/Jobs/CatchUpObserver.cs` | **Implemented** on 19.32.3: the observer receives the global seeds and the later default-only seed | `TestKernelSeedingRestartReconnectNamespaceIsolationAndObserverVisibility/observer_visibility` checks persisted content first and fails on any missing delivery. On 19.29.4 a finishing catch-up job could strand the next seeded partition while the observer remained Active and subscribed ([Chronicle#4548](https://github.com/Cratis/Chronicle/issues/4548), fixed in 19.32.3) |
 | Late observer subscription / kernel observer catch-up | **Implemented** on 19.32.3: an observer that subscribes after events exist for a key catches up without dropping later live events for other observers | Integration tests append right after `WaitForRegistration`, without waiting for observers to become `Active`. `EventStore` / `WaitForRegistration` still means registration was **sent**, not that observers are subscribed or caught up. On 19.29.4 the late subscription's catch-up could drop events appended to the same key for other observers, including projections ([Chronicle#4558](https://github.com/Cratis/Chronicle/issues/4558), fixed in 19.32.3); [reactors](reactors.md#wait-for-observers-before-the-first-append) keeps the startup wait for older kernels. `TestKernelCacheEvictionRetainsWatchAndExplicitReconnect` still waits through `awaitObserversObserving`: without it the reactor received its previous event again after explicit reconnect |
 | Observer-wide catch-up across partitions / kernel `Observation/Jobs/CatchUpObserver.cs`, `Observation/Observer.Handling.cs` | **Open upstream defect** for reactors and reducers ([Chronicle#4583](https://github.com/Cratis/Chronicle/issues/4583)): an event for one partition that arrives while another partition finishes its catch-up step can be skipped | `TestKernelCatchUpAcrossPartitionsDeliversEveryEvent` is skipped by default because the race cannot be made deterministic from the client; set `CHRONICLE_CATCHUP_PARTITION_WITNESS=1` to run it. The client cannot repair the defect. Projections catch up through a single step; their variant is tracked separately in [Chronicle#4600](https://github.com/Cratis/Chronicle/issues/4600). See the [catch-up limitation](reactors.md#known-limitation-catch-up-across-partitions) |
-| Global seeds in later namespaces / `IEventSeedingBuilder.For`, `Source/Kernel/Core/Namespaces/NamespacesReactor.cs` | **Regression gate; CI qualification pending** on `19.153.0-development`: requires the kernel's durable `NamespaceAdded` seeding path ([Chronicle#4547](https://github.com/Cratis/Chronicle/issues/4547)) | `TestKernelGlobalSeedsReachFutureNamespaces` sends a hand-derived C# request directly, confirms initial append and global tracking, explicitly calls `EnsureNamespace`, then requires exactly one seed with matching content, namespace, type/generation and static tags after a bounded wait. Repeated ensures must retain its sequence position without duplication. No conditional skip, append workaround, or crash-atomicity claim; older kernels without the durable path are not covered |
+| Global seeds in later namespaces / `IEventSeedingBuilder.For`, `Source/Kernel/Core/Namespaces/NamespacesReactor.cs` | **Regression gate; CI qualification pending** on `19.188.0-development`: requires the kernel's durable `NamespaceAdded` seeding path ([Chronicle#4547](https://github.com/Cratis/Chronicle/issues/4547)) | `TestKernelGlobalSeedsReachFutureNamespaces` sends a hand-derived C# request directly, confirms initial append and global tracking, explicitly calls `EnsureNamespace`, then requires exactly one seed with matching content, namespace, type/generation and static tags after a bounded wait. Repeated ensures must retain its sequence position without duplication. No conditional skip, append workaround, or crash-atomicity claim; older kernels without the durable path are not covered |
 | Generation and rejected-seed outcomes / kernel `SeedingEntry`, `SeedEvents.Handle` | **Partial** protocol capability, matching C#: no generation field and no per-entry append-result response | Golden request pins the available fields; kernel test proves generation one. Kernel rejection logging/response policy is recorded in [Chronicle#3662](https://github.com/Cratis/Chronicle/issues/3662). Registration success means command acknowledgement, not verified append of each seed. Protected-value compatibility limits are listed below; ordinary seeding has no such prerequisite |
 
 ## External integrations
@@ -1197,7 +1197,7 @@ the `x-graph-*` schema annotations. Generated contracts were bumped to Chronicle
 | `GraphSchemaWriter` | **Implemented**: the read-model schema carries `x-graph`, `x-graph-kind`, `x-graph-key`, `x-graph-source`, `x-graph-target` and `x-graph-identity`. Property types come from the Go serialization plan, so number formats can differ from the CLR ones the kernel ignores | `TestGraphSchemaAnnotations` |
 | Registration | **Implemented**: the graph is registered as a read model in the read-model stage and as a projection in the full-set projection request, after event types | `TestGraphIsRegisteredAsReadModelAndProjectionBesideOrdinaryOnes`, `TestGraphAloneIsRegisteredWithoutOrdinaryReadModels`, `TestGraphsPerStoreRegistryAreKeptApart` |
 | Runtime registration of a graph | **Not implemented**: `RegisterProjection` adds ordinary projections only, and a runtime addition sends no graph | Graphs are part of the startup registry, like other definition families |
-| Kernel observation | **Partial** backend qualification on `19.153.0-development` with the in-memory graph sink | `TestKernelGraphProjectionRegistersAndObservesEvents`: stored definitions carry the graph, and the observer handles every event without a failed partition. The stored graph is not read back, and Neo4j is not provisioned by this fixture |
+| Kernel observation | **Partial** backend qualification on `19.188.0-development` with the in-memory graph sink | `TestKernelGraphProjectionRegistersAndObservesEvents`: stored definitions carry the graph, and the observer handles every event without a failed partition. The stored graph is not read back, and Neo4j is not provisioned by this fixture |
 
 The [graph projection guide](projections/graphs.md) and its compiling example are
 tied together by `TestGraphProjectionSnippetsMatchCompiledExample`. The kernel
@@ -1322,7 +1322,7 @@ contract independently.
 References are pinned to Chronicle
 [`9157c14098688ac0c6946a335bfabf1f44220c7c`](https://github.com/Cratis/Chronicle/tree/9157c14098688ac0c6946a335bfabf1f44220c7c),
 the source for the generated contracts and the CI kernel image
-`19.153.0-development`. Paths below are relative to that checkout.
+`19.188.0-development`. Paths below are relative to that checkout.
 The [operations guide](operations.md#remove-a-namespace) describes safe use.
 
 | Contract and pinned source | Go surface and evidence | Boundary |
@@ -1360,7 +1360,7 @@ drives the production observer runtime with protocol messages, not a kernel.
 
 References below are `Source/Clients/Testing/` and `Testing.Specs/` at Chronicle
 `2e31b0dfba489159b3db323238f16d0f277056b4`. Kernel sibling cases use
-`cratis/chronicle:19.153.0-development`. The Go fixture package is
+`cratis/chronicle:19.188.0-development`. The Go fixture package is
 [`chronicletest`](testing-with-scenarios.md); these rows do not claim that a Go
 substitute executes C# kernel code. Root admission remains explicit; all registered
 conventions use the production compilation pipeline.
