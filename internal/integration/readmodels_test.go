@@ -10,12 +10,16 @@ import (
 
 	chronicle "github.com/cratis/chronicle.go"
 	contracts "github.com/cratis/chronicle.go/contracts/readmodels"
+	"github.com/cratis/chronicle.go/projections"
 	"github.com/cratis/chronicle.go/readmodels"
 )
 
+type CatalogPersonNamed struct {
+	Name string `json:"name"`
+}
 type CatalogPerson struct {
-	ID      string         `json:"id"`
-	Name    string         `json:"name"`
+	ID      string         `json:"id" chronicle:"key"`
+	Name    string         `json:"name" chronicle:"set(CatalogPersonNamed)"`
 	Address CatalogAddress `json:"address"`
 }
 type CatalogAddress struct {
@@ -27,6 +31,14 @@ func TestKernelReadModelRegistrationAndAbsence(t *testing.T) {
 	registry := chronicle.NewRegistry()
 	model, err := chronicle.RegisterReadModel[CatalogPerson](registry, readmodels.WithIdentifier("Example.CatalogPerson"), readmodels.WithIndexes("name", "address.city"))
 	if err != nil {
+		t.Fatal(err)
+	}
+	// Kernel read policy refuses reads of a projection-backed model that has no
+	// producer, so the model needs a projection to be readable at all.
+	if _, err = chronicle.RegisterEvent[CatalogPersonNamed](registry); err != nil {
+		t.Fatal(err)
+	}
+	if err = registry.AddProjection(projections.ModelBound(model)); err != nil {
 		t.Fatal(err)
 	}
 	client := fixture.client(registry)
@@ -66,5 +78,5 @@ func TestKernelReadModelRegistrationAndAbsence(t *testing.T) {
 		t.Fatalf("registered definition: %+v", definition)
 	}
 	// Registration alone creates no instance. Presence, released data and session
-	// behavior use bufconn until slice 7 provides a real projection producer.
+	// behavior are covered by the projection and decision-read integration tests.
 }

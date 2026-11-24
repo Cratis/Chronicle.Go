@@ -94,9 +94,12 @@ None/Basic/Bearer requests without claiming kernel authentication behavior.
 
 Targets must be absolute HTTP(S) URLs without userinfo. Put credentials in the
 authorization options, not the URL. Returned definitions expose `Identifier`,
-`EventSequence`, `EventTypes`, `TargetURL`, `Headers`, `IsActive` and `IsReplayable`.
+`EventSequence`, `EventTypes`, `TargetURL`, `Headers`, `HeaderValuesSet`, `IsActive`
+and `IsReplayable`.
 Authorization is intentionally **not reconstructed** on read-back: the kernel
-never returns the credentials. Do not reuse read-back as a credential-preserving
+never returns the credentials. Header values are write-only too: `GetAll` keeps
+each header name with an empty value, and `HeaderValuesSet` reports whether a
+non-empty value is configured. Do not reuse read-back as a credential-preserving
 update template.
 
 The SDK sends explicit false fields to preserve C# protobuf defaults.

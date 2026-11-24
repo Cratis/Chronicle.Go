@@ -3,11 +3,11 @@ title: Read models
 description: Register read-model schemas and read typed or raw state, learning to distinguish a missing instance from a legitimate zero value in Go.
 ---
 
-Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the client. A model describes state produced by a projection or reducer; **registration alone does not create an instance**. This page covers catalog registration, one-shot reads, watches, materialized windows, projection sessions and release. [Projection authoring](../projections/index.md), [collections and history](collections-and-history.md), and [decision reads](decision-reads.md) have their own references.
+Use `chronicle.RegisterReadModel[T]` to declare a model before constructing the client. A model describes state produced by a projection or reducer; **registration alone does not create an instance**. The kernel also refuses reads of a projection-backed model that has no registered projection or reducer (`PermissionDenied`, reported with the system-store administrator message), so register the producer before reading. This page covers catalog registration, one-shot reads, watches, materialized windows, projection sessions and release. [Projection authoring](../projections/index.md), [collections and history](collections-and-history.md), and [decision reads](decision-reads.md) have their own references.
 
 ## Run the example
 
-The [read-model example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.188.0-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
+The [read-model example](https://github.com/Cratis/Chronicle.Go/blob/main/examples/readmodels/main.go) creates a unique store, registers an inventory model and verifies that an uncreated item is absent. It requires Go 1.26 or newer and a running `cratis/chronicle:19.189.2-development` kernel. It uses development credentials and disables certificate validation; do not use that configuration in production.
 
 ```sh
 CHRONICLE_INTEGRATION_CONNECTION_STRING=chronicle://localhost:35000 \
@@ -153,10 +153,12 @@ model's configured event sequence, rather than C#'s hard-coded event log.
 The raw equivalent is `store.ReadModels().Watch(ctx, model.Identifier())`.
 Both APIs validate the returned namespace and normalize model IDs/collections as
 one-shot reads do. Classified models fail with `ErrUnsupported` before subscribing.
-The pinned kernel can corrupt legitimate plaintext on the projection watch route,
+Earlier kernels could corrupt legitimate plaintext on the projection watch route,
 including namespace-encrypted values after PII erasure
-([Chronicle#4566](https://github.com/Cratis/Chronicle/issues/4566)). Another client
-`Release` cannot repair that loss and can itself corrupt already-released values.
+([Chronicle#4566](https://github.com/Cratis/Chronicle/issues/4566)); the pinned
+kernel now releases the document once. The SDK keeps refusing classified watches
+until its delivery path is verified end to end, and another client `Release` must
+not be applied to server-released values.
 
 ### Lifetime, interruption and overload
 

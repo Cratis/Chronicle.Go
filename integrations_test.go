@@ -196,7 +196,7 @@ func TestWebhookWireAuthorizationReadbackAndRemoval(t *testing.T) {
 			if r.EventStore != "target" {
 				t.Error("lost store")
 			}
-			return &webhookcontracts.QueryResult_IEnumerable_WebhookDetailsResponse{IsAuthorized: true, Data: []*webhookcontracts.WebhookDetailsResponse{{Identifier: "notify", Url: "https://example.test/events", EventSequenceId: "outbox", AuthorizationType: webhookcontracts.AuthorizationType_OAuth, Headers: map[string]string{"secret": "header"}, EventTypes: []*webhookcontracts.EventType{{Id: "IntegrationChanged", Generation: 3}}}}}
+			return &webhookcontracts.QueryResult_IEnumerable_WebhookDetailsResponse{IsAuthorized: true, Data: []*webhookcontracts.WebhookDetailsResponse{{Identifier: "notify", Url: "https://example.test/events", EventSequenceId: "outbox", AuthorizationType: webhookcontracts.AuthorizationType_OAuth, Headers: map[string]string{"secret": "header", "unset": ""}, HeaderValuesSet: map[string]bool{"secret": true, "unset": false}, EventTypes: []*webhookcontracts.EventType{{Id: "IntegrationChanged", Generation: 3}}}}}
 		},
 		removeWebhook: func(r *webhookcontracts.RemoveWebhooksRequest) {
 			if r.EventStore != "target" || !reflect.DeepEqual(r.Webhooks, []string{"notify"}) {
@@ -232,6 +232,9 @@ func TestWebhookWireAuthorizationReadbackAndRemoval(t *testing.T) {
 	got, err := service.GetAll(t.Context())
 	if err != nil || len(got) != 1 || got[0].KernelDefinition().Target.Authorization != nil {
 		t.Fatal("readback fabricated authorization", err)
+	}
+	if headers := got[0].Headers(); !reflect.DeepEqual(headers, map[string]string{"secret": "", "unset": ""}) || !reflect.DeepEqual(got[0].HeaderValuesSet(), map[string]bool{"secret": true, "unset": false}) {
+		t.Fatal("readback must keep header names, drop values and report presence")
 	}
 	if err = service.Remove(t.Context(), "notify"); err != nil {
 		t.Fatal(err)
