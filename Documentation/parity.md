@@ -1040,6 +1040,7 @@ The [projection guide](projections/index.md) presents model-bound declarations f
 | [`PiiOnEventSourceIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/PiiOnEventSourceIdAnalyzer.cs), `CHR0034` (Error) | **Partial**: reports a lone `pii` directive on an `events.SourceID` field, including a true type alias | `TestRuntimeIdentityWitness` |
 | [`EncryptedOnEventSourceIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/EncryptedOnEventSourceIdAnalyzer.cs), `CHR0052` (Error) | **Partial**: reports a lone `encrypted` directive on the same identity type, with or without valid scope and details | `TestRuntimeIdentityWitness` |
 | [`MigrationGenerationEventTypeIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2183775328f5d38ea5401b52ba9594bee23a574a/Source/Clients/DotNET.CodeAnalysis/Analyzers/MigrationGenerationEventTypeIdAnalyzer.cs), `CHR0037` (Usage warning) | **Partial**: points to a direct `events.DefineMigration` call whose endpoints have proven different explicit event type IDs | `TestMigrationIdentityDiagnostics`, `TestRuntimeMigrationIdentityWitness` |
+| [`ReservedSubjectPropertyAnalyzer`](https://github.com/Cratis/Chronicle/blob/2183775328f5d38ea5401b52ba9594bee23a574a/Source/Clients/DotNET.CodeAnalysis/Analyzers/ReservedSubjectPropertyAnalyzer.cs), `CHR0035` (Usage error) | **Partial**: reports an explicit reserved JSON name on a string field in a directly registered read model | `TestReservedSubjectDiagnostics`, `TestRuntimeReservedSubjectWitness` |
 
 All findings fail Go vet. The three protection checks point to the struct tag.
 `TestEventProtectionDiagnostics` covers their selected files, tag ranges, and
@@ -1078,6 +1079,26 @@ block, wrappers, function values, and the registry path (`RegisterEvent`,
 does not certify a migration: the SDK can author a mismatched declaration, but
 catalog compilation rejects it. [Derive the earlier generation](module-policy.md#try-the-chronicle-vet-preview)
 from the current event type to preserve their shared ID.
+
+For `CHR0035`, C# checks exact property or constructor parameter names on
+attributed read models and reports the first match per type. Go points to each
+matching tag once per type. It matches emitted JSON names `_subject`,
+`__subject`, and `__subjects` case-insensitively in its ASCII-only subset.
+It requires a direct `chronicle.RegisterReadModel[T](registry)` call without
+options and a package-level, local, nongeneric named struct without methods.
+It does not follow `readmodels.Define`, wrappers, function values, or other
+registration paths.
+
+The Go check preflights the entire flat model: it accepts single-name fields
+with builtin `string`, `bool`, or `int` types and absent or canonical single
+`json` tags. It skips models with aliases, embedded fields, other metadata,
+unsupported JSON options, or emitted names that are non-ASCII, not simple
+identifiers, reserved kernel tokens, or collide after case folding. Only an
+exported string field with a nonempty, explicit JSON name can produce a
+finding. Runtime schema compilation rejects the reserved names even outside
+this subset. Registration with a literal `nil` registry fails before schema
+compilation; this diagnostic describes the declared model, not whether its
+registry is valid. A clean vet run does not certify a read model.
 
 Actual generator output ([#23](https://github.com/Cratis/Chronicle.Go/issues/23))
 and tool publication are deferred. The preview does not follow inherited,
