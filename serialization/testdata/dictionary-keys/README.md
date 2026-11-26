@@ -4,7 +4,12 @@
 validator is `serialization/dictionary_key_fixture_test.go`
 (`TestDictionaryKeyPackagedProfile`). Regeneration is manual; `go test` does not
 restore or execute .NET packages. This is evidence for Cratis/Chronicle.Go#64
-only. It implements and approves no Go dictionary admission.
+only. The capture itself implements and approves no Go dictionary admission,
+and its `goAdmission` field stays `not-implemented` because the bytes are immutable.
+Separately, production code now admits event/document `map[uuid.UUID]string`
+(see `serialization/guid_dictionary.go`); its tests read the `GuidKeyed` cases
+here for both naming policies. Go refuses spelling collisions that the packaged
+client resolves by last-wins, and every other key type remains unadmitted.
 
 ## Provenance and regeneration
 

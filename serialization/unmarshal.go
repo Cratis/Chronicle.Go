@@ -267,15 +267,17 @@ func (n *node) decodeMap(data []byte, value reflect.Value, depth int, open bool)
 	if err := json.Unmarshal(data, &items); err != nil {
 		return err
 	}
+	guids, err := parseGuidDictionaryKeys(value.Type(), items)
+	if err != nil {
+		return err
+	}
 	value.Set(reflect.MakeMapWithSize(value.Type(), len(items)))
 	for key, raw := range items {
 		item, err := n.decodeMapItem(raw, value.Type().Elem(), depth, open)
 		if err != nil {
 			return err
 		}
-		mapKey := reflect.New(value.Type().Key()).Elem()
-		mapKey.SetString(key)
-		value.SetMapIndex(mapKey, item)
+		value.SetMapIndex(dictionaryKey(value.Type().Key(), key, guids), item)
 	}
 	return nil
 }

@@ -269,7 +269,7 @@ func (e nodeEncoder) dictionaryValue(value reflect.Value) (any, error) {
 		if encoded == nil {
 			return nil, fmt.Errorf("chronicle: null map value")
 		}
-		result[iterator.Key().String()] = encoded
+		result[dictionaryKeyText(iterator.Key())] = encoded
 	}
 	return result, nil
 }

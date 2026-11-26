@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 // Package serialization compiles one immutable field plan for JSON and JSON Schema.
-// Primitive named values, structs, pointers, slices, arrays, string-keyed maps,
+// Primitive named values, structs, pointers, slices, arrays, string-keyed maps
+// (and event/document map[uuid.UUID]string),
 // time.Time, uuid.UUID, binary byte slices, Fundamentals scalars and concepts are
 // supported. Ordinary typed fields preserve the full uint64 range. Integers nested
 // under maps or open-derived values are restricted to -2^53 through 2^53 by the
@@ -129,7 +130,7 @@ func buildConfigured(typ reflect.Type, readModel bool, config Config) (*Plan, er
 	}
 	state := &compileState{
 		active: map[compileKey]*node{}, definitions: map[string]any{}, codecs: config.Codecs,
-		deferDuplicates: binaryTypeCandidate(typ, policy, readModel, config.Codecs),
+		deferDuplicates: binaryTypeCandidate(typ, policy, readModel, config.Codecs), readModel: readModel,
 	}
 	root, families, err := compileGraph(typ, readModel, config, state)
 	if err != nil {
