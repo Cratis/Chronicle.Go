@@ -19,10 +19,20 @@ import (
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
+const (
+	conflictMessage  = "CHR0053: choose either pii or encrypted for this field; remove the other directive"
+	piiMessage       = "CHR0034: remove pii from this event source identity; protect a separate field instead"
+	encryptedMessage = "CHR0052: remove encrypted from this event source identity; protect a separate field instead"
+)
+
 type tagSpan struct {
-	file string
-	line int
-	tag  string
+	file              string
+	line, column, end int
+	category, message string
+}
+
+func (s tagSpan) start() token.Position {
+	return token.Position{Filename: s.file, Line: s.line, Column: s.column}
 }
 
 func TestEventProtectionDiagnostics(t *testing.T) {
@@ -41,21 +51,34 @@ func TestEventProtectionDiagnostics(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("GOFLAGS", tc.flags)
-			want := []tagSpan{
-				{"events.go", 12, "`" + `chronicle:"pii;encrypted(details=\"CANARY_CLASSIFICATION_DETAILS\")"` + "`"},
-				{"events.go", 16, "`" + `json:",omitempty,omitzero" chronicle:"encrypted;pii"` + "`"},
-				{"zz_generated.go", 11, "`" + `chronicle:"pii;encrypted"` + "`"},
-			}
-			if tc.flags != "" {
-				want = append(want, tagSpan{"excluded.go", 11, "`" + `chronicle:"pii;encrypted"` + "`"})
-			}
-			results := analysistest.Run(t, dir, eventprotection.Analyzer, "./testdata/consumer")
-			if len(results) != 1 {
-				t.Fatalf("got %d analyzed packages, want 1", len(results))
-			}
-			assertTagDiagnostics(t, results[0], want)
+			assertTagDiagnostics(t, analyzeConsumer(t, dir), expectedSpans(tc.flags != ""))
 		})
 	}
+}
+
+func analyzeConsumer(t *testing.T, dir string) *analysistest.Result {
+	t.Helper()
+	results := analysistest.Run(t, dir, eventprotection.Analyzer, "./testdata/consumer")
+	if len(results) != 1 {
+		t.Fatalf("got %d analyzed packages, want 1", len(results))
+	}
+	return results[0]
+}
+
+func expectedSpans(tagged bool) []tagSpan {
+	spans := []tagSpan{
+		{"events.go", 12, 15, 85, "CHR0053", conflictMessage},
+		{"events.go", 16, 15, 69, "CHR0053", conflictMessage},
+		{"zz_generated.go", 11, 15, 42, "CHR0053", conflictMessage},
+		{"identities.go", 12, 22, 39, "CHR0034", piiMessage},
+		{"identities.go", 18, 14, 107, "CHR0052", encryptedMessage},
+	}
+	if tagged {
+		spans = append(spans,
+			tagSpan{"excluded.go", 11, 15, 42, "CHR0053", conflictMessage},
+			tagSpan{"excluded.go", 17, 22, 57, "CHR0034", piiMessage})
+	}
+	return spans
 }
 
 func assertTagDiagnostics(t *testing.T, result *analysistest.Result, spans []tagSpan) {
@@ -64,25 +87,25 @@ func assertTagDiagnostics(t *testing.T, result *analysistest.Result, spans []tag
 	if len(diagnostics) != len(spans) {
 		t.Fatalf("got %d diagnostics, want %d", len(diagnostics), len(spans))
 	}
-	remaining := make(map[token.Position]token.Position, len(spans))
+	remaining := make(map[token.Position]tagSpan, len(spans))
 	for _, span := range spans {
-		start := token.Position{Filename: span.file, Line: span.line, Column: 15}
-		end := start
-		end.Column += len(span.tag)
-		remaining[start] = end
+		remaining[span.start()] = span
 	}
 	fset := result.Action.Package.Fset
 	for _, diagnostic := range diagnostics {
 		start := fixturePosition(fset, diagnostic.Pos)
-		end := fixturePosition(fset, diagnostic.End)
-		if wantEnd, ok := remaining[start]; !ok || end != wantEnd {
-			t.Errorf("unexpected diagnostic range %s–%s (want end %s)", start, end, wantEnd)
+		span, ok := remaining[start]
+		if !ok {
+			t.Errorf("unexpected diagnostic at %s", start)
+			continue
 		}
 		delete(remaining, start)
-		assertSafeDiagnostic(t, diagnostic)
+		assertTagDiagnostic(t, fset, diagnostic, span)
 	}
-	if len(remaining) != 0 {
-		t.Errorf("missing diagnostics for %v", remaining)
+	for _, span := range spans {
+		if _, missing := remaining[span.start()]; missing {
+			t.Errorf("missing diagnostic at %s", span.start())
+		}
 	}
 }
 
@@ -91,13 +114,18 @@ func fixturePosition(fset *token.FileSet, pos token.Pos) token.Position {
 	return token.Position{Filename: filepath.Base(p.Filename), Line: p.Line, Column: p.Column}
 }
 
-func assertSafeDiagnostic(t *testing.T, diagnostic analysis.Diagnostic) {
+func assertTagDiagnostic(t *testing.T, fset *token.FileSet, diagnostic analysis.Diagnostic, span tagSpan) {
 	t.Helper()
-	if diagnostic.Category != "CHR0053" || diagnostic.Message != "CHR0053: choose either pii or encrypted for this field; remove the other directive" {
-		t.Error("expected fixed CHR0053 diagnostic and remedy")
+	wantEnd := span.start()
+	wantEnd.Column = span.end
+	if end := fixturePosition(fset, diagnostic.End); end != wantEnd {
+		t.Errorf("unexpected diagnostic end %s (want %s)", end, wantEnd)
 	}
-	if strings.Contains(diagnostic.Message, "CANARY_CLASSIFICATION_DETAILS") || len(diagnostic.SuggestedFixes) != 0 {
-		t.Error("diagnostic must not reveal details or choose which protection to remove")
+	if diagnostic.Category != span.category || diagnostic.Message != span.message {
+		t.Errorf("expected fixed %s diagnostic and remedy at %s", span.category, span.start())
+	}
+	if strings.Contains(diagnostic.Message, "CANARY_") || len(diagnostic.SuggestedFixes) != 0 {
+		t.Error("diagnostic must not reveal details or suggest a fix")
 	}
 }
 
@@ -122,6 +150,34 @@ func TestRuntimeProtectionWitness(t *testing.T) {
 	}
 	if err := definitionError[consumer.Valid](); err != nil {
 		t.Fatalf("valid protection declarations rejected: %v", err)
+	}
+}
+
+func TestRuntimeIdentityWitness(t *testing.T) {
+	const identityError = "event-source identity cannot be protected"
+	for _, tc := range []struct {
+		name, reason string
+		err          error
+	}{
+		{"PII identity", identityError, definitionError[consumer.PIIIdentity]()},
+		{"encrypted identity alias", identityError, definitionError[consumer.EncryptedIdentity]()},
+		{"combined identity", "PII and confidentiality cannot protect the same value", definitionError[consumer.CombinedIdentity]()},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if !errors.Is(tc.err, sdk.ErrInvalidConfiguration) {
+				t.Fatal("expected an invalid configuration")
+			}
+			var declaration *declarations.DeclarationError
+			if !errors.As(tc.err, &declaration) || declaration.Directive != "protection" {
+				t.Fatal("expected a protection declaration error")
+			}
+			if declaration.Message != tc.reason {
+				t.Errorf("expected protection rejection reason %q", tc.reason)
+			}
+		})
+	}
+	if err := definitionError[consumer.ValidIdentity](); err != nil {
+		t.Fatal("valid identity and protected string-like fields rejected")
 	}
 }
 

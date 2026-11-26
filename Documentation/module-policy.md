@@ -107,13 +107,20 @@ run plain `go vet` with the same build tags.
 GOWORK=off GOPROXY=off GOTOOLCHAIN=local go vet -vettool=/absolute/path/to/chroniclevet ./...
 ```
 
-`CHR0053` points to the struct tag when a direct event field is marked both
-`pii` and `encrypted`. Choose which protection the field requires and remove the
-other directive. The [parity map](parity.md#declaration-diagnostics-preview)
-explains which declarations the preview can prove. The tool validates tags
-using SDK `v0.21.0`'s declaration grammar; the grammar may differ in consumers
-using another SDK version. A clean run does not replace runtime validation.
-The tool is built from source, not published as a module.
+`CHR0053` points to the tag on a direct builtin `string` event field marked
+both `pii` and `encrypted`. Choose the protection the field needs and remove
+the other directive. For a direct `events.SourceID` field or true alias,
+`CHR0034` (`PiiOnEventSourceIdAnalyzer`, Error) flags a lone `pii` directive and
+`CHR0052` (`EncryptedOnEventSourceIdAnalyzer`, Error) flags a lone `encrypted`
+directive. Keep a non-sensitive identity and protect a separate field. These
+identity checks skip JSON-renamed fields and tags with another directive,
+including an ID tagged with both protections.
+
+The [parity map](parity.md#declaration-diagnostics-preview) links the pinned C#
+rules, tests, and exact detection boundaries. The tool validates tags using
+SDK `v0.21.0`'s declaration grammar, which may differ from the consumer's SDK.
+A clean run does not replace runtime validation. The tool is built from source,
+not published as a module.
 
 ### Qualify a nested module for publication
 

@@ -12,3 +12,9 @@ type TaggedConflict struct {
 }
 
 func DeclareTagged() { _, _ = events.Define[TaggedConflict]() }
+
+type TaggedIdentity struct {
+	Key events.SourceID `json:",omitempty" chronicle:"pii"` // want "^CHR0034:"
+}
+
+func DeclareTaggedIdentity() { _, _ = events.Define[TaggedIdentity]() }
