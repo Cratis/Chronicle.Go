@@ -32,7 +32,7 @@ func (s *Service) snapshotEvent(model Descriptor, event *contracts.Event) (event
 	result := events.Appended{Content: json.RawMessage(event.Content), Context: events.Context{
 		Store: s.store, Namespace: s.namespace, Sequence: model.EventSequence(),
 		EventType: events.TypeRef{ID: events.TypeID(c.EventType.Id), Generation: events.Generation(c.EventType.Generation)},
-		Tombstone: c.EventType.Tombstone, SourceType: events.SourceType(c.EventSourceType), SourceID: events.SourceID(c.EventSourceId),
+		Tombstone: c.EventType.Tombstone, SourceType: events.SourceType(c.EventSourceType), EventSource: events.SourceName(c.EventSource), SourceID: events.SourceID(c.EventSourceId),
 		SequenceNumber: events.SequenceNumber(c.SequenceNumber), StreamType: events.StreamType(c.EventStreamType), StreamID: events.StreamID(c.EventStreamId),
 		Occurred: occurred, CorrelationID: wire.Correlation(c.CorrelationId), CausedBy: snapshotIdentity(c.CausedBy),
 		Hash: c.Hash, ObservationState: events.ObservationState(c.ObservationState), CompensationFor: events.CompensationTarget(c.CompensationFor), Subject: events.Subject(c.Subject),

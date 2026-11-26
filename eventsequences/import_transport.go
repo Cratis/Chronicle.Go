@@ -14,18 +14,18 @@ import (
 // import contracts. Repeated and message values reuse the append contract's
 // shapes, which the import contract mirrors field for field.
 type importEvent struct {
-	sourceID, sourceType, streamType, streamID string
-	eventType                                  *sequences.EventType
-	content                                    string
-	tags                                       []string
-	namedTags                                  []*sequences.NamedTag
-	occurred                                   string
-	subject                                    string
-	correlation                                metadata.CorrelationID
-	causation                                  []*sequences.Causation
-	causedBy                                   *sequences.Identity
-	idempotencyKey                             string
-	sourceSequenceNumber                       *uint64
+	sourceID, sourceType, eventSource, streamType, streamID string
+	eventType                                               *sequences.EventType
+	content                                                 string
+	tags                                                    []string
+	namedTags                                               []*sequences.NamedTag
+	occurred                                                string
+	subject                                                 string
+	correlation                                             metadata.CorrelationID
+	causation                                               []*sequences.Causation
+	causedBy                                                *sequences.Identity
+	idempotencyKey                                          string
+	sourceSequenceNumber                                    *uint64
 }
 
 // size measures an event as the kernel counts it against its chunk byte limit:

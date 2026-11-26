@@ -21,6 +21,9 @@ type Entry struct {
 	Event any
 	// Route selects the append route; zero fields use Default/All/Default.
 	Route Route
+	// EventSource attributes the event to a registered event source definition;
+	// see WithEventSource. Empty means no attribution.
+	EventSource events.SourceName
 	// Tags merges after the event type's static tags and before batch tags.
 	Tags []events.Tag
 	// NamedTags preserves exact name/value pairs, including empty values.
@@ -124,6 +127,17 @@ func normalizedRoute(route Route) Route {
 	}
 	if route.StreamID == "" {
 		route.StreamID = events.DefaultStreamID
+	}
+	return route
+}
+
+// effectiveRoute is the route used to select automatic concurrency filters: a
+// named event source persists as the SourceType, so an empty or Default
+// requested type narrows to it. The append wire route is never rewritten.
+func effectiveRoute(route Route, eventSource events.SourceName) Route {
+	route = normalizedRoute(route)
+	if eventSource != "" && route.SourceType == events.DefaultSourceType {
+		route.SourceType = events.SourceType(eventSource)
 	}
 	return route
 }

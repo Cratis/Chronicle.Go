@@ -123,7 +123,7 @@ func commandEnvelope(envelope proto.Message, err error) error {
 }
 
 func importEventContract(event *importEvent) (*imports.ImportEvent, error) {
-	result := &imports.ImportEvent{EventSourceId: event.sourceID, EventSourceType: event.sourceType, EventStreamType: event.streamType, EventStreamId: event.streamID,
+	result := &imports.ImportEvent{EventSourceId: event.sourceID, EventSourceType: event.sourceType, EventSource: event.eventSource, EventStreamType: event.streamType, EventStreamId: event.streamID,
 		EventType: &imports.EventType{Id: event.eventType.GetId(), Generation: event.eventType.GetGeneration()}, Content: event.content, Tags: event.tags,
 		Subject: event.subject, CorrelationId: wire.Guid(event.correlation), IdempotencyKey: event.idempotencyKey, CausedBy: importIdentity(event.causedBy)}
 	if event.occurred != "" {

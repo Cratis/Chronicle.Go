@@ -17,7 +17,7 @@ func (s *Sequence) resolveScope(ctx context.Context, source events.SourceID, con
 	if config.scope != nil {
 		return s.resolveLabeledScope(ctx, source, *config.scope)
 	}
-	scope, err := s.automaticScope(ctx, source, config.route)
+	scope, err := s.automaticScope(ctx, source, effectiveRoute(config.route, config.eventSource))
 	if err != nil {
 		return nil, err
 	}

@@ -94,7 +94,7 @@ func (s *Sequence) Append(ctx context.Context, source events.SourceID, event any
 		return AppendResult{}, err
 	}
 	scopes := singleAppendScopes(source, config)
-	batch, err := s.snapshotBatch(ctx, []Entry{{Source: source, Event: event, Route: config.route, Subject: config.subject, Occurred: config.occurred, Tags: config.tags, NamedTags: config.named}}, batchConfig{correlation: config.correlation, correlationSet: config.correlationSet, scopes: scopes})
+	batch, err := s.snapshotBatch(ctx, []Entry{{Source: source, Event: event, Route: config.route, EventSource: config.eventSource, Subject: config.subject, Occurred: config.occurred, Tags: config.tags, NamedTags: config.named}}, batchConfig{correlation: config.correlation, correlationSet: config.correlationSet, scopes: scopes})
 	if err != nil {
 		return AppendResult{}, err
 	}
@@ -212,6 +212,9 @@ func singleEnvelopeFailure(envelope *sequences.CommandResult_AppendResponse, err
 }
 
 func (s *Sequence) request(ctx context.Context, source events.SourceID, descriptor events.Descriptor, content string, config appendConfig) (*sequences.AppendRequest, error) {
+	if config.eventSource != "" && strings.TrimSpace(string(config.eventSource)) == "" {
+		return nil, fmt.Errorf("%w: blank event source name", faults.ErrInvalidConfiguration)
+	}
 	config.route = normalizedRoute(config.route)
 	subject, err := singleAppendSubject(source, config)
 	if err != nil {
@@ -227,7 +230,7 @@ func (s *Sequence) request(ctx context.Context, source events.SourceID, descript
 	}
 	ref := descriptor.Ref()
 	request := &sequences.AppendRequest{EventStore: string(s.store), Namespace: string(s.namespace), EventSequenceId: string(s.id), EventSourceId: string(source),
-		EventSourceType: string(config.route.SourceType), EventStreamType: string(config.route.StreamType), EventStreamId: string(config.route.StreamID),
+		EventSourceType: string(config.route.SourceType), EventSource: string(config.eventSource), EventStreamType: string(config.route.StreamType), EventStreamId: string(config.route.StreamID),
 		EventType: &sequences.EventType{Id: string(ref.ID), Generation: uint32(ref.Generation)}, Content: content,
 		CorrelationId: wire.Guid(config.correlation), Subject: subject, ConcurrencyScope: scope, Occurred: &sequences.SerializableDateTimeOffset{},
 		CausedBy: identityContract(metadata.Identity(ctx)), Causation: causationContract(metadata.CausationChain(ctx)),

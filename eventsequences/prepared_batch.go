@@ -79,7 +79,7 @@ func freezeBatchCausation(request *sequences.AppendManyForEventSourcesRequest) {
 func newPreparedBatch(sequence *Sequence, batch preparedBatch, entries []Entry, scopes []LabeledScope) *PreparedBatch {
 	result := &PreparedBatch{sequence: sequence, batch: batch}
 	for _, entry := range entries {
-		result.entries = append(result.entries, Entry{Source: entry.Source, Route: entry.Route})
+		result.entries = append(result.entries, Entry{Source: entry.Source, Route: entry.Route, EventSource: entry.EventSource})
 	}
 	for _, labeled := range scopes {
 		result.explicit = append(result.explicit, LabeledScope{Label: labeled.Label, Scope: cloneScope(labeled.Scope)})

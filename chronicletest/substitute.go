@@ -117,8 +117,15 @@ func (k *substituteKernel) append(r *sequences.AppendRequest) uint64 {
 	if occurred == nil || occurred.Value == "" {
 		occurred = &sequences.SerializableDateTimeOffset{Value: time.Unix(0, int64(position)).UTC().Format(time.RFC3339Nano)}
 	}
+	// Substituted scenarios keep EventSource metadata only: there is no source
+	// registry or validation. A named source with an empty or Default type is
+	// stored with the name as its type, mirroring the kernel's success rewrite.
+	sourceType := r.EventSourceType
+	if r.EventSource != "" && (sourceType == "" || sourceType == "Default") {
+		sourceType = r.EventSource
+	}
 	event := &sequences.AppendedEventResponse{Id: strconv.FormatUint(position, 10), Content: r.Content, OriginalContent: r.Content,
-		Context: &sequences.EventContext{EventType: r.EventType, EventSourceId: r.EventSourceId, EventSourceType: r.EventSourceType, EventStreamType: r.EventStreamType, EventStreamId: r.EventStreamId,
+		Context: &sequences.EventContext{EventType: r.EventType, EventSourceId: r.EventSourceId, EventSourceType: sourceType, EventSource: r.EventSource, EventStreamType: r.EventStreamType, EventStreamId: r.EventStreamId,
 			SequenceNumber: position, Occurred: occurred, CorrelationId: r.CorrelationId, Causation: r.Causation, CausedBy: r.CausedBy, Tags: r.Tags, Subject: r.Subject}}
 	k.events[key] = append(k.events[key], proto.Clone(event).(*sequences.AppendedEventResponse))
 	return position

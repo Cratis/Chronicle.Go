@@ -74,12 +74,12 @@ func (e importEncoder) encode(ctx context.Context, entry Entry, index int64) (im
 	if err != nil {
 		return importEvent{}, err
 	}
-	config := appendConfig{route: entry.Route, scope: &Scope{Expectation: NoCheck()}, correlation: e.correlation, subject: &subject, occurred: entry.Occurred, tags: entry.Tags}
+	config := appendConfig{route: entry.Route, eventSource: entry.EventSource, scope: &Scope{Expectation: NoCheck()}, correlation: e.correlation, subject: &subject, occurred: entry.Occurred, tags: entry.Tags}
 	request, err := s.request(entryCtx, entry.Source, descriptor, string(content), config)
 	if err != nil {
 		return importEvent{}, err
 	}
-	event := importEvent{sourceID: request.EventSourceId, sourceType: request.EventSourceType, streamType: request.EventStreamType, streamID: request.EventStreamId,
+	event := importEvent{sourceID: request.EventSourceId, sourceType: request.EventSourceType, eventSource: request.EventSource, streamType: request.EventStreamType, streamID: request.EventStreamId,
 		eventType: &sequences.EventType{Id: request.EventType.GetId(), Generation: request.EventType.GetGeneration()}, content: request.Content, tags: request.Tags,
 		namedTags: namedRequest(request, entry.NamedTags).NamedTags, occurred: request.Occurred.GetValue(), subject: request.Subject, correlation: e.correlation,
 		causation: request.Causation, causedBy: request.CausedBy, idempotencyKey: string(entry.IdempotencyKey)}

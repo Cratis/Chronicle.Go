@@ -41,7 +41,7 @@ func (s *Sequence) PrepareReturnedEvents(ctx context.Context, effect reactoreffe
 	// Keep coordinates only, never retain the event objects or metadata aliases.
 	coordinates := make([]Entry, len(effect.Entries))
 	for i, entry := range effect.Entries {
-		coordinates[i] = Entry{Source: entry.Source, Route: entry.Route}
+		coordinates[i] = Entry{Source: entry.Source, Route: entry.Route, EventSource: entry.EventSource}
 	}
 	scopes := make([]LabeledScope, len(effect.Scopes))
 	for i, scope := range effect.Scopes {
@@ -59,7 +59,7 @@ func (s *Sequence) PrepareReturnedEvents(ctx context.Context, effect reactoreffe
 		if bare && single {
 			first := coordinates[0]
 			request := singleRequest(pending.request, pending.request.Events[0])
-			request.ConcurrencyScope, err = s.resolveScope(ctx, first.Source, appendConfig{route: first.Route})
+			request.ConcurrencyScope, err = s.resolveScope(ctx, first.Source, appendConfig{route: first.Route, eventSource: first.EventSource})
 			if err != nil {
 				return err
 			}
@@ -78,7 +78,7 @@ func (s *Sequence) PrepareReturnedEvents(ctx context.Context, effect reactoreffe
 			return err
 		}
 		var result BatchResult
-		if bare && normalizedRoute(coordinates[0].Route) == normalizedRoute(Route{}) {
+		if bare && normalizedRoute(coordinates[0].Route) == normalizedRoute(Route{}) && coordinates[0].EventSource == "" {
 			result, err = s.dispatchMany(ctx, coordinates[0].Source, appendConfig{}, pending, origin)
 		} else {
 			result, err = s.dispatchBatch(ctx, pending, origin)

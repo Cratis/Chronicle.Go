@@ -17,7 +17,7 @@ func singleRequest(batch *sequences.AppendManyForEventSourcesRequest, event *seq
 		causes = batch.Causation
 	}
 	return &sequences.AppendRequest{EventStore: batch.EventStore, Namespace: batch.Namespace, EventSequenceId: batch.EventSequenceId,
-		EventSourceId: event.EventSourceId, EventSourceType: event.EventSourceType, EventStreamType: event.EventStreamType, EventStreamId: event.EventStreamId,
+		EventSourceId: event.EventSourceId, EventSourceType: event.EventSourceType, EventSource: event.EventSource, EventStreamType: event.EventStreamType, EventStreamId: event.EventStreamId,
 		EventType: event.EventType, Content: event.Content, Tags: event.Tags, Subject: event.Subject, Occurred: event.Occurred,
 		CorrelationId: batch.CorrelationId, CausedBy: batch.CausedBy, Causation: causes}
 }

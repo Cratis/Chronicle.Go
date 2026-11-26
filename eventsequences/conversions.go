@@ -33,7 +33,7 @@ func causationContract(chain []metadata.Causation) []*sequences.Causation {
 }
 func namedRequest(request *sequences.AppendRequest, tags []events.NamedTag) *sequences.AppendWithNamedTagsRequest {
 	result := &sequences.AppendWithNamedTagsRequest{EventStore: request.EventStore, Namespace: request.Namespace, EventSequenceId: request.EventSequenceId,
-		EventSourceId: request.EventSourceId, EventSourceType: request.EventSourceType, EventStreamType: request.EventStreamType, EventStreamId: request.EventStreamId,
+		EventSourceId: request.EventSourceId, EventSourceType: request.EventSourceType, EventSource: request.EventSource, EventStreamType: request.EventStreamType, EventStreamId: request.EventStreamId,
 		EventType: request.EventType, Content: request.Content, CorrelationId: request.CorrelationId, Tags: request.Tags, Occurred: request.Occurred,
 		Subject: request.Subject, Causation: request.Causation, CausedBy: request.CausedBy, ConcurrencyScope: request.ConcurrencyScope}
 	seen := make(map[events.NamedTag]bool)
