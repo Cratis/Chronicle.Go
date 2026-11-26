@@ -1022,7 +1022,7 @@ References in this section are C# revision `2e31b0dfba489159b3db323238f16d0f2770
 
 - `declarations.Parse(declarations.V1, tag)` is the shared, bounded parser. `FuzzParse`, grammar/error tests and `TestDeclarationsOnIgnoredFieldsFailClosed` cover delimiters, escaped strings, offsets, ignored fields and fail-closed role checks. Unsupported compliance and event-field directives remain errors, not no-ops. Arithmetic, global mappings and nodes use this same parser.
 - `serialization.Plan.Fields()` supplies detached field/index, serialized name/path, declared type, nullability and scalar/format metadata. Projection code never invents another casing policy. `TestFieldMetadataSharesPlanAndOwnsSnapshots` covers snapshot isolation. Fundamentals wrapper compatibility is centralized in `scalarCompatible` and `concepts.Underlying`, without calling fabricated concept values. Child parent-key inference retains declared domain-ID types.
-- All event references resolve only against the frozen store catalog: bare Go name, `go("qualified.Type")`, `id("persisted-id"[,generation])`, or a typed `BindEvent` alias. Tests cover aliases, exact generations, ambiguity with qualified candidates, foreign handles and store isolation. Runtime validation is mandatory; ordinary gopls rename and Go vet do not validate custom tags. The optional [declaration diagnostics preview](#declaration-diagnostics-preview) covers one event protection conflict.
+- All event references resolve only against the frozen store catalog: bare Go name, `go("qualified.Type")`, `id("persisted-id"[,generation])`, or a typed `BindEvent` alias. Tests cover aliases, exact generations, ambiguity with qualified candidates, foreign handles and store isolation. Runtime validation is mandatory; ordinary gopls rename and Go vet do not validate custom tags. The optional [declaration diagnostics preview](#declaration-diagnostics-preview) covers a subset of direct event protection errors.
 - Model-bound precedence is C#'s family order (`set`, `add`, `subtract`, `increment`, `decrement`, `count`, `context`, `value`, `clear`), with last-in-family wins and inspectable shadowing diagnostics. Fluent duplicate writers fail. `TestModelBoundPrecedenceAndFluentDuplicateRejection` fixes this distinction. Mixing mapping tags and fluent mappings fails rather than applying accidental precedence; identity/exclusion tags are shared.
 - The one encoder emits the canonical immutable definition. `TestFluentBuildSnapshotsValuesAndCallbacks` and golden mutation tests prove literal/callback/protobuf ownership. Reconnect uses those definitions without reflection or author callbacks. Defaults are `{}`, active, rewindable and AutoMap enabled. The model-bound/explicit projection ID defaults to the model observer ID when set, otherwise the full Go model type name, independently of an overridden read-model identifier; `TestProjectionDiscoveryInheritsModelDefaults` and `TestFluentBuilderInheritsModelDefaults` cover both front ends. Zero `Definition` accessors return zero metadata (`TestZeroDefinitionAccessors`); `WithIdentifier` or a builder ID selects shared C# identities. Container naming remains a read-model setting.
 - `NewClient` fails the whole declaration graph before I/O rather than C#'s log-and-skip discovery. Each registry snapshot includes events, models, constraints and projections under one lock. `TestProjectionStartupValidationIsAtomicAndStoreLocal` proves forward references and failure atomicity. Models with mapping tags discover projections; type-level options require `AddProjection`. Explicit foreign model handles and conflicting producer settings fail.
@@ -1036,23 +1036,36 @@ The [projection guide](projections/index.md) presents model-bound declarations f
 
 | C# rule | Go coverage | Evidence |
 | --- | --- | --- |
-| [`PIIAndEncryptedCombinedAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/PIIAndEncryptedCombinedAnalyzer.cs), `CHR0053` (Error) | **Partial**: the opt-in [vet preview](module-policy.md#try-the-chronicle-vet-preview) reports both directives on one event field, with a diagnostic that fails vet | `TestEventProtectionDiagnostics` covers selected files, tag ranges and abstentions; `TestRuntimeProtectionWitness` checks the same conflict against `events.Define` ([#39](https://github.com/Cratis/Chronicle.Go/issues/39)) |
+| [`PIIAndEncryptedCombinedAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/PIIAndEncryptedCombinedAnalyzer.cs), `CHR0053` (Error) | **Partial**: the opt-in [vet preview](module-policy.md#try-the-chronicle-vet-preview) reports both directives on the same builtin `string` event field | `TestRuntimeProtectionWitness` |
+| [`PiiOnEventSourceIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/PiiOnEventSourceIdAnalyzer.cs), `CHR0034` (Error) | **Partial**: reports a lone `pii` directive on an `events.SourceID` field, including a true type alias | `TestRuntimeIdentityWitness` |
+| [`EncryptedOnEventSourceIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/EncryptedOnEventSourceIdAnalyzer.cs), `CHR0052` (Error) | **Partial**: reports a lone `encrypted` directive on the same identity type, with or without valid scope and details | `TestRuntimeIdentityWitness` |
+
+Each diagnostic points to the struct tag and fails vet. `TestEventProtectionDiagnostics`
+covers the selected files, tag ranges, and abstentions for all three checks. The
+runtime witnesses call `events.Define` from the tool's pinned SDK `v0.21.0`
+([#39](https://github.com/Cratis/Chronicle.Go/issues/39)).
 
 The preview recognizes direct `chronicle.RegisterEvent[T](registry)` and
-`events.Define[T]()` calls without options. It checks a single-name exported
-`string` field on a named, nongeneric struct defined in the same package.
-Structs with methods or embedded fields are skipped, as are ignored JSON fields,
-unsupported JSON options, invalid declarations, duplicate protection directives,
-and tags with `compliance-details`. The analyzer reads the Go files selected by
-`go vet`, including handwritten and generated-style source. The analyzer itself
-does not execute consumer code or print classification details.
+`events.Define[T]()` calls without options. It considers single-name exported
+fields on named, nongeneric structs declared in the same package. It skips
+structs with methods or embedded fields, JSON-ignored fields, unsupported JSON
+options, invalid declarations, duplicate protection directives, and tags with
+`compliance-details`. It uses the `v0.21.0` declaration grammar, which may differ
+from the consumer's SDK. The analyzer reads the Go files selected by `go vet`,
+including handwritten and generated-style source, without itself executing
+consumer code or printing classification details.
+
+The identity checks also skip JSON-renamed fields, pointers, composites, and
+other named types even if they have the same underlying type. They abstain when
+any other directive is present, including both `pii` and `encrypted` on the ID.
+Use a non-sensitive surrogate for the identity and protect a separate field.
+Runtime validation is still required.
 
 Actual generator output ([#23](https://github.com/Cratis/Chronicle.Go/issues/23))
-and tool publication are deferred. So are other `CHR0053` shapes, including
-inherited, typed, or provider-supplied protection, and declarations resolved
-across packages or through dynamic metadata. The remaining 50 active IDs, full
-inventory and severity mapping, projection, identity, path and global binding
-checks, and Arc-only advice are not part of the preview.
+and tool publication are deferred. The preview does not follow inherited,
+typed, provider-supplied, cross-package, or dynamic metadata. The full analyzer
+inventory and severity mapping, other projection, identity, path, and global
+binding checks, and Arc-only advice are outside this preview.
 
 ## Projection initial values and artifact labels
 

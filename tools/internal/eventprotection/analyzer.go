@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-// Package eventprotection detects directly conflicting Chronicle event field tags.
+// Package eventprotection checks direct Chronicle event field protection tags.
 package eventprotection
 
 import (
@@ -18,14 +18,20 @@ import (
 
 const (
 	sdkPath = "github.com/cratis/chronicle.go"
-	code    = "CHR0053"
-	message = code + ": choose either pii or encrypted for this field; remove the other directive"
+
+	conflictCode    = "CHR0053"
+	conflictMessage = conflictCode + ": choose either pii or encrypted for this field; remove the other directive"
+
+	piiIdentityCode    = "CHR0034"
+	piiIdentityMessage = piiIdentityCode + ": remove pii from this event source identity; protect a separate field instead"
+	encryptedIDCode    = "CHR0052"
+	encryptedIDMessage = encryptedIDCode + ": remove encrypted from this event source identity; protect a separate field instead"
 )
 
 // Analyzer reports incompatible protection on proven event field declarations.
 var Analyzer = &analysis.Analyzer{
 	Name: "chronicleprotection",
-	Doc:  "check directly declared Chronicle event fields for conflicting pii and encrypted directives",
+	Doc:  "check directly declared Chronicle event fields for conflicting protection and protected source identities",
 	Run:  run,
 }
 
@@ -133,32 +139,76 @@ func isSDKDeclaration(fn *types.Func, argc int) bool {
 
 func inspectFields(pass *analysis.Pass, decl *ast.StructType) {
 	for _, field := range decl.Fields.List {
-		if !simpleStringField(pass.TypesInfo, field) || !conflictingTag(field.Tag.Value) {
+		if field.Tag == nil || len(field.Names) != 1 || !field.Names[0].IsExported() {
 			continue
 		}
-		pass.Report(analysis.Diagnostic{Pos: field.Tag.Pos(), End: field.Tag.End(), Category: code, Message: message})
+		category, message := fieldDiagnostic(pass.TypesInfo.TypeOf(field.Type), field.Tag.Value)
+		if category != "" {
+			pass.Report(analysis.Diagnostic{Pos: field.Tag.Pos(), End: field.Tag.End(), Category: category, Message: message})
+		}
 	}
 }
 
-func simpleStringField(info *types.Info, field *ast.Field) bool {
-	return field.Tag != nil && len(field.Names) == 1 && field.Names[0].IsExported() && info.TypeOf(field.Type) == types.Typ[types.String]
+func fieldDiagnostic(typ types.Type, literal string) (category, message string) {
+	builtinString := typ == types.Typ[types.String]
+	identity := isSourceIdentity(typ)
+	if !builtinString && !identity {
+		return "", ""
+	}
+	directives := eventDirectives(literal, identity)
+	if identity {
+		return identityDiagnostic(directives)
+	}
+	if conflictingProtection(directives) {
+		return conflictCode, conflictMessage
+	}
+	return "", ""
 }
 
-func conflictingTag(literal string) bool {
+func isSourceIdentity(typ types.Type) bool {
+	named, ok := types.Unalias(typ).(*types.Named)
+	if !ok {
+		return false
+	}
+	obj := named.Obj()
+	return obj.Pkg() != nil && obj.Pkg().Path() == sdkPath+"/events" && obj.Name() == "SourceID"
+}
+
+func eventDirectives(literal string, identity bool) []declarations.Directive {
 	decoded, err := strconv.Unquote(literal)
 	if err != nil {
-		return false
+		return nil
 	}
 	tag := reflect.StructTag(decoded)
-	metadata := tag.Get("chronicle")
-	if metadata == "" || !supportedJSONTag(tag.Get("json")) {
-		return false
+	metadata, jsonTag := tag.Get("chronicle"), tag.Get("json")
+	if metadata == "" || !supportedJSONTag(jsonTag) {
+		return nil
+	}
+	name, _, _ := strings.Cut(jsonTag, ",")
+	if identity && name != "" {
+		return nil
 	}
 	directives, err := declarations.Parse(declarations.V1, metadata)
 	if err != nil || declarations.Validate(declarations.Event, directives) != nil {
-		return false
+		return nil
 	}
-	return conflictingProtection(directives)
+	return directives
+}
+
+func identityDiagnostic(directives []declarations.Directive) (category, message string) {
+	if len(directives) != 1 {
+		return "", ""
+	}
+	directive := directives[0]
+	switch directive.Name {
+	case "pii":
+		if len(directive.Args) == 0 {
+			return piiIdentityCode, piiIdentityMessage
+		}
+	case "encrypted":
+		return encryptedIDCode, encryptedIDMessage
+	}
+	return "", ""
 }
 
 func supportedJSONTag(tag string) bool {
