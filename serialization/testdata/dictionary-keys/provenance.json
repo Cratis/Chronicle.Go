@@ -1,0 +1,31 @@
+{
+  "fixture": "profile.json",
+  "sha256": "bfe6806e982443cf7f5bbf483081a29f6c92faf475d62bd00a71f2422f9e8e05",
+  "generator": "capture.cs",
+  "generatorSha256": "042f9ce26fc37a4390d6cdb725ec16ea9581bac294dbed97462e2e43cd56eccd",
+  "sdk": "11.0.100",
+  "runtime": "11.0.0",
+  "packages": {
+    "Cratis.Chronicle": "19.153.0",
+    "Cratis.Fundamentals": "7.33.1"
+  },
+  "chronicleSource": "9157c14098688ac0c6946a335bfabf1f44220c7c",
+  "fundamentalsSource": "6ae7eb7d133afdb7adaf161ca185eaa189c7372b",
+  "command": "dotnet run --file serialization/testdata/dictionary-keys/capture.cs --no-restore -- .ai-work/64/capture3-profile.json (output copied byte-for-byte to profile.json; capture attempt 3 of 3, warning-free, exit 0)",
+  "generationDate": "2026-11-26",
+  "owningSources": [
+    "Cratis/Chronicle:Source/Clients/DotNET/ChronicleClient.cs (InitializeJsonSerializationOptions)",
+    "Cratis/Chronicle:Source/Clients/DotNET/Events/EventSerializer.cs",
+    "Cratis/Chronicle:Source/Clients/DotNET/Schemas/JsonSchemaGenerator.cs",
+    "Cratis/Chronicle:Source/Infrastructure/Json/ExpandoObjectConverter.cs",
+    "Cratis/Fundamentals:Source/DotNET/Fundamentals/Json/ComplexKeyDictionaryJsonConverterFactory.cs",
+    "Cratis/Fundamentals:Source/DotNET/Fundamentals/Json/Globals.cs"
+  ],
+  "optionsPaths": {
+    "serializeDeserialize": "Configured client options from the packaged ChronicleClient initializer, per naming policy.",
+    "expando": "ExpandoObjectConverter one-argument constructor: Cratis.Json.Globals.JsonSerializerOptions from Fundamentals, not the client options."
+  },
+  "representation": "Wire, schema, lookup and expando outputs are retained as JSON text strings so duplicate or colliding property names are never flattened. Errors keep only the exception type chain, never messages or key payloads.",
+  "limits": "No live Chronicle kernel, Mongo/BSON, Go round trip, protection or older-server claim. Capture-only: no Go dictionary admission is implemented or approved.",
+  "network": "The capture execution used --no-restore and no network or server. How the packages reached the local NuGet cache is not claimed."
+}
