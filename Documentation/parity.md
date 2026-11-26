@@ -1041,6 +1041,7 @@ The [projection guide](projections/index.md) presents model-bound declarations f
 | [`EncryptedOnEventSourceIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/EncryptedOnEventSourceIdAnalyzer.cs), `CHR0052` (Error) | **Partial**: reports a lone `encrypted` directive on the same identity type, with or without valid scope and details | `TestRuntimeIdentityWitness` |
 | [`MigrationGenerationEventTypeIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2183775328f5d38ea5401b52ba9594bee23a574a/Source/Clients/DotNET.CodeAnalysis/Analyzers/MigrationGenerationEventTypeIdAnalyzer.cs), `CHR0037` (Usage warning) | **Partial**: points to a direct `events.DefineMigration` call whose endpoints have proven different explicit event type IDs | `TestMigrationIdentityDiagnostics`, `TestRuntimeMigrationIdentityWitness` |
 | [`ReservedSubjectPropertyAnalyzer`](https://github.com/Cratis/Chronicle/blob/2183775328f5d38ea5401b52ba9594bee23a574a/Source/Clients/DotNET.CodeAnalysis/Analyzers/ReservedSubjectPropertyAnalyzer.cs), `CHR0035` (Usage error) | **Partial**: reports an explicit reserved JSON name on a string field in a directly registered read model | `TestReservedSubjectDiagnostics`, `TestRuntimeReservedSubjectWitness` |
+| [`ClearOnNonNullableMemberAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/ClearOnNonNullableMemberAnalyzer.cs), `CHR0048` (Usage warning) | **Partial**: points to `Clear` for a proven required string in a direct fluent projection callback | `TestProjectionClearDiagnostics`, `TestRuntimeProjectionClearWitness` |
 
 All findings fail Go vet. The three protection checks point to the struct tag.
 `TestEventProtectionDiagnostics` covers their selected files, tag ranges, and
@@ -1099,6 +1100,20 @@ finding. Runtime schema compilation rejects the reserved names even outside
 this subset. Registration with a literal `nil` registry fails before schema
 compilation; this diagnostic describes the declared model, not whether its
 registry is valid. A clean vet run does not certify a read model.
+
+For `CHR0048`, C# warns on fluent clears, null `ToValue` calls, and clear
+attributes. Go checks only a direct `projections.Clear` in a one-statement,
+inline `projections.From` callback, using its own callback parameter and the
+unaliased SDK import. It requires a literal path and a matching builtin `string`
+descriptor on a local, flat, methodless model with explicit simple JSON names.
+It skips identity fields, unsupported model shapes, indirect calls, model-bound
+tags, null `Value` writes, and `EveryClear`. As with the other Go checks,
+generated files selected by vet are analyzed; the C# rule skips generated code.
+
+The pinned Go SDK `v0.21.0` rejects the indicated clear when building the
+projection. Clearing writes null, not an empty string. Use a `*string` field
+and a matching pointer descriptor to clear it, or explicitly assign a value.
+This finding describes the write, not whether the rest of the projection builds.
 
 Actual generator output ([#23](https://github.com/Cratis/Chronicle.Go/issues/23))
 and tool publication are deferred. The preview does not follow inherited,
