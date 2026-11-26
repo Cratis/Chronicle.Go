@@ -9,6 +9,7 @@ import (
 
 	"github.com/cratis/chronicle.go/declarations"
 	"github.com/cratis/chronicle.go/serialization"
+	"github.com/google/uuid"
 )
 
 // UsingKeyFromContext correlates an event using a scalar kernel context property.
@@ -90,6 +91,10 @@ func (b *CompositeKeyBuilder[K, E]) add(path string, typ reflect.Type, part keyP
 	}
 	fields := plan.Fields()
 	for _, field := range fields {
+		if guidDictionaryField(field.Type) {
+			b.err = invalid("composite key does not support UUID-keyed dictionaries")
+			return
+		}
 		directives, err := declarations.Parse(declarations.V1, field.Tag)
 		if err != nil {
 			b.err = err
@@ -117,6 +122,26 @@ func (b *CompositeKeyBuilder[K, E]) add(path string, typ reflect.Type, part keyP
 		}
 	}
 	b.parts = append(b.parts, part)
+}
+
+// guidDictionaryField reports whether a serialized field is, or holds through
+// pointers, slices, arrays and map values, a map keyed by uuid.UUID. Fields come
+// from the compiled plan, so ignored and unexported members never appear; the
+// event/document plan admits these maps, identities must not carry them.
+func guidDictionaryField(typ reflect.Type) bool {
+	for {
+		switch typ.Kind() {
+		case reflect.Map:
+			if typ.Key() == reflect.TypeFor[uuid.UUID]() {
+				return true
+			}
+			typ = typ.Elem()
+		case reflect.Pointer, reflect.Slice, reflect.Array:
+			typ = typ.Elem()
+		default:
+			return false
+		}
+	}
 }
 
 // UsingCompositeKey correlates by named parts in callback order. Duplicate parts,
