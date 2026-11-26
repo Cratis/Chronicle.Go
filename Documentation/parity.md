@@ -1039,13 +1039,14 @@ The [projection guide](projections/index.md) presents model-bound declarations f
 | [`PIIAndEncryptedCombinedAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/PIIAndEncryptedCombinedAnalyzer.cs), `CHR0053` (Error) | **Partial**: the opt-in [vet preview](module-policy.md#try-the-chronicle-vet-preview) reports both directives on the same builtin `string` event field | `TestRuntimeProtectionWitness` |
 | [`PiiOnEventSourceIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/PiiOnEventSourceIdAnalyzer.cs), `CHR0034` (Error) | **Partial**: reports a lone `pii` directive on an `events.SourceID` field, including a true type alias | `TestRuntimeIdentityWitness` |
 | [`EncryptedOnEventSourceIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2e31b0dfba489159b3db323238f16d0f277056b4/Source/Clients/DotNET.CodeAnalysis/Analyzers/EncryptedOnEventSourceIdAnalyzer.cs), `CHR0052` (Error) | **Partial**: reports a lone `encrypted` directive on the same identity type, with or without valid scope and details | `TestRuntimeIdentityWitness` |
+| [`MigrationGenerationEventTypeIdAnalyzer`](https://github.com/Cratis/Chronicle/blob/2183775328f5d38ea5401b52ba9594bee23a574a/Source/Clients/DotNET.CodeAnalysis/Analyzers/MigrationGenerationEventTypeIdAnalyzer.cs), `CHR0037` (Usage warning) | **Partial**: points to a direct `events.DefineMigration` call whose endpoints have proven different explicit event type IDs | `TestMigrationIdentityDiagnostics`, `TestRuntimeMigrationIdentityWitness` |
 
-Each diagnostic points to the struct tag and fails vet. `TestEventProtectionDiagnostics`
-covers the selected files, tag ranges, and abstentions for all three checks. The
-runtime witnesses call `events.Define` from the tool's pinned SDK `v0.21.0`
+All findings fail Go vet. The three protection checks point to the struct tag.
+`TestEventProtectionDiagnostics` covers their selected files, tag ranges, and
+abstentions. All runtime witnesses use the tool's pinned SDK `v0.21.0`
 ([#39](https://github.com/Cratis/Chronicle.Go/issues/39)).
 
-The preview recognizes direct `chronicle.RegisterEvent[T](registry)` and
+The protection checks recognize direct `chronicle.RegisterEvent[T](registry)` and
 `events.Define[T]()` calls without options. It considers single-name exported
 fields on named, nongeneric structs declared in the same package. It skips
 structs with methods or embedded fields, JSON-ignored fields, unsupported JSON
@@ -1060,6 +1061,23 @@ other named types even if they have the same underlying type. They abstain when
 any other directive is present, including both `pii` and `encrypted` on the ID.
 Use a non-sensitive surrogate for the identity and protect a separate field.
 Runtime validation is still required.
+
+The C# migration warning follows marked migration endpoints. Go uses direct,
+marker-free factory calls instead. The preview checks two consecutive
+`events.Define[T]` short declarations (each binding a fresh handle to a
+concrete nongeneric named struct), each followed by `if err != nil { return … }`,
+then a two-result assignment from `events.DefineMigration(up, prev, mapping)`.
+All five statements must be in one Go block, and all three migration arguments
+must be identifiers. It compares the decoded `events.WithID` string literals;
+only an optional literal `events.WithGeneration` may accompany each ID.
+
+The preview does not infer default IDs or diagnose generation numbers. It skips
+intervening statements, `case` and `select` clause bodies without an explicit
+block, wrappers, function values, and the registry path (`RegisterEvent`,
+`RegisterEventMigration`, and `RegisterEventMigrationFactory`). A clean vet run
+does not certify a migration: the SDK can author a mismatched declaration, but
+catalog compilation rejects it. [Derive the earlier generation](module-policy.md#try-the-chronicle-vet-preview)
+from the current event type to preserve their shared ID.
 
 Actual generator output ([#23](https://github.com/Cratis/Chronicle.Go/issues/23))
 and tool publication are deferred. The preview does not follow inherited,

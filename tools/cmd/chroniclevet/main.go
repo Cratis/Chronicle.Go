@@ -6,7 +6,8 @@ package main
 
 import (
 	"github.com/cratis/chronicle.go/tools/internal/eventprotection"
+	"github.com/cratis/chronicle.go/tools/internal/migrationidentity"
 	"golang.org/x/tools/go/analysis/unitchecker"
 )
 
-func main() { unitchecker.Main(eventprotection.Analyzer) }
+func main() { unitchecker.Main(eventprotection.Analyzer, migrationidentity.Analyzer) }

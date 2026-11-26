@@ -116,11 +116,32 @@ directive. Keep a non-sensitive identity and protect a separate field. These
 identity checks skip JSON-renamed fields and tags with another directive,
 including an ID tagged with both protections.
 
-The [parity map](parity.md#declaration-diagnostics-preview) links the pinned C#
-rules, tests, and exact detection boundaries. The tool validates tags using
-SDK `v0.21.0`'s declaration grammar, which may differ from the consumer's SDK.
-A clean run does not replace runtime validation. The tool is built from source,
-not published as a module.
+`CHR0037` points to `events.DefineMigration` when two consecutive, checked
+`events.Define` calls explicitly give its endpoints different literal IDs. The
+C# rule is a warning; the Go vettool exits nonzero. Creating the Go migration
+declaration can succeed, but catalog compilation rejects the mismatched IDs.
+Derive the historical handle instead of defining it as a second current event:
+
+```go
+current, err := events.Define[CustomerRegistered](events.WithID("customer-registered"), events.WithGeneration(2))
+if err != nil {
+    return err
+}
+previous, err := events.DefineGeneration[CustomerRegisteredV1](current, 1)
+if err != nil {
+    return err
+}
+_, err = events.DefineMigration(current, previous, mapping)
+return err
+```
+
+This check does not infer IDs, check generation numbers, or follow the registry
+path taught elsewhere (`RegisterEvent` and `RegisterEventMigration`). The
+[parity map](parity.md#declaration-diagnostics-preview) links the pinned C# rules,
+tests, and exact detection boundaries. The tag checks use SDK `v0.21.0`'s
+declaration grammar, which may differ from the consumer's SDK. A clean run does
+not replace runtime validation. The tool is built from source, not published as
+a module.
 
 ### Qualify a nested module for publication
 
