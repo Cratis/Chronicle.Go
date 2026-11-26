@@ -59,8 +59,10 @@ func TestRegisterSendsClientOwnedDefinitionsInOrder(t *testing.T) {
 func TestRegisterRejectsInvalidInputBeforeAnyRPC(t *testing.T) {
 	cases := map[string][]eventsources.Definition{
 		"blank name":       {{Name: " "}},
+		"padded source":    {{Name: " A"}},
 		"duplicate source": {{Name: "A"}, {Name: "A"}},
 		"blank stream":     {{Name: "A", Streams: []eventsources.Stream{{Name: ""}}}},
+		"padded stream":    {{Name: "A", Streams: []eventsources.Stream{{Name: "s "}}}},
 		"duplicate stream": {{Name: "A", Streams: []eventsources.Stream{{Name: "s"}, {Name: "s"}}}},
 		"unknown flags":    {{Name: "A", Concurrency: 16}},
 		"unknown stream":   {{Name: "A", Streams: []eventsources.Stream{{Name: "s", Concurrency: -1}}}},

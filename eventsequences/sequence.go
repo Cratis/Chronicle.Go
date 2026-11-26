@@ -211,9 +211,20 @@ func singleEnvelopeFailure(envelope *sequences.CommandResult_AppendResponse, err
 	return AppendResult{}, true, &OutcomeUnknownError{Cause: err}
 }
 
+func validateEventSourceName(name events.SourceName) error {
+	trimmed := strings.TrimSpace(string(name))
+	if trimmed == string(name) {
+		return nil
+	}
+	if trimmed == "" {
+		return fmt.Errorf("%w: blank event source name", faults.ErrInvalidConfiguration)
+	}
+	return fmt.Errorf("%w: padded event source name", faults.ErrInvalidConfiguration)
+}
+
 func (s *Sequence) request(ctx context.Context, source events.SourceID, descriptor events.Descriptor, content string, config appendConfig) (*sequences.AppendRequest, error) {
-	if config.eventSource != "" && strings.TrimSpace(string(config.eventSource)) == "" {
-		return nil, fmt.Errorf("%w: blank event source name", faults.ErrInvalidConfiguration)
+	if err := validateEventSourceName(config.eventSource); err != nil {
+		return nil, err
 	}
 	config.route = normalizedRoute(config.route)
 	subject, err := singleAppendSubject(source, config)

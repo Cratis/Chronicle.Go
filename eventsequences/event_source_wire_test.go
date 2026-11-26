@@ -235,7 +235,7 @@ func TestWithEventSourceLastWinsAndEmptyClears(t *testing.T) {
 			t.Run(variant+"/"+string(last), func(t *testing.T) {
 				captured, tails := make(chan proto.Message, 1), make(chan *sequences.TailSequenceNumberRequest, 1)
 				sequence, _ := sequenceFixture(t, sourceAppendHandlers(captured, tails))
-				err := appendSourceVariant(t, sequence, sourceAppendCase{variant: variant, source: "First", options: []eventsequences.AppendOption{eventsequences.WithEventSource(last)}})
+				err := appendSourceVariant(t, sequence, sourceAppendCase{variant: variant, source: " First ", options: []eventsequences.AppendOption{eventsequences.WithEventSource(last)}})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -246,64 +246,84 @@ func TestWithEventSourceLastWinsAndEmptyClears(t *testing.T) {
 	}
 }
 
-func TestBlankEventSourceIsRejectedBeforeRPC(t *testing.T) {
-	for _, variant := range []string{"single", "many", "batch", "prepared"} {
-		t.Run(variant, func(t *testing.T) {
-			sequence, calls := sequenceFixture(t, nil)
-			if err := appendSourceVariant(t, sequence, sourceAppendCase{variant: variant, source: " \t"}); !errors.Is(err, chronicle.ErrInvalidConfiguration) {
-				t.Fatalf("error = %v", err)
-			}
-			if calls.Load() != 0 {
-				t.Fatal("invalid source reached RPC")
-			}
-		})
+func TestInvalidEventSourceIsRejectedBeforeRPC(t *testing.T) {
+	names := map[string]events.SourceName{"blank": " \t", "leading": " Billing", "trailing": "Billing "}
+	variants := []string{"single", "single named", "many", "many named", "batch", "batch named", "prepared", "returned single", "returned many"}
+	for label, source := range names {
+		for _, variant := range variants {
+			t.Run(label+"/"+variant, func(t *testing.T) {
+				sequence, calls := sequenceFixture(t, nil)
+				err := appendSourceVariant(t, sequence, sourceAppendCase{variant: variant, source: source})
+				if !errors.Is(err, chronicle.ErrInvalidConfiguration) || calls.Load() != 0 {
+					t.Fatalf("error = %v, RPCs = %d", err, calls.Load())
+				}
+			})
+		}
 	}
 }
 
-func sourceFailureHandlers(code string) map[string]rpcHandler {
+func TestProtectedEmptyAppendManyRejectsPaddedSourceBeforeRPC(t *testing.T) {
+	sequence, calls := sequenceFixture(t, nil)
+	scope := eventsequences.Scope{Expectation: eventsequences.Exact(7)}
+	_, err := sequence.AppendMany(testContext(t), "A", nil, eventsequences.WithEventSource(" Billing"), eventsequences.WithScope(scope))
+	if !errors.Is(err, chronicle.ErrInvalidConfiguration) || calls.Load() != 0 {
+		t.Fatalf("error = %v, RPCs = %d", err, calls.Load())
+	}
+}
+
+func sourceFailureHandlers(diagnostic string) map[string]rpcHandler {
 	return map[string]rpcHandler{
 		"TailSequenceNumber": func(context.Context, any) (any, error) { return tailResponse(7), nil },
 		"Append": func(context.Context, any) (any, error) {
-			return &sequences.CommandResult_AppendResponse{IsAuthorized: true, Response: &sequences.AppendResponse{HasErrors: true, ConcurrencyCheckPerformed: true, Errors: []string{code}}}, nil
+			return &sequences.CommandResult_AppendResponse{IsAuthorized: true, Response: &sequences.AppendResponse{HasErrors: true, ConcurrencyCheckPerformed: true, Errors: []string{diagnostic}}}, nil
 		},
 		"AppendManyForEventSources": func(context.Context, any) (any, error) {
-			return &sequences.CommandResult_AppendManyResponse{IsAuthorized: true, Response: &sequences.AppendManyResponse{HasErrors: true, ConcurrencyCheckPerformed: true, Errors: []string{code}}}, nil
+			return &sequences.CommandResult_AppendManyResponse{IsAuthorized: true, Response: &sequences.AppendManyResponse{HasErrors: true, ConcurrencyCheckPerformed: true, Errors: []string{diagnostic}}}, nil
 		},
 	}
 }
 
-func sourceFailureResult(t *testing.T, sequence *eventsequences.Sequence, many bool) (eventsequences.Disposition, error, error) {
+func sourceFailureResult(t *testing.T, sequence *eventsequences.Sequence, many bool, route eventsequences.Route) (eventsequences.Disposition, error, error) {
 	t.Helper()
+	options := []eventsequences.AppendOption{eventsequences.WithEventSource("Billing"), eventsequences.WithRoute(route)}
 	if many {
-		result, err := sequence.AppendMany(testContext(t), "A", []any{opened{}}, eventsequences.WithEventSource("Billing"))
+		result, err := sequence.AppendMany(testContext(t), "A", []any{opened{}}, options...)
 		return result.Disposition, result.Err(), err
 	}
-	result, err := sequence.Append(testContext(t), "A", opened{}, eventsequences.WithEventSource("Billing"))
+	result, err := sequence.Append(testContext(t), "A", opened{}, options...)
 	return result.Disposition, result.Err(), err
 }
 
-func assertUnknownSourceDiagnostic(t *testing.T, err error, code string) {
+func assertUnknownSourceDiagnostic(t *testing.T, err error, diagnostic string) {
 	t.Helper()
 	var unknown *eventsequences.OutcomeUnknownError
 	if !errors.As(err, &unknown) {
 		t.Fatalf("diagnostic = %v", err)
 	}
-	if !errors.Is(err, eventsequences.AppendError(code)) {
-		t.Fatalf("missing %s: %v", code, err)
+	if !errors.Is(err, eventsequences.AppendError(diagnostic)) {
+		t.Fatalf("missing %q: %v", diagnostic, err)
 	}
 }
 
 func TestEventSourceDiagnosticsPreserveLegacyUnknownDisposition(t *testing.T) {
-	for _, code := range []string{"UnknownEventSource", "EventSourceTypeDoesNotMatchEventSource", "UnknownEventStreamForEventSource"} {
-		for _, many := range []bool{false, true} {
-			t.Run(code+map[bool]string{false: "/single", true: "/many"}[many], func(t *testing.T) {
-				sequence, _ := sequenceFixture(t, sourceFailureHandlers(code))
-				disposition, diagnostic, err := sourceFailureResult(t, sequence, many)
+	cases := map[string]struct {
+		route eventsequences.Route
+		want  string
+	}{
+		"unknown source":  {want: "UnknownEventSource: The event source 'Billing' is not registered."},
+		"mismatched type": {eventsequences.Route{SourceType: "Other"}, "EventSourceTypeDoesNotMatchEventSource: The event source type 'Other' does not match the event source 'Billing'."},
+		"unknown stream":  {eventsequences.Route{StreamType: "Missing"}, "UnknownEventStreamForEventSource: The event stream 'Missing' does not belong to the event source 'Billing'."},
+	}
+	for name, c := range cases {
+		for variant, many := range map[string]bool{"single": false, "many": true} {
+			t.Run(name+"/"+variant, func(t *testing.T) {
+				sequence, _ := sequenceFixture(t, sourceFailureHandlers(c.want))
+				disposition, diagnostic, err := sourceFailureResult(t, sequence, many, c.route)
 				if disposition != eventsequences.Unknown {
 					t.Fatal(disposition)
 				}
-				assertUnknownSourceDiagnostic(t, diagnostic, code)
-				assertUnknownSourceDiagnostic(t, err, code)
+				assertUnknownSourceDiagnostic(t, diagnostic, c.want)
+				assertUnknownSourceDiagnostic(t, err, c.want)
 			})
 		}
 	}

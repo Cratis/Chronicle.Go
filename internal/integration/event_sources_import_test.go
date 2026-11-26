@@ -6,6 +6,7 @@
 package integration_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -39,7 +40,7 @@ func TestKernelNamedEventSourceImportPersistsAttribution(t *testing.T) {
 	}
 }
 
-func assertHostedImportSourceRejection(t *testing.T, result eventsequences.ImportResult) {
+func assertHostedImportSourceRejection(t *testing.T, result eventsequences.ImportResult, diagnostic string) {
 	t.Helper()
 	if result.RejectedCount != 1 || len(result.Rejections) != 1 {
 		t.Fatalf("missing source rejection: %+v", result)
@@ -48,8 +49,8 @@ func assertHostedImportSourceRejection(t *testing.T, result eventsequences.Impor
 	if rejection.Index != 1 || rejection.EventType == "" {
 		t.Fatal(rejection)
 	}
-	if len(rejection.Reasons) == 0 {
-		t.Fatal("source rejection has no diagnostic reasons")
+	if !slices.Contains(rejection.Reasons, diagnostic) {
+		t.Fatalf("rejection reasons = %q, want %q", rejection.Reasons, diagnostic)
 	}
 	t.Logf("source import rejection: %+v", rejection)
 }
@@ -80,18 +81,18 @@ func TestKernelNamedEventSourceImportRejectionsRespectInvalidMode(t *testing.T) 
 		for modeName, mode := range map[string]eventsequences.OnInvalidEvent{"reject": eventsequences.RejectInvalidEvents, "skip": eventsequences.SkipInvalidEvents} {
 			t.Run(name+"/"+modeName, func(t *testing.T) {
 				source := events.SourceID(strings.ReplaceAll(name, " ", "-") + "-" + modeName)
-				entries := []eventsequences.Entry{hostedSourceEntry(source, "before"), invalid, hostedSourceEntry(source, "after")}
+				entries := []eventsequences.Entry{hostedSourceEntry(source, "before"), invalid.entry, hostedSourceEntry(source, "after")}
 				result, err := store.EventLog().Import(f.ctx, eventsequences.ImportEntries(entries), eventsequences.WithOnInvalid(mode))
 				if err != nil {
 					t.Fatal(err)
 				}
-				assertHostedImportSourceRejection(t, result)
+				assertHostedImportSourceRejection(t, result, invalid.diagnostic)
 				assertHostedImportInvalidMode(t, result, mode)
 				appended := readHostedSource(t, f, store.EventLog(), source)
 				if int64(len(appended)) != result.EventsCommitted {
 					t.Fatal("import commit count differs from persisted control events", result, appended)
 				}
-				assertHostedInvalidImportLeftNoEvents(t, f, store.EventLog(), invalid.Source)
+				assertHostedInvalidImportLeftNoEvents(t, f, store.EventLog(), invalid.entry.Source)
 			})
 		}
 	}

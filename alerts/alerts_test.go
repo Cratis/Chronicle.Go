@@ -59,9 +59,32 @@ func details(id uuid.UUID) *contracts.AlertIncidentDetails {
 	}
 }
 
+func lookupConn(status contracts.AlertIncidentsReadinessState, incident *contracts.AlertIncidentDetails) *fakeConn {
+	return &fakeConn{reply: &contracts.QueryResult_AlertIncidentLookupResponse{IsAuthorized: true, Data: &contracts.AlertIncidentLookupResponse{Status: status, Incident: incident}}}
+}
+
+func pageConn(data *contracts.AlertIncidentPageResponse) *fakeConn {
+	return &fakeConn{reply: &contracts.QueryResult_AlertIncidentPageResponse{IsAuthorized: true, Data: data}}
+}
+
+func summaryConn(data *contracts.AlertIncidentSummaryResponse) *fakeConn {
+	return &fakeConn{reply: &contracts.QueryResult_AlertIncidentSummaryResponse{IsAuthorized: true, Data: data}}
+}
+
+func countsOf(counts ...*contracts.AlertIncidentCountDetails) *contracts.AlertIncidentSummaryResponse {
+	return &contracts.AlertIncidentSummaryResponse{Counts: counts}
+}
+
+func requireProtocolFailure(t *testing.T, err error) {
+	t.Helper()
+	if !errors.Is(err, faults.ErrProtocol) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
 func TestGetOpenIncidentDecodesIncidentAndKeepsReadiness(t *testing.T) {
 	id := uuid.New()
-	conn := &fakeConn{reply: &contracts.QueryResult_AlertIncidentLookupResponse{IsAuthorized: true, Data: &contracts.AlertIncidentLookupResponse{Status: contracts.AlertIncidentsReadinessState_Ready, Incident: details(id)}}}
+	conn := lookupConn(contracts.AlertIncidentsReadinessState_Ready, details(id))
 	lookup, err := service(t, conn).GetOpenIncident(context.Background(), id)
 	if err != nil {
 		t.Fatal(err)
@@ -76,8 +99,29 @@ func TestGetOpenIncidentDecodesIncidentAndKeepsReadiness(t *testing.T) {
 	}
 }
 
+func TestLookupRejectsMismatchedTargetOrID(t *testing.T) {
+	cases := map[string]func(*contracts.AlertIncidentDetails){
+		"store":     func(row *contracts.AlertIncidentDetails) { row.Target.EventStore = "Store" },
+		"namespace": func(row *contracts.AlertIncidentDetails) { row.Target.Namespace = "tenant " },
+		"id":        func(row *contracts.AlertIncidentDetails) { row.Id = guid(uuid.New()) },
+	}
+	for name, alter := range cases {
+		t.Run(name, func(t *testing.T) {
+			id := uuid.New()
+			row := details(id)
+			alter(row)
+			conn := lookupConn(contracts.AlertIncidentsReadinessState_Ready, row)
+			lookup, err := service(t, conn).GetOpenIncident(t.Context(), id)
+			requireProtocolFailure(t, err)
+			if lookup != (alerts.Lookup{}) {
+				t.Fatalf("lookup = %+v", lookup)
+			}
+		})
+	}
+}
+
 func TestGetOpenIncidentMissingIncidentIsNilNotProtocolFailure(t *testing.T) {
-	conn := &fakeConn{reply: &contracts.QueryResult_AlertIncidentLookupResponse{IsAuthorized: true, Data: &contracts.AlertIncidentLookupResponse{Status: contracts.AlertIncidentsReadinessState_CatchingUp}}}
+	conn := lookupConn(contracts.AlertIncidentsReadinessState_CatchingUp, nil)
 	lookup, err := service(t, conn).GetOpenIncident(context.Background(), uuid.New())
 	if err != nil || lookup.Incident != nil || lookup.Readiness != alerts.CatchingUp {
 		t.Fatalf("lookup = %+v, err = %v", lookup, err)
@@ -85,10 +129,9 @@ func TestGetOpenIncidentMissingIncidentIsNilNotProtocolFailure(t *testing.T) {
 }
 
 func TestMissingDataIsProtocolFailureAndUnauthorizedNeverSucceeds(t *testing.T) {
-	missing := &fakeConn{reply: &contracts.QueryResult_AlertIncidentPageResponse{IsAuthorized: true}}
-	if _, err := service(t, missing).GetOpenIncidents(context.Background(), alerts.Query{}); !errors.Is(err, faults.ErrProtocol) {
-		t.Fatalf("err = %v", err)
-	}
+	missing := pageConn(nil)
+	_, err := service(t, missing).GetOpenIncidents(context.Background(), alerts.Query{})
+	requireProtocolFailure(t, err)
 	denied := &fakeConn{reply: &contracts.QueryResult_AlertIncidentSummaryResponse{Data: &contracts.AlertIncidentSummaryResponse{}}}
 	if _, err := service(t, denied).GetOpenIncidentCounts(context.Background()); err == nil {
 		t.Fatal("unauthorized reply reported success")
@@ -97,10 +140,10 @@ func TestMissingDataIsProtocolFailureAndUnauthorizedNeverSucceeds(t *testing.T) 
 
 func TestGetOpenIncidentsSendsQueryAndDecodesPairedContinuation(t *testing.T) {
 	first, next := uuid.New(), uuid.New()
-	conn := &fakeConn{reply: &contracts.QueryResult_AlertIncidentPageResponse{IsAuthorized: true, Data: &contracts.AlertIncidentPageResponse{
+	conn := pageConn(&contracts.AlertIncidentPageResponse{
 		Status: contracts.AlertIncidentsReadinessState_Degraded, Items: []*contracts.AlertIncidentDetails{details(first)},
 		Next: &contracts.AlertIncidentContinuation{RaisedSequenceNumber: 7, IncidentId: guid(next)},
-	}}}
+	})
 	after := uuid.New()
 	page, err := service(t, conn).GetOpenIncidents(context.Background(), alerts.Query{Observer: "obs", Condition: "c", MinimumSeverity: alerts.Critical, Limit: 5, After: &alerts.Continuation{RaisedSequenceNumber: 4, IncidentID: after}})
 	if err != nil {
@@ -116,7 +159,7 @@ func TestGetOpenIncidentsSendsQueryAndDecodesPairedContinuation(t *testing.T) {
 }
 
 func TestZeroContinuationIdentityDisablesContinuation(t *testing.T) {
-	conn := &fakeConn{reply: &contracts.QueryResult_AlertIncidentPageResponse{IsAuthorized: true, Data: &contracts.AlertIncidentPageResponse{}}}
+	conn := pageConn(&contracts.AlertIncidentPageResponse{})
 	page, err := service(t, conn).GetOpenIncidents(context.Background(), alerts.Query{After: &alerts.Continuation{RaisedSequenceNumber: 99}})
 	if err != nil || page.Next != nil || page.Incidents == nil {
 		t.Fatalf("page = %+v, err = %v", page, err)
@@ -146,22 +189,50 @@ func TestInvalidQueriesFailBeforeAnyRPC(t *testing.T) {
 func TestMalformedNestedRecordFailsWholePage(t *testing.T) {
 	broken := details(uuid.New())
 	broken.Evidence.FirstFailure = nil
-	conn := &fakeConn{reply: &contracts.QueryResult_AlertIncidentPageResponse{IsAuthorized: true, Data: &contracts.AlertIncidentPageResponse{Items: []*contracts.AlertIncidentDetails{details(uuid.New()), broken}}}}
-	if _, err := service(t, conn).GetOpenIncidents(context.Background(), alerts.Query{}); !errors.Is(err, faults.ErrProtocol) {
-		t.Fatalf("err = %v", err)
+	conn := pageConn(&contracts.AlertIncidentPageResponse{Items: []*contracts.AlertIncidentDetails{details(uuid.New()), broken}})
+	_, err := service(t, conn).GetOpenIncidents(context.Background(), alerts.Query{})
+	requireProtocolFailure(t, err)
+}
+
+func TestPageRejectsOutOfScopeItemWithoutReturningPartialResults(t *testing.T) {
+	for name, target := range map[string]*contracts.AlertTarget{
+		"store":     {EventStore: "Store", Namespace: "tenant"},
+		"namespace": {EventStore: "store", Namespace: "tenant "},
+	} {
+		t.Run(name, func(t *testing.T) {
+			row := details(uuid.New())
+			row.Target = target
+			conn := pageConn(&contracts.AlertIncidentPageResponse{
+				Status: contracts.AlertIncidentsReadinessState_Ready, Items: []*contracts.AlertIncidentDetails{details(uuid.New()), row},
+			})
+			page, err := service(t, conn).GetOpenIncidents(t.Context(), alerts.Query{})
+			requireProtocolFailure(t, err)
+			if page.Incidents != nil || page.Next != nil || page.Readiness != (alerts.Page{}).Readiness {
+				t.Fatalf("page = %+v", page)
+			}
+		})
+	}
+}
+
+func TestCountsRejectOutOfScopeBucketWithoutReturningPartialResults(t *testing.T) {
+	data := countsOf(&contracts.AlertIncidentCountDetails{Namespace: "tenant", Count: 2}, &contracts.AlertIncidentCountDetails{Namespace: "Tenant", Count: 3})
+	data.Status = contracts.AlertIncidentsReadinessState_Ready
+	counts, err := service(t, summaryConn(data)).GetOpenIncidentCounts(t.Context())
+	requireProtocolFailure(t, err)
+	if counts.Buckets != nil || counts.Readiness != (alerts.Counts{}).Readiness {
+		t.Fatalf("counts = %+v", counts)
 	}
 }
 
 func TestCountsPreserveUnknownSeverityAndRejectNegative(t *testing.T) {
-	ok := &fakeConn{reply: &contracts.QueryResult_AlertIncidentSummaryResponse{IsAuthorized: true, Data: &contracts.AlertIncidentSummaryResponse{Counts: []*contracts.AlertIncidentCountDetails{{Namespace: "tenant", Condition: "c", Severity: 42, Count: 2}}}}}
+	ok := summaryConn(countsOf(&contracts.AlertIncidentCountDetails{Namespace: "tenant", Condition: "c", Severity: 42, Count: 2}))
 	counts, err := service(t, ok).GetOpenIncidentCounts(context.Background())
 	if err != nil || len(counts.Buckets) != 1 || counts.Buckets[0].Severity != 42 || counts.Buckets[0].Count != 2 {
 		t.Fatalf("counts = %+v, err = %v", counts, err)
 	}
-	bad := &fakeConn{reply: &contracts.QueryResult_AlertIncidentSummaryResponse{IsAuthorized: true, Data: &contracts.AlertIncidentSummaryResponse{Counts: []*contracts.AlertIncidentCountDetails{{Count: -1}}}}}
-	if _, err := service(t, bad).GetOpenIncidentCounts(context.Background()); !errors.Is(err, faults.ErrProtocol) {
-		t.Fatalf("err = %v", err)
-	}
+	bad := summaryConn(countsOf(&contracts.AlertIncidentCountDetails{Namespace: "tenant", Count: -1}))
+	_, err = service(t, bad).GetOpenIncidentCounts(context.Background())
+	requireProtocolFailure(t, err)
 }
 
 func TestSubscribeIsUnsupportedWithoutRPC(t *testing.T) {

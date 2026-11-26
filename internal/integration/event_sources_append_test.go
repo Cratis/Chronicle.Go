@@ -8,6 +8,7 @@ package integration_test
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -155,26 +156,33 @@ func TestKernelNamedEventSourceExplicitStaleScopeIsNotRewritten(t *testing.T) {
 	}
 }
 
-func invalidHostedSourceEntries() map[string]eventsequences.Entry {
+type invalidHostedSourceCase struct {
+	entry      eventsequences.Entry
+	diagnostic string
+}
+
+func invalidHostedSourceEntries() map[string]invalidHostedSourceCase {
 	unknown := hostedSourceEntry("unknown-source", "refused")
 	unknown.EventSource = "Missing"
 	mismatch := hostedSourceEntry("mismatched-type", "refused")
 	mismatch.Route.SourceType = "Other"
 	stream := hostedSourceEntry("unknown-stream", "refused")
 	stream.Route.StreamType = "Missing"
-	return map[string]eventsequences.Entry{"unregistered name": unknown, "mismatched source type": mismatch, "unregistered stream": stream}
+	return map[string]invalidHostedSourceCase{
+		"unregistered name":      {unknown, "UnknownEventSource: The event source 'Missing' is not registered."},
+		"mismatched source type": {mismatch, "EventSourceTypeDoesNotMatchEventSource: The event source type 'Other' does not match the event source 'Billing'."},
+		"unregistered stream":    {stream, "UnknownEventStreamForEventSource: The event stream 'Missing' does not belong to the event source 'Billing'."},
+	}
 }
 
-func assertHostedSourceRefused(t *testing.T, outcome hostedSourceAppendOutcome) {
+func assertHostedSourceRefused(t *testing.T, outcome hostedSourceAppendOutcome, diagnostic string) {
 	t.Helper()
 	if outcome.disposition == eventsequences.Committed {
 		t.Fatal("invalid named source committed")
 	}
-	if len(outcome.diagnostics) == 0 {
-		t.Fatalf("missing source diagnostics: %+v", outcome)
-	}
-	if outcome.err == nil {
-		t.Fatalf("rejection was not inspectable: %+v", outcome)
+	want := eventsequences.AppendError(diagnostic)
+	if !slices.Contains(outcome.diagnostics, want) || !errors.Is(outcome.err, want) {
+		t.Fatalf("missing %q in outcome: %+v", diagnostic, outcome)
 	}
 	// Errors-only replies intentionally retain the SDK's existing Unknown disposition.
 	t.Logf("source rejection: disposition=%v diagnostics=%v error=%v", outcome.disposition, outcome.diagnostics, outcome.err)
@@ -183,11 +191,11 @@ func assertHostedSourceRefused(t *testing.T, outcome hostedSourceAppendOutcome) 
 func TestKernelNamedEventSourceRejectsInvalidAppendRoutes(t *testing.T) {
 	f, store := newHostedSourceStore(t)
 	registerHostedSource(t, f, store)
-	for name, entry := range invalidHostedSourceEntries() {
+	for name, c := range invalidHostedSourceEntries() {
 		for _, variant := range []string{"single", "many named", "batch", "prepared"} {
 			t.Run(name+"/"+variant, func(t *testing.T) {
-				assertHostedSourceRefused(t, appendHostedSourceVariant(f.ctx, store.EventLog(), entry, variant))
-				appended, err := store.EventLog().ReadSource(f.ctx, entry.Source, eventsequences.SourceFilter{})
+				assertHostedSourceRefused(t, appendHostedSourceVariant(f.ctx, store.EventLog(), c.entry, variant), c.diagnostic)
+				appended, err := store.EventLog().ReadSource(f.ctx, c.entry.Source, eventsequences.SourceFilter{})
 				if err != nil {
 					t.Fatal(err)
 				}

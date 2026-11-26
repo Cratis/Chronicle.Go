@@ -4,24 +4,50 @@
 package eventsequences
 
 import (
+	"errors"
 	"slices"
 	"testing"
+
+	"github.com/cratis/chronicle.go/internal/faults"
 )
 
 func TestImportPreservesEventSourceRejectionReasonsOverGRPC(t *testing.T) {
-	for _, reason := range []string{"UnknownEventSource", "EventSourceTypeDoesNotMatchEventSource", "UnknownEventStreamForEventSource"} {
-		t.Run(reason, func(t *testing.T) {
+	cases := map[string]struct {
+		route Route
+		want  string
+	}{
+		"unknown source":  {want: "UnknownEventSource: The event source 'Billing' is not registered."},
+		"mismatched type": {Route{SourceType: "Other"}, "EventSourceTypeDoesNotMatchEventSource: The event source type 'Other' does not match the event source 'Billing'."},
+		"unknown stream":  {Route{StreamType: "Missing"}, "UnknownEventStreamForEventSource: The event stream 'Missing' does not belong to the event source 'Billing'."},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
 			sequence, server := grpcImportFixture(t, true)
-			server.rejectionReason = reason
-			result, err := sequence.Import(t.Context(), ImportEntries([]Entry{{Source: "A", Event: imported{}, EventSource: "Billing"}}), WithImportID(server.id))
+			server.rejectionReason = c.want
+			entry := Entry{Source: "A", Event: imported{}, EventSource: "Billing", Route: c.route}
+			result, err := sequence.Import(t.Context(), ImportEntries([]Entry{entry}), WithImportID(server.id))
 			if err != nil {
 				t.Fatal(err)
 			}
-			assertImportSourceRejection(t, result, reason)
-			if event := server.chunks[0].Events[0]; event.EventSource != "Billing" || event.EventSourceType != "Default" {
+			assertImportSourceRejection(t, result, c.want)
+			if event := server.chunks[0].Events[0]; event.EventSource != "Billing" || event.EventSourceType != string(normalizedRoute(c.route).SourceType) {
 				t.Fatal(event)
 			}
 		})
+	}
+}
+
+func TestImportRejectsPaddedEventSourceWithoutStagingOrCompleting(t *testing.T) {
+	sequence, server := grpcImportFixture(t, true)
+	entry := Entry{Source: "A", Event: imported{}, EventSource: "Billing "}
+	_, err := sequence.Import(t.Context(), ImportEntries([]Entry{entry}), WithImportID(server.id))
+	if !errors.Is(err, faults.ErrInvalidConfiguration) {
+		t.Fatalf("error = %v", err)
+	}
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	if server.begun == nil || len(server.chunks) != 0 || server.complete != nil {
+		t.Fatalf("began = %t, staged chunks = %d, completed = %t", server.begun != nil, len(server.chunks), server.complete != nil)
 	}
 }
 

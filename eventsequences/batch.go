@@ -89,6 +89,9 @@ func manyConfig(ctx context.Context, options []AppendOption) (appendConfig, erro
 		}
 		option(&config)
 	}
+	if err := validateEventSourceName(config.eventSource); err != nil {
+		return appendConfig{}, err
+	}
 	if err := validateAppendMetadata(config.subject, config.occurred, config.named); err != nil {
 		return appendConfig{}, err
 	}

@@ -190,9 +190,12 @@ func (s *Service) GetOpenIncident(ctx context.Context, id IncidentID) (Lookup, e
 	}
 	lookup := Lookup{Readiness: Readiness(response.Data.Status)}
 	if response.Data.Incident != nil {
-		incident, err := decodeIncident(response.Data.Incident)
+		incident, err := s.decodeIncident(response.Data.Incident)
 		if err != nil {
 			return Lookup{}, err
+		}
+		if incident.ID != id {
+			return Lookup{}, faults.ErrProtocol
 		}
 		lookup.Incident = &incident
 	}
@@ -221,7 +224,7 @@ func (s *Service) GetOpenIncidents(ctx context.Context, query Query) (Page, erro
 	page := Page{Readiness: Readiness(response.Data.Status), Incidents: make([]Incident, 0, len(response.Data.Items))}
 	seen := map[IncidentID]bool{}
 	for _, value := range response.Data.Items {
-		incident, err := decodeIncident(value)
+		incident, err := s.decodeIncident(value)
 		if err != nil {
 			return Page{}, err
 		}
@@ -258,7 +261,7 @@ func (s *Service) GetOpenIncidentCounts(ctx context.Context) (Counts, error) {
 	}
 	counts := Counts{Readiness: Readiness(response.Data.Status), Buckets: make([]Count, 0, len(response.Data.Counts))}
 	for _, value := range response.Data.Counts {
-		if value == nil || value.Count < 0 {
+		if !s.validCount(value) {
 			return Counts{}, faults.ErrProtocol
 		}
 		counts.Buckets = append(counts.Buckets, Count{Namespace: metadata.Namespace(value.Namespace), Condition: value.Condition, Severity: Severity(value.Severity), Count: value.Count})
@@ -290,8 +293,16 @@ func (s *Service) pageRequest(query Query) (*contracts.GetOpenIncidentsRequest, 
 	return request, nil
 }
 
-func decodeIncident(value *contracts.AlertIncidentDetails) (Incident, error) {
-	if value == nil || value.Target == nil || value.Evidence == nil || value.Id == nil {
+func (s *Service) validCount(value *contracts.AlertIncidentCountDetails) bool {
+	return value != nil && value.Count >= 0 && value.Namespace == string(s.namespace)
+}
+
+func (s *Service) matchesTarget(target *contracts.AlertTarget) bool {
+	return target != nil && target.EventStore == string(s.store) && target.Namespace == string(s.namespace)
+}
+
+func (s *Service) decodeIncident(value *contracts.AlertIncidentDetails) (Incident, error) {
+	if !s.matchesTarget(value.GetTarget()) || value.Evidence == nil {
 		return Incident{}, faults.ErrProtocol
 	}
 	id := IncidentID(wire.Correlation(value.Id))

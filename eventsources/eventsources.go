@@ -121,8 +121,8 @@ func wireDefinitions(definitions []Definition) ([]*contracts.EventSourceDefiniti
 	result := make([]*contracts.EventSourceDefinition, 0, len(definitions))
 	seen := make(map[Name]bool, len(definitions))
 	for _, definition := range definitions {
-		if strings.TrimSpace(string(definition.Name)) == "" {
-			return nil, invalid("event source name required")
+		if err := validateName(string(definition.Name), "event source"); err != nil {
+			return nil, err
 		}
 		if seen[definition.Name] {
 			return nil, invalid("duplicate event source name")
@@ -144,8 +144,8 @@ func wireStreams(streams []Stream) ([]*contracts.EventStreamDefinition, error) {
 	result := make([]*contracts.EventStreamDefinition, 0, len(streams))
 	seen := make(map[string]bool, len(streams))
 	for _, stream := range streams {
-		if strings.TrimSpace(stream.Name) == "" {
-			return nil, invalid("event stream name required")
+		if err := validateName(stream.Name, "event stream"); err != nil {
+			return nil, err
 		}
 		if seen[stream.Name] {
 			return nil, invalid("duplicate event stream name")
@@ -157,6 +157,17 @@ func wireStreams(streams []Stream) ([]*contracts.EventStreamDefinition, error) {
 		result = append(result, &contracts.EventStreamDefinition{Name: stream.Name, Description: stream.Description, Concurrency: contracts.ConcurrencyDimensions(stream.Concurrency)})
 	}
 	return result, nil
+}
+
+func validateName(name, kind string) error {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return invalid(kind + " name required")
+	}
+	if trimmed != name {
+		return invalid("padded " + kind + " name")
+	}
+	return nil
 }
 
 func (d ConcurrencyDimensions) valid() bool { return d&^allDimensions == 0 }
