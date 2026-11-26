@@ -136,10 +136,19 @@ return err
 ```
 
 This check does not infer IDs, check generation numbers, or follow the registry
-path taught elsewhere (`RegisterEvent` and `RegisterEventMigration`). The
-[parity map](parity.md#declaration-diagnostics-preview) links the pinned C# rules,
-tests, and exact detection boundaries. The tag checks use SDK `v0.21.0`'s
-declaration grammar, which may differ from the consumer's SDK. A clean run does
+path taught elsewhere (`RegisterEvent` and `RegisterEventMigration`).
+
+`CHR0035` points to an explicit JSON name reserved for compliance subject
+tracking on a read model registered directly with
+`chronicle.RegisterReadModel[T](registry)` and no options. Rename the JSON
+property to an unreserved name, such as `subjectRef`. Review compatibility with
+stored documents and consumers before renaming an existing property. The check
+only covers flat models with a small set of builtin field types. It does not
+follow `readmodels.Define`, wrappers, or registrations with options.
+
+The [parity map](parity.md#declaration-diagnostics-preview) links the pinned C#
+rules, tests, and exact detection boundaries. The analyzer uses SDK `v0.21.0`'s
+declaration rules, which may differ from the consumer's SDK. A clean run does
 not replace runtime validation. The tool is built from source, not published as
 a module.
 
