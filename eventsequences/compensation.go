@@ -27,7 +27,7 @@ const (
 // Compensate appends a compensating event for the event at position. The original
 // is never changed; the new event records position as its Context.CompensationFor.
 // The event source, stream and subject come from the original, so WithRoute,
-// WithScope, WithSubject and WithNamedTags are refused with ErrInvalidConfiguration
+// WithEventSource, WithScope, WithSubject and WithNamedTags are refused with ErrInvalidConfiguration
 // rather than silently ignored; WithCorrelation, WithTags and WithOccurred apply.
 // The event's registered type must be declared with events.WithCompensationFor;
 // otherwise it is refused before dispatch. The kernel checks that the target exists
@@ -56,7 +56,7 @@ func (s *Sequence) Compensate(ctx context.Context, position events.SequenceNumbe
 		}
 		option(&config)
 	}
-	if config.route != (Route{}) || config.scope != nil || config.subject != nil || len(config.named) != 0 {
+	if config.overridesCompensatedEvent() {
 		return AppendResult{}, fmt.Errorf("%w: a compensation takes its source, stream and subject from the compensated event and has no scope or named tags", faults.ErrInvalidConfiguration)
 	}
 	if err := validateAppendMetadata(nil, config.occurred, nil); err != nil {
@@ -125,4 +125,9 @@ func allKnownCompensationRejections(errs []AppendError) bool {
 		}
 	}
 	return true
+}
+
+// overridesCompensatedEvent reports options a compensation refuses.
+func (c appendConfig) overridesCompensatedEvent() bool {
+	return c.route != (Route{}) || c.eventSource != "" || c.scope != nil || c.subject != nil || len(c.named) != 0
 }

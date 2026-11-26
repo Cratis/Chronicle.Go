@@ -79,6 +79,29 @@ Named tags retain exact name/value pairs. A name must be nonblank; an empty valu
 
 For more than one event, use [atomic batches](batches.md). Enrichment hooks and field-derived subjects are supported; field-derived routing is not yet implemented. Use explicit [units of work](unit-of-work.md), [constraint declarations](constraints.md) and the scoped append notifications below. Use only the supported options; unimplemented field tags fail explicitly. See [parity and limitations](../parity.md).
 
+## Attribute an append to a registered source
+
+First [register the definition](../operations.md#register-event-sources) in the
+store. Pass `eventsequences.WithEventSource("Billing")` to `Append` or
+`AppendMany`, or set `Entry.EventSource` for batches and imports. The last
+`WithEventSource` wins; an empty name clears attribution. Go rejects nonempty
+names with leading or trailing whitespace instead of trimming them.
+
+The kernel accepts an empty or `Default` route source type, or the registered
+name itself. A stream type other than `All` must be registered on that source.
+The kernel persists the registered name as the source type, but `WithEventSource`
+does not rewrite the wire route. If the route's source type is empty or `Default`,
+Go uses the registered name in the automatic concurrency filter so it can see
+prior attributed events. Explicit scopes are unchanged; registration concurrency
+flags do not choose Go's append scope.
+
+A source refusal reported only as append diagnostics can still produce an
+`Unknown` disposition and an `OutcomeUnknownError`. Inspect the full diagnostics
+and verify the append outcome before retrying. The offline
+[registration and append example](https://github.com/Cratis/Chronicle.Go/blob/main/example_alerts_event_sources_test.go)
+(`ExampleEventStore_EventSources`) demonstrates attribution, stream routing, and
+an explicit scope.
+
 ## Work with sequence positions locally
 
 Use `events.SequenceNumber`'s pure `Next()`, `Add(delta uint64)` and

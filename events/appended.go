@@ -47,6 +47,9 @@ type Context struct {
 	Tombstone bool
 	// SourceType classifies the event source.
 	SourceType SourceType
+	// EventSource is the registered source name that attributed the event. It is
+	// empty for events appended without one, including all older events.
+	EventSource SourceName
 	// SourceID identifies the event source.
 	SourceID SourceID
 	// StreamType classifies the stream.

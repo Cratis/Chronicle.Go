@@ -36,7 +36,7 @@ func (s *Sequence) AppendMany(ctx context.Context, source events.SourceID, value
 	if err != nil {
 		return BatchResult{}, err
 	}
-	scope := defaultScope(source, config.route)
+	scope := defaultScope(source, effectiveRoute(config.route, config.eventSource))
 	if config.scope != nil {
 		scope = *config.scope
 	}
@@ -66,7 +66,7 @@ func (s *Sequence) appendPreparedMany(ctx context.Context, many manyAppend, batc
 	}
 	ctx = batch.audit.Context(ctx)
 	if config.scope == nil {
-		scope, err = s.automaticScope(ctx, source, config.route)
+		scope, err = s.automaticScope(ctx, source, effectiveRoute(config.route, config.eventSource))
 		if err != nil {
 			return BatchResult{}, err
 		}
@@ -75,7 +75,7 @@ func (s *Sequence) appendPreparedMany(ctx context.Context, many manyAppend, batc
 	if err != nil {
 		return BatchResult{}, err
 	}
-	if config.route == normalizedRoute(Route{}) {
+	if config.route == normalizedRoute(Route{}) && config.eventSource == "" {
 		return s.dispatchMany(ctx, source, config, batch, origin)
 	}
 	return s.dispatchBatch(ctx, batch, origin)
@@ -88,6 +88,9 @@ func manyConfig(ctx context.Context, options []AppendOption) (appendConfig, erro
 			return appendConfig{}, fmt.Errorf("%w: nil append option", faults.ErrInvalidConfiguration)
 		}
 		option(&config)
+	}
+	if err := validateEventSourceName(config.eventSource); err != nil {
+		return appendConfig{}, err
 	}
 	if err := validateAppendMetadata(config.subject, config.occurred, config.named); err != nil {
 		return appendConfig{}, err
@@ -105,7 +108,7 @@ func (s *Sequence) manyEntries(source events.SourceID, values []any, config appe
 			return nil, nil, faults.ErrNotRegistered
 		}
 		tags = append(tags, descriptor.Tags()...)
-		entries[i] = Entry{Source: source, Event: value, Route: config.route, Occurred: config.occurred, Subject: config.subject}
+		entries[i] = Entry{Source: source, Event: value, Route: config.route, EventSource: config.eventSource, Occurred: config.occurred, Subject: config.subject}
 	}
 	return entries, append(tags, config.tags...), nil
 }
@@ -233,13 +236,13 @@ func (s *Sequence) snapshotEntry(ctx context.Context, frozen frozenBatchEntry, c
 	if err != nil {
 		return nil, nil, err
 	}
-	options := appendConfig{route: entry.Route, scope: &Scope{Expectation: NoCheck()}, correlation: frozen.correlation, subject: &frozen.subject, occurred: entry.Occurred,
+	options := appendConfig{route: entry.Route, eventSource: entry.EventSource, scope: &Scope{Expectation: NoCheck()}, correlation: frozen.correlation, subject: &frozen.subject, occurred: entry.Occurred,
 		tags: append(slices.Clone(entry.Tags), config.tags...), named: append(slices.Clone(entry.NamedTags), config.named...)}
 	one, err := s.request(ctx, entry.Source, frozen.descriptor, string(content), options)
 	if err != nil {
 		return nil, nil, err
 	}
-	event := &sequences.EventForEventSourceId{EventSourceId: one.EventSourceId, EventSourceType: one.EventSourceType, EventStreamType: one.EventStreamType, EventStreamId: one.EventStreamId, EventType: one.EventType, Content: one.Content, Tags: one.Tags, Subject: one.Subject, Occurred: one.Occurred}
+	event := &sequences.EventForEventSourceId{EventSourceId: one.EventSourceId, EventSourceType: one.EventSourceType, EventSource: one.EventSource, EventStreamType: one.EventStreamType, EventStreamId: one.EventStreamId, EventType: one.EventType, Content: one.Content, Tags: one.Tags, Subject: one.Subject, Occurred: one.Occurred}
 	if len(entry.Causation) > 0 {
 		event.Causation = one.Causation
 	}
@@ -334,7 +337,7 @@ func batchScopes(entries []Entry, explicit []LabeledScope) ([]LabeledScope, erro
 		label := string(entry.Source)
 		if !seen[label] {
 			seen[label] = true
-			result = append(result, LabeledScope{Label: label, Scope: defaultScope(entry.Source, entry.Route)})
+			result = append(result, LabeledScope{Label: label, Scope: defaultScope(entry.Source, effectiveRoute(entry.Route, entry.EventSource))})
 		}
 	}
 	return result, nil

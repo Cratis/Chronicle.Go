@@ -1,6 +1,6 @@
 ---
-title: Namespace, observer and job administration
-description: Remove a namespace, inspect failed work and distinguish accepted requests from confirmed processing completion when operating Chronicle from Go.
+title: Chronicle operations from Go
+description: Inspect alerts and failed work, register event sources, and administer namespaces, observers, and jobs from Go.
 ---
 
 Use `store.Observers()` to inspect observer state and failures, and `store.Jobs()`
@@ -12,6 +12,29 @@ This reference assumes a connected `*chronicle.EventStore`; see
 [Get started](clients/go/getting-started.md) for registration and connection setup.
 The [executable examples](https://github.com/Cratis/Chronicle.Go/blob/main/observation/example_test.go)
 use an offline transport to demonstrate result handling without a server.
+
+## Read open alert incidents
+
+`store.Alerts()` reads incidents in the handle's store and namespace. Use
+`GetOpenIncident(ctx, id)` for a lookup, `GetOpenIncidents(ctx, query)` for a
+page, and `GetOpenIncidentCounts(ctx)` for counts grouped by condition and
+severity. Check readiness on every result: a nil incident or empty page while
+catching up does not establish that no incidents are open. For pagination,
+pass `page.Next` back as `query.After` until `page.Next` is nil. An out-of-scope
+reply or a lookup with the wrong incident ID is a protocol error, not partial data.
+
+Subscriptions are unsupported. The offline [alert query example](https://github.com/Cratis/Chronicle.Go/blob/main/example_alerts_event_sources_test.go)
+(`ExampleEventStore_Alerts`) shows how to handle readiness and walk a page cursor.
+
+## Register event sources
+
+`store.EventSources().Register(ctx, definitions...)` adds or replaces the named
+client-owned definitions in the event store; it does not remove omitted names.
+Registration is store-wide, not namespace-specific. Source and stream names must
+be nonblank and have no leading or trailing whitespace. Registration does not
+automatically configure Go append concurrency. See the
+[offline registration and append example](https://github.com/Cratis/Chronicle.Go/blob/main/example_alerts_event_sources_test.go)
+(`ExampleEventStore_EventSources`) and [append routing](events/appending-events.md#attribute-an-append-to-a-registered-source).
 
 ## Remove a namespace
 

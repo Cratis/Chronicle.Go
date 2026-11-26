@@ -79,7 +79,7 @@ func sendBatch(ctx context.Context, batch preparedBatch, service sequences.Event
 	} else {
 		named := &sequences.AppendManyForEventSourcesWithNamedTagsRequest{EventStore: request.EventStore, Namespace: request.Namespace, EventSequenceId: request.EventSequenceId, CorrelationId: request.CorrelationId, Tags: request.Tags, Causation: request.Causation, CausedBy: request.CausedBy, ConcurrencyScopes: request.ConcurrencyScopes}
 		for i, event := range request.Events {
-			named.Events = append(named.Events, &sequences.EventForEventSourceIdWithNamedTags{EventSourceId: event.EventSourceId, EventSourceType: event.EventSourceType, EventStreamType: event.EventStreamType, EventStreamId: event.EventStreamId, EventType: event.EventType, Content: event.Content, Tags: event.Tags, NamedTags: batch.named[i], Occurred: event.Occurred, Subject: event.Subject, Causation: event.Causation})
+			named.Events = append(named.Events, &sequences.EventForEventSourceIdWithNamedTags{EventSourceId: event.EventSourceId, EventSourceType: event.EventSourceType, EventSource: event.EventSource, EventStreamType: event.EventStreamType, EventStreamId: event.EventStreamId, EventType: event.EventType, Content: event.Content, Tags: event.Tags, NamedTags: batch.named[i], Occurred: event.Occurred, Subject: event.Subject, Causation: event.Causation})
 		}
 		response, err = service.AppendManyForEventSourcesWithNamedTags(ctx, named)
 	}

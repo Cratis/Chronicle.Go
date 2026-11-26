@@ -52,28 +52,43 @@ func CheckEnvelope(value proto.Message) error {
 	if reason := fields.ByName("AuthorizationFailureReason"); reason != nil {
 		err.AuthorizationFailureReason = m.Get(reason).String()
 	}
-	failure := !err.Authorized
-	list := m.Get(validation).List()
-	for i := 0; i < list.Len(); i++ {
-		item := list.Get(i).Message()
-		f := item.Descriptor().Fields()
-		result := ValidationResult{Severity: int32(item.Get(f.ByName("Severity")).Enum()), Message: item.Get(f.ByName("Message")).String()}
-		members := item.Get(f.ByName("Members")).List()
-		for j := 0; j < members.Len(); j++ {
-			result.Members = append(result.Members, members.Get(j).String())
-		}
-		err.ValidationResults = append(err.ValidationResults, result)
-		// Unknown severity fails closed; Information/Warning are non-fatal.
-		failure = failure || result.Severity == 0 || result.Severity >= 3
-	}
-	list = m.Get(exceptions).List()
-	for i := 0; i < list.Len(); i++ {
-		err.ExceptionMessages = append(err.ExceptionMessages, list.Get(i).String())
-	}
+	failure := err.readValidation(m.Get(validation).List(), !err.Authorized)
+	err.readExceptions(m.Get(exceptions).List())
 	if failure || len(err.ExceptionMessages) != 0 {
 		return err
 	}
 	return nil
+}
+
+func (e *EnvelopeError) readExceptions(list protoreflect.List) {
+	for i := 0; i < list.Len(); i++ {
+		e.ExceptionMessages = append(e.ExceptionMessages, list.Get(i).String())
+	}
+}
+
+// readValidation records every result and returns the seeded failure state, now true on any fatal result.
+func (e *EnvelopeError) readValidation(list protoreflect.List, failure bool) bool {
+	for i := 0; i < list.Len(); i++ {
+		result := decodeValidation(list.Get(i).Message())
+		e.ValidationResults = append(e.ValidationResults, result)
+		failure = failure || result.isFatal()
+	}
+	return failure
+}
+
+func (r ValidationResult) isFatal() bool {
+	// Only Information (1) and Warning (2) are non-fatal across the envelopes.
+	return r.Severity != 1 && r.Severity != 2
+}
+
+func decodeValidation(item protoreflect.Message) ValidationResult {
+	f := item.Descriptor().Fields()
+	result := ValidationResult{Severity: int32(item.Get(f.ByName("Severity")).Enum()), Message: item.Get(f.ByName("Message")).String()}
+	members := item.Get(f.ByName("Members")).List()
+	for i := 0; i < members.Len(); i++ {
+		result.Members = append(result.Members, members.Get(i).String())
+	}
+	return result
 }
 
 // RequireMessage checks presence, not a proto3 getter's default value.

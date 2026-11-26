@@ -25,11 +25,12 @@ import (
 
 type importsServer struct {
 	imports.UnimplementedImportsServer
-	mu       sync.Mutex
-	id       ImportID
-	begun    *imports.BeginImportRequest
-	chunks   []*imports.AddImportChunkRequest
-	complete *imports.CompleteImportRequest
+	mu              sync.Mutex
+	id              ImportID
+	begun           *imports.BeginImportRequest
+	chunks          []*imports.AddImportChunkRequest
+	complete        *imports.CompleteImportRequest
+	rejectionReason string
 }
 
 func (s *importsServer) BeginImport(_ context.Context, request *imports.BeginImportRequest) (*imports.CommandResult_BeginImportResponse, error) {
@@ -54,6 +55,10 @@ func (s *importsServer) CompleteImport(_ context.Context, request *imports.Compl
 }
 
 func (s *importsServer) progress() *imports.ImportProgressResponse {
+	if s.rejectionReason != "" {
+		return &imports.ImportProgressResponse{ImportId: wire.Guid(metadata.CorrelationID(s.id)), EventSequenceId: "event-log", State: imports.ImportState_Failed,
+			EventsStaged: 1, RejectedCount: 1, FailureReason: "invalid source", Rejections: []*imports.ImportEventRejection{{Index: 0, EventType: "imported+2", Reasons: []string{s.rejectionReason}}}}
+	}
 	return &imports.ImportProgressResponse{ImportId: wire.Guid(metadata.CorrelationID(s.id)), EventSequenceId: "event-log", State: imports.ImportState_Completed,
 		EventsStaged: 3, EventsCommitted: 3, FirstSequenceNumber: 0, LastSequenceNumber: 2,
 		Rejections: []*imports.ImportEventRejection{{Index: 1, EventType: "imported+1", Reasons: []string{"late"}}}}
@@ -111,7 +116,7 @@ func TestImportOverTheImportsService(t *testing.T) {
 	correlation, _ := metadata.NewCorrelationID()
 	zero := events.SequenceNumber(0)
 	values := []Entry{
-		{Source: "a", Event: imported{Name: "1"}, CorrelationID: correlation, SourceSequenceNumber: &zero, IdempotencyKey: "k1", Generation: 2},
+		{Source: "a", EventSource: "Billing", Route: Route{SourceType: "Explicit", StreamType: "changes", StreamID: "west"}, Event: imported{Name: "1"}, CorrelationID: correlation, SourceSequenceNumber: &zero, IdempotencyKey: "k1", Generation: 2},
 		{Source: "a", Event: imported{Name: "2"}},
 		{Source: "b", Event: imported{Name: "3"}},
 	}
@@ -119,10 +124,7 @@ func TestImportOverTheImportsService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.IsSuccess() || result.ImportID != server.id || result.FirstSequenceNumber != 0 || result.LastSequenceNumber != 2 ||
-		len(result.Rejections) != 1 || result.Rejections[0].Reasons[0] != "late" {
-		t.Fatalf("result = %+v", result)
-	}
+	assertSuccessfulImport(t, result, server.id)
 	session, err := sequence.ReattachImport(t.Context(), server.id)
 	if err != nil {
 		t.Fatal(err)
@@ -134,15 +136,63 @@ func TestImportOverTheImportsService(t *testing.T) {
 	if !slices.Equal(states, []ImportState{ImportStaging, ImportCompleted}) {
 		t.Fatalf("progress states = %v", states)
 	}
-	if ImportID(wire.Correlation(server.begun.ImportId)) != server.id || server.begun.OnInvalid != imports.OnInvalidEvent_Skip || server.begun.EventSequenceId != "event-log" {
-		t.Fatalf("BeginImport = %v", server.begun)
+	assertImportChunkRequests(t, server)
+	assertImportedSourceEvent(t, server.chunks[0].Events[0], correlation)
+}
+
+func assertSuccessfulImport(t *testing.T, result ImportResult, id ImportID) {
+	t.Helper()
+	if !result.IsSuccess() {
+		t.Fatalf("result = %+v", result)
 	}
-	if len(server.chunks) != 2 || server.chunks[1].FirstEventIndex != 2 || server.complete.ExpectedChunks != 2 || server.complete.ExpectedEvents != 3 {
-		t.Fatalf("chunks %d, complete %v", len(server.chunks), server.complete)
+	if result.ImportID != id {
+		t.Fatal(result.ImportID)
 	}
-	first := server.chunks[0].Events[0]
-	if wire.Correlation(first.CorrelationId) != correlation || first.IdempotencyKey != "k1" || first.EventType.Generation != 2 || first.EventSourceId != "a" {
-		t.Fatalf("first event = %v", first)
+	if result.FirstSequenceNumber != 0 || result.LastSequenceNumber != 2 {
+		t.Fatalf("positions = %+v", result)
+	}
+	if len(result.Rejections) != 1 {
+		t.Fatal(result.Rejections)
+	}
+	if !slices.Equal(result.Rejections[0].Reasons, []string{"late"}) {
+		t.Fatal(result.Rejections)
+	}
+}
+
+func assertImportChunkRequests(t *testing.T, server *importsServer) {
+	t.Helper()
+	if ImportID(wire.Correlation(server.begun.ImportId)) != server.id {
+		t.Fatal(server.begun)
+	}
+	if server.begun.OnInvalid != imports.OnInvalidEvent_Skip || server.begun.EventSequenceId != "event-log" {
+		t.Fatal(server.begun)
+	}
+	if len(server.chunks) != 2 {
+		t.Fatal(server.chunks)
+	}
+	if server.chunks[1].FirstEventIndex != 2 {
+		t.Fatal(server.chunks[1])
+	}
+	if server.complete.ExpectedChunks != 2 || server.complete.ExpectedEvents != 3 {
+		t.Fatal(server.complete)
+	}
+}
+
+func assertImportedSourceEvent(t *testing.T, first *imports.ImportEvent, correlation metadata.CorrelationID) {
+	t.Helper()
+	if wire.Correlation(first.CorrelationId) != correlation {
+		t.Fatal(first.CorrelationId)
+	}
+	if first.EventType.Generation != 2 {
+		t.Fatal(first.EventType)
+	}
+	for field, values := range map[string][2]string{
+		"idempotency": {first.IdempotencyKey, "k1"}, "source ID": {first.EventSourceId, "a"}, "source": {first.EventSource, "Billing"},
+		"type": {first.EventSourceType, "Explicit"}, "stream type": {first.EventStreamType, "changes"}, "stream ID": {first.EventStreamId, "west"},
+	} {
+		if values[0] != values[1] {
+			t.Errorf("%s = %q, want %q", field, values[0], values[1])
+		}
 	}
 }
 

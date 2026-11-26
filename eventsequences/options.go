@@ -73,6 +73,7 @@ type Scope struct {
 type AppendOption func(*appendConfig)
 type appendConfig struct {
 	route          Route
+	eventSource    events.SourceName
 	scope          *Scope
 	occurred       *time.Time
 	subject        *events.Subject
@@ -84,6 +85,19 @@ type appendConfig struct {
 
 // WithRoute overrides routing; it never changes the source argument.
 func WithRoute(route Route) AppendOption { return func(c *appendConfig) { c.route = route } }
+
+// WithEventSource attributes the event to a registered event source definition,
+// which the kernel validates: the source must be registered, a requested
+// SourceType must be empty, Default or the definition's name, and a non-All
+// stream type must belong to it. The persisted SourceType becomes the name. It
+// is last-wins; an empty name clears attribution. Nonempty names with leading
+// or trailing whitespace are invalid. Automatic concurrency scopes narrow to
+// the named source classification when the route SourceType is empty or Default.
+// A kernel refusal reported only as append diagnostics can yield Unknown and
+// OutcomeUnknownError. Inspect the diagnostics; do not blindly retry.
+func WithEventSource(name events.SourceName) AppendOption {
+	return func(c *appendConfig) { c.eventSource = name }
+}
 
 // WithScope overrides the default source-and-route optimistic scope.
 func WithScope(scope Scope) AppendOption {
