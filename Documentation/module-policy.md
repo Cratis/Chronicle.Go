@@ -8,14 +8,14 @@ description: Learn the module allow-list grammar, how the independent Go gates a
 
 Keep optional tooling and ecosystem dependencies out of the Chronicle runtime.
 The checked-in [module manifest](https://github.com/Cratis/Chronicle.Go/blob/main/.github/go-modules.json) lists
-`github.com/cratis/chronicle.go` and the unpublished `recipes` module. The
-[OpenTelemetry gRPC recipe](../recipes/otelgrpc/README.md) pins published SDK
-`v0.21.0` and isolates its OpenTelemetry SDK/exporter dependencies from the root.
-It needs no replacement directives, `go.work`, or local checkout dependency.
-The existing module CI matrix runs its build, vet, tests, race checks, formatting,
-tidy, and lint gates; contract and kernel integration profiles remain root-only.
-Tools and integrations remain absent until concrete work adds them. Use this
-reference when adding a real, independently compiled module.
+`github.com/cratis/chronicle.go` and two unpublished modules: `recipes` and
+`tools`. The [OpenTelemetry gRPC recipe](../recipes/otelgrpc/README.md) and
+[Chronicle vet preview](#try-the-chronicle-vet-preview) both pin published SDK
+`v0.21.0`. The recipe keeps OpenTelemetry dependencies out of the runtime;
+the vet tool does the same for `golang.org/x/tools`. Neither needs a replacement,
+`go.work`, or a local SDK checkout. The module CI matrix runs their build, vet,
+tests, race checks, formatting, tidy, and lint gates. Contract and kernel
+integration checks remain root-only.
 
 ## Manifest grammar
 
@@ -30,7 +30,7 @@ module aliases, or executable configuration.
 | `contracts` | Boolean `true`; pinned contract generation is root-only |
 | `kernelIntegration` | Boolean `true`; the existing store/client kernel tests are root-only |
 | `rootDependencies` | Unique canonical external module paths allowed in root `require` directives, including indirect and test dependencies |
-| `nested` | An array of implemented module records; currently the `recipes` module |
+| `nested` | An array of implemented module records; currently `recipes` and `tools` |
 
 The runtime dependency list preserves the existing SDK graph: Fundamentals,
 UUID, gRPC, protobuf and their current indirect modules. Versions remain in
@@ -76,18 +76,46 @@ source implementation of declaration tooling in
 [#23](https://github.com/Cratis/Chronicle.Go/issues/23) and
 [#39](https://github.com/Cratis/Chronicle.Go/issues/39).
 
-When there is real tool source, add `tools/go.mod` and its record together with
-`kind: "tool"`, `publish: false`, `tagPrefix: "tools/v"` and both service profiles
-`false`. The tool must require the canonical root through a fetchable, pushed
-v0/v1 pseudo-version (or a stable released tag). It cannot replace the root with
-local source, a remote fork or a sibling checkout. Root `go.mod`/`go.sum` stay
-unchanged. Every native module gate still runs on this preview.
+The `tools` record pairs with `tools/go.mod`: `kind: "tool"`, `publish: false`,
+`tagPrefix: "tools/v"`, and both service profiles `false`. A preview tool must
+require the canonical root through a fetchable, pushed v0/v1 pseudo-version or a
+released tag. It cannot replace the root with local source, a remote fork, or a
+sibling checkout. Root `go.mod`/`go.sum` stay unchanged. Every native module gate
+still applies to the preview.
 
 The dependency gate downloads that exact root version through the public proxy
 in a fresh cache. A local-only commit cannot pass. A pseudo-version proves
 available source, **not a release**. This explicit unpublished tool/integration
 preview is the small Chronicle extension to Fundamentals' recipe-only unpublished
 example; it breaks the pre-release circularity without weakening publication.
+
+### Try the Chronicle vet preview
+
+Build the tool from the checkout's `tools/` directory with Go 1.26 or later:
+
+```sh
+go build -o /absolute/path/to/chroniclevet ./cmd/chroniclevet
+```
+
+In a consumer with its own `go.mod` and cached dependencies, run the binary as
+an optional vet tool. The consumer does not need a tool dependency in `go.mod`.
+If you use build tags, pass them to `go vet` so it analyzes the same files as
+your build. `-vettool` replaces the standard vet checks for that run, so also
+run plain `go vet` with the same build tags.
+
+```sh
+GOWORK=off GOPROXY=off GOTOOLCHAIN=local go vet -vettool=/absolute/path/to/chroniclevet ./...
+```
+
+`CHR0053` points to the struct tag when a direct event field is marked both
+`pii` and `encrypted`. Choose which protection the field requires and remove the
+other directive. The [parity map](parity.md#declaration-diagnostics-preview)
+explains which declarations the preview can prove. The tool validates tags
+using SDK `v0.21.0`'s declaration grammar; the grammar may differ in consumers
+using another SDK version. A clean run does not replace runtime validation.
+The tool is built from source, not published as a module.
+
+### Qualify a nested module for publication
 
 To become publication-eligible, flip `publish` to `true` only after pinning an
 exact stable, publicly fetchable root tag. Pseudo-versions and prereleases fail

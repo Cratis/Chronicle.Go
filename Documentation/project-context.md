@@ -39,10 +39,11 @@ unmanaged local additions shared with Arc.Go, not installer-managed files.
 
 Keep one runtime root module, public packages grouped by capability,
 implementation-only helpers under `internal/`, and co-located `_test.go` files.
-The [explicit module allow-list](https://github.com/Cratis/Chronicle.Go/blob/main/.github/go-modules.json) currently lists only
-the root. Add real nested tooling, integrations or unpublished recipes only under
-[the module policy](module-policy.md), independently gated without runtime
-optional dependencies or a workspace. Add directories only
+The [explicit module allow-list](https://github.com/Cratis/Chronicle.Go/blob/main/.github/go-modules.json)
+lists the runtime root and the unpublished `recipes` and `tools` modules. Add
+nested tooling, integrations, or recipes only under the
+[module policy](module-policy.md), with independent gates and no optional runtime
+dependencies or workspace. Add directories only
 when implemented; do not copy the C# `Source/` namespace layout. Public examples
 should compile. Product documentation belongs in `Documentation/`.
 
