@@ -21,6 +21,14 @@
       "tagPrefix": "recipes/v",
       "contracts": false,
       "kernelIntegration": false
+    },
+    {
+      "dir": "tools",
+      "kind": "tool",
+      "publish": false,
+      "tagPrefix": "tools/v",
+      "contracts": false,
+      "kernelIntegration": false
     }
   ]
 }
