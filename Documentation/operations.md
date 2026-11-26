@@ -1,6 +1,6 @@
 ---
 title: Chronicle operations from Go
-description: Inspect alerts and failed work, register event sources, and administer namespaces, observers, and jobs from Go.
+description: Inspect alerts and failed work, register event sources, and administer namespaces, observers, and jobs from Go with the Chronicle client.
 ---
 
 Use `store.Observers()` to inspect observer state and failures, and `store.Jobs()`
