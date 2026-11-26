@@ -28,6 +28,7 @@ type compileState struct {
 	codecs          *Codecs
 	duplicateNames  error
 	deferDuplicates bool
+	readModel       bool
 }
 
 // enter marks the key as being compiled and returns the function that restores the previous state.
@@ -213,7 +214,10 @@ func (n *node) compileByKind(state *compileState, policy NamingPolicy, readModel
 	}
 }
 
-func checkMapKey(typ reflect.Type) error {
+func checkMapKey(typ reflect.Type, state *compileState) error {
+	if isGuidDictionary(typ) {
+		return checkGuidDictionary(typ, state)
+	}
 	if _, _, err := concepts.Underlying(typ.Key()); err != nil {
 		return fmt.Errorf("%w: %w", faults.ErrInvalidConfiguration, err)
 	}
@@ -235,7 +239,7 @@ func (n *node) compileBinary() error {
 func (n *node) compileCollection(state *compileState, policy NamingPolicy) error {
 	typ := n.typ
 	if typ.Kind() == reflect.Map {
-		if err := checkMapKey(typ); err != nil {
+		if err := checkMapKey(typ, state); err != nil {
 			return err
 		}
 	}

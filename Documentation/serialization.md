@@ -140,6 +140,13 @@ including nested collections and pointers. These checks inspect the codec's actu
 scalar JSON, so a struct wrapper cannot bypass kernel limits. Concept map keys and
 arbitrary custom schema codecs are not supported by this slice.
 
+Events and documents (not read models) also accept `map[uuid.UUID]string`, using
+`github.com/google/uuid`. Keys are written as lowercase hyphenated property names
+and read in either hex case; any other spelling is a protocol error. The packaged
+C# client keeps the last of two names that parse to the same Guid, but Go refuses
+the whole document because it cannot preserve wire order, so no value is silently
+dropped. Other key types, other value types and read-model use stay unsupported.
+
 ## Binary values
 
 Before declaring a binary field, check [admitted shapes](#admitted-binary-shapes) and [refusals](#refused-binary-shapes). For specific checks, use [reads and capability limits](#binary-reads-and-capability-limits), [property names](#names-in-binary-containing-graphs), and [generations and captured evidence](#generations-and-captured-evidence).
