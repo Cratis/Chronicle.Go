@@ -78,7 +78,7 @@ func (s *Sequence) PrepareReturnedEvents(ctx context.Context, effect reactoreffe
 			return err
 		}
 		var result BatchResult
-		if bare && normalizedRoute(coordinates[0].Route) == normalizedRoute(Route{}) && coordinates[0].EventSource == "" {
+		if bare && usesDefaultRouteAndSource(coordinates[0]) {
 			result, err = s.dispatchMany(ctx, coordinates[0].Source, appendConfig{}, pending, origin)
 		} else {
 			result, err = s.dispatchBatch(ctx, pending, origin)
@@ -88,6 +88,10 @@ func (s *Sequence) PrepareReturnedEvents(ctx context.Context, effect reactoreffe
 		}
 		return result.Err()
 	}, nil
+}
+
+func usesDefaultRouteAndSource(entry Entry) bool {
+	return normalizedRoute(entry.Route) == normalizedRoute(Route{}) && entry.EventSource == ""
 }
 
 // Resolve may still acquire protection from a matching tail. Only empty

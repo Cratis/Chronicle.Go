@@ -110,6 +110,11 @@ func checkScope(scope *sequences.ConcurrencyScope) error {
 	}
 	return nil
 }
+
+// namedSourceNeedsType reports whether a named source has no explicit source type.
+func namedSourceNeedsType(name, sourceType string) bool {
+	return name != "" && (sourceType == "" || sourceType == "Default")
+}
 func (k *substituteKernel) append(r *sequences.AppendRequest) uint64 {
 	key := sequenceKey{r.EventStore, r.Namespace, r.EventSequenceId}
 	position := uint64(len(k.events[key]))
@@ -121,7 +126,7 @@ func (k *substituteKernel) append(r *sequences.AppendRequest) uint64 {
 	// registry or validation. A named source with an empty or Default type is
 	// stored with the name as its type, mirroring the kernel's success rewrite.
 	sourceType := r.EventSourceType
-	if r.EventSource != "" && (sourceType == "" || sourceType == "Default") {
+	if namedSourceNeedsType(r.EventSource, sourceType) {
 		sourceType = r.EventSource
 	}
 	event := &sequences.AppendedEventResponse{Id: strconv.FormatUint(position, 10), Content: r.Content, OriginalContent: r.Content,

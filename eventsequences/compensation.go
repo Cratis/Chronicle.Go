@@ -56,7 +56,7 @@ func (s *Sequence) Compensate(ctx context.Context, position events.SequenceNumbe
 		}
 		option(&config)
 	}
-	if config.route != (Route{}) || config.eventSource != "" || config.scope != nil || config.subject != nil || len(config.named) != 0 {
+	if config.overridesCompensatedEvent() {
 		return AppendResult{}, fmt.Errorf("%w: a compensation takes its source, stream and subject from the compensated event and has no scope or named tags", faults.ErrInvalidConfiguration)
 	}
 	if err := validateAppendMetadata(nil, config.occurred, nil); err != nil {
@@ -125,4 +125,9 @@ func allKnownCompensationRejections(errs []AppendError) bool {
 		}
 	}
 	return true
+}
+
+// overridesCompensatedEvent reports options a compensation refuses.
+func (c appendConfig) overridesCompensatedEvent() bool {
+	return c.route != (Route{}) || c.eventSource != "" || c.scope != nil || c.subject != nil || len(c.named) != 0
 }
