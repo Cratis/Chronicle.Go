@@ -237,6 +237,9 @@ func rebindMapJSON(data json.RawMessage, before, after *node, depth int) (json.R
 	if err := json.Unmarshal(data, &items); err != nil {
 		return nil, err
 	}
+	if _, err := parseGuidDictionaryKeys(before.typ, items); err != nil {
+		return nil, &UnmarshalError{cause: err}
+	}
 	for key, item := range items {
 		value, err := rebindJSON(item, before.item, after.item, depth+1)
 		if err != nil {
