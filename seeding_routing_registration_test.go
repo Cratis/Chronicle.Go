@@ -266,8 +266,17 @@ func TestSeedingRoutingReconnectReprobesFrozenBatch(t *testing.T) {
 }
 
 func TestSeedingRoutingProbeHonorsCancellationAndDeadline(t *testing.T) {
-	for _, deadline := range []bool{false, true} {
-		t.Run(map[bool]string{false: "cancel", true: "deadline"}[deadline], func(t *testing.T) {
+	cases := []struct {
+		name     string
+		deadline bool
+		code     codes.Code
+		cause    error
+	}{
+		{name: "cancel", code: codes.Canceled, cause: context.Canceled},
+		{name: "deadline", deadline: true, code: codes.DeadlineExceeded, cause: context.DeadlineExceeded},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
 			entered := make(chan struct{}, 1)
 			kernel := &routedSeedKernel{support: func(ctx context.Context) (*contracts.QueryResult_EventSeedingSupportResponse, error) {
 				entered <- struct{}{}
@@ -283,27 +292,43 @@ func TestSeedingRoutingProbeHonorsCancellationAndDeadline(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			attempt, cancel := seedProbeContext(ctx, deadline)
+			attempt, cancel := seedProbeContext(ctx, tc.deadline)
 			defer cancel()
 			result := make(chan error, 1)
 			go func() { result <- batch.Register(attempt) }()
 			awaitSignal(t, ctx, entered)
-			if !deadline {
+			if !tc.deadline {
 				cancel()
 			}
-			awaitSeedProbeError(t, ctx, attempt, result)
-			if kernel.calls.Load() != 0 {
-				t.Fatal("canceled probe sent entries")
+			awaitSeedProbeError(t, ctx, result, tc.code)
+			awaitSeedProbeContext(t, ctx, attempt, tc.cause)
+			if kernel.calls.Load() != 0 || kernel.probes.Load() != 1 {
+				t.Fatal("canceled probe sent entries or repeated probe", kernel.calls.Load(), kernel.probes.Load())
 			}
 		})
 	}
 }
 
-func awaitSeedProbeError(t *testing.T, ctx, attempt context.Context, result <-chan error) {
+// awaitSeedProbeError checks the literal status code. The gRPC status and the
+// caller context are driven by independent timers, so the result may arrive
+// before the caller context reports its own state.
+func awaitSeedProbeError(t *testing.T, ctx context.Context, result <-chan error, code codes.Code) {
 	t.Helper()
 	select {
 	case err := <-result:
-		assertSeedProbeStatus(t, err, status.FromContextError(attempt.Err()).Code())
+		assertSeedProbeStatus(t, err, code)
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+}
+
+func awaitSeedProbeContext(t *testing.T, ctx, attempt context.Context, cause error) {
+	t.Helper()
+	select {
+	case <-attempt.Done():
+		if !errors.Is(attempt.Err(), cause) {
+			t.Fatal("caller context ended with", attempt.Err(), "want", cause)
+		}
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}
