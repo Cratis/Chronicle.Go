@@ -143,6 +143,7 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 		c.mu.Unlock()
 	}()
 	attempt := 0
+	var droppedAddress string
 	for c.life.Err() == nil {
 		c.mu.Lock()
 		closed := c.closed
@@ -150,7 +151,8 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 		if closed {
 			return
 		}
-		g, err := c.establishGeneration(startup)
+		g, err := c.establishGeneration(startup, droppedAddress)
+		droppedAddress = "" // Prefer peers for one attempt, even if establishment fails.
 		err = c.installGeneration(g, err)
 		if startup != nil {
 			s.err = err
@@ -160,6 +162,7 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 		if err == nil {
 			attempt = 0
 			err = c.runConnectedGeneration(g)
+			droppedAddress = g.logicalSessionAddress()
 		}
 		c.endGeneration(g, err)
 		if c.life.Err() != nil {
@@ -177,14 +180,14 @@ func (c *Client) supervise(startup context.Context, s *supervision) {
 	}
 }
 
-func (c *Client) establishGeneration(startup context.Context) (*generation, error) {
+func (c *Client) establishGeneration(startup context.Context, droppedAddress string) (*generation, error) {
 	parent := c.life
 	if startup != nil {
 		parent = startup
 	}
 	ctx, cancel := context.WithTimeout(parent, c.config.connectTimeout)
 	stop := context.AfterFunc(c.life, cancel)
-	g, err := c.newGeneration(ctx)
+	g, err := c.newGeneration(ctx, droppedAddress)
 	if err == nil {
 		err = c.establish(ctx, g)
 	}

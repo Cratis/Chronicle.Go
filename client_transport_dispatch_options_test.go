@@ -58,7 +58,7 @@ func TestExplicitMessageBoundsReachEveryServiceAndPreserveCallerOptions(t *testi
 			t.Error(err)
 		}
 	}()
-	g, err := client.newGeneration(t.Context())
+	g, err := client.newGeneration(t.Context(), "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -103,6 +103,20 @@ Built-in OAuth sends a form POST to the selected kernel's `/connect/token`, cach
 
 With normal logical sessions, transient stream loss or missing heartbeats triggers automatic reconnection and registration replay. Existing handles remain usable after recovery. Authentication rejection and incompatible protocols stop supervision until an explicit `Connect`; readiness never silently bypasses those failures. `WithSkipKeepAlive` omits that session and its loss detection; transport reconnection alone does not guarantee registration replay. Read [short-lived clients and process ownership](lifecycle.md#short-lived-clients-and-process-ownership) before selecting it, and [connection lifecycle and readiness](lifecycle.md) for admission, retry and shutdown contracts.
 
+On the first automatic replacement attempt after an established session drops,
+Go's built-in balancer excludes the dropped address if the current candidate
+list contains a different address. If that attempt fails transiently, the next
+attempt uses the full current list, resolving DNS again for SRV. The dropped
+address is eligible then, not guaranteed to be next. A terminal authentication
+or compatibility rejection on the selected peer still stops supervision; the
+client does not silently try another node. Custom balancers still receive the
+full candidate list, and borrowed channels are unaffected.
+
+Unlike Go's one-attempt preference, C# remembers the last dropped address across
+attempts and can try multiple candidates in one connect budget, withholding the
+dropped address from built-in and custom selection while other candidates remain.
+See [the parity comparison](../parity.md#connection-api-and-default-comparison).
+
 ## Diagnose connection failures
 
 Check kernel health with `curl` against `/health`, then inspect the returned error. Use `errors.As` for `CompatibilityError`, `LoadBalancerError` and `EnvelopeError`; use `errors.Is` for `ErrClosed`, `ErrInvalidConfiguration`, `ErrUnsupported` and context cancellation. gRPC status codes remain inspectable with `status.Code` on transport errors.
