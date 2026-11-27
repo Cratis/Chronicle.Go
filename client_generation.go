@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -49,10 +50,13 @@ type generation struct {
 	registrationWork sync.WaitGroup
 }
 
-func (c *Client) newGeneration(ctx context.Context) (*generation, error) {
+func (c *Client) newGeneration(ctx context.Context, droppedAddress string) (*generation, error) {
 	addresses, err := c.generationAddresses(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if c.config.loadBalancer == nil && c.config.borrowed == nil {
+		addresses = preferReconnectPeers(addresses, droppedAddress)
 	}
 	address, err := c.selectAddress(ctx, addresses)
 	if err != nil {
@@ -87,6 +91,27 @@ func (c *Client) generationAddresses(ctx context.Context) ([]string, error) {
 		return connection.Resolve(ctx, c.config.resolver, c.uri.addresses[0].Host)
 	}
 	return addresses, nil
+}
+
+func (g *generation) logicalSessionAddress() string {
+	if g.stream == nil {
+		return ""
+	}
+	return g.address
+}
+
+func preferReconnectPeers(addresses []string, droppedAddress string) []string {
+	if droppedAddress == "" || len(addresses) <= 1 {
+		return addresses
+	}
+	if !slices.Contains(addresses, droppedAddress) {
+		return addresses
+	}
+	peers := slices.DeleteFunc(slices.Clone(addresses), func(address string) bool { return address == droppedAddress })
+	if len(peers) == 0 {
+		return addresses
+	}
+	return peers
 }
 
 func (g *generation) configureAuthentication(address string) {
