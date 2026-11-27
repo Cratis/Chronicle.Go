@@ -137,9 +137,26 @@ func (c *Client) acquireRegistrationReady(ctx context.Context) (*generation, con
 		return nil, nil, nil, err
 	}
 	release()
+	attemptCtx, done := registrationAttemptContext(ctx, g)
+	return g, attemptCtx, done, nil
+}
+
+func registrationAttemptContext(ctx context.Context, g *generation) (context.Context, func()) {
 	attemptCtx, cancel := context.WithCancel(ctx)
 	stop := context.AfterFunc(g.ctx, cancel)
-	return g, attemptCtx, func() { stop(); cancel() }, nil
+	return attemptCtx, func() { stop(); cancel() }
+}
+
+func (s *EventStore) registerForAdmission(ctx context.Context, g *generation) error {
+	attemptCtx, done := registrationAttemptContext(ctx, g)
+	defer done()
+	if _, err := s.register(attemptCtx, g); err != nil {
+		return err
+	}
+	if err := g.ctx.Err(); err != nil {
+		return err
+	}
+	return attemptCtx.Err()
 }
 
 // storeSnapshot is registration membership, never the resource ownership set.

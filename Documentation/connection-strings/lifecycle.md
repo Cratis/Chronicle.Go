@@ -129,7 +129,9 @@ Transient reconnection uses cancellation-aware exponential backoff, nominally on
 
 Bad OAuth credentials, rejected authentication/authorization, unsupported compatibility RPCs, incompatible descriptors and malformed keep-alive identities fail closed. `Ready` returns the terminal cause; an explicit subsequent `Connect` starts a new attempt. This deliberately avoids C#'s blanket transport retries and its permissive compatibility failure fallback.
 
-During an outage, ordinary handle operations fail before dispatch. During replay they wait for their registration barrier within the caller's context. An already dispatched append interrupted by generation loss returns `OutcomeUnknownError`; it is never automatically retried. The kernel may have committed it even though the response was lost.
+While there is no live connection generation, operations on cached store handles fail before dispatch with the latest recorded connection error (or a connection unavailable error if no cause has been recorded). They do not wait for reconnection. Once a live generation is installed, operations still wait for its required registration within the caller's context. Use `Ready(ctx)` or `store.WaitForRegistration(ctx)` to wait for recovery explicitly before making a new call with the same handle.
+
+An already dispatched append interrupted by generation loss returns `OutcomeUnknownError`; it is never automatically retried. The kernel may have committed it even though the response was lost.
 
 ## Owned gRPC stats handlers
 

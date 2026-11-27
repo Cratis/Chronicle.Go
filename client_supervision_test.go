@@ -228,6 +228,85 @@ func TestAutomaticReplaySharesStoreDefinitionsAndSeparatesNamespaces(t *testing.
 	}
 }
 
+func TestCachedHandleRejectsOutageBeforeDispatch(t *testing.T) {
+	entered, release := make(chan struct{}), make(chan struct{})
+	kernel := &supervisedKernel{streamInterceptor: gateReplacementConnect(entered, release)}
+	client, ctx := supervisionClient(t, kernel, WithConnectTimeout(30*time.Second))
+	releaseConnect := sync.OnceFunc(func() { close(release) })
+	t.Cleanup(releaseConnect)
+	store, err := client.EventStore(ctx, "store")
+	if err != nil {
+		t.Fatal(err)
+	}
+	log := store.EventLog()
+	if got := kernel.registrations.Load(); got != 1 {
+		t.Fatalf("initial registration count = %d, want 1", got)
+	}
+	kernel.endStream <- status.Error(codes.Unavailable, "lost before dispatch")
+	awaitSignal(t, ctx, entered)
+	client.mu.Lock()
+	current, cause := client.current, client.connectionError
+	client.mu.Unlock()
+	if current != nil || status.Code(cause) != codes.Unavailable {
+		t.Fatalf("replacement handshake entered with current installed = %t, connection error = %v", current != nil, cause)
+	}
+
+	scope := eventsequences.WithScope(eventsequences.Scope{Expectation: eventsequences.NoCheck()})
+	appendCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	_, err = log.Append(appendCtx, "source", lifecycleEvent{}, scope)
+	callerErr, appends := appendCtx.Err(), kernel.appends.Load()
+	t.Logf("outage append: error = %v, caller error = %v, RPCs = %d", err, callerErr, appends)
+	if !errors.Is(err, cause) {
+		t.Errorf("append error = %v, want recorded connection error %v", err, cause)
+	}
+	var unknown *eventsequences.OutcomeUnknownError
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.As(err, &unknown) {
+		t.Errorf("append should fail before dispatch without waiting for the caller deadline, got %v", err)
+	}
+	if callerErr != nil {
+		t.Errorf("append returned with expired or canceled caller context: %v", callerErr)
+	}
+	if appends != 0 {
+		t.Errorf("append RPCs during outage = %d, want 0", appends)
+	}
+
+	releaseConnect()
+	if err := client.Ready(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := kernel.registrations.Load(); got != 2 {
+		t.Fatalf("registration count after Ready = %d, want 2", got)
+	}
+	result, err := log.Append(ctx, "source", lifecycleEvent{}, scope)
+	if err != nil || result.Disposition != eventsequences.Committed {
+		t.Fatalf("new append after Ready: disposition = %v, error = %v", result.Disposition, err)
+	}
+	if got := kernel.appends.Load(); got != 1 {
+		t.Fatalf("total append RPCs = %d, want 1", got)
+	}
+}
+
+func gateReplacementConnect(entered chan<- struct{}, release <-chan struct{}) grpc.StreamClientInterceptor {
+	var connects atomic.Int32
+	return func(ctx context.Context, desc *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+		if method == clients.ConnectionService_Connect_FullMethodName {
+			attempt := connects.Add(1)
+			if attempt == 2 {
+				close(entered)
+			}
+			if attempt > 1 {
+				select {
+				case <-release:
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				}
+			}
+		}
+		return streamer(ctx, desc, conn, method, opts...)
+	}
+}
+
 func TestLostGenerationDoesNotReplayInflightAppend(t *testing.T) {
 	entered := make(chan struct{})
 	kernel := &supervisedKernel{appendCall: func(ctx context.Context) error { close(entered); <-ctx.Done(); return ctx.Err() }}

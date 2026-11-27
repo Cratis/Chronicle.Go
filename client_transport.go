@@ -27,12 +27,8 @@ func (c *Client) acquire(ctx context.Context) (*generation, context.Context, fun
 		c.mu.Unlock()
 		return nil, nil, nil, ErrClosed
 	}
-	g := c.current
-	if g == nil || g.ctx.Err() != nil {
-		err := c.connectionError
-		if err == nil {
-			err = errors.New("chronicle: connection unavailable")
-		}
+	g, err := c.liveGenerationLocked()
+	if err != nil {
 		c.mu.Unlock()
 		return nil, nil, nil, err
 	}
@@ -48,6 +44,32 @@ func (c *Client) acquire(ctx context.Context) (*generation, context.Context, fun
 		return nil, nil, nil, err
 	}
 	return g, ctx, done, nil
+}
+
+// liveGenerationLocked inspects connection state without starting or waiting for
+// supervision. The caller holds c.mu and has already checked for closure.
+func (c *Client) liveGenerationLocked() (*generation, error) {
+	if g := c.current; g != nil && g.ctx.Err() == nil {
+		return g, nil
+	}
+	if c.connectionError != nil {
+		return nil, c.connectionError
+	}
+	return nil, errors.New("chronicle: connection unavailable")
+}
+
+// selectRegistrationGeneration does not take an RPC lease: registration can
+// call application code, which must be able to close the client.
+func (c *Client) selectRegistrationGeneration(ctx context.Context) (*generation, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.requirePreparedLocked("connect", false); err != nil {
+		return nil, fmt.Errorf("chronicle: registration: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("chronicle: registration: %w", err)
+	}
+	return c.liveGenerationLocked()
 }
 
 type clientTransport struct {
@@ -81,17 +103,24 @@ func (t *clientTransport) acquire(ctx context.Context) (*generation, context.Con
 		return t.client.acquire(ctx)
 	}
 	for {
-		outcome, err := t.store.WaitForRegistration(ctx)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("chronicle: registration: %w", err)
-		}
-		g, attemptCtx, done, err := t.client.acquire(ctx)
+		g, err := t.client.selectRegistrationGeneration(ctx)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		if g.number == outcome.Generation {
-			return g, attemptCtx, done, nil
+		if err := t.store.registerForAdmission(ctx, g); err != nil {
+			if g.ctx.Err() != nil && retryReadiness(ctx, err) {
+				continue
+			}
+			return nil, nil, nil, fmt.Errorf("chronicle: registration: %w", err)
 		}
+		pinned, attemptCtx, done, err := t.client.acquire(ctx)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if pinned == g {
+			return pinned, attemptCtx, done, nil
+		}
+		// A replacement must pass its own registration before dispatch.
 		done()
 	}
 }
