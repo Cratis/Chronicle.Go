@@ -27,7 +27,9 @@ jobs:
           go-version: '1.27.x'
           cache-dependency-path: go.sum
       - name: Configure disposable compliance encryption certificate
-        run: bash scripts/configure-compliance-integration.sh '${{ job.services.chronicle.id }}'
+        env:
+          CHRONICLE_SERVICE_ID: ${{ job.services.chronicle.id }}
+        run: bash scripts/configure-compliance-integration.sh "$CHRONICLE_SERVICE_ID"
       - name: Wait for the kernel
         run: timeout 180 bash -c 'until curl -skf https://localhost:35000/health > /dev/null; do sleep 2; done'
       - name: Register, append and read back
@@ -37,4 +39,53 @@ jobs:
         run: go test -tags=integration -count=1 -timeout=6m ./internal/integration ./chronicletest/...
       - name: Kernel diagnostics on failure
         if: failure()
-        run: docker logs '${{ job.services.chronicle.id }}' --tail 150
+        env:
+          CHRONICLE_SERVICE_ID: ${{ job.services.chronicle.id }}
+        run: docker logs "$CHRONICLE_SERVICE_ID" --tail 150
+
+  kernel-restart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GOWORK: 'off'
+      GOTOOLCHAIN: local
+    services:
+      chronicle:
+        image: cratis/chronicle:19.153.0-development
+        ports:
+          - 35000:35000
+        options: --label org.cratis.go-kernel-restart=${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: go.sum
+      - name: Configure disposable compliance encryption certificate
+        env:
+          CHRONICLE_RESTART_SERVICE_ID: ${{ job.services.chronicle.id }}
+        run: bash scripts/configure-compliance-integration.sh "$CHRONICLE_RESTART_SERVICE_ID"
+      - name: Wait for the kernel
+        run: timeout 180 bash -c 'until curl -skf --noproxy "*" --max-time 3 https://localhost:35000/health > /dev/null; do sleep 2; done'
+      - name: Require both restart tests to be selected
+        shell: bash
+        run: |
+          listed=$(go test -tags=integration,kernelrestart -list '^(TestKernelRestartFixtureGuard|TestKernelRestartAutomaticallyReattachesReactor)$' ./internal/integration)
+          grep -Fxq TestKernelRestartFixtureGuard <<< "$listed"
+          grep -Fxq TestKernelRestartAutomaticallyReattachesReactor <<< "$listed"
+      - name: Witness automatic reactor attachment after kernel restart
+        env:
+          CHRONICLE_INTEGRATION_CONNECTION_STRING: chronicle://localhost:35000
+          CHRONICLE_RESTART_FIXTURE: disposable-service-v1
+          CHRONICLE_RESTART_SERVICE_ID: ${{ job.services.chronicle.id }}
+        run: go test -tags=integration,kernelrestart -count=1 -timeout=6m -v -run '^(TestKernelRestartFixtureGuard|TestKernelRestartAutomaticallyReattachesReactor)$' ./internal/integration
+      - name: Service state on failure
+        if: failure()
+        shell: bash
+        env:
+          CHRONICLE_RESTART_SERVICE_ID: ${{ job.services.chronicle.id }}
+        run: |
+          [[ "$CHRONICLE_RESTART_SERVICE_ID" =~ ^[0-9a-f]{64}$ ]]
+          timeout 10 docker --context default inspect --type container --format '{{.State.Status}} (exit {{.State.ExitCode}})' "$CHRONICLE_RESTART_SERVICE_ID"
