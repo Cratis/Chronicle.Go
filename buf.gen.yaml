@@ -59,6 +59,9 @@ managed:
       path: observation_eventstoresubscriptions.proto
       value: github.com/cratis/chronicle.go/contracts/observation/eventstoresubscriptions
     - file_option: go_package
+      path: observation_multiplexed.proto
+      value: github.com/cratis/chronicle.go/contracts/observation/multiplexed
+    - file_option: go_package
       path: observation_reactors.proto
       value: github.com/cratis/chronicle.go/contracts/observation/reactors
     - file_option: go_package

@@ -317,6 +317,102 @@ func (x *AllEventTypesRequest) GetEventStore() string {
 	return ""
 }
 
+type CheckEventTypeRegistrationsRequest struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	EventStore    string                   `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Types         []*EventTypeRegistration `protobuf:"bytes,2,rep,name=Types,proto3" json:"Types,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckEventTypeRegistrationsRequest) Reset() {
+	*x = CheckEventTypeRegistrationsRequest{}
+	mi := &file_eventtypes_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckEventTypeRegistrationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckEventTypeRegistrationsRequest) ProtoMessage() {}
+
+func (x *CheckEventTypeRegistrationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckEventTypeRegistrationsRequest.ProtoReflect.Descriptor instead.
+func (*CheckEventTypeRegistrationsRequest) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CheckEventTypeRegistrationsRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *CheckEventTypeRegistrationsRequest) GetTypes() []*EventTypeRegistration {
+	if x != nil {
+		return x.Types
+	}
+	return nil
+}
+
+type CheckEventTypeRegistrationsResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Results       []*EventTypeCheckResult `protobuf:"bytes,1,rep,name=Results,proto3" json:"Results,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckEventTypeRegistrationsResponse) Reset() {
+	*x = CheckEventTypeRegistrationsResponse{}
+	mi := &file_eventtypes_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckEventTypeRegistrationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckEventTypeRegistrationsResponse) ProtoMessage() {}
+
+func (x *CheckEventTypeRegistrationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckEventTypeRegistrationsResponse.ProtoReflect.Descriptor instead.
+func (*CheckEventTypeRegistrationsResponse) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CheckEventTypeRegistrationsResponse) GetResults() []*EventTypeCheckResult {
+	if x != nil {
+		return x.Results
+	}
+	return nil
+}
+
 type CommandResult struct {
 	state                      protoimpl.MessageState `protogen:"open.v1"`
 	CorrelationId              *bcl.Guid              `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -331,7 +427,7 @@ type CommandResult struct {
 
 func (x *CommandResult) Reset() {
 	*x = CommandResult{}
-	mi := &file_eventtypes_proto_msgTypes[2]
+	mi := &file_eventtypes_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -343,7 +439,7 @@ func (x *CommandResult) String() string {
 func (*CommandResult) ProtoMessage() {}
 
 func (x *CommandResult) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[2]
+	mi := &file_eventtypes_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -356,7 +452,7 @@ func (x *CommandResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandResult.ProtoReflect.Descriptor instead.
 func (*CommandResult) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{2}
+	return file_eventtypes_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CommandResult) GetCorrelationId() *bcl.Guid {
@@ -401,6 +497,190 @@ func (x *CommandResult) GetAuthorizationFailureReason() string {
 	return ""
 }
 
+type CommandResult_CheckEventTypeRegistrationsResponse struct {
+	state                      protoimpl.MessageState               `protogen:"open.v1"`
+	CorrelationId              *bcl.Guid                            `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized               bool                                 `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults          []*ValidationResult                  `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages          []string                             `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace        string                               `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	AuthorizationFailureReason string                               `protobuf:"bytes,6,opt,name=AuthorizationFailureReason,proto3" json:"AuthorizationFailureReason,omitempty"`
+	Response                   *CheckEventTypeRegistrationsResponse `protobuf:"bytes,7,opt,name=Response,proto3" json:"Response,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) Reset() {
+	*x = CommandResult_CheckEventTypeRegistrationsResponse{}
+	mi := &file_eventtypes_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandResult_CheckEventTypeRegistrationsResponse) ProtoMessage() {}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandResult_CheckEventTypeRegistrationsResponse.ProtoReflect.Descriptor instead.
+func (*CommandResult_CheckEventTypeRegistrationsResponse) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) GetAuthorizationFailureReason() string {
+	if x != nil {
+		return x.AuthorizationFailureReason
+	}
+	return ""
+}
+
+func (x *CommandResult_CheckEventTypeRegistrationsResponse) GetResponse() *CheckEventTypeRegistrationsResponse {
+	if x != nil {
+		return x.Response
+	}
+	return nil
+}
+
+type CommandResult_NormalizeEventTypeSchemasResponse struct {
+	state                      protoimpl.MessageState             `protogen:"open.v1"`
+	CorrelationId              *bcl.Guid                          `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized               bool                               `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults          []*ValidationResult                `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages          []string                           `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace        string                             `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	AuthorizationFailureReason string                             `protobuf:"bytes,6,opt,name=AuthorizationFailureReason,proto3" json:"AuthorizationFailureReason,omitempty"`
+	Response                   *NormalizeEventTypeSchemasResponse `protobuf:"bytes,7,opt,name=Response,proto3" json:"Response,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) Reset() {
+	*x = CommandResult_NormalizeEventTypeSchemasResponse{}
+	mi := &file_eventtypes_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandResult_NormalizeEventTypeSchemasResponse) ProtoMessage() {}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandResult_NormalizeEventTypeSchemasResponse.ProtoReflect.Descriptor instead.
+func (*CommandResult_NormalizeEventTypeSchemasResponse) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) GetAuthorizationFailureReason() string {
+	if x != nil {
+		return x.AuthorizationFailureReason
+	}
+	return ""
+}
+
+func (x *CommandResult_NormalizeEventTypeSchemasResponse) GetResponse() *NormalizeEventTypeSchemasResponse {
+	if x != nil {
+		return x.Response
+	}
+	return nil
+}
+
 type CreateEventTypeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -411,7 +691,7 @@ type CreateEventTypeRequest struct {
 
 func (x *CreateEventTypeRequest) Reset() {
 	*x = CreateEventTypeRequest{}
-	mi := &file_eventtypes_proto_msgTypes[3]
+	mi := &file_eventtypes_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -423,7 +703,7 @@ func (x *CreateEventTypeRequest) String() string {
 func (*CreateEventTypeRequest) ProtoMessage() {}
 
 func (x *CreateEventTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[3]
+	mi := &file_eventtypes_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -436,7 +716,7 @@ func (x *CreateEventTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateEventTypeRequest.ProtoReflect.Descriptor instead.
 func (*CreateEventTypeRequest) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{3}
+	return file_eventtypes_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateEventTypeRequest) GetEventStore() string {
@@ -464,7 +744,7 @@ type EventType struct {
 
 func (x *EventType) Reset() {
 	*x = EventType{}
-	mi := &file_eventtypes_proto_msgTypes[4]
+	mi := &file_eventtypes_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -476,7 +756,7 @@ func (x *EventType) String() string {
 func (*EventType) ProtoMessage() {}
 
 func (x *EventType) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[4]
+	mi := &file_eventtypes_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -489,7 +769,7 @@ func (x *EventType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventType.ProtoReflect.Descriptor instead.
 func (*EventType) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{4}
+	return file_eventtypes_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *EventType) GetId() string {
@@ -513,6 +793,98 @@ func (x *EventType) GetTombstone() bool {
 	return false
 }
 
+type EventTypeCheckResult struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EventType      string                 `protobuf:"bytes,1,opt,name=EventType,proto3" json:"EventType,omitempty"`
+	Generation     uint32                 `protobuf:"varint,2,opt,name=Generation,proto3" json:"Generation,omitempty"`
+	Accepted       bool                   `protobuf:"varint,3,opt,name=Accepted,proto3" json:"Accepted,omitempty"`
+	Reason         string                 `protobuf:"bytes,4,opt,name=Reason,proto3" json:"Reason,omitempty"`
+	Keyword        string                 `protobuf:"bytes,5,opt,name=Keyword,proto3" json:"Keyword,omitempty"`
+	Path           string                 `protobuf:"bytes,6,opt,name=Path,proto3" json:"Path,omitempty"`
+	Classification string                 `protobuf:"bytes,7,opt,name=Classification,proto3" json:"Classification,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *EventTypeCheckResult) Reset() {
+	*x = EventTypeCheckResult{}
+	mi := &file_eventtypes_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventTypeCheckResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventTypeCheckResult) ProtoMessage() {}
+
+func (x *EventTypeCheckResult) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventTypeCheckResult.ProtoReflect.Descriptor instead.
+func (*EventTypeCheckResult) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *EventTypeCheckResult) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *EventTypeCheckResult) GetGeneration() uint32 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *EventTypeCheckResult) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *EventTypeCheckResult) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *EventTypeCheckResult) GetKeyword() string {
+	if x != nil {
+		return x.Keyword
+	}
+	return ""
+}
+
+func (x *EventTypeCheckResult) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *EventTypeCheckResult) GetClassification() string {
+	if x != nil {
+		return x.Classification
+	}
+	return ""
+}
+
 type EventTypeDetailsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          *EventType             `protobuf:"bytes,1,opt,name=Type,proto3" json:"Type,omitempty"`
@@ -526,7 +898,7 @@ type EventTypeDetailsResponse struct {
 
 func (x *EventTypeDetailsResponse) Reset() {
 	*x = EventTypeDetailsResponse{}
-	mi := &file_eventtypes_proto_msgTypes[5]
+	mi := &file_eventtypes_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -538,7 +910,7 @@ func (x *EventTypeDetailsResponse) String() string {
 func (*EventTypeDetailsResponse) ProtoMessage() {}
 
 func (x *EventTypeDetailsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[5]
+	mi := &file_eventtypes_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -551,7 +923,7 @@ func (x *EventTypeDetailsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypeDetailsResponse.ProtoReflect.Descriptor instead.
 func (*EventTypeDetailsResponse) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{5}
+	return file_eventtypes_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *EventTypeDetailsResponse) GetType() *EventType {
@@ -599,7 +971,7 @@ type EventTypeGenerationDefinition struct {
 
 func (x *EventTypeGenerationDefinition) Reset() {
 	*x = EventTypeGenerationDefinition{}
-	mi := &file_eventtypes_proto_msgTypes[6]
+	mi := &file_eventtypes_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -611,7 +983,7 @@ func (x *EventTypeGenerationDefinition) String() string {
 func (*EventTypeGenerationDefinition) ProtoMessage() {}
 
 func (x *EventTypeGenerationDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[6]
+	mi := &file_eventtypes_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -624,7 +996,7 @@ func (x *EventTypeGenerationDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypeGenerationDefinition.ProtoReflect.Descriptor instead.
 func (*EventTypeGenerationDefinition) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{6}
+	return file_eventtypes_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *EventTypeGenerationDefinition) GetGeneration() uint32 {
@@ -654,7 +1026,7 @@ type EventTypeMigrationDefinition struct {
 
 func (x *EventTypeMigrationDefinition) Reset() {
 	*x = EventTypeMigrationDefinition{}
-	mi := &file_eventtypes_proto_msgTypes[7]
+	mi := &file_eventtypes_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -666,7 +1038,7 @@ func (x *EventTypeMigrationDefinition) String() string {
 func (*EventTypeMigrationDefinition) ProtoMessage() {}
 
 func (x *EventTypeMigrationDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[7]
+	mi := &file_eventtypes_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -679,7 +1051,7 @@ func (x *EventTypeMigrationDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypeMigrationDefinition.ProtoReflect.Descriptor instead.
 func (*EventTypeMigrationDefinition) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{7}
+	return file_eventtypes_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *EventTypeMigrationDefinition) GetFromGeneration() uint32 {
@@ -727,7 +1099,7 @@ type EventTypeMigrationOperation struct {
 
 func (x *EventTypeMigrationOperation) Reset() {
 	*x = EventTypeMigrationOperation{}
-	mi := &file_eventtypes_proto_msgTypes[8]
+	mi := &file_eventtypes_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -739,7 +1111,7 @@ func (x *EventTypeMigrationOperation) String() string {
 func (*EventTypeMigrationOperation) ProtoMessage() {}
 
 func (x *EventTypeMigrationOperation) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[8]
+	mi := &file_eventtypes_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -752,7 +1124,7 @@ func (x *EventTypeMigrationOperation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypeMigrationOperation.ProtoReflect.Descriptor instead.
 func (*EventTypeMigrationOperation) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{8}
+	return file_eventtypes_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *EventTypeMigrationOperation) GetOperation() string {
@@ -783,7 +1155,7 @@ type EventTypeRegistration struct {
 
 func (x *EventTypeRegistration) Reset() {
 	*x = EventTypeRegistration{}
-	mi := &file_eventtypes_proto_msgTypes[9]
+	mi := &file_eventtypes_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -795,7 +1167,7 @@ func (x *EventTypeRegistration) String() string {
 func (*EventTypeRegistration) ProtoMessage() {}
 
 func (x *EventTypeRegistration) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[9]
+	mi := &file_eventtypes_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -808,7 +1180,7 @@ func (x *EventTypeRegistration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypeRegistration.ProtoReflect.Descriptor instead.
 func (*EventTypeRegistration) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{9}
+	return file_eventtypes_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *EventTypeRegistration) GetType() *EventType {
@@ -853,6 +1225,206 @@ func (x *EventTypeRegistration) GetVisibility() EventTypeVisibility {
 	return EventTypeVisibility_Unspecified
 }
 
+type EventTypesWithAnnotationsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventTypeId   string                 `protobuf:"bytes,1,opt,name=EventTypeId,proto3" json:"EventTypeId,omitempty"`
+	Generation    uint32                 `protobuf:"varint,2,opt,name=Generation,proto3" json:"Generation,omitempty"`
+	Keywords      []string               `protobuf:"bytes,3,rep,name=Keywords,proto3" json:"Keywords,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventTypesWithAnnotationsResponse) Reset() {
+	*x = EventTypesWithAnnotationsResponse{}
+	mi := &file_eventtypes_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventTypesWithAnnotationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventTypesWithAnnotationsResponse) ProtoMessage() {}
+
+func (x *EventTypesWithAnnotationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventTypesWithAnnotationsResponse.ProtoReflect.Descriptor instead.
+func (*EventTypesWithAnnotationsResponse) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *EventTypesWithAnnotationsResponse) GetEventTypeId() string {
+	if x != nil {
+		return x.EventTypeId
+	}
+	return ""
+}
+
+func (x *EventTypesWithAnnotationsResponse) GetGeneration() uint32 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *EventTypesWithAnnotationsResponse) GetKeywords() []string {
+	if x != nil {
+		return x.Keywords
+	}
+	return nil
+}
+
+type GetEventTypesWithAnnotationsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetEventTypesWithAnnotationsRequest) Reset() {
+	*x = GetEventTypesWithAnnotationsRequest{}
+	mi := &file_eventtypes_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetEventTypesWithAnnotationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetEventTypesWithAnnotationsRequest) ProtoMessage() {}
+
+func (x *GetEventTypesWithAnnotationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetEventTypesWithAnnotationsRequest.ProtoReflect.Descriptor instead.
+func (*GetEventTypesWithAnnotationsRequest) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetEventTypesWithAnnotationsRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+type NormalizeEventTypeSchemasRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	EventTypeIds  []string               `protobuf:"bytes,2,rep,name=EventTypeIds,proto3" json:"EventTypeIds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NormalizeEventTypeSchemasRequest) Reset() {
+	*x = NormalizeEventTypeSchemasRequest{}
+	mi := &file_eventtypes_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NormalizeEventTypeSchemasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NormalizeEventTypeSchemasRequest) ProtoMessage() {}
+
+func (x *NormalizeEventTypeSchemasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NormalizeEventTypeSchemasRequest.ProtoReflect.Descriptor instead.
+func (*NormalizeEventTypeSchemasRequest) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *NormalizeEventTypeSchemasRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *NormalizeEventTypeSchemasRequest) GetEventTypeIds() []string {
+	if x != nil {
+		return x.EventTypeIds
+	}
+	return nil
+}
+
+type NormalizeEventTypeSchemasResponse struct {
+	state         protoimpl.MessageState               `protogen:"open.v1"`
+	Changed       []*EventTypesWithAnnotationsResponse `protobuf:"bytes,1,rep,name=Changed,proto3" json:"Changed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NormalizeEventTypeSchemasResponse) Reset() {
+	*x = NormalizeEventTypeSchemasResponse{}
+	mi := &file_eventtypes_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NormalizeEventTypeSchemasResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NormalizeEventTypeSchemasResponse) ProtoMessage() {}
+
+func (x *NormalizeEventTypeSchemasResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NormalizeEventTypeSchemasResponse.ProtoReflect.Descriptor instead.
+func (*NormalizeEventTypeSchemasResponse) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *NormalizeEventTypeSchemasResponse) GetChanged() []*EventTypesWithAnnotationsResponse {
+	if x != nil {
+		return x.Changed
+	}
+	return nil
+}
+
 type ObserveEventTypesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -862,7 +1434,7 @@ type ObserveEventTypesRequest struct {
 
 func (x *ObserveEventTypesRequest) Reset() {
 	*x = ObserveEventTypesRequest{}
-	mi := &file_eventtypes_proto_msgTypes[10]
+	mi := &file_eventtypes_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -874,7 +1446,7 @@ func (x *ObserveEventTypesRequest) String() string {
 func (*ObserveEventTypesRequest) ProtoMessage() {}
 
 func (x *ObserveEventTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[10]
+	mi := &file_eventtypes_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -887,7 +1459,7 @@ func (x *ObserveEventTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObserveEventTypesRequest.ProtoReflect.Descriptor instead.
 func (*ObserveEventTypesRequest) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{10}
+	return file_eventtypes_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ObserveEventTypesRequest) GetEventStore() string {
@@ -911,7 +1483,7 @@ type QueryResult_IEnumerable_EventTypeDetailsResponse struct {
 
 func (x *QueryResult_IEnumerable_EventTypeDetailsResponse) Reset() {
 	*x = QueryResult_IEnumerable_EventTypeDetailsResponse{}
-	mi := &file_eventtypes_proto_msgTypes[11]
+	mi := &file_eventtypes_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -923,7 +1495,7 @@ func (x *QueryResult_IEnumerable_EventTypeDetailsResponse) String() string {
 func (*QueryResult_IEnumerable_EventTypeDetailsResponse) ProtoMessage() {}
 
 func (x *QueryResult_IEnumerable_EventTypeDetailsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[11]
+	mi := &file_eventtypes_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -936,7 +1508,7 @@ func (x *QueryResult_IEnumerable_EventTypeDetailsResponse) ProtoReflect() protor
 
 // Deprecated: Use QueryResult_IEnumerable_EventTypeDetailsResponse.ProtoReflect.Descriptor instead.
 func (*QueryResult_IEnumerable_EventTypeDetailsResponse) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{11}
+	return file_eventtypes_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *QueryResult_IEnumerable_EventTypeDetailsResponse) GetCorrelationId() *bcl.Guid {
@@ -981,6 +1553,90 @@ func (x *QueryResult_IEnumerable_EventTypeDetailsResponse) GetData() []*EventTyp
 	return nil
 }
 
+type QueryResult_IEnumerable_EventTypesWithAnnotationsResponse struct {
+	state               protoimpl.MessageState               `protogen:"open.v1"`
+	CorrelationId       *bcl.Guid                            `protobuf:"bytes,1,opt,name=CorrelationId,proto3" json:"CorrelationId,omitempty"` // default value could not be applied: 00000000-0000-0000-0000-000000000000
+	IsAuthorized        bool                                 `protobuf:"varint,2,opt,name=IsAuthorized,proto3" json:"IsAuthorized,omitempty"`
+	ValidationResults   []*ValidationResult                  `protobuf:"bytes,3,rep,name=ValidationResults,proto3" json:"ValidationResults,omitempty"`
+	ExceptionMessages   []string                             `protobuf:"bytes,4,rep,name=ExceptionMessages,proto3" json:"ExceptionMessages,omitempty"`
+	ExceptionStackTrace string                               `protobuf:"bytes,5,opt,name=ExceptionStackTrace,proto3" json:"ExceptionStackTrace,omitempty"`
+	Data                []*EventTypesWithAnnotationsResponse `protobuf:"bytes,6,rep,name=Data,proto3" json:"Data,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) Reset() {
+	*x = QueryResult_IEnumerable_EventTypesWithAnnotationsResponse{}
+	mi := &file_eventtypes_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) ProtoMessage() {}
+
+func (x *QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventtypes_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryResult_IEnumerable_EventTypesWithAnnotationsResponse.ProtoReflect.Descriptor instead.
+func (*QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) Descriptor() ([]byte, []int) {
+	return file_eventtypes_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) GetCorrelationId() *bcl.Guid {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) GetIsAuthorized() bool {
+	if x != nil {
+		return x.IsAuthorized
+	}
+	return false
+}
+
+func (x *QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) GetValidationResults() []*ValidationResult {
+	if x != nil {
+		return x.ValidationResults
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) GetExceptionMessages() []string {
+	if x != nil {
+		return x.ExceptionMessages
+	}
+	return nil
+}
+
+func (x *QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) GetExceptionStackTrace() string {
+	if x != nil {
+		return x.ExceptionStackTrace
+	}
+	return ""
+}
+
+func (x *QueryResult_IEnumerable_EventTypesWithAnnotationsResponse) GetData() []*EventTypesWithAnnotationsResponse {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type RegisterEventTypesRequest struct {
 	state             protoimpl.MessageState   `protogen:"open.v1"`
 	EventStore        string                   `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
@@ -992,7 +1648,7 @@ type RegisterEventTypesRequest struct {
 
 func (x *RegisterEventTypesRequest) Reset() {
 	*x = RegisterEventTypesRequest{}
-	mi := &file_eventtypes_proto_msgTypes[12]
+	mi := &file_eventtypes_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1004,7 +1660,7 @@ func (x *RegisterEventTypesRequest) String() string {
 func (*RegisterEventTypesRequest) ProtoMessage() {}
 
 func (x *RegisterEventTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[12]
+	mi := &file_eventtypes_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1017,7 +1673,7 @@ func (x *RegisterEventTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterEventTypesRequest.ProtoReflect.Descriptor instead.
 func (*RegisterEventTypesRequest) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{12}
+	return file_eventtypes_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RegisterEventTypesRequest) GetEventStore() string {
@@ -1051,7 +1707,7 @@ type RegisterSingleEventTypeRequest struct {
 
 func (x *RegisterSingleEventTypeRequest) Reset() {
 	*x = RegisterSingleEventTypeRequest{}
-	mi := &file_eventtypes_proto_msgTypes[13]
+	mi := &file_eventtypes_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1063,7 +1719,7 @@ func (x *RegisterSingleEventTypeRequest) String() string {
 func (*RegisterSingleEventTypeRequest) ProtoMessage() {}
 
 func (x *RegisterSingleEventTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[13]
+	mi := &file_eventtypes_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1076,7 +1732,7 @@ func (x *RegisterSingleEventTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterSingleEventTypeRequest.ProtoReflect.Descriptor instead.
 func (*RegisterSingleEventTypeRequest) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{13}
+	return file_eventtypes_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *RegisterSingleEventTypeRequest) GetEventStore() string {
@@ -1104,7 +1760,7 @@ type ValidationResult struct {
 
 func (x *ValidationResult) Reset() {
 	*x = ValidationResult{}
-	mi := &file_eventtypes_proto_msgTypes[14]
+	mi := &file_eventtypes_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1116,7 +1772,7 @@ func (x *ValidationResult) String() string {
 func (*ValidationResult) ProtoMessage() {}
 
 func (x *ValidationResult) ProtoReflect() protoreflect.Message {
-	mi := &file_eventtypes_proto_msgTypes[14]
+	mi := &file_eventtypes_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1129,7 +1785,7 @@ func (x *ValidationResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidationResult.ProtoReflect.Descriptor instead.
 func (*ValidationResult) Descriptor() ([]byte, []int) {
-	return file_eventtypes_proto_rawDescGZIP(), []int{14}
+	return file_eventtypes_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ValidationResult) GetSeverity() ValidationResultSeverity {
@@ -1166,14 +1822,37 @@ const file_eventtypes_proto_rawDesc = "" +
 	"\x14AllEventTypesRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
-	"EventStore\"\xeb\x02\n" +
+	"EventStore\"\x98\x01\n" +
+	"\"CheckEventTypeRegistrationsRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12R\n" +
+	"\x05Types\x18\x02 \x03(\v2<.Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistrationR\x05Types\"|\n" +
+	"#CheckEventTypeRegistrationsResponse\x12U\n" +
+	"\aResults\x18\x01 \x03(\v2;.Cratis.Chronicle.Contracts.EventTypes.EventTypeCheckResultR\aResults\"\xeb\x02\n" +
 	"\rCommandResult\x12/\n" +
 	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
 	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12e\n" +
 	"\x11ValidationResults\x18\x03 \x03(\v27.Cratis.Chronicle.Contracts.EventTypes.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
-	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"L\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\"\xf7\x03\n" +
+	"1CommandResult_CheckEventTypeRegistrationsResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12e\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v27.Cratis.Chronicle.Contracts.EventTypes.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\x12f\n" +
+	"\bResponse\x18\a \x01(\v2J.Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsResponseR\bResponse\"\xf3\x03\n" +
+	"/CommandResult_NormalizeEventTypeSchemasResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12e\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v27.Cratis.Chronicle.Contracts.EventTypes.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12>\n" +
+	"\x1aAuthorizationFailureReason\x18\x06 \x01(\tR\x1aAuthorizationFailureReason\x12d\n" +
+	"\bResponse\x18\a \x01(\v2H.Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasResponseR\bResponse\"L\n" +
 	"\x16CreateEventTypeRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1184,7 +1863,17 @@ const file_eventtypes_proto_rawDesc = "" +
 	"\n" +
 	"Generation\x18\x02 \x01(\rR\n" +
 	"Generation\x12\x1c\n" +
-	"\tTombstone\x18\x03 \x01(\bR\tTombstone\"\xa5\x02\n" +
+	"\tTombstone\x18\x03 \x01(\bR\tTombstone\"\xde\x01\n" +
+	"\x14EventTypeCheckResult\x12\x1c\n" +
+	"\tEventType\x18\x01 \x01(\tR\tEventType\x12\x1e\n" +
+	"\n" +
+	"Generation\x18\x02 \x01(\rR\n" +
+	"Generation\x12\x1a\n" +
+	"\bAccepted\x18\x03 \x01(\bR\bAccepted\x12\x16\n" +
+	"\x06Reason\x18\x04 \x01(\tR\x06Reason\x12\x18\n" +
+	"\aKeyword\x18\x05 \x01(\tR\aKeyword\x12\x12\n" +
+	"\x04Path\x18\x06 \x01(\tR\x04Path\x12&\n" +
+	"\x0eClassification\x18\a \x01(\tR\x0eClassification\"\xa5\x02\n" +
 	"\x18EventTypeDetailsResponse\x12D\n" +
 	"\x04Type\x18\x01 \x01(\v20.Cratis.Chronicle.Contracts.EventTypes.EventTypeR\x04Type\x12K\n" +
 	"\x05Owner\x18\x02 \x01(\x0e25.Cratis.Chronicle.Contracts.EventTypes.EventTypeOwnerR\x05Owner\x12N\n" +
@@ -1219,7 +1908,24 @@ const file_eventtypes_proto_rawDesc = "" +
 	"EventStore\x12Z\n" +
 	"\n" +
 	"Visibility\x18\x06 \x01(\x0e2:.Cratis.Chronicle.Contracts.EventTypes.EventTypeVisibilityR\n" +
-	"Visibility\":\n" +
+	"Visibility\"\x81\x01\n" +
+	"!EventTypesWithAnnotationsResponse\x12 \n" +
+	"\vEventTypeId\x18\x01 \x01(\tR\vEventTypeId\x12\x1e\n" +
+	"\n" +
+	"Generation\x18\x02 \x01(\rR\n" +
+	"Generation\x12\x1a\n" +
+	"\bKeywords\x18\x03 \x03(\tR\bKeywords\"E\n" +
+	"#GetEventTypesWithAnnotationsRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\"f\n" +
+	" NormalizeEventTypeSchemasRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\"\n" +
+	"\fEventTypeIds\x18\x02 \x03(\tR\fEventTypeIds\"\x87\x01\n" +
+	"!NormalizeEventTypeSchemasResponse\x12b\n" +
+	"\aChanged\x18\x01 \x03(\v2H.Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponseR\aChanged\":\n" +
 	"\x18ObserveEventTypesRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1230,7 +1936,14 @@ const file_eventtypes_proto_rawDesc = "" +
 	"\x11ValidationResults\x18\x03 \x03(\v27.Cratis.Chronicle.Contracts.EventTypes.ValidationResultR\x11ValidationResults\x12,\n" +
 	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
 	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12S\n" +
-	"\x04Data\x18\x06 \x03(\v2?.Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponseR\x04Data\"\xbd\x01\n" +
+	"\x04Data\x18\x06 \x03(\v2?.Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponseR\x04Data\"\xb5\x03\n" +
+	"9QueryResult_IEnumerable_EventTypesWithAnnotationsResponse\x12/\n" +
+	"\rCorrelationId\x18\x01 \x01(\v2\t.bcl.GuidR\rCorrelationId\x12\"\n" +
+	"\fIsAuthorized\x18\x02 \x01(\bR\fIsAuthorized\x12e\n" +
+	"\x11ValidationResults\x18\x03 \x03(\v27.Cratis.Chronicle.Contracts.EventTypes.ValidationResultR\x11ValidationResults\x12,\n" +
+	"\x11ExceptionMessages\x18\x04 \x03(\tR\x11ExceptionMessages\x120\n" +
+	"\x13ExceptionStackTrace\x18\x05 \x01(\tR\x13ExceptionStackTrace\x12\\\n" +
+	"\x04Data\x18\x06 \x03(\v2H.Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponseR\x04Data\"\xbd\x01\n" +
 	"\x19RegisterEventTypesRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1265,12 +1978,15 @@ const file_eventtypes_proto_rawDesc = "" +
 	"\"VALIDATION_RESULT_SEVERITY_Unknown\x10\x00\x12\x0f\n" +
 	"\vInformation\x10\x01\x12\v\n" +
 	"\aWarning\x10\x02\x12\t\n" +
-	"\x05Error\x10\x032\xd3\a\n" +
+	"\x05Error\x10\x032\xa6\f\n" +
 	"\n" +
 	"EventTypes\x12\xb9\x01\n" +
 	"\x17AllEventTypeGenerations\x12E.Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest\x1aW.Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse\x12\xa5\x01\n" +
-	"\rAllEventTypes\x12;.Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest\x1aW.Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse\x12\x86\x01\n" +
-	"\x0fCreateEventType\x12=.Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest\x1a4.Cratis.Chronicle.Contracts.EventTypes.CommandResult\x12\xaf\x01\n" +
+	"\rAllEventTypes\x12;.Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest\x1aW.Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse\x12\xc2\x01\n" +
+	"\x1bCheckEventTypeRegistrations\x12I.Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsRequest\x1aX.Cratis.Chronicle.Contracts.EventTypes.CommandResult_CheckEventTypeRegistrationsResponse\x12\x86\x01\n" +
+	"\x0fCreateEventType\x12=.Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest\x1a4.Cratis.Chronicle.Contracts.EventTypes.CommandResult\x12\xcc\x01\n" +
+	"\x1cGetEventTypesWithAnnotations\x12J.Cratis.Chronicle.Contracts.EventTypes.GetEventTypesWithAnnotationsRequest\x1a`.Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypesWithAnnotationsResponse\x12\xbc\x01\n" +
+	"\x19NormalizeEventTypeSchemas\x12G.Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasRequest\x1aV.Cratis.Chronicle.Contracts.EventTypes.CommandResult_NormalizeEventTypeSchemasResponse\x12\xaf\x01\n" +
 	"\x11ObserveEventTypes\x12?.Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest\x1aW.Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse0\x01\x12\x8c\x01\n" +
 	"\x12RegisterEventTypes\x12@.Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest\x1a4.Cratis.Chronicle.Contracts.EventTypes.CommandResult\x12\x96\x01\n" +
 	"\x17RegisterSingleEventType\x12E.Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest\x1a4.Cratis.Chronicle.Contracts.EventTypes.CommandResultB\xa9\x02\n" +
@@ -1289,63 +2005,91 @@ func file_eventtypes_proto_rawDescGZIP() []byte {
 }
 
 var file_eventtypes_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_eventtypes_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_eventtypes_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_eventtypes_proto_goTypes = []any{
-	(EventTypeOwner)(0),                                      // 0: Cratis.Chronicle.Contracts.EventTypes.EventTypeOwner
-	(EventTypeSource)(0),                                     // 1: Cratis.Chronicle.Contracts.EventTypes.EventTypeSource
-	(EventTypeVisibility)(0),                                 // 2: Cratis.Chronicle.Contracts.EventTypes.EventTypeVisibility
-	(ValidationResultSeverity)(0),                            // 3: Cratis.Chronicle.Contracts.EventTypes.ValidationResultSeverity
-	(*AllEventTypeGenerationsRequest)(nil),                   // 4: Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest
-	(*AllEventTypesRequest)(nil),                             // 5: Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest
-	(*CommandResult)(nil),                                    // 6: Cratis.Chronicle.Contracts.EventTypes.CommandResult
-	(*CreateEventTypeRequest)(nil),                           // 7: Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest
-	(*EventType)(nil),                                        // 8: Cratis.Chronicle.Contracts.EventTypes.EventType
-	(*EventTypeDetailsResponse)(nil),                         // 9: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse
-	(*EventTypeGenerationDefinition)(nil),                    // 10: Cratis.Chronicle.Contracts.EventTypes.EventTypeGenerationDefinition
-	(*EventTypeMigrationDefinition)(nil),                     // 11: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition
-	(*EventTypeMigrationOperation)(nil),                      // 12: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationOperation
-	(*EventTypeRegistration)(nil),                            // 13: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
-	(*ObserveEventTypesRequest)(nil),                         // 14: Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest
-	(*QueryResult_IEnumerable_EventTypeDetailsResponse)(nil), // 15: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
-	(*RegisterEventTypesRequest)(nil),                        // 16: Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest
-	(*RegisterSingleEventTypeRequest)(nil),                   // 17: Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest
-	(*ValidationResult)(nil),                                 // 18: Cratis.Chronicle.Contracts.EventTypes.ValidationResult
-	(*bcl.Guid)(nil),                                         // 19: bcl.Guid
+	(EventTypeOwner)(0),                                               // 0: Cratis.Chronicle.Contracts.EventTypes.EventTypeOwner
+	(EventTypeSource)(0),                                              // 1: Cratis.Chronicle.Contracts.EventTypes.EventTypeSource
+	(EventTypeVisibility)(0),                                          // 2: Cratis.Chronicle.Contracts.EventTypes.EventTypeVisibility
+	(ValidationResultSeverity)(0),                                     // 3: Cratis.Chronicle.Contracts.EventTypes.ValidationResultSeverity
+	(*AllEventTypeGenerationsRequest)(nil),                            // 4: Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest
+	(*AllEventTypesRequest)(nil),                                      // 5: Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest
+	(*CheckEventTypeRegistrationsRequest)(nil),                        // 6: Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsRequest
+	(*CheckEventTypeRegistrationsResponse)(nil),                       // 7: Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsResponse
+	(*CommandResult)(nil),                                             // 8: Cratis.Chronicle.Contracts.EventTypes.CommandResult
+	(*CommandResult_CheckEventTypeRegistrationsResponse)(nil),         // 9: Cratis.Chronicle.Contracts.EventTypes.CommandResult_CheckEventTypeRegistrationsResponse
+	(*CommandResult_NormalizeEventTypeSchemasResponse)(nil),           // 10: Cratis.Chronicle.Contracts.EventTypes.CommandResult_NormalizeEventTypeSchemasResponse
+	(*CreateEventTypeRequest)(nil),                                    // 11: Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest
+	(*EventType)(nil),                                                 // 12: Cratis.Chronicle.Contracts.EventTypes.EventType
+	(*EventTypeCheckResult)(nil),                                      // 13: Cratis.Chronicle.Contracts.EventTypes.EventTypeCheckResult
+	(*EventTypeDetailsResponse)(nil),                                  // 14: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse
+	(*EventTypeGenerationDefinition)(nil),                             // 15: Cratis.Chronicle.Contracts.EventTypes.EventTypeGenerationDefinition
+	(*EventTypeMigrationDefinition)(nil),                              // 16: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition
+	(*EventTypeMigrationOperation)(nil),                               // 17: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationOperation
+	(*EventTypeRegistration)(nil),                                     // 18: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
+	(*EventTypesWithAnnotationsResponse)(nil),                         // 19: Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponse
+	(*GetEventTypesWithAnnotationsRequest)(nil),                       // 20: Cratis.Chronicle.Contracts.EventTypes.GetEventTypesWithAnnotationsRequest
+	(*NormalizeEventTypeSchemasRequest)(nil),                          // 21: Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasRequest
+	(*NormalizeEventTypeSchemasResponse)(nil),                         // 22: Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasResponse
+	(*ObserveEventTypesRequest)(nil),                                  // 23: Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest
+	(*QueryResult_IEnumerable_EventTypeDetailsResponse)(nil),          // 24: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
+	(*QueryResult_IEnumerable_EventTypesWithAnnotationsResponse)(nil), // 25: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypesWithAnnotationsResponse
+	(*RegisterEventTypesRequest)(nil),                                 // 26: Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest
+	(*RegisterSingleEventTypeRequest)(nil),                            // 27: Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest
+	(*ValidationResult)(nil),                                          // 28: Cratis.Chronicle.Contracts.EventTypes.ValidationResult
+	(*bcl.Guid)(nil),                                                  // 29: bcl.Guid
 }
 var file_eventtypes_proto_depIdxs = []int32{
-	19, // 0: Cratis.Chronicle.Contracts.EventTypes.CommandResult.CorrelationId:type_name -> bcl.Guid
-	18, // 1: Cratis.Chronicle.Contracts.EventTypes.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
-	8,  // 2: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventType
-	0,  // 3: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Owner:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeOwner
-	1,  // 4: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Source:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeSource
-	12, // 5: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition.Operations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationOperation
-	8,  // 6: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventType
-	10, // 7: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Generations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeGenerationDefinition
-	11, // 8: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Migrations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition
-	2,  // 9: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Visibility:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeVisibility
-	19, // 10: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.CorrelationId:type_name -> bcl.Guid
-	18, // 11: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
-	9,  // 12: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse
-	13, // 13: Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest.Types:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
-	13, // 14: Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
-	3,  // 15: Cratis.Chronicle.Contracts.EventTypes.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResultSeverity
-	4,  // 16: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypeGenerations:input_type -> Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest
-	5,  // 17: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest
-	7,  // 18: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CreateEventType:input_type -> Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest
-	14, // 19: Cratis.Chronicle.Contracts.EventTypes.EventTypes.ObserveEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest
-	16, // 20: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest
-	17, // 21: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterSingleEventType:input_type -> Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest
-	15, // 22: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypeGenerations:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
-	15, // 23: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
-	6,  // 24: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CreateEventType:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
-	15, // 25: Cratis.Chronicle.Contracts.EventTypes.EventTypes.ObserveEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
-	6,  // 26: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
-	6,  // 27: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterSingleEventType:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
-	22, // [22:28] is the sub-list for method output_type
-	16, // [16:22] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	18, // 0: Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsRequest.Types:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
+	13, // 1: Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsResponse.Results:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeCheckResult
+	29, // 2: Cratis.Chronicle.Contracts.EventTypes.CommandResult.CorrelationId:type_name -> bcl.Guid
+	28, // 3: Cratis.Chronicle.Contracts.EventTypes.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
+	29, // 4: Cratis.Chronicle.Contracts.EventTypes.CommandResult_CheckEventTypeRegistrationsResponse.CorrelationId:type_name -> bcl.Guid
+	28, // 5: Cratis.Chronicle.Contracts.EventTypes.CommandResult_CheckEventTypeRegistrationsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
+	7,  // 6: Cratis.Chronicle.Contracts.EventTypes.CommandResult_CheckEventTypeRegistrationsResponse.Response:type_name -> Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsResponse
+	29, // 7: Cratis.Chronicle.Contracts.EventTypes.CommandResult_NormalizeEventTypeSchemasResponse.CorrelationId:type_name -> bcl.Guid
+	28, // 8: Cratis.Chronicle.Contracts.EventTypes.CommandResult_NormalizeEventTypeSchemasResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
+	22, // 9: Cratis.Chronicle.Contracts.EventTypes.CommandResult_NormalizeEventTypeSchemasResponse.Response:type_name -> Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasResponse
+	12, // 10: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventType
+	0,  // 11: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Owner:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeOwner
+	1,  // 12: Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse.Source:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeSource
+	17, // 13: Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition.Operations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationOperation
+	12, // 14: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventType
+	15, // 15: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Generations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeGenerationDefinition
+	16, // 16: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Migrations:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeMigrationDefinition
+	2,  // 17: Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration.Visibility:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeVisibility
+	19, // 18: Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasResponse.Changed:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponse
+	29, // 19: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.CorrelationId:type_name -> bcl.Guid
+	28, // 20: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
+	14, // 21: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse.Data:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse
+	29, // 22: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypesWithAnnotationsResponse.CorrelationId:type_name -> bcl.Guid
+	28, // 23: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypesWithAnnotationsResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResult
+	19, // 24: Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypesWithAnnotationsResponse.Data:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponse
+	18, // 25: Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest.Types:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
+	18, // 26: Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest.Type:type_name -> Cratis.Chronicle.Contracts.EventTypes.EventTypeRegistration
+	3,  // 27: Cratis.Chronicle.Contracts.EventTypes.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.EventTypes.ValidationResultSeverity
+	4,  // 28: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypeGenerations:input_type -> Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest
+	5,  // 29: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.AllEventTypesRequest
+	6,  // 30: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CheckEventTypeRegistrations:input_type -> Cratis.Chronicle.Contracts.EventTypes.CheckEventTypeRegistrationsRequest
+	11, // 31: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CreateEventType:input_type -> Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest
+	20, // 32: Cratis.Chronicle.Contracts.EventTypes.EventTypes.GetEventTypesWithAnnotations:input_type -> Cratis.Chronicle.Contracts.EventTypes.GetEventTypesWithAnnotationsRequest
+	21, // 33: Cratis.Chronicle.Contracts.EventTypes.EventTypes.NormalizeEventTypeSchemas:input_type -> Cratis.Chronicle.Contracts.EventTypes.NormalizeEventTypeSchemasRequest
+	23, // 34: Cratis.Chronicle.Contracts.EventTypes.EventTypes.ObserveEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest
+	26, // 35: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterEventTypes:input_type -> Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest
+	27, // 36: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterSingleEventType:input_type -> Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest
+	24, // 37: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypeGenerations:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
+	24, // 38: Cratis.Chronicle.Contracts.EventTypes.EventTypes.AllEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
+	9,  // 39: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CheckEventTypeRegistrations:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult_CheckEventTypeRegistrationsResponse
+	8,  // 40: Cratis.Chronicle.Contracts.EventTypes.EventTypes.CreateEventType:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
+	25, // 41: Cratis.Chronicle.Contracts.EventTypes.EventTypes.GetEventTypesWithAnnotations:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypesWithAnnotationsResponse
+	10, // 42: Cratis.Chronicle.Contracts.EventTypes.EventTypes.NormalizeEventTypeSchemas:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult_NormalizeEventTypeSchemasResponse
+	24, // 43: Cratis.Chronicle.Contracts.EventTypes.EventTypes.ObserveEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.QueryResult_IEnumerable_EventTypeDetailsResponse
+	8,  // 44: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterEventTypes:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
+	8,  // 45: Cratis.Chronicle.Contracts.EventTypes.EventTypes.RegisterSingleEventType:output_type -> Cratis.Chronicle.Contracts.EventTypes.CommandResult
+	37, // [37:46] is the sub-list for method output_type
+	28, // [28:37] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_eventtypes_proto_init() }
@@ -1359,7 +2103,7 @@ func file_eventtypes_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_eventtypes_proto_rawDesc), len(file_eventtypes_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   15,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -7,9 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/cratis/chronicle.go/contracts/clients"
 	"github.com/cratis/chronicle.go/internal/connection"
+	"github.com/cratis/chronicle.go/internal/diagnostics"
 )
 
 func (c *Client) runGeneration(g *generation) error {
@@ -69,6 +71,7 @@ func (g *generation) loseSession(kernel error) {
 
 func (c *Client) receiveKeepAlive(g *generation, heartbeat chan<- struct{}) error {
 	service := clients.NewConnectionServiceClient(g.transport)
+	status := clients.KernelStatus_Accepting
 	for {
 		message, err := g.stream.Recv()
 		if err != nil {
@@ -76,6 +79,10 @@ func (c *Client) receiveKeepAlive(g *generation, heartbeat chan<- struct{}) erro
 		}
 		if message == nil || message.ConnectionId != g.id {
 			return ErrProtocol
+		}
+		if message.Status != status {
+			status = message.Status
+			c.reportKernelStatus(g, status)
 		}
 		select {
 		case heartbeat <- struct{}{}:
@@ -88,4 +95,15 @@ func (c *Client) receiveKeepAlive(g *generation, heartbeat chan<- struct{}) erro
 			return err
 		}
 	}
+}
+
+// reportKernelStatus logs a change of the kernel status the keep-alive carries.
+// Values this client does not know are reported by number and never fail the
+// connection: a busy or recovering kernel is still reachable.
+func (c *Client) reportKernelStatus(g *generation, status clients.KernelStatus) {
+	if status == clients.KernelStatus_Accepting {
+		diagnostics.Log(g.ctx, c.config.logger, slog.LevelInfo, "kernel is accepting requests again", "client", "keep-alive", nil)
+		return
+	}
+	diagnostics.Log(g.ctx, c.config.logger, slog.LevelWarn, "kernel is busy or recovering: "+status.String(), "client", "keep-alive", nil)
 }

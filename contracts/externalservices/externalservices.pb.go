@@ -823,6 +823,7 @@ type ExternalServiceResponse struct {
 	Database          string                      `protobuf:"bytes,9,opt,name=Database,proto3" json:"Database,omitempty"`
 	Username          string                      `protobuf:"bytes,10,opt,name=Username,proto3" json:"Username,omitempty"`
 	Options           map[string]string           `protobuf:"bytes,11,rep,name=Options,proto3" json:"Options,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	HeaderValuesSet   map[string]bool             `protobuf:"bytes,12,rep,name=HeaderValuesSet,proto3" json:"HeaderValuesSet,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -930,6 +931,13 @@ func (x *ExternalServiceResponse) GetUsername() string {
 func (x *ExternalServiceResponse) GetOptions() map[string]string {
 	if x != nil {
 		return x.Options
+	}
+	return nil
+}
+
+func (x *ExternalServiceResponse) GetHeaderValuesSet() map[string]bool {
+	if x != nil {
+		return x.HeaderValuesSet
 	}
 	return nil
 }
@@ -1529,7 +1537,7 @@ const file_externalservices_proto_rawDesc = "" +
 	"\x17ExternalServiceEndpoint\x12\\\n" +
 	"\x04Type\x18\x01 \x01(\x0e2H.Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceEndpointTypeR\x04Type\x12Z\n" +
 	"\x04Http\x18\x02 \x01(\v2F.Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfigurationR\x04Http\x12f\n" +
-	"\bDatabase\x18\x03 \x01(\v2J.Cratis.Chronicle.Contracts.ExternalServices.DatabaseEndpointConfigurationR\bDatabase\"\xdd\x05\n" +
+	"\bDatabase\x18\x03 \x01(\v2J.Cratis.Chronicle.Contracts.ExternalServices.DatabaseEndpointConfigurationR\bDatabase\"\xa7\a\n" +
 	"\x17ExternalServiceResponse\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\tR\x02Id\x12\x12\n" +
 	"\x04Name\x18\x02 \x01(\tR\x04Name\x12l\n" +
@@ -1542,13 +1550,17 @@ const file_externalservices_proto_rawDesc = "" +
 	"\bDatabase\x18\t \x01(\tR\bDatabase\x12\x1a\n" +
 	"\bUsername\x18\n" +
 	" \x01(\tR\bUsername\x12k\n" +
-	"\aOptions\x18\v \x03(\v2Q.Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.OptionsEntryR\aOptions\x1a:\n" +
+	"\aOptions\x18\v \x03(\v2Q.Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.OptionsEntryR\aOptions\x12\x83\x01\n" +
+	"\x0fHeaderValuesSet\x18\f \x03(\v2Y.Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.HeaderValuesSetEntryR\x0fHeaderValuesSet\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a:\n" +
 	"\fOptionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"<\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aB\n" +
+	"\x14HeaderValuesSetEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"<\n" +
 	"\x1aGetExternalServicesRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
@@ -1633,7 +1645,7 @@ func file_externalservices_proto_rawDescGZIP() []byte {
 }
 
 var file_externalservices_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_externalservices_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_externalservices_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_externalservices_proto_goTypes = []any{
 	(AuthorizationType)(0),                 // 0: Cratis.Chronicle.Contracts.ExternalServices.AuthorizationType
 	(ExternalServiceEndpointType)(0),       // 1: Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceEndpointType
@@ -1661,8 +1673,9 @@ var file_externalservices_proto_goTypes = []any{
 	nil,                                                                          // 23: Cratis.Chronicle.Contracts.ExternalServices.DatabaseEndpointConfiguration.OptionsEntry
 	nil,                                                                          // 24: Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.HeadersEntry
 	nil,                                                                          // 25: Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.OptionsEntry
-	nil,                                                                          // 26: Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfiguration.HeadersEntry
-	(*bcl.Guid)(nil),                                                             // 27: bcl.Guid
+	nil,                                                                          // 26: Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.HeaderValuesSetEntry
+	nil,                                                                          // 27: Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfiguration.HeadersEntry
+	(*bcl.Guid)(nil),                                                             // 28: bcl.Guid
 }
 var file_externalservices_proto_depIdxs = []int32{
 	1,  // 0: Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest.EndpointType:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceEndpointType
@@ -1670,7 +1683,7 @@ var file_externalservices_proto_depIdxs = []int32{
 	21, // 2: Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest.Headers:type_name -> Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest.HeadersEntry
 	22, // 3: Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest.Options:type_name -> Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest.OptionsEntry
 	9,  // 4: Cratis.Chronicle.Contracts.ExternalServices.AddExternalServicesRequest.ExternalServices:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceDefinition
-	27, // 5: Cratis.Chronicle.Contracts.ExternalServices.CommandResult.CorrelationId:type_name -> bcl.Guid
+	28, // 5: Cratis.Chronicle.Contracts.ExternalServices.CommandResult.CorrelationId:type_name -> bcl.Guid
 	20, // 6: Cratis.Chronicle.Contracts.ExternalServices.CommandResult.ValidationResults:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ValidationResult
 	23, // 7: Cratis.Chronicle.Contracts.ExternalServices.DatabaseEndpointConfiguration.Options:type_name -> Cratis.Chronicle.Contracts.ExternalServices.DatabaseEndpointConfiguration.OptionsEntry
 	10, // 8: Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceDefinition.Endpoint:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceEndpoint
@@ -1681,32 +1694,33 @@ var file_externalservices_proto_depIdxs = []int32{
 	0,  // 13: Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.AuthorizationType:type_name -> Cratis.Chronicle.Contracts.ExternalServices.AuthorizationType
 	24, // 14: Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.Headers:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.HeadersEntry
 	25, // 15: Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.Options:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.OptionsEntry
-	16, // 16: Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfiguration.Authorization:type_name -> Cratis.Chronicle.Contracts.ExternalServices.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
-	26, // 17: Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfiguration.Headers:type_name -> Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfiguration.HeadersEntry
-	5,  // 18: Cratis.Chronicle.Contracts.ExternalServices.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value0:type_name -> Cratis.Chronicle.Contracts.ExternalServices.BasicAuthorization
-	6,  // 19: Cratis.Chronicle.Contracts.ExternalServices.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value1:type_name -> Cratis.Chronicle.Contracts.ExternalServices.BearerTokenAuthorization
-	14, // 20: Cratis.Chronicle.Contracts.ExternalServices.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value2:type_name -> Cratis.Chronicle.Contracts.ExternalServices.OAuthAuthorization
-	27, // 21: Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse.CorrelationId:type_name -> bcl.Guid
-	20, // 22: Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ValidationResult
-	11, // 23: Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse.Data:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse
-	2,  // 24: Cratis.Chronicle.Contracts.ExternalServices.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ValidationResultSeverity
-	3,  // 25: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.AddExternalService:input_type -> Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest
-	4,  // 26: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.AddExternalServices:input_type -> Cratis.Chronicle.Contracts.ExternalServices.AddExternalServicesRequest
-	12, // 27: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.GetExternalServices:input_type -> Cratis.Chronicle.Contracts.ExternalServices.GetExternalServicesRequest
-	15, // 28: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.ObserveExternalServices:input_type -> Cratis.Chronicle.Contracts.ExternalServices.ObserveExternalServicesRequest
-	18, // 29: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.RemoveExternalService:input_type -> Cratis.Chronicle.Contracts.ExternalServices.RemoveExternalServiceRequest
-	19, // 30: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.RemoveExternalServices:input_type -> Cratis.Chronicle.Contracts.ExternalServices.RemoveExternalServicesRequest
-	7,  // 31: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.AddExternalService:output_type -> Cratis.Chronicle.Contracts.ExternalServices.CommandResult
-	7,  // 32: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.AddExternalServices:output_type -> Cratis.Chronicle.Contracts.ExternalServices.CommandResult
-	17, // 33: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.GetExternalServices:output_type -> Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse
-	17, // 34: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.ObserveExternalServices:output_type -> Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse
-	7,  // 35: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.RemoveExternalService:output_type -> Cratis.Chronicle.Contracts.ExternalServices.CommandResult
-	7,  // 36: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.RemoveExternalServices:output_type -> Cratis.Chronicle.Contracts.ExternalServices.CommandResult
-	31, // [31:37] is the sub-list for method output_type
-	25, // [25:31] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	26, // 16: Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.HeaderValuesSet:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse.HeaderValuesSetEntry
+	16, // 17: Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfiguration.Authorization:type_name -> Cratis.Chronicle.Contracts.ExternalServices.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization
+	27, // 18: Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfiguration.Headers:type_name -> Cratis.Chronicle.Contracts.ExternalServices.HttpEndpointConfiguration.HeadersEntry
+	5,  // 19: Cratis.Chronicle.Contracts.ExternalServices.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value0:type_name -> Cratis.Chronicle.Contracts.ExternalServices.BasicAuthorization
+	6,  // 20: Cratis.Chronicle.Contracts.ExternalServices.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value1:type_name -> Cratis.Chronicle.Contracts.ExternalServices.BearerTokenAuthorization
+	14, // 21: Cratis.Chronicle.Contracts.ExternalServices.OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization.Value2:type_name -> Cratis.Chronicle.Contracts.ExternalServices.OAuthAuthorization
+	28, // 22: Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse.CorrelationId:type_name -> bcl.Guid
+	20, // 23: Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse.ValidationResults:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ValidationResult
+	11, // 24: Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse.Data:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse
+	2,  // 25: Cratis.Chronicle.Contracts.ExternalServices.ValidationResult.Severity:type_name -> Cratis.Chronicle.Contracts.ExternalServices.ValidationResultSeverity
+	3,  // 26: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.AddExternalService:input_type -> Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest
+	4,  // 27: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.AddExternalServices:input_type -> Cratis.Chronicle.Contracts.ExternalServices.AddExternalServicesRequest
+	12, // 28: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.GetExternalServices:input_type -> Cratis.Chronicle.Contracts.ExternalServices.GetExternalServicesRequest
+	15, // 29: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.ObserveExternalServices:input_type -> Cratis.Chronicle.Contracts.ExternalServices.ObserveExternalServicesRequest
+	18, // 30: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.RemoveExternalService:input_type -> Cratis.Chronicle.Contracts.ExternalServices.RemoveExternalServiceRequest
+	19, // 31: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.RemoveExternalServices:input_type -> Cratis.Chronicle.Contracts.ExternalServices.RemoveExternalServicesRequest
+	7,  // 32: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.AddExternalService:output_type -> Cratis.Chronicle.Contracts.ExternalServices.CommandResult
+	7,  // 33: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.AddExternalServices:output_type -> Cratis.Chronicle.Contracts.ExternalServices.CommandResult
+	17, // 34: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.GetExternalServices:output_type -> Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse
+	17, // 35: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.ObserveExternalServices:output_type -> Cratis.Chronicle.Contracts.ExternalServices.QueryResult_IEnumerable_ExternalServiceResponse
+	7,  // 36: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.RemoveExternalService:output_type -> Cratis.Chronicle.Contracts.ExternalServices.CommandResult
+	7,  // 37: Cratis.Chronicle.Contracts.ExternalServices.ExternalServices.RemoveExternalServices:output_type -> Cratis.Chronicle.Contracts.ExternalServices.CommandResult
+	32, // [32:38] is the sub-list for method output_type
+	26, // [26:32] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_externalservices_proto_init() }
@@ -1720,7 +1734,7 @@ func file_externalservices_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_externalservices_proto_rawDesc), len(file_externalservices_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   24,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

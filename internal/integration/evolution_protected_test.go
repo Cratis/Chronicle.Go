@@ -7,15 +7,12 @@ package integration_test
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"testing"
 	"time"
 
 	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/events"
 	"github.com/cratis/chronicle.go/eventsequences"
-	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/google/uuid"
 )
@@ -38,27 +35,15 @@ type ProtectedPersonModel struct {
 	LastName  string `chronicle:"pii;set(ProtectedPerson)"`
 }
 
-type HistoricalProtectedPersonReactor struct{}
-
-func (*HistoricalProtectedPersonReactor) Observe(ProtectedPersonV1) {
-	panic("historical protected handler must not run")
-}
-
-// Characterizes kernel 19.32.3. Chronicle#4456 (fixed in 19.32.2) makes
-// migrations transform plaintext and protect every generation for the original
-// subject: the event's current representation and projections built from it
-// release correctly, before and after erasure. The kernel still releases only
-// the current representation, though: other generations in GenerationalContent
-// reach clients as ciphertext (Chronicle#4623,
-// https://github.com/Cratis/Chronicle/issues/4623). The SDK now refuses protected
-// alternate-generation decoding and historical protected observers (Chronicle.Go#90).
-// Remove the guard per Chronicle.Go#96 once the kernel releases other generations;
-// this test checks the raw kernel content independently of the SDK refusal.
+// Characterizes the kernel since Chronicle#4623: migrations transform plaintext
+// and protect every generation for the original subject, and the kernel releases
+// protected values in every generation of GenerationalContent, so the SDK decodes
+// alternate generations and admits historical protected observers. Released
+// values stay released after erasure of the subject's PII.
 func TestKernelProtectedEventGenerationMigrationProfile(t *testing.T) {
 	f := newKernelFixture(t)
 	subject := uuid.NewString()
 	appendHistoricalProtectedPerson(t, f, subject)
-	assertHistoricalProtectedPersonReactorRefused(t)
 	registry, model := protectedPersonRegistry(t)
 	client := f.client(registry, chronicle.WithEventTypeGenerationValidation(true))
 	store, err := client.EventStore(f.ctx, f.storeName)
@@ -74,7 +59,7 @@ func TestKernelProtectedEventGenerationMigrationProfile(t *testing.T) {
 	assertProtectedPersonCurrent(t, catalog, readSource("new"))
 	reader := readmodels.For(store.ReadModels(), model)
 	assertProtectedPersonReplay(t, f.ctx, reader, subject)
-	assertProtectedPersonOtherGenerations(t, catalog, readSource)
+	assertProtectedPersonOtherGenerations(t, catalog, readSource, subject)
 	if err := store.Compliance().ErasePII(f.ctx, subject); err != nil {
 		t.Fatal(err)
 	}
@@ -121,25 +106,6 @@ func protectedPersonRegistry(t *testing.T) (*chronicle.Registry, readmodels.Mode
 		t.Fatal(err)
 	}
 	return registry, model
-}
-
-func assertHistoricalProtectedPersonReactorRefused(t *testing.T) {
-	t.Helper()
-	// Use a separate registry: the real kernel client must have no historical reactor.
-	registry, _ := protectedPersonRegistry(t)
-	err := chronicle.RegisterReactor[*HistoricalProtectedPersonReactor](registry, func() *HistoricalProtectedPersonReactor { return &HistoricalProtectedPersonReactor{} }, reactors.WithID("protected-person-v1"))
-	if err == nil {
-		client, clientErr := chronicle.NewClient(chronicle.WithDevelopmentDefaults(), chronicle.WithRegistry(registry), chronicle.WithEventTypeGenerationValidation(true))
-		if client != nil {
-			if closeErr := client.Close(); closeErr != nil {
-				t.Error(closeErr)
-			}
-		}
-		err = clientErr
-	}
-	if !errors.Is(err, chronicle.ErrUnsupported) {
-		t.Fatalf("historical protected reactor: %v, want ErrUnsupported", err)
-	}
 }
 
 func readProtectedPersonSource(t *testing.T, ctx context.Context, store *chronicle.EventStore, source events.SourceID) events.Appended {
@@ -196,51 +162,20 @@ func assertProtectedPersonReplay(t *testing.T, ctx context.Context, reader *read
 	}
 }
 
-func assertProtectedPersonOtherGenerations(t *testing.T, catalog *events.Catalog, readSource func(events.SourceID) events.Appended) {
+func assertProtectedPersonOtherGenerations(t *testing.T, catalog *events.Catalog, readSource func(events.SourceID) events.Appended, subject string) {
 	t.Helper()
-	for _, source := range []events.SourceID{"old", "new"} {
+	for source, want := range map[events.SourceID]ProtectedPersonV1{
+		"old": {Owner: subject, Name: "Ada Lovelace", Secret: "migrated-secret"},
+		"new": {Owner: subject, Name: "Grace Hopper", Secret: "current-secret"},
+	} {
 		appended := readSource(source)
-		assertProtectedPersonAlternateContent(t, source, appended)
-		if _, err := events.Decode[ProtectedPersonV1](catalog, appended); !errors.Is(err, chronicle.ErrUnsupported) {
-			t.Fatalf("protected alternate-generation decode for %s: %v, want ErrUnsupported", source, err)
-		}
-	}
-}
-
-func assertProtectedPersonAlternateContent(t *testing.T, source events.SourceID, appended events.Appended) {
-	t.Helper()
-	if len(appended.GenerationalContent) == 0 {
-		t.Fatalf("kernel witness has no alternate generational content for %s", source)
-	}
-	if source == "new" {
 		if _, ok := appended.GenerationalContent[1]; !ok {
-			t.Fatal("kernel witness is missing generation 1 alternate content for new")
+			t.Fatalf("kernel witness is missing generation 1 alternate content for %s", source)
 		}
-	}
-	// The historical event may expose a different alternate generation. Inspect
-	// every supplied representation, not an SDK-decoded or invented fallback.
-	for generation, content := range appended.GenerationalContent {
-		assertProtectedPersonGenerationCiphertext(t, source, generation, content)
-	}
-}
-
-func assertProtectedPersonGenerationCiphertext(t *testing.T, source events.SourceID, generation events.Generation, content json.RawMessage) {
-	t.Helper()
-	var fields []string
-	switch generation {
-	case 1:
-		fields = []string{"Name", "Secret"}
-	case 2:
-		fields = []string{"FirstName", "LastName", "Secret"}
-	default:
-		t.Fatalf("kernel witness has unexpected alternate generation %d for %s", generation, source)
-	}
-	err := protectedGenerationContentError(content, fields)
-	if errors.Is(err, errProtectedPlaintext) {
-		t.Fatalf("Chronicle now releases generational content for %s; lift the protected-migration limit: generation %d", source, generation)
-	}
-	if err != nil {
-		t.Fatalf("kernel witness has invalid protected fields in alternate generation %d for %s: %v", generation, source, err)
+		got, err := events.Decode[ProtectedPersonV1](catalog, appended)
+		if err != nil || got != want {
+			t.Fatalf("protected alternate-generation decode for %s: %+v %v, want %+v", source, got, err, want)
+		}
 	}
 }
 

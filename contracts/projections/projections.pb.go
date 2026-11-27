@@ -369,6 +369,55 @@ func (ReadModelSource) EnumDescriptor() ([]byte, []int) {
 	return file_projections_proto_rawDescGZIP(), []int{6}
 }
 
+type RegistrationState int32
+
+const (
+	RegistrationState_Pending RegistrationState = 0
+	RegistrationState_Applied RegistrationState = 1
+	RegistrationState_Failed  RegistrationState = 2
+)
+
+// Enum value maps for RegistrationState.
+var (
+	RegistrationState_name = map[int32]string{
+		0: "Pending",
+		1: "Applied",
+		2: "Failed",
+	}
+	RegistrationState_value = map[string]int32{
+		"Pending": 0,
+		"Applied": 1,
+		"Failed":  2,
+	}
+)
+
+func (x RegistrationState) Enum() *RegistrationState {
+	p := new(RegistrationState)
+	*p = x
+	return p
+}
+
+func (x RegistrationState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RegistrationState) Descriptor() protoreflect.EnumDescriptor {
+	return file_projections_proto_enumTypes[7].Descriptor()
+}
+
+func (RegistrationState) Type() protoreflect.EnumType {
+	return &file_projections_proto_enumTypes[7]
+}
+
+func (x RegistrationState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RegistrationState.Descriptor instead.
+func (RegistrationState) EnumDescriptor() ([]byte, []int) {
+	return file_projections_proto_rawDescGZIP(), []int{7}
+}
+
 type SortDirection int32
 
 const (
@@ -399,11 +448,11 @@ func (x SortDirection) String() string {
 }
 
 func (SortDirection) Descriptor() protoreflect.EnumDescriptor {
-	return file_projections_proto_enumTypes[7].Descriptor()
+	return file_projections_proto_enumTypes[8].Descriptor()
 }
 
 func (SortDirection) Type() protoreflect.EnumType {
-	return &file_projections_proto_enumTypes[7]
+	return &file_projections_proto_enumTypes[8]
 }
 
 func (x SortDirection) Number() protoreflect.EnumNumber {
@@ -412,7 +461,7 @@ func (x SortDirection) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SortDirection.Descriptor instead.
 func (SortDirection) EnumDescriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{7}
+	return file_projections_proto_rawDescGZIP(), []int{8}
 }
 
 type ChildrenDefinition struct {
@@ -1115,6 +1164,58 @@ func (x *GetAllDefinitionsRequest) GetEventStore() string {
 	return ""
 }
 
+type GetRegistrationStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventStore    string                 `protobuf:"bytes,1,opt,name=EventStore,proto3" json:"EventStore,omitempty"`
+	Registrant    string                 `protobuf:"bytes,2,opt,name=Registrant,proto3" json:"Registrant,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRegistrationStatusRequest) Reset() {
+	*x = GetRegistrationStatusRequest{}
+	mi := &file_projections_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRegistrationStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRegistrationStatusRequest) ProtoMessage() {}
+
+func (x *GetRegistrationStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projections_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRegistrationStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetRegistrationStatusRequest) Descriptor() ([]byte, []int) {
+	return file_projections_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetRegistrationStatusRequest) GetEventStore() string {
+	if x != nil {
+		return x.EventStore
+	}
+	return ""
+}
+
+func (x *GetRegistrationStatusRequest) GetRegistrant() string {
+	if x != nil {
+		return x.Registrant
+	}
+	return ""
+}
+
 type GraphEdgeFromDefinition struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SourceKey     string                 `protobuf:"bytes,1,opt,name=SourceKey,proto3" json:"SourceKey,omitempty"`
@@ -1128,7 +1229,7 @@ type GraphEdgeFromDefinition struct {
 
 func (x *GraphEdgeFromDefinition) Reset() {
 	*x = GraphEdgeFromDefinition{}
-	mi := &file_projections_proto_msgTypes[11]
+	mi := &file_projections_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1140,7 +1241,7 @@ func (x *GraphEdgeFromDefinition) String() string {
 func (*GraphEdgeFromDefinition) ProtoMessage() {}
 
 func (x *GraphEdgeFromDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[11]
+	mi := &file_projections_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1153,7 +1254,7 @@ func (x *GraphEdgeFromDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphEdgeFromDefinition.ProtoReflect.Descriptor instead.
 func (*GraphEdgeFromDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{11}
+	return file_projections_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GraphEdgeFromDefinition) GetSourceKey() string {
@@ -1201,7 +1302,7 @@ type GraphEdgeProjectionDefinition struct {
 
 func (x *GraphEdgeProjectionDefinition) Reset() {
 	*x = GraphEdgeProjectionDefinition{}
-	mi := &file_projections_proto_msgTypes[12]
+	mi := &file_projections_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1213,7 +1314,7 @@ func (x *GraphEdgeProjectionDefinition) String() string {
 func (*GraphEdgeProjectionDefinition) ProtoMessage() {}
 
 func (x *GraphEdgeProjectionDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[12]
+	mi := &file_projections_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1226,7 +1327,7 @@ func (x *GraphEdgeProjectionDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphEdgeProjectionDefinition.ProtoReflect.Descriptor instead.
 func (*GraphEdgeProjectionDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{12}
+	return file_projections_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GraphEdgeProjectionDefinition) GetFrom() map[string]*GraphEdgeFromDefinition {
@@ -1255,7 +1356,7 @@ type GraphEdgeRemovedWithDefinition struct {
 
 func (x *GraphEdgeRemovedWithDefinition) Reset() {
 	*x = GraphEdgeRemovedWithDefinition{}
-	mi := &file_projections_proto_msgTypes[13]
+	mi := &file_projections_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1267,7 +1368,7 @@ func (x *GraphEdgeRemovedWithDefinition) String() string {
 func (*GraphEdgeRemovedWithDefinition) ProtoMessage() {}
 
 func (x *GraphEdgeRemovedWithDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[13]
+	mi := &file_projections_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1280,7 +1381,7 @@ func (x *GraphEdgeRemovedWithDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphEdgeRemovedWithDefinition.ProtoReflect.Descriptor instead.
 func (*GraphEdgeRemovedWithDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{13}
+	return file_projections_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GraphEdgeRemovedWithDefinition) GetSourceKey() string {
@@ -1323,7 +1424,7 @@ type GraphNodeFromDefinition struct {
 
 func (x *GraphNodeFromDefinition) Reset() {
 	*x = GraphNodeFromDefinition{}
-	mi := &file_projections_proto_msgTypes[14]
+	mi := &file_projections_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1335,7 +1436,7 @@ func (x *GraphNodeFromDefinition) String() string {
 func (*GraphNodeFromDefinition) ProtoMessage() {}
 
 func (x *GraphNodeFromDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[14]
+	mi := &file_projections_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1348,7 +1449,7 @@ func (x *GraphNodeFromDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphNodeFromDefinition.ProtoReflect.Descriptor instead.
 func (*GraphNodeFromDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{14}
+	return file_projections_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GraphNodeFromDefinition) GetKey() string {
@@ -1389,7 +1490,7 @@ type GraphNodeProjectionDefinition struct {
 
 func (x *GraphNodeProjectionDefinition) Reset() {
 	*x = GraphNodeProjectionDefinition{}
-	mi := &file_projections_proto_msgTypes[15]
+	mi := &file_projections_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1401,7 +1502,7 @@ func (x *GraphNodeProjectionDefinition) String() string {
 func (*GraphNodeProjectionDefinition) ProtoMessage() {}
 
 func (x *GraphNodeProjectionDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[15]
+	mi := &file_projections_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1414,7 +1515,7 @@ func (x *GraphNodeProjectionDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphNodeProjectionDefinition.ProtoReflect.Descriptor instead.
 func (*GraphNodeProjectionDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{15}
+	return file_projections_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GraphNodeProjectionDefinition) GetFrom() map[string]*GraphNodeFromDefinition {
@@ -1442,7 +1543,7 @@ type GraphNodeRemovedWithDefinition struct {
 
 func (x *GraphNodeRemovedWithDefinition) Reset() {
 	*x = GraphNodeRemovedWithDefinition{}
-	mi := &file_projections_proto_msgTypes[16]
+	mi := &file_projections_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1454,7 +1555,7 @@ func (x *GraphNodeRemovedWithDefinition) String() string {
 func (*GraphNodeRemovedWithDefinition) ProtoMessage() {}
 
 func (x *GraphNodeRemovedWithDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[16]
+	mi := &file_projections_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1467,7 +1568,7 @@ func (x *GraphNodeRemovedWithDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphNodeRemovedWithDefinition.ProtoReflect.Descriptor instead.
 func (*GraphNodeRemovedWithDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{16}
+	return file_projections_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GraphNodeRemovedWithDefinition) GetKey() string {
@@ -1501,7 +1602,7 @@ type GraphProjectionDefinition struct {
 
 func (x *GraphProjectionDefinition) Reset() {
 	*x = GraphProjectionDefinition{}
-	mi := &file_projections_proto_msgTypes[17]
+	mi := &file_projections_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1513,7 +1614,7 @@ func (x *GraphProjectionDefinition) String() string {
 func (*GraphProjectionDefinition) ProtoMessage() {}
 
 func (x *GraphProjectionDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[17]
+	mi := &file_projections_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1526,7 +1627,7 @@ func (x *GraphProjectionDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphProjectionDefinition.ProtoReflect.Descriptor instead.
 func (*GraphProjectionDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{17}
+	return file_projections_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GraphProjectionDefinition) GetNodes() map[string]*GraphNodeProjectionDefinition {
@@ -1552,7 +1653,7 @@ type IEnumerable_ProjectionDefinition struct {
 
 func (x *IEnumerable_ProjectionDefinition) Reset() {
 	*x = IEnumerable_ProjectionDefinition{}
-	mi := &file_projections_proto_msgTypes[18]
+	mi := &file_projections_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1564,7 +1665,7 @@ func (x *IEnumerable_ProjectionDefinition) String() string {
 func (*IEnumerable_ProjectionDefinition) ProtoMessage() {}
 
 func (x *IEnumerable_ProjectionDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[18]
+	mi := &file_projections_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1577,7 +1678,7 @@ func (x *IEnumerable_ProjectionDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IEnumerable_ProjectionDefinition.ProtoReflect.Descriptor instead.
 func (*IEnumerable_ProjectionDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{18}
+	return file_projections_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *IEnumerable_ProjectionDefinition) GetItems() []*ProjectionDefinition {
@@ -1596,7 +1697,7 @@ type IEnumerable_ProjectionWithDeclaration struct {
 
 func (x *IEnumerable_ProjectionWithDeclaration) Reset() {
 	*x = IEnumerable_ProjectionWithDeclaration{}
-	mi := &file_projections_proto_msgTypes[19]
+	mi := &file_projections_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1608,7 +1709,7 @@ func (x *IEnumerable_ProjectionWithDeclaration) String() string {
 func (*IEnumerable_ProjectionWithDeclaration) ProtoMessage() {}
 
 func (x *IEnumerable_ProjectionWithDeclaration) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[19]
+	mi := &file_projections_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1621,7 +1722,7 @@ func (x *IEnumerable_ProjectionWithDeclaration) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use IEnumerable_ProjectionWithDeclaration.ProtoReflect.Descriptor instead.
 func (*IEnumerable_ProjectionWithDeclaration) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{19}
+	return file_projections_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *IEnumerable_ProjectionWithDeclaration) GetItems() []*ProjectionWithDeclaration {
@@ -1641,7 +1742,7 @@ type IndexDefinition struct {
 
 func (x *IndexDefinition) Reset() {
 	*x = IndexDefinition{}
-	mi := &file_projections_proto_msgTypes[20]
+	mi := &file_projections_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1653,7 +1754,7 @@ func (x *IndexDefinition) String() string {
 func (*IndexDefinition) ProtoMessage() {}
 
 func (x *IndexDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[20]
+	mi := &file_projections_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1666,7 +1767,7 @@ func (x *IndexDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IndexDefinition.ProtoReflect.Descriptor instead.
 func (*IndexDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{20}
+	return file_projections_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *IndexDefinition) GetPropertyPath() string {
@@ -1693,7 +1794,7 @@ type IndexProperty struct {
 
 func (x *IndexProperty) Reset() {
 	*x = IndexProperty{}
-	mi := &file_projections_proto_msgTypes[21]
+	mi := &file_projections_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1705,7 +1806,7 @@ func (x *IndexProperty) String() string {
 func (*IndexProperty) ProtoMessage() {}
 
 func (x *IndexProperty) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[21]
+	mi := &file_projections_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1718,7 +1819,7 @@ func (x *IndexProperty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IndexProperty.ProtoReflect.Descriptor instead.
 func (*IndexProperty) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{21}
+	return file_projections_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *IndexProperty) GetPath() string {
@@ -1747,7 +1848,7 @@ type JoinDefinition struct {
 
 func (x *JoinDefinition) Reset() {
 	*x = JoinDefinition{}
-	mi := &file_projections_proto_msgTypes[22]
+	mi := &file_projections_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1759,7 +1860,7 @@ func (x *JoinDefinition) String() string {
 func (*JoinDefinition) ProtoMessage() {}
 
 func (x *JoinDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[22]
+	mi := &file_projections_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1772,7 +1873,7 @@ func (x *JoinDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinDefinition.ProtoReflect.Descriptor instead.
 func (*JoinDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{22}
+	return file_projections_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *JoinDefinition) GetOn() string {
@@ -1813,7 +1914,7 @@ type KeyValuePair_EventType_FromDefinition struct {
 
 func (x *KeyValuePair_EventType_FromDefinition) Reset() {
 	*x = KeyValuePair_EventType_FromDefinition{}
-	mi := &file_projections_proto_msgTypes[23]
+	mi := &file_projections_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1825,7 +1926,7 @@ func (x *KeyValuePair_EventType_FromDefinition) String() string {
 func (*KeyValuePair_EventType_FromDefinition) ProtoMessage() {}
 
 func (x *KeyValuePair_EventType_FromDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[23]
+	mi := &file_projections_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1838,7 +1939,7 @@ func (x *KeyValuePair_EventType_FromDefinition) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use KeyValuePair_EventType_FromDefinition.ProtoReflect.Descriptor instead.
 func (*KeyValuePair_EventType_FromDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{23}
+	return file_projections_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *KeyValuePair_EventType_FromDefinition) GetKey() *EventType {
@@ -1865,7 +1966,7 @@ type KeyValuePair_EventType_JoinDefinition struct {
 
 func (x *KeyValuePair_EventType_JoinDefinition) Reset() {
 	*x = KeyValuePair_EventType_JoinDefinition{}
-	mi := &file_projections_proto_msgTypes[24]
+	mi := &file_projections_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1877,7 +1978,7 @@ func (x *KeyValuePair_EventType_JoinDefinition) String() string {
 func (*KeyValuePair_EventType_JoinDefinition) ProtoMessage() {}
 
 func (x *KeyValuePair_EventType_JoinDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[24]
+	mi := &file_projections_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1890,7 +1991,7 @@ func (x *KeyValuePair_EventType_JoinDefinition) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use KeyValuePair_EventType_JoinDefinition.ProtoReflect.Descriptor instead.
 func (*KeyValuePair_EventType_JoinDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{24}
+	return file_projections_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *KeyValuePair_EventType_JoinDefinition) GetKey() *EventType {
@@ -1917,7 +2018,7 @@ type KeyValuePair_EventType_RemovedWithDefinition struct {
 
 func (x *KeyValuePair_EventType_RemovedWithDefinition) Reset() {
 	*x = KeyValuePair_EventType_RemovedWithDefinition{}
-	mi := &file_projections_proto_msgTypes[25]
+	mi := &file_projections_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1929,7 +2030,7 @@ func (x *KeyValuePair_EventType_RemovedWithDefinition) String() string {
 func (*KeyValuePair_EventType_RemovedWithDefinition) ProtoMessage() {}
 
 func (x *KeyValuePair_EventType_RemovedWithDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[25]
+	mi := &file_projections_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1942,7 +2043,7 @@ func (x *KeyValuePair_EventType_RemovedWithDefinition) ProtoReflect() protorefle
 
 // Deprecated: Use KeyValuePair_EventType_RemovedWithDefinition.ProtoReflect.Descriptor instead.
 func (*KeyValuePair_EventType_RemovedWithDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{25}
+	return file_projections_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *KeyValuePair_EventType_RemovedWithDefinition) GetKey() *EventType {
@@ -1969,7 +2070,7 @@ type KeyValuePair_EventType_RemovedWithJoinDefinition struct {
 
 func (x *KeyValuePair_EventType_RemovedWithJoinDefinition) Reset() {
 	*x = KeyValuePair_EventType_RemovedWithJoinDefinition{}
-	mi := &file_projections_proto_msgTypes[26]
+	mi := &file_projections_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1981,7 +2082,7 @@ func (x *KeyValuePair_EventType_RemovedWithJoinDefinition) String() string {
 func (*KeyValuePair_EventType_RemovedWithJoinDefinition) ProtoMessage() {}
 
 func (x *KeyValuePair_EventType_RemovedWithJoinDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[26]
+	mi := &file_projections_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1994,7 +2095,7 @@ func (x *KeyValuePair_EventType_RemovedWithJoinDefinition) ProtoReflect() protor
 
 // Deprecated: Use KeyValuePair_EventType_RemovedWithJoinDefinition.ProtoReflect.Descriptor instead.
 func (*KeyValuePair_EventType_RemovedWithJoinDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{26}
+	return file_projections_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *KeyValuePair_EventType_RemovedWithJoinDefinition) GetKey() *EventType {
@@ -2021,7 +2122,7 @@ type OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors struct {
 
 func (x *OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors) Reset() {
 	*x = OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors{}
-	mi := &file_projections_proto_msgTypes[27]
+	mi := &file_projections_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2033,7 +2134,7 @@ func (x *OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors) String() st
 func (*OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors) ProtoMessage() {}
 
 func (x *OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[27]
+	mi := &file_projections_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2046,7 +2147,7 @@ func (x *OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors) ProtoReflec
 
 // Deprecated: Use OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors.ProtoReflect.Descriptor instead.
 func (*OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{27}
+	return file_projections_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors) GetValue0() *ProjectionPreview {
@@ -2076,7 +2177,7 @@ type PreviewProjectionRequest struct {
 
 func (x *PreviewProjectionRequest) Reset() {
 	*x = PreviewProjectionRequest{}
-	mi := &file_projections_proto_msgTypes[28]
+	mi := &file_projections_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2088,7 +2189,7 @@ func (x *PreviewProjectionRequest) String() string {
 func (*PreviewProjectionRequest) ProtoMessage() {}
 
 func (x *PreviewProjectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[28]
+	mi := &file_projections_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2101,7 +2202,7 @@ func (x *PreviewProjectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewProjectionRequest.ProtoReflect.Descriptor instead.
 func (*PreviewProjectionRequest) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{28}
+	return file_projections_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *PreviewProjectionRequest) GetEventStore() string {
@@ -2148,7 +2249,7 @@ type ProjectionDeclarationParsingErrors struct {
 
 func (x *ProjectionDeclarationParsingErrors) Reset() {
 	*x = ProjectionDeclarationParsingErrors{}
-	mi := &file_projections_proto_msgTypes[29]
+	mi := &file_projections_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2160,7 +2261,7 @@ func (x *ProjectionDeclarationParsingErrors) String() string {
 func (*ProjectionDeclarationParsingErrors) ProtoMessage() {}
 
 func (x *ProjectionDeclarationParsingErrors) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[29]
+	mi := &file_projections_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2173,7 +2274,7 @@ func (x *ProjectionDeclarationParsingErrors) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ProjectionDeclarationParsingErrors.ProtoReflect.Descriptor instead.
 func (*ProjectionDeclarationParsingErrors) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{29}
+	return file_projections_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ProjectionDeclarationParsingErrors) GetErrors() []*ProjectionDeclarationSyntaxError {
@@ -2194,7 +2295,7 @@ type ProjectionDeclarationSyntaxError struct {
 
 func (x *ProjectionDeclarationSyntaxError) Reset() {
 	*x = ProjectionDeclarationSyntaxError{}
-	mi := &file_projections_proto_msgTypes[30]
+	mi := &file_projections_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2206,7 +2307,7 @@ func (x *ProjectionDeclarationSyntaxError) String() string {
 func (*ProjectionDeclarationSyntaxError) ProtoMessage() {}
 
 func (x *ProjectionDeclarationSyntaxError) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[30]
+	mi := &file_projections_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2219,7 +2320,7 @@ func (x *ProjectionDeclarationSyntaxError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectionDeclarationSyntaxError.ProtoReflect.Descriptor instead.
 func (*ProjectionDeclarationSyntaxError) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{30}
+	return file_projections_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ProjectionDeclarationSyntaxError) GetMessage() string {
@@ -2273,7 +2374,7 @@ type ProjectionDefinition struct {
 
 func (x *ProjectionDefinition) Reset() {
 	*x = ProjectionDefinition{}
-	mi := &file_projections_proto_msgTypes[31]
+	mi := &file_projections_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2285,7 +2386,7 @@ func (x *ProjectionDefinition) String() string {
 func (*ProjectionDefinition) ProtoMessage() {}
 
 func (x *ProjectionDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[31]
+	mi := &file_projections_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2298,7 +2399,7 @@ func (x *ProjectionDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectionDefinition.ProtoReflect.Descriptor instead.
 func (*ProjectionDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{31}
+	return file_projections_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ProjectionDefinition) GetEventSequenceId() string {
@@ -2465,7 +2566,7 @@ type ProjectionPreview struct {
 
 func (x *ProjectionPreview) Reset() {
 	*x = ProjectionPreview{}
-	mi := &file_projections_proto_msgTypes[32]
+	mi := &file_projections_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2477,7 +2578,7 @@ func (x *ProjectionPreview) String() string {
 func (*ProjectionPreview) ProtoMessage() {}
 
 func (x *ProjectionPreview) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[32]
+	mi := &file_projections_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2490,7 +2591,7 @@ func (x *ProjectionPreview) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectionPreview.ProtoReflect.Descriptor instead.
 func (*ProjectionPreview) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{32}
+	return file_projections_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ProjectionPreview) GetReadModelEntries() []string {
@@ -2518,7 +2619,7 @@ type ProjectionWithDeclaration struct {
 
 func (x *ProjectionWithDeclaration) Reset() {
 	*x = ProjectionWithDeclaration{}
-	mi := &file_projections_proto_msgTypes[33]
+	mi := &file_projections_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2530,7 +2631,7 @@ func (x *ProjectionWithDeclaration) String() string {
 func (*ProjectionWithDeclaration) ProtoMessage() {}
 
 func (x *ProjectionWithDeclaration) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[33]
+	mi := &file_projections_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2543,7 +2644,7 @@ func (x *ProjectionWithDeclaration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectionWithDeclaration.ProtoReflect.Descriptor instead.
 func (*ProjectionWithDeclaration) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{33}
+	return file_projections_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ProjectionWithDeclaration) GetIdentifier() string {
@@ -2585,7 +2686,7 @@ type ReadModelDefinition struct {
 
 func (x *ReadModelDefinition) Reset() {
 	*x = ReadModelDefinition{}
-	mi := &file_projections_proto_msgTypes[34]
+	mi := &file_projections_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2597,7 +2698,7 @@ func (x *ReadModelDefinition) String() string {
 func (*ReadModelDefinition) ProtoMessage() {}
 
 func (x *ReadModelDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[34]
+	mi := &file_projections_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2610,7 +2711,7 @@ func (x *ReadModelDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadModelDefinition.ProtoReflect.Descriptor instead.
 func (*ReadModelDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{34}
+	return file_projections_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ReadModelDefinition) GetType() *ReadModelType {
@@ -2693,7 +2794,7 @@ type ReadModelType struct {
 
 func (x *ReadModelType) Reset() {
 	*x = ReadModelType{}
-	mi := &file_projections_proto_msgTypes[35]
+	mi := &file_projections_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2705,7 +2806,7 @@ func (x *ReadModelType) String() string {
 func (*ReadModelType) ProtoMessage() {}
 
 func (x *ReadModelType) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[35]
+	mi := &file_projections_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2718,7 +2819,7 @@ func (x *ReadModelType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadModelType.ProtoReflect.Descriptor instead.
 func (*ReadModelType) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{35}
+	return file_projections_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ReadModelType) GetIdentifier() string {
@@ -2750,7 +2851,7 @@ type RegisterRequest struct {
 
 func (x *RegisterRequest) Reset() {
 	*x = RegisterRequest{}
-	mi := &file_projections_proto_msgTypes[36]
+	mi := &file_projections_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2762,7 +2863,7 @@ func (x *RegisterRequest) String() string {
 func (*RegisterRequest) ProtoMessage() {}
 
 func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[36]
+	mi := &file_projections_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2775,7 +2876,7 @@ func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{36}
+	return file_projections_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RegisterRequest) GetEventStore() string {
@@ -2827,6 +2928,74 @@ func (x *RegisterRequest) GetConnectionId() string {
 	return ""
 }
 
+type RegistrationStatus struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	State           RegistrationState      `protobuf:"varint,1,opt,name=State,proto3,enum=Cratis.Chronicle.Contracts.Projections.RegistrationState" json:"State,omitempty"`
+	Revision        int64                  `protobuf:"varint,2,opt,name=Revision,proto3" json:"Revision,omitempty"`
+	AppliedRevision int64                  `protobuf:"varint,3,opt,name=AppliedRevision,proto3" json:"AppliedRevision,omitempty"`
+	Failure         string                 `protobuf:"bytes,4,opt,name=Failure,proto3" json:"Failure,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RegistrationStatus) Reset() {
+	*x = RegistrationStatus{}
+	mi := &file_projections_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegistrationStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegistrationStatus) ProtoMessage() {}
+
+func (x *RegistrationStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_projections_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegistrationStatus.ProtoReflect.Descriptor instead.
+func (*RegistrationStatus) Descriptor() ([]byte, []int) {
+	return file_projections_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *RegistrationStatus) GetState() RegistrationState {
+	if x != nil {
+		return x.State
+	}
+	return RegistrationState_Pending
+}
+
+func (x *RegistrationStatus) GetRevision() int64 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *RegistrationStatus) GetAppliedRevision() int64 {
+	if x != nil {
+		return x.AppliedRevision
+	}
+	return 0
+}
+
+func (x *RegistrationStatus) GetFailure() string {
+	if x != nil {
+		return x.Failure
+	}
+	return ""
+}
+
 type RemovedWithDefinition struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Key           string                 `protobuf:"bytes,1,opt,name=Key,proto3" json:"Key,omitempty"`
@@ -2837,7 +3006,7 @@ type RemovedWithDefinition struct {
 
 func (x *RemovedWithDefinition) Reset() {
 	*x = RemovedWithDefinition{}
-	mi := &file_projections_proto_msgTypes[37]
+	mi := &file_projections_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2849,7 +3018,7 @@ func (x *RemovedWithDefinition) String() string {
 func (*RemovedWithDefinition) ProtoMessage() {}
 
 func (x *RemovedWithDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[37]
+	mi := &file_projections_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2862,7 +3031,7 @@ func (x *RemovedWithDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemovedWithDefinition.ProtoReflect.Descriptor instead.
 func (*RemovedWithDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{37}
+	return file_projections_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *RemovedWithDefinition) GetKey() string {
@@ -2888,7 +3057,7 @@ type RemovedWithJoinDefinition struct {
 
 func (x *RemovedWithJoinDefinition) Reset() {
 	*x = RemovedWithJoinDefinition{}
-	mi := &file_projections_proto_msgTypes[38]
+	mi := &file_projections_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2900,7 +3069,7 @@ func (x *RemovedWithJoinDefinition) String() string {
 func (*RemovedWithJoinDefinition) ProtoMessage() {}
 
 func (x *RemovedWithJoinDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[38]
+	mi := &file_projections_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2913,7 +3082,7 @@ func (x *RemovedWithJoinDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemovedWithJoinDefinition.ProtoReflect.Descriptor instead.
 func (*RemovedWithJoinDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{38}
+	return file_projections_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *RemovedWithJoinDefinition) GetKey() string {
@@ -2937,7 +3106,7 @@ type SaveProjectionRequest struct {
 
 func (x *SaveProjectionRequest) Reset() {
 	*x = SaveProjectionRequest{}
-	mi := &file_projections_proto_msgTypes[39]
+	mi := &file_projections_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2949,7 +3118,7 @@ func (x *SaveProjectionRequest) String() string {
 func (*SaveProjectionRequest) ProtoMessage() {}
 
 func (x *SaveProjectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[39]
+	mi := &file_projections_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2962,7 +3131,7 @@ func (x *SaveProjectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveProjectionRequest.ProtoReflect.Descriptor instead.
 func (*SaveProjectionRequest) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{39}
+	return file_projections_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *SaveProjectionRequest) GetEventStore() string {
@@ -3016,7 +3185,7 @@ type SaveProjectionResult struct {
 
 func (x *SaveProjectionResult) Reset() {
 	*x = SaveProjectionResult{}
-	mi := &file_projections_proto_msgTypes[40]
+	mi := &file_projections_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3028,7 +3197,7 @@ func (x *SaveProjectionResult) String() string {
 func (*SaveProjectionResult) ProtoMessage() {}
 
 func (x *SaveProjectionResult) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[40]
+	mi := &file_projections_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3041,7 +3210,7 @@ func (x *SaveProjectionResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveProjectionResult.ProtoReflect.Descriptor instead.
 func (*SaveProjectionResult) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{40}
+	return file_projections_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *SaveProjectionResult) GetErrors() []*ProjectionDeclarationSyntaxError {
@@ -3061,7 +3230,7 @@ type SerializableDateTimeOffset struct {
 
 func (x *SerializableDateTimeOffset) Reset() {
 	*x = SerializableDateTimeOffset{}
-	mi := &file_projections_proto_msgTypes[41]
+	mi := &file_projections_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3073,7 +3242,7 @@ func (x *SerializableDateTimeOffset) String() string {
 func (*SerializableDateTimeOffset) ProtoMessage() {}
 
 func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[41]
+	mi := &file_projections_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3086,7 +3255,7 @@ func (x *SerializableDateTimeOffset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SerializableDateTimeOffset.ProtoReflect.Descriptor instead.
 func (*SerializableDateTimeOffset) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{41}
+	return file_projections_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *SerializableDateTimeOffset) GetValue() string {
@@ -3108,7 +3277,7 @@ type SinkDefinition struct {
 
 func (x *SinkDefinition) Reset() {
 	*x = SinkDefinition{}
-	mi := &file_projections_proto_msgTypes[42]
+	mi := &file_projections_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3120,7 +3289,7 @@ func (x *SinkDefinition) String() string {
 func (*SinkDefinition) ProtoMessage() {}
 
 func (x *SinkDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_projections_proto_msgTypes[42]
+	mi := &file_projections_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3133,7 +3302,7 @@ func (x *SinkDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SinkDefinition.ProtoReflect.Descriptor instead.
 func (*SinkDefinition) Descriptor() ([]byte, []int) {
-	return file_projections_proto_rawDescGZIP(), []int{42}
+	return file_projections_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *SinkDefinition) GetConfigurationId() *bcl.Guid {
@@ -3245,7 +3414,14 @@ const file_projections_proto_rawDesc = "" +
 	"\x18GetAllDefinitionsRequest\x12\x1e\n" +
 	"\n" +
 	"EventStore\x18\x01 \x01(\tR\n" +
-	"EventStore\"\xbb\x02\n" +
+	"EventStore\"^\n" +
+	"\x1cGetRegistrationStatusRequest\x12\x1e\n" +
+	"\n" +
+	"EventStore\x18\x01 \x01(\tR\n" +
+	"EventStore\x12\x1e\n" +
+	"\n" +
+	"Registrant\x18\x02 \x01(\tR\n" +
+	"Registrant\"\xbb\x02\n" +
 	"\x17GraphEdgeFromDefinition\x12\x1c\n" +
 	"\tSourceKey\x18\x01 \x01(\tR\tSourceKey\x12\x1c\n" +
 	"\tTargetKey\x18\x02 \x01(\tR\tTargetKey\x12\x1a\n" +
@@ -3431,7 +3607,12 @@ const file_projections_proto_rawDesc = "" +
 	"Registrant\x18\x05 \x01(\tR\n" +
 	"Registrant\x12\x18\n" +
 	"\aVersion\x18\x06 \x01(\tR\aVersion\x12\"\n" +
-	"\fConnectionId\x18\a \x01(\tR\fConnectionId\"G\n" +
+	"\fConnectionId\x18\a \x01(\tR\fConnectionId\"\xc5\x01\n" +
+	"\x12RegistrationStatus\x12O\n" +
+	"\x05State\x18\x01 \x01(\x0e29.Cratis.Chronicle.Contracts.Projections.RegistrationStateR\x05State\x12\x1a\n" +
+	"\bRevision\x18\x02 \x01(\x03R\bRevision\x12(\n" +
+	"\x0fAppliedRevision\x18\x03 \x01(\x03R\x0fAppliedRevision\x12\x18\n" +
+	"\aFailure\x18\x04 \x01(\tR\aFailure\"G\n" +
 	"\x15RemovedWithDefinition\x12\x10\n" +
 	"\x03Key\x18\x01 \x01(\tR\x03Key\x12\x1c\n" +
 	"\tParentKey\x18\x02 \x01(\tR\tParentKey\"-\n" +
@@ -3490,14 +3671,20 @@ const file_projections_proto_rawDesc = "" +
 	"\x0fReadModelSource\x12\v\n" +
 	"\aUnknown\x10\x00\x12\b\n" +
 	"\x04Code\x10\x01\x12\b\n" +
-	"\x04User\x10\x02*.\n" +
+	"\x04User\x10\x02*9\n" +
+	"\x11RegistrationState\x12\v\n" +
+	"\aPending\x10\x00\x12\v\n" +
+	"\aApplied\x10\x01\x12\n" +
+	"\n" +
+	"\x06Failed\x10\x02*.\n" +
 	"\rSortDirection\x12\r\n" +
 	"\tAscending\x10\x00\x12\x0e\n" +
 	"\n" +
-	"Descending\x10\x012\xed\x05\n" +
+	"Descending\x10\x012\x89\a\n" +
 	"\vProjections\x12\xa6\x01\n" +
 	"\x12GetAllDeclarations\x12A.Cratis.Chronicle.Contracts.Projections.GetAllDeclarationsRequest\x1aM.Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionWithDeclaration\x12\x9f\x01\n" +
-	"\x11GetAllDefinitions\x12@.Cratis.Chronicle.Contracts.Projections.GetAllDefinitionsRequest\x1aH.Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionDefinition\x12\xaf\x01\n" +
+	"\x11GetAllDefinitions\x12@.Cratis.Chronicle.Contracts.Projections.GetAllDefinitionsRequest\x1aH.Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionDefinition\x12\x99\x01\n" +
+	"\x15GetRegistrationStatus\x12D.Cratis.Chronicle.Contracts.Projections.GetRegistrationStatusRequest\x1a:.Cratis.Chronicle.Contracts.Projections.RegistrationStatus\x12\xaf\x01\n" +
 	"\aPreview\x12@.Cratis.Chronicle.Contracts.Projections.PreviewProjectionRequest\x1ab.Cratis.Chronicle.Contracts.Projections.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors\x12[\n" +
 	"\bRegister\x127.Cratis.Chronicle.Contracts.Projections.RegisterRequest\x1a\x16.google.protobuf.Empty\x12\x83\x01\n" +
 	"\x04Save\x12=.Cratis.Chronicle.Contracts.Projections.SaveProjectionRequest\x1a<.Cratis.Chronicle.Contracts.Projections.SaveProjectionResultB\xb0\x02\n" +
@@ -3515,8 +3702,8 @@ func file_projections_proto_rawDescGZIP() []byte {
 	return file_projections_proto_rawDescData
 }
 
-var file_projections_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_projections_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
+var file_projections_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
+var file_projections_proto_msgTypes = make([]protoimpl.MessageInfo, 60)
 var file_projections_proto_goTypes = []any{
 	(AutoMap)(0),                                                       // 0: Cratis.Chronicle.Contracts.Projections.AutoMap
 	(ChildrenPlacement)(0),                                             // 1: Cratis.Chronicle.Contracts.Projections.ChildrenPlacement
@@ -3525,165 +3712,171 @@ var file_projections_proto_goTypes = []any{
 	(ReadModelObserverType)(0),                                         // 4: Cratis.Chronicle.Contracts.Projections.ReadModelObserverType
 	(ReadModelOwner)(0),                                                // 5: Cratis.Chronicle.Contracts.Projections.ReadModelOwner
 	(ReadModelSource)(0),                                               // 6: Cratis.Chronicle.Contracts.Projections.ReadModelSource
-	(SortDirection)(0),                                                 // 7: Cratis.Chronicle.Contracts.Projections.SortDirection
-	(*ChildrenDefinition)(nil),                                         // 8: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
-	(*ChildrenOrderingDefinition)(nil),                                 // 9: Cratis.Chronicle.Contracts.Projections.ChildrenOrderingDefinition
-	(*DraftReadModelDefinition)(nil),                                   // 10: Cratis.Chronicle.Contracts.Projections.DraftReadModelDefinition
-	(*EventSequenceSinkConfiguration)(nil),                             // 11: Cratis.Chronicle.Contracts.Projections.EventSequenceSinkConfiguration
-	(*EventType)(nil),                                                  // 12: Cratis.Chronicle.Contracts.Projections.EventType
-	(*FromDefinition)(nil),                                             // 13: Cratis.Chronicle.Contracts.Projections.FromDefinition
-	(*FromDerivativesDefinition)(nil),                                  // 14: Cratis.Chronicle.Contracts.Projections.FromDerivativesDefinition
-	(*FromEventPropertyDefinition)(nil),                                // 15: Cratis.Chronicle.Contracts.Projections.FromEventPropertyDefinition
-	(*FromEveryDefinition)(nil),                                        // 16: Cratis.Chronicle.Contracts.Projections.FromEveryDefinition
-	(*GetAllDeclarationsRequest)(nil),                                  // 17: Cratis.Chronicle.Contracts.Projections.GetAllDeclarationsRequest
-	(*GetAllDefinitionsRequest)(nil),                                   // 18: Cratis.Chronicle.Contracts.Projections.GetAllDefinitionsRequest
-	(*GraphEdgeFromDefinition)(nil),                                    // 19: Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition
-	(*GraphEdgeProjectionDefinition)(nil),                              // 20: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition
-	(*GraphEdgeRemovedWithDefinition)(nil),                             // 21: Cratis.Chronicle.Contracts.Projections.GraphEdgeRemovedWithDefinition
-	(*GraphNodeFromDefinition)(nil),                                    // 22: Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition
-	(*GraphNodeProjectionDefinition)(nil),                              // 23: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition
-	(*GraphNodeRemovedWithDefinition)(nil),                             // 24: Cratis.Chronicle.Contracts.Projections.GraphNodeRemovedWithDefinition
-	(*GraphProjectionDefinition)(nil),                                  // 25: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition
-	(*IEnumerable_ProjectionDefinition)(nil),                           // 26: Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionDefinition
-	(*IEnumerable_ProjectionWithDeclaration)(nil),                      // 27: Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionWithDeclaration
-	(*IndexDefinition)(nil),                                            // 28: Cratis.Chronicle.Contracts.Projections.IndexDefinition
-	(*IndexProperty)(nil),                                              // 29: Cratis.Chronicle.Contracts.Projections.IndexProperty
-	(*JoinDefinition)(nil),                                             // 30: Cratis.Chronicle.Contracts.Projections.JoinDefinition
-	(*KeyValuePair_EventType_FromDefinition)(nil),                      // 31: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition
-	(*KeyValuePair_EventType_JoinDefinition)(nil),                      // 32: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition
-	(*KeyValuePair_EventType_RemovedWithDefinition)(nil),               // 33: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition
-	(*KeyValuePair_EventType_RemovedWithJoinDefinition)(nil),           // 34: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition
-	(*OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors)(nil), // 35: Cratis.Chronicle.Contracts.Projections.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors
-	(*PreviewProjectionRequest)(nil),                                   // 36: Cratis.Chronicle.Contracts.Projections.PreviewProjectionRequest
-	(*ProjectionDeclarationParsingErrors)(nil),                         // 37: Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors
-	(*ProjectionDeclarationSyntaxError)(nil),                           // 38: Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationSyntaxError
-	(*ProjectionDefinition)(nil),                                       // 39: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition
-	(*ProjectionPreview)(nil),                                          // 40: Cratis.Chronicle.Contracts.Projections.ProjectionPreview
-	(*ProjectionWithDeclaration)(nil),                                  // 41: Cratis.Chronicle.Contracts.Projections.ProjectionWithDeclaration
-	(*ReadModelDefinition)(nil),                                        // 42: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition
-	(*ReadModelType)(nil),                                              // 43: Cratis.Chronicle.Contracts.Projections.ReadModelType
-	(*RegisterRequest)(nil),                                            // 44: Cratis.Chronicle.Contracts.Projections.RegisterRequest
-	(*RemovedWithDefinition)(nil),                                      // 45: Cratis.Chronicle.Contracts.Projections.RemovedWithDefinition
-	(*RemovedWithJoinDefinition)(nil),                                  // 46: Cratis.Chronicle.Contracts.Projections.RemovedWithJoinDefinition
-	(*SaveProjectionRequest)(nil),                                      // 47: Cratis.Chronicle.Contracts.Projections.SaveProjectionRequest
-	(*SaveProjectionResult)(nil),                                       // 48: Cratis.Chronicle.Contracts.Projections.SaveProjectionResult
-	(*SerializableDateTimeOffset)(nil),                                 // 49: Cratis.Chronicle.Contracts.Projections.SerializableDateTimeOffset
-	(*SinkDefinition)(nil),                                             // 50: Cratis.Chronicle.Contracts.Projections.SinkDefinition
-	nil,                                                                // 51: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.ChildrenEntry
-	nil,                                                                // 52: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.NestedEntry
-	nil,                                                                // 53: Cratis.Chronicle.Contracts.Projections.FromDefinition.PropertiesEntry
-	nil,                                                                // 54: Cratis.Chronicle.Contracts.Projections.FromEveryDefinition.PropertiesEntry
-	nil,                                                                // 55: Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition.PropertiesEntry
-	nil,                                                                // 56: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.FromEntry
-	nil,                                                                // 57: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.RemovedWithEntry
-	nil,                                                                // 58: Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition.PropertiesEntry
-	nil,                                                                // 59: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.FromEntry
-	nil,                                                                // 60: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.RemovedWithEntry
-	nil,                                                                // 61: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.NodesEntry
-	nil,                                                                // 62: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.EdgesEntry
-	nil,                                                                // 63: Cratis.Chronicle.Contracts.Projections.JoinDefinition.PropertiesEntry
-	nil,                                                                // 64: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.ChildrenEntry
-	nil,                                                                // 65: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.NestedEntry
-	(*bcl.Guid)(nil),                                                   // 66: bcl.Guid
-	(*emptypb.Empty)(nil),                                              // 67: google.protobuf.Empty
+	(RegistrationState)(0),                                             // 7: Cratis.Chronicle.Contracts.Projections.RegistrationState
+	(SortDirection)(0),                                                 // 8: Cratis.Chronicle.Contracts.Projections.SortDirection
+	(*ChildrenDefinition)(nil),                                         // 9: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
+	(*ChildrenOrderingDefinition)(nil),                                 // 10: Cratis.Chronicle.Contracts.Projections.ChildrenOrderingDefinition
+	(*DraftReadModelDefinition)(nil),                                   // 11: Cratis.Chronicle.Contracts.Projections.DraftReadModelDefinition
+	(*EventSequenceSinkConfiguration)(nil),                             // 12: Cratis.Chronicle.Contracts.Projections.EventSequenceSinkConfiguration
+	(*EventType)(nil),                                                  // 13: Cratis.Chronicle.Contracts.Projections.EventType
+	(*FromDefinition)(nil),                                             // 14: Cratis.Chronicle.Contracts.Projections.FromDefinition
+	(*FromDerivativesDefinition)(nil),                                  // 15: Cratis.Chronicle.Contracts.Projections.FromDerivativesDefinition
+	(*FromEventPropertyDefinition)(nil),                                // 16: Cratis.Chronicle.Contracts.Projections.FromEventPropertyDefinition
+	(*FromEveryDefinition)(nil),                                        // 17: Cratis.Chronicle.Contracts.Projections.FromEveryDefinition
+	(*GetAllDeclarationsRequest)(nil),                                  // 18: Cratis.Chronicle.Contracts.Projections.GetAllDeclarationsRequest
+	(*GetAllDefinitionsRequest)(nil),                                   // 19: Cratis.Chronicle.Contracts.Projections.GetAllDefinitionsRequest
+	(*GetRegistrationStatusRequest)(nil),                               // 20: Cratis.Chronicle.Contracts.Projections.GetRegistrationStatusRequest
+	(*GraphEdgeFromDefinition)(nil),                                    // 21: Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition
+	(*GraphEdgeProjectionDefinition)(nil),                              // 22: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition
+	(*GraphEdgeRemovedWithDefinition)(nil),                             // 23: Cratis.Chronicle.Contracts.Projections.GraphEdgeRemovedWithDefinition
+	(*GraphNodeFromDefinition)(nil),                                    // 24: Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition
+	(*GraphNodeProjectionDefinition)(nil),                              // 25: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition
+	(*GraphNodeRemovedWithDefinition)(nil),                             // 26: Cratis.Chronicle.Contracts.Projections.GraphNodeRemovedWithDefinition
+	(*GraphProjectionDefinition)(nil),                                  // 27: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition
+	(*IEnumerable_ProjectionDefinition)(nil),                           // 28: Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionDefinition
+	(*IEnumerable_ProjectionWithDeclaration)(nil),                      // 29: Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionWithDeclaration
+	(*IndexDefinition)(nil),                                            // 30: Cratis.Chronicle.Contracts.Projections.IndexDefinition
+	(*IndexProperty)(nil),                                              // 31: Cratis.Chronicle.Contracts.Projections.IndexProperty
+	(*JoinDefinition)(nil),                                             // 32: Cratis.Chronicle.Contracts.Projections.JoinDefinition
+	(*KeyValuePair_EventType_FromDefinition)(nil),                      // 33: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition
+	(*KeyValuePair_EventType_JoinDefinition)(nil),                      // 34: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition
+	(*KeyValuePair_EventType_RemovedWithDefinition)(nil),               // 35: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition
+	(*KeyValuePair_EventType_RemovedWithJoinDefinition)(nil),           // 36: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition
+	(*OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors)(nil), // 37: Cratis.Chronicle.Contracts.Projections.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors
+	(*PreviewProjectionRequest)(nil),                                   // 38: Cratis.Chronicle.Contracts.Projections.PreviewProjectionRequest
+	(*ProjectionDeclarationParsingErrors)(nil),                         // 39: Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors
+	(*ProjectionDeclarationSyntaxError)(nil),                           // 40: Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationSyntaxError
+	(*ProjectionDefinition)(nil),                                       // 41: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition
+	(*ProjectionPreview)(nil),                                          // 42: Cratis.Chronicle.Contracts.Projections.ProjectionPreview
+	(*ProjectionWithDeclaration)(nil),                                  // 43: Cratis.Chronicle.Contracts.Projections.ProjectionWithDeclaration
+	(*ReadModelDefinition)(nil),                                        // 44: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition
+	(*ReadModelType)(nil),                                              // 45: Cratis.Chronicle.Contracts.Projections.ReadModelType
+	(*RegisterRequest)(nil),                                            // 46: Cratis.Chronicle.Contracts.Projections.RegisterRequest
+	(*RegistrationStatus)(nil),                                         // 47: Cratis.Chronicle.Contracts.Projections.RegistrationStatus
+	(*RemovedWithDefinition)(nil),                                      // 48: Cratis.Chronicle.Contracts.Projections.RemovedWithDefinition
+	(*RemovedWithJoinDefinition)(nil),                                  // 49: Cratis.Chronicle.Contracts.Projections.RemovedWithJoinDefinition
+	(*SaveProjectionRequest)(nil),                                      // 50: Cratis.Chronicle.Contracts.Projections.SaveProjectionRequest
+	(*SaveProjectionResult)(nil),                                       // 51: Cratis.Chronicle.Contracts.Projections.SaveProjectionResult
+	(*SerializableDateTimeOffset)(nil),                                 // 52: Cratis.Chronicle.Contracts.Projections.SerializableDateTimeOffset
+	(*SinkDefinition)(nil),                                             // 53: Cratis.Chronicle.Contracts.Projections.SinkDefinition
+	nil,                                                                // 54: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.ChildrenEntry
+	nil,                                                                // 55: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.NestedEntry
+	nil,                                                                // 56: Cratis.Chronicle.Contracts.Projections.FromDefinition.PropertiesEntry
+	nil,                                                                // 57: Cratis.Chronicle.Contracts.Projections.FromEveryDefinition.PropertiesEntry
+	nil,                                                                // 58: Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition.PropertiesEntry
+	nil,                                                                // 59: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.FromEntry
+	nil,                                                                // 60: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.RemovedWithEntry
+	nil,                                                                // 61: Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition.PropertiesEntry
+	nil,                                                                // 62: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.FromEntry
+	nil,                                                                // 63: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.RemovedWithEntry
+	nil,                                                                // 64: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.NodesEntry
+	nil,                                                                // 65: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.EdgesEntry
+	nil,                                                                // 66: Cratis.Chronicle.Contracts.Projections.JoinDefinition.PropertiesEntry
+	nil,                                                                // 67: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.ChildrenEntry
+	nil,                                                                // 68: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.NestedEntry
+	(*bcl.Guid)(nil),                                                   // 69: bcl.Guid
+	(*emptypb.Empty)(nil),                                              // 70: google.protobuf.Empty
 }
 var file_projections_proto_depIdxs = []int32{
-	31, // 0: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition
-	32, // 1: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.Join:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition
-	51, // 2: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.Children:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.ChildrenEntry
-	16, // 3: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.All:type_name -> Cratis.Chronicle.Contracts.Projections.FromEveryDefinition
-	15, // 4: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.FromEventProperty:type_name -> Cratis.Chronicle.Contracts.Projections.FromEventPropertyDefinition
-	33, // 5: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.RemovedWith:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition
-	34, // 6: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.RemovedWithJoin:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition
+	33, // 0: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition
+	34, // 1: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.Join:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition
+	54, // 2: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.Children:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.ChildrenEntry
+	17, // 3: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.All:type_name -> Cratis.Chronicle.Contracts.Projections.FromEveryDefinition
+	16, // 4: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.FromEventProperty:type_name -> Cratis.Chronicle.Contracts.Projections.FromEventPropertyDefinition
+	35, // 5: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.RemovedWith:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition
+	36, // 6: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.RemovedWithJoin:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition
 	0,  // 7: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.AutoMap:type_name -> Cratis.Chronicle.Contracts.Projections.AutoMap
-	52, // 8: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.Nested:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.NestedEntry
-	9,  // 9: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.Ordering:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenOrderingDefinition
+	55, // 8: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.Nested:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.NestedEntry
+	10, // 9: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.Ordering:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenOrderingDefinition
 	1,  // 10: Cratis.Chronicle.Contracts.Projections.ChildrenOrderingDefinition.Placement:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenPlacement
-	7,  // 11: Cratis.Chronicle.Contracts.Projections.ChildrenOrderingDefinition.Direction:type_name -> Cratis.Chronicle.Contracts.Projections.SortDirection
-	12, // 12: Cratis.Chronicle.Contracts.Projections.EventSequenceSinkConfiguration.EventType:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
-	53, // 13: Cratis.Chronicle.Contracts.Projections.FromDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.FromDefinition.PropertiesEntry
-	12, // 14: Cratis.Chronicle.Contracts.Projections.FromDerivativesDefinition.EventTypes:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
-	13, // 15: Cratis.Chronicle.Contracts.Projections.FromDerivativesDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.FromDefinition
-	12, // 16: Cratis.Chronicle.Contracts.Projections.FromEventPropertyDefinition.Event:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
-	54, // 17: Cratis.Chronicle.Contracts.Projections.FromEveryDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.FromEveryDefinition.PropertiesEntry
+	8,  // 11: Cratis.Chronicle.Contracts.Projections.ChildrenOrderingDefinition.Direction:type_name -> Cratis.Chronicle.Contracts.Projections.SortDirection
+	13, // 12: Cratis.Chronicle.Contracts.Projections.EventSequenceSinkConfiguration.EventType:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
+	56, // 13: Cratis.Chronicle.Contracts.Projections.FromDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.FromDefinition.PropertiesEntry
+	13, // 14: Cratis.Chronicle.Contracts.Projections.FromDerivativesDefinition.EventTypes:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
+	14, // 15: Cratis.Chronicle.Contracts.Projections.FromDerivativesDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.FromDefinition
+	13, // 16: Cratis.Chronicle.Contracts.Projections.FromEventPropertyDefinition.Event:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
+	57, // 17: Cratis.Chronicle.Contracts.Projections.FromEveryDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.FromEveryDefinition.PropertiesEntry
 	0,  // 18: Cratis.Chronicle.Contracts.Projections.FromEveryDefinition.AutoMap:type_name -> Cratis.Chronicle.Contracts.Projections.AutoMap
-	55, // 19: Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition.PropertiesEntry
-	56, // 20: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.FromEntry
-	57, // 21: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.RemovedWith:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.RemovedWithEntry
-	58, // 22: Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition.PropertiesEntry
-	59, // 23: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.FromEntry
-	60, // 24: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.RemovedWith:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.RemovedWithEntry
-	61, // 25: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.Nodes:type_name -> Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.NodesEntry
-	62, // 26: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.Edges:type_name -> Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.EdgesEntry
-	39, // 27: Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionDefinition.items:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDefinition
-	41, // 28: Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionWithDeclaration.items:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionWithDeclaration
-	29, // 29: Cratis.Chronicle.Contracts.Projections.IndexDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.IndexProperty
-	63, // 30: Cratis.Chronicle.Contracts.Projections.JoinDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.JoinDefinition.PropertiesEntry
+	58, // 19: Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition.PropertiesEntry
+	59, // 20: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.FromEntry
+	60, // 21: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.RemovedWith:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.RemovedWithEntry
+	61, // 22: Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition.PropertiesEntry
+	62, // 23: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.FromEntry
+	63, // 24: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.RemovedWith:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.RemovedWithEntry
+	64, // 25: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.Nodes:type_name -> Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.NodesEntry
+	65, // 26: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.Edges:type_name -> Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.EdgesEntry
+	41, // 27: Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionDefinition.items:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDefinition
+	43, // 28: Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionWithDeclaration.items:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionWithDeclaration
+	31, // 29: Cratis.Chronicle.Contracts.Projections.IndexDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.IndexProperty
+	66, // 30: Cratis.Chronicle.Contracts.Projections.JoinDefinition.Properties:type_name -> Cratis.Chronicle.Contracts.Projections.JoinDefinition.PropertiesEntry
 	0,  // 31: Cratis.Chronicle.Contracts.Projections.JoinDefinition.AutoMap:type_name -> Cratis.Chronicle.Contracts.Projections.AutoMap
-	12, // 32: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition.Key:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
-	13, // 33: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition.Value:type_name -> Cratis.Chronicle.Contracts.Projections.FromDefinition
-	12, // 34: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition.Key:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
-	30, // 35: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition.Value:type_name -> Cratis.Chronicle.Contracts.Projections.JoinDefinition
-	12, // 36: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition.Key:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
-	45, // 37: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition.Value:type_name -> Cratis.Chronicle.Contracts.Projections.RemovedWithDefinition
-	12, // 38: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition.Key:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
-	46, // 39: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition.Value:type_name -> Cratis.Chronicle.Contracts.Projections.RemovedWithJoinDefinition
-	40, // 40: Cratis.Chronicle.Contracts.Projections.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors.Value0:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionPreview
-	37, // 41: Cratis.Chronicle.Contracts.Projections.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors.Value1:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors
-	10, // 42: Cratis.Chronicle.Contracts.Projections.PreviewProjectionRequest.DraftReadModel:type_name -> Cratis.Chronicle.Contracts.Projections.DraftReadModelDefinition
-	38, // 43: Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors.Errors:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationSyntaxError
-	31, // 44: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition
-	32, // 45: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.Join:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition
-	64, // 46: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.Children:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.ChildrenEntry
-	14, // 47: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.FromEvery:type_name -> Cratis.Chronicle.Contracts.Projections.FromDerivativesDefinition
-	16, // 48: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.All:type_name -> Cratis.Chronicle.Contracts.Projections.FromEveryDefinition
-	15, // 49: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.FromEventProperty:type_name -> Cratis.Chronicle.Contracts.Projections.FromEventPropertyDefinition
-	33, // 50: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.RemovedWith:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition
-	34, // 51: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.RemovedWithJoin:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition
-	49, // 52: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.LastUpdated:type_name -> Cratis.Chronicle.Contracts.Projections.SerializableDateTimeOffset
+	13, // 32: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition.Key:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
+	14, // 33: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition.Value:type_name -> Cratis.Chronicle.Contracts.Projections.FromDefinition
+	13, // 34: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition.Key:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
+	32, // 35: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition.Value:type_name -> Cratis.Chronicle.Contracts.Projections.JoinDefinition
+	13, // 36: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition.Key:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
+	48, // 37: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition.Value:type_name -> Cratis.Chronicle.Contracts.Projections.RemovedWithDefinition
+	13, // 38: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition.Key:type_name -> Cratis.Chronicle.Contracts.Projections.EventType
+	49, // 39: Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition.Value:type_name -> Cratis.Chronicle.Contracts.Projections.RemovedWithJoinDefinition
+	42, // 40: Cratis.Chronicle.Contracts.Projections.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors.Value0:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionPreview
+	39, // 41: Cratis.Chronicle.Contracts.Projections.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors.Value1:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors
+	11, // 42: Cratis.Chronicle.Contracts.Projections.PreviewProjectionRequest.DraftReadModel:type_name -> Cratis.Chronicle.Contracts.Projections.DraftReadModelDefinition
+	40, // 43: Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors.Errors:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationSyntaxError
+	33, // 44: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.From:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_FromDefinition
+	34, // 45: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.Join:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_JoinDefinition
+	67, // 46: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.Children:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.ChildrenEntry
+	15, // 47: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.FromEvery:type_name -> Cratis.Chronicle.Contracts.Projections.FromDerivativesDefinition
+	17, // 48: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.All:type_name -> Cratis.Chronicle.Contracts.Projections.FromEveryDefinition
+	16, // 49: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.FromEventProperty:type_name -> Cratis.Chronicle.Contracts.Projections.FromEventPropertyDefinition
+	35, // 50: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.RemovedWith:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithDefinition
+	36, // 51: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.RemovedWithJoin:type_name -> Cratis.Chronicle.Contracts.Projections.KeyValuePair_EventType_RemovedWithJoinDefinition
+	52, // 52: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.LastUpdated:type_name -> Cratis.Chronicle.Contracts.Projections.SerializableDateTimeOffset
 	0,  // 53: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.AutoMap:type_name -> Cratis.Chronicle.Contracts.Projections.AutoMap
-	65, // 54: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.Nested:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.NestedEntry
+	68, // 54: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.Nested:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.NestedEntry
 	2,  // 55: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Projections.EventGenerationDelivery
-	25, // 56: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.Graph:type_name -> Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition
-	42, // 57: Cratis.Chronicle.Contracts.Projections.ProjectionPreview.ReadModel:type_name -> Cratis.Chronicle.Contracts.Projections.ReadModelDefinition
-	43, // 58: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition.Type:type_name -> Cratis.Chronicle.Contracts.Projections.ReadModelType
-	50, // 59: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition.Sink:type_name -> Cratis.Chronicle.Contracts.Projections.SinkDefinition
-	28, // 60: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition.Indexes:type_name -> Cratis.Chronicle.Contracts.Projections.IndexDefinition
+	27, // 56: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.Graph:type_name -> Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition
+	44, // 57: Cratis.Chronicle.Contracts.Projections.ProjectionPreview.ReadModel:type_name -> Cratis.Chronicle.Contracts.Projections.ReadModelDefinition
+	45, // 58: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition.Type:type_name -> Cratis.Chronicle.Contracts.Projections.ReadModelType
+	53, // 59: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition.Sink:type_name -> Cratis.Chronicle.Contracts.Projections.SinkDefinition
+	30, // 60: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition.Indexes:type_name -> Cratis.Chronicle.Contracts.Projections.IndexDefinition
 	4,  // 61: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition.ObserverType:type_name -> Cratis.Chronicle.Contracts.Projections.ReadModelObserverType
 	5,  // 62: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition.Owner:type_name -> Cratis.Chronicle.Contracts.Projections.ReadModelOwner
 	6,  // 63: Cratis.Chronicle.Contracts.Projections.ReadModelDefinition.Source:type_name -> Cratis.Chronicle.Contracts.Projections.ReadModelSource
 	3,  // 64: Cratis.Chronicle.Contracts.Projections.RegisterRequest.Owner:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionOwner
-	39, // 65: Cratis.Chronicle.Contracts.Projections.RegisterRequest.Projections:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDefinition
-	10, // 66: Cratis.Chronicle.Contracts.Projections.SaveProjectionRequest.DraftReadModel:type_name -> Cratis.Chronicle.Contracts.Projections.DraftReadModelDefinition
-	2,  // 67: Cratis.Chronicle.Contracts.Projections.SaveProjectionRequest.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Projections.EventGenerationDelivery
-	38, // 68: Cratis.Chronicle.Contracts.Projections.SaveProjectionResult.Errors:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationSyntaxError
-	66, // 69: Cratis.Chronicle.Contracts.Projections.SinkDefinition.ConfigurationId:type_name -> bcl.Guid
-	11, // 70: Cratis.Chronicle.Contracts.Projections.SinkDefinition.EventSequence:type_name -> Cratis.Chronicle.Contracts.Projections.EventSequenceSinkConfiguration
-	8,  // 71: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.ChildrenEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
-	8,  // 72: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.NestedEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
-	19, // 73: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.FromEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition
-	21, // 74: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.RemovedWithEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeRemovedWithDefinition
-	22, // 75: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.FromEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition
-	24, // 76: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.RemovedWithEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeRemovedWithDefinition
-	23, // 77: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.NodesEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition
-	20, // 78: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.EdgesEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition
-	8,  // 79: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.ChildrenEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
-	8,  // 80: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.NestedEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
-	17, // 81: Cratis.Chronicle.Contracts.Projections.Projections.GetAllDeclarations:input_type -> Cratis.Chronicle.Contracts.Projections.GetAllDeclarationsRequest
-	18, // 82: Cratis.Chronicle.Contracts.Projections.Projections.GetAllDefinitions:input_type -> Cratis.Chronicle.Contracts.Projections.GetAllDefinitionsRequest
-	36, // 83: Cratis.Chronicle.Contracts.Projections.Projections.Preview:input_type -> Cratis.Chronicle.Contracts.Projections.PreviewProjectionRequest
-	44, // 84: Cratis.Chronicle.Contracts.Projections.Projections.Register:input_type -> Cratis.Chronicle.Contracts.Projections.RegisterRequest
-	47, // 85: Cratis.Chronicle.Contracts.Projections.Projections.Save:input_type -> Cratis.Chronicle.Contracts.Projections.SaveProjectionRequest
-	27, // 86: Cratis.Chronicle.Contracts.Projections.Projections.GetAllDeclarations:output_type -> Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionWithDeclaration
-	26, // 87: Cratis.Chronicle.Contracts.Projections.Projections.GetAllDefinitions:output_type -> Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionDefinition
-	35, // 88: Cratis.Chronicle.Contracts.Projections.Projections.Preview:output_type -> Cratis.Chronicle.Contracts.Projections.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors
-	67, // 89: Cratis.Chronicle.Contracts.Projections.Projections.Register:output_type -> google.protobuf.Empty
-	48, // 90: Cratis.Chronicle.Contracts.Projections.Projections.Save:output_type -> Cratis.Chronicle.Contracts.Projections.SaveProjectionResult
-	86, // [86:91] is the sub-list for method output_type
-	81, // [81:86] is the sub-list for method input_type
-	81, // [81:81] is the sub-list for extension type_name
-	81, // [81:81] is the sub-list for extension extendee
-	0,  // [0:81] is the sub-list for field type_name
+	41, // 65: Cratis.Chronicle.Contracts.Projections.RegisterRequest.Projections:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDefinition
+	7,  // 66: Cratis.Chronicle.Contracts.Projections.RegistrationStatus.State:type_name -> Cratis.Chronicle.Contracts.Projections.RegistrationState
+	11, // 67: Cratis.Chronicle.Contracts.Projections.SaveProjectionRequest.DraftReadModel:type_name -> Cratis.Chronicle.Contracts.Projections.DraftReadModelDefinition
+	2,  // 68: Cratis.Chronicle.Contracts.Projections.SaveProjectionRequest.GenerationDelivery:type_name -> Cratis.Chronicle.Contracts.Projections.EventGenerationDelivery
+	40, // 69: Cratis.Chronicle.Contracts.Projections.SaveProjectionResult.Errors:type_name -> Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationSyntaxError
+	69, // 70: Cratis.Chronicle.Contracts.Projections.SinkDefinition.ConfigurationId:type_name -> bcl.Guid
+	12, // 71: Cratis.Chronicle.Contracts.Projections.SinkDefinition.EventSequence:type_name -> Cratis.Chronicle.Contracts.Projections.EventSequenceSinkConfiguration
+	9,  // 72: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.ChildrenEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
+	9,  // 73: Cratis.Chronicle.Contracts.Projections.ChildrenDefinition.NestedEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
+	21, // 74: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.FromEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeFromDefinition
+	23, // 75: Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition.RemovedWithEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeRemovedWithDefinition
+	24, // 76: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.FromEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeFromDefinition
+	26, // 77: Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition.RemovedWithEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeRemovedWithDefinition
+	25, // 78: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.NodesEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphNodeProjectionDefinition
+	22, // 79: Cratis.Chronicle.Contracts.Projections.GraphProjectionDefinition.EdgesEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.GraphEdgeProjectionDefinition
+	9,  // 80: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.ChildrenEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
+	9,  // 81: Cratis.Chronicle.Contracts.Projections.ProjectionDefinition.NestedEntry.value:type_name -> Cratis.Chronicle.Contracts.Projections.ChildrenDefinition
+	18, // 82: Cratis.Chronicle.Contracts.Projections.Projections.GetAllDeclarations:input_type -> Cratis.Chronicle.Contracts.Projections.GetAllDeclarationsRequest
+	19, // 83: Cratis.Chronicle.Contracts.Projections.Projections.GetAllDefinitions:input_type -> Cratis.Chronicle.Contracts.Projections.GetAllDefinitionsRequest
+	20, // 84: Cratis.Chronicle.Contracts.Projections.Projections.GetRegistrationStatus:input_type -> Cratis.Chronicle.Contracts.Projections.GetRegistrationStatusRequest
+	38, // 85: Cratis.Chronicle.Contracts.Projections.Projections.Preview:input_type -> Cratis.Chronicle.Contracts.Projections.PreviewProjectionRequest
+	46, // 86: Cratis.Chronicle.Contracts.Projections.Projections.Register:input_type -> Cratis.Chronicle.Contracts.Projections.RegisterRequest
+	50, // 87: Cratis.Chronicle.Contracts.Projections.Projections.Save:input_type -> Cratis.Chronicle.Contracts.Projections.SaveProjectionRequest
+	29, // 88: Cratis.Chronicle.Contracts.Projections.Projections.GetAllDeclarations:output_type -> Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionWithDeclaration
+	28, // 89: Cratis.Chronicle.Contracts.Projections.Projections.GetAllDefinitions:output_type -> Cratis.Chronicle.Contracts.Projections.IEnumerable_ProjectionDefinition
+	47, // 90: Cratis.Chronicle.Contracts.Projections.Projections.GetRegistrationStatus:output_type -> Cratis.Chronicle.Contracts.Projections.RegistrationStatus
+	37, // 91: Cratis.Chronicle.Contracts.Projections.Projections.Preview:output_type -> Cratis.Chronicle.Contracts.Projections.OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors
+	70, // 92: Cratis.Chronicle.Contracts.Projections.Projections.Register:output_type -> google.protobuf.Empty
+	51, // 93: Cratis.Chronicle.Contracts.Projections.Projections.Save:output_type -> Cratis.Chronicle.Contracts.Projections.SaveProjectionResult
+	88, // [88:94] is the sub-list for method output_type
+	82, // [82:88] is the sub-list for method input_type
+	82, // [82:82] is the sub-list for extension type_name
+	82, // [82:82] is the sub-list for extension extendee
+	0,  // [0:82] is the sub-list for field type_name
 }
 
 func init() { file_projections_proto_init() }
@@ -3696,8 +3889,8 @@ func file_projections_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_projections_proto_rawDesc), len(file_projections_proto_rawDesc)),
-			NumEnums:      8,
-			NumMessages:   58,
+			NumEnums:      9,
+			NumMessages:   60,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -32,7 +32,7 @@ func (s *EventStore) projectionDefinitions() []projections.Definition {
 }
 func (s *EventStore) registerProjections(ctx context.Context, g *generation, root *definitionRoot, full bool) error {
 	return s.definitionStage(ctx, g, root, "projections", full, func(ctx context.Context) error {
-		request := &contracts.RegisterRequest{EventStore: string(s.name), Owner: contracts.ProjectionOwner_PROJECTION_OWNER_Client, FullSet: full}
+		request := &contracts.RegisterRequest{EventStore: string(s.name), Owner: contracts.ProjectionOwner_PROJECTION_OWNER_Client, FullSet: full, Registrant: registrant(), Version: "0.1.0-dev"}
 		definitions := root.snapshot.projections
 		if !full {
 			definitions = []projections.Definition{root.delta}
@@ -53,6 +53,6 @@ func (s *EventStore) registerProjections(ctx context.Context, g *generation, roo
 		if response == nil {
 			return ErrProtocol
 		}
-		return nil
+		return waitForAcceptedRegistration(ctx, g.transport, string(s.name), request.Registrant, maxWaitForAcceptedRegistration)
 	})
 }

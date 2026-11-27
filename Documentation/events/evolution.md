@@ -137,7 +137,7 @@ options are last-wins, and an unknown mode fails declaration validation. A compi
 plan freezes the mode and exposes it through `GenerationDelivery()`.
 
 Pinned delivery requires a kernel supporting `EventGenerationDelivery` (the CI
-kernel is `cratis/chronicle:19.153.0-development`). It requests the subscribed
+kernel is `cratis/chronicle:19.189.2-development`). It requests the subscribed
 generation as `Content`. The runtime decodes that content directly, ignores
 `GenerationalContent`, and does not rewrite `Context.EventType.Generation`. There
 is no client-side fallback or emulated migration in Pinned mode. Older kernels
@@ -148,8 +148,7 @@ For reactor and reducer delivery, `Context.EventType.Generation` identifies the
 delivered representation, while `Context.AppendedGeneration` preserves the
 original append generation. Zero means unknown for older persisted events; it is
 not inferred from the delivered generation. Revision can change the delivered
-representation without changing the original append generation. Existing
-protected-generation refusals remain in force in both modes.
+representation without changing the original append generation.
 
 Historical backfill runs asynchronously in the kernel: registration readiness
 is not a backfill barrier. When upgrading an existing store, wait for historical
@@ -166,27 +165,18 @@ latest codec; `LookupID` explicitly selects the current generation.
 
 From Chronicle 19.32.2 ([Chronicle#4456](https://github.com/Cratis/Chronicle/issues/4456))
 migrations transform PII and encrypted values as plaintext and protect every
-generation for the original subject. The event's current representation, and
-projections built from it, release correctly before and after erasure. The
-kernel still releases **only** that current representation: other generations
-in `GenerationalContent` reach the client as ciphertext. The SDK now refuses
-protected alternate-generation decoding and historical-generation reactor or
-reducer registration with `ErrUnsupported`, rather than handing ciphertext to
-typed fields or handlers. Dispatch also refuses a protected generation mismatch.
-Current-generation content and alternate generations of identities with **no
-protected registered generation** are unaffected. A protected sibling generation
-makes alternate decoding unsupported even when the requested generation's schema
-is unprotected.
+generation for the original subject. Since
+[Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623) the kernel also
+releases protected values in **every** generation of `GenerationalContent`, not
+only the current representation, before and after erasure. The SDK therefore
+treats protected identities like any other: `events.Decode` selects the requested
+generation's alternate content, and reactors and reducers can observe a
+historical generation of a protected event. Erased values arrive empty, as they do
+for the current generation.
 
-A current-generation reactor or reducer for a protected identity still compiles,
-but **fails at dispatch** if an event appended at an older generation arrives.
-This stops that partition until the kernel fix
-([Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623)); it is not a
-compile-time refusal of the current-generation observer.
-`TestKernelProtectedEventGenerationMigrationProfile` records the kernel behavior,
-tracked upstream as [Chronicle#4623](https://github.com/Cratis/Chronicle/issues/4623).
-Guard removal is tracked in
-[Chronicle.Go#96](https://github.com/Cratis/Chronicle.Go/issues/96).
+`TestKernelProtectedEventGenerationMigrationProfile` records this behavior against
+a real kernel: historical upcast, current append, alternate-generation decode,
+projection replay and erasure.
 
 Continue with [reading events](reading-events.md) and the
 [behavior-level parity map](../parity.md#event-evolution).

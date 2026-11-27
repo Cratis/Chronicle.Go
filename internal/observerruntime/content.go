@@ -9,14 +9,13 @@ import (
 	"reflect"
 
 	"github.com/cratis/chronicle.go/events"
-	"github.com/cratis/chronicle.go/internal/eventprotection"
 	"github.com/cratis/chronicle.go/internal/faults"
 )
 
 // DecodeContent applies C#'s generation selection, falling back to Content when
-// no requested representation is supplied. A generation mismatch for an identity
-// with any protected generation is refused with ErrUnsupported. The complete
-// registered catalog is required for mismatches. JSON null is never an event.
+// no requested representation is supplied. The kernel releases protected values
+// in every generation it supplies. The complete registered catalog is required
+// for mismatches. JSON null is never an event.
 func DecodeContent(catalog *events.Catalog, descriptor events.Descriptor, appended events.Appended) (events.Context, any, error) {
 	return decodeContent(catalog, descriptor, appended, events.Compatibility)
 }
@@ -47,15 +46,6 @@ func observerGenerationContent(catalog *events.Catalog, descriptor events.Descri
 	}
 	if catalog == nil {
 		return ec, nil, faults.ErrInvalidConfiguration
-	}
-	protected, err := eventprotection.IdentityProtected(catalog.Descriptors(), func(d events.Descriptor) bool { return d.Ref().ID == descriptor.Ref().ID })
-	if err != nil {
-		return ec, nil, err
-	}
-	// Only current content is released: Cratis/Chronicle#4623;
-	// remove this guard with Cratis/Chronicle.Go#96.
-	if protected {
-		return ec, nil, fmt.Errorf("%w: protected non-current observer generation", faults.ErrUnsupported)
 	}
 	if delivery == events.Pinned {
 		return ec, content, nil

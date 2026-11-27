@@ -5,27 +5,25 @@ package events_test
 
 import (
 	"encoding/json"
-	"errors"
-	"strings"
 	"testing"
 
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/events"
-	"github.com/cratis/chronicle.go/internal/faults"
 )
 
 type DecodeGeneration struct{ Value string }
 type PreviousDecodeGeneration DecodeGeneration
 
-func TestDecodeAlternateGenerationProtection(t *testing.T) {
+// The kernel releases protected values in every generation of GenerationalContent
+// (Cratis/Chronicle#4623), so protection never changes which content is selected.
+func TestDecodeAlternateGenerationSelectsKernelContentForProtectedEvents(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		classification compliance.Classification
-		protected      bool
 	}{
-		{"plain", compliance.Classification{}, false},
-		{"pii", compliance.Classification{PII: true}, true},
-		{"encrypted", compliance.Classification{Encrypted: true, Scope: compliance.Namespace}, true},
+		{"plain", compliance.Classification{}},
+		{"pii", compliance.Classification{PII: true}},
+		{"encrypted", compliance.Classification{Encrypted: true, Scope: compliance.Namespace}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			option := events.WithProtection(compliance.Property("Value", tc.classification))
@@ -47,15 +45,8 @@ func TestDecodeAlternateGenerationProtection(t *testing.T) {
 				GenerationalContent: map[events.Generation]json.RawMessage{1: json.RawMessage(`{"Value":"ciphertext-marker"}`)},
 			}
 			value, err := events.Decode[PreviousDecodeGeneration](catalog, appended)
-			if tc.protected {
-				if !errors.Is(err, faults.ErrUnsupported) || value != (PreviousDecodeGeneration{}) {
-					t.Fatalf("alternate = %#v, %v", value, err)
-				}
-				if strings.Contains(err.Error(), "ciphertext-marker") {
-					t.Fatal("error disclosed content")
-				}
-			} else if err != nil || value.Value != "ciphertext-marker" {
-				t.Fatalf("plain alternate = %#v, %v", value, err)
+			if err != nil || value.Value != "ciphertext-marker" {
+				t.Fatalf("alternate = %#v, %v", value, err)
 			}
 			assertDeliveredGeneration(t, catalog, appended)
 			// The existing raw-content fallback does not select alternate bytes.

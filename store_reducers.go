@@ -26,7 +26,7 @@ func (s *EventStore) startReducers(ctx context.Context, g *generation, waitReady
 	var plans []observerPlan
 	for _, plan := range s.reducerPlans() {
 		plans = append(plans, observerPlan{id: string(plan.Identifier()), logger: plan.Logger(), operation: "reducer", open: func(ctx context.Context, g *generation, delivered func()) (observerStream, error) {
-			runtime, err := observerruntime.OpenReducer(ctx, g.transport, g.id, s.name, s.namespace, plan)
+			runtime, err := observerruntime.OpenReducer(ctx, g.observationConn(), g.id, s.name, s.namespace, plan)
 			if err == nil {
 				runtime.EventTypes = s.catalog
 				runtime.OnDelivered = delivered

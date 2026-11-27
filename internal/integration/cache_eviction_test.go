@@ -17,6 +17,7 @@ import (
 	chronicle "github.com/cratis/chronicle.go"
 	"github.com/cratis/chronicle.go/contracts/clients"
 	"github.com/cratis/chronicle.go/contracts/observation"
+	"github.com/cratis/chronicle.go/contracts/observation/multiplexed"
 	reactorcontracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
 	"github.com/google/uuid"
@@ -60,7 +61,7 @@ func TestKernelCacheEvictionRetainsWatchAndExplicitReconnect(t *testing.T) {
 	conn, err := grpc.NewClient(relay.listener.Addr().String(), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})), grpc.WithDisableRetry(), // Test-owned local TLS endpoint.
 		grpc.WithStreamInterceptor(func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, options ...grpc.CallOption) (grpc.ClientStream, error) {
 			stream, err := streamer(ctx, desc, cc, method, options...)
-			if err == nil && method == reactorcontracts.Reactors_Observe_FullMethodName {
+			if err == nil && (method == reactorcontracts.Reactors_Observe_FullMethodName || method == multiplexed.MultiplexedObservation_Observe_FullMethodName) {
 				streams.Add(1)
 			}
 			if err == nil && method == clients.ConnectionService_Connect_FullMethodName {

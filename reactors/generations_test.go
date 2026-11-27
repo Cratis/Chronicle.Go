@@ -5,12 +5,10 @@ package reactors_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/cratis/chronicle.go/compliance"
 	"github.com/cratis/chronicle.go/events"
-	"github.com/cratis/chronicle.go/internal/faults"
 	"github.com/cratis/chronicle.go/observation"
 	"github.com/cratis/chronicle.go/reactors"
 	"github.com/cratis/chronicle.go/readmodels"
@@ -22,17 +20,18 @@ type HistoricalObserver struct{}
 
 func (HistoricalObserver) Observe(PreviousObservedGeneration) { panic("must not run") }
 
+// The kernel releases protected values in every generation, so protected historical
+// observers are admitted like plain ones (Cratis/Chronicle#4623).
 func TestReactorGenerationAdmission(t *testing.T) {
 	for _, tc := range []struct {
 		name                                            string
 		currentProtected, previousProtected, historical bool
-		wantErr                                         error
 	}{
-		{"protected historical", true, true, true, faults.ErrUnsupported},
-		{"current protection alone", true, false, true, faults.ErrUnsupported},
-		{"historical protection alone", false, true, true, faults.ErrUnsupported},
-		{"plain historical", false, false, true, nil},
-		{"protected current", true, true, false, nil},
+		{"protected historical", true, true, true},
+		{"current protection alone", true, false, true},
+		{"historical protection alone", false, true, true},
+		{"plain historical", false, false, true},
+		{"protected current", true, true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			catalog := reactorGenerationCatalog(t, tc.currentProtected, tc.previousProtected)
@@ -49,12 +48,14 @@ func TestReactorGenerationAdmission(t *testing.T) {
 				t.Fatal(err)
 			}
 			plan, err := reactors.Compile(declaration, catalog, models, nil)
-			assertReactorGenerationAdmission(t, plan, err, tc.wantErr)
+			if err != nil || plan == nil {
+				t.Fatalf("compile = %v, %v", plan, err)
+			}
 		})
 	}
 }
 
-func TestReactorHistoricalDiscoveryReplayAndBatchRefuseBeforeActivation(t *testing.T) {
+func TestReactorHistoricalDiscoveryReplayAndBatchAreAdmittedForProtectedEvents(t *testing.T) {
 	catalog := reactorGenerationCatalog(t, true, false)
 	models, err := readmodels.NewCatalog()
 	if err != nil {
@@ -79,30 +80,10 @@ func TestReactorHistoricalDiscoveryReplayAndBatchRefuseBeforeActivation(t *testi
 	for _, declaration := range []reactors.Declaration{discovered, replay, batch} {
 		t.Run(string(declaration.Identifier()), func(t *testing.T) {
 			plan, err := reactors.Compile(declaration, catalog, models, nil)
-			if !errors.Is(err, faults.ErrUnsupported) || plan != nil {
+			if err != nil || plan == nil {
 				t.Fatalf("compile = %v, %v", plan, err)
 			}
 		})
-	}
-}
-
-func assertReactorGenerationAdmission(t *testing.T, plan *reactors.Plan, err, wantErr error) {
-	t.Helper()
-	if !errors.Is(err, wantErr) {
-		t.Fatalf("compile = %v", err)
-	}
-	if wantErr == nil {
-		return
-	}
-	if plan != nil {
-		t.Fatalf("refused plan = %v", plan)
-	}
-	var detail *reactors.DeclarationError
-	if !errors.As(err, &detail) {
-		t.Fatalf("declaration error = %v", err)
-	}
-	if detail.Reactor != "generation" {
-		t.Fatalf("reactor = %v", detail.Reactor)
 	}
 }
 

@@ -17,6 +17,7 @@ import (
 	"github.com/cratis/chronicle.go/internal/connection"
 	"github.com/cratis/chronicle.go/internal/decision"
 	"github.com/cratis/chronicle.go/internal/kernelcapability"
+	"github.com/cratis/chronicle.go/internal/multiplexed"
 	"github.com/cratis/chronicle.go/internal/registration"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -39,6 +40,7 @@ type generation struct {
 	tokens        TokenSource
 	oauth         *connection.OAuth
 	transport     *generationTransport
+	multiplexed   *multiplexed.Conn // Non-nil when observers share one call.
 	stream        grpc.ServerStreamingClient[clients.ConnectionKeepAlive]
 	id            string
 	address       string
@@ -207,7 +209,21 @@ func (g *generation) checkCompatibility(ctx context.Context, service clients.Con
 	g.decisions = decision.Supported(response.ServerVersion, response.ServerProtocolVersion)
 	// Skipped verification leaves the zero value: no fix is assumed present.
 	g.capabilities = kernelcapability.FromVersion(response.ServerVersion)
+	g.capabilities.MultiplexedObservation = slices.Contains(response.Capabilities, multiplexed.Capability)
+	if g.capabilities.MultiplexedObservation && !g.client.config.multiplexedObservationOff {
+		g.multiplexed = multiplexed.NewConn(g.transport, multiplexed.NewChannel(g.ctx, multiplexed.NewOpener(g.transport), multiplexed.DefaultCoalesce))
+	}
 	return nil
+}
+
+// observationConn is the connection reactors and reducers observe on: the one
+// shared multiplexed call when the kernel supports it and the option allows it,
+// otherwise a call of their own each.
+func (g *generation) observationConn() grpc.ClientConnInterface {
+	if g.multiplexed != nil {
+		return g.multiplexed
+	}
+	return g.transport
 }
 
 func probeConnectionReadiness(ctx context.Context, service clients.ConnectionServiceClient) error {

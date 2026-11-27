@@ -20,11 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Projections_GetAllDeclarations_FullMethodName = "/Cratis.Chronicle.Contracts.Projections.Projections/GetAllDeclarations"
-	Projections_GetAllDefinitions_FullMethodName  = "/Cratis.Chronicle.Contracts.Projections.Projections/GetAllDefinitions"
-	Projections_Preview_FullMethodName            = "/Cratis.Chronicle.Contracts.Projections.Projections/Preview"
-	Projections_Register_FullMethodName           = "/Cratis.Chronicle.Contracts.Projections.Projections/Register"
-	Projections_Save_FullMethodName               = "/Cratis.Chronicle.Contracts.Projections.Projections/Save"
+	Projections_GetAllDeclarations_FullMethodName    = "/Cratis.Chronicle.Contracts.Projections.Projections/GetAllDeclarations"
+	Projections_GetAllDefinitions_FullMethodName     = "/Cratis.Chronicle.Contracts.Projections.Projections/GetAllDefinitions"
+	Projections_GetRegistrationStatus_FullMethodName = "/Cratis.Chronicle.Contracts.Projections.Projections/GetRegistrationStatus"
+	Projections_Preview_FullMethodName               = "/Cratis.Chronicle.Contracts.Projections.Projections/Preview"
+	Projections_Register_FullMethodName              = "/Cratis.Chronicle.Contracts.Projections.Projections/Register"
+	Projections_Save_FullMethodName                  = "/Cratis.Chronicle.Contracts.Projections.Projections/Save"
 )
 
 // ProjectionsClient is the client API for Projections service.
@@ -33,6 +34,7 @@ const (
 type ProjectionsClient interface {
 	GetAllDeclarations(ctx context.Context, in *GetAllDeclarationsRequest, opts ...grpc.CallOption) (*IEnumerable_ProjectionWithDeclaration, error)
 	GetAllDefinitions(ctx context.Context, in *GetAllDefinitionsRequest, opts ...grpc.CallOption) (*IEnumerable_ProjectionDefinition, error)
+	GetRegistrationStatus(ctx context.Context, in *GetRegistrationStatusRequest, opts ...grpc.CallOption) (*RegistrationStatus, error)
 	Preview(ctx context.Context, in *PreviewProjectionRequest, opts ...grpc.CallOption) (*OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Save(ctx context.Context, in *SaveProjectionRequest, opts ...grpc.CallOption) (*SaveProjectionResult, error)
@@ -60,6 +62,16 @@ func (c *projectionsClient) GetAllDefinitions(ctx context.Context, in *GetAllDef
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(IEnumerable_ProjectionDefinition)
 	err := c.cc.Invoke(ctx, Projections_GetAllDefinitions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectionsClient) GetRegistrationStatus(ctx context.Context, in *GetRegistrationStatusRequest, opts ...grpc.CallOption) (*RegistrationStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegistrationStatus)
+	err := c.cc.Invoke(ctx, Projections_GetRegistrationStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +114,7 @@ func (c *projectionsClient) Save(ctx context.Context, in *SaveProjectionRequest,
 type ProjectionsServer interface {
 	GetAllDeclarations(context.Context, *GetAllDeclarationsRequest) (*IEnumerable_ProjectionWithDeclaration, error)
 	GetAllDefinitions(context.Context, *GetAllDefinitionsRequest) (*IEnumerable_ProjectionDefinition, error)
+	GetRegistrationStatus(context.Context, *GetRegistrationStatusRequest) (*RegistrationStatus, error)
 	Preview(context.Context, *PreviewProjectionRequest) (*OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors, error)
 	Register(context.Context, *RegisterRequest) (*emptypb.Empty, error)
 	Save(context.Context, *SaveProjectionRequest) (*SaveProjectionResult, error)
@@ -120,6 +133,9 @@ func (UnimplementedProjectionsServer) GetAllDeclarations(context.Context, *GetAl
 }
 func (UnimplementedProjectionsServer) GetAllDefinitions(context.Context, *GetAllDefinitionsRequest) (*IEnumerable_ProjectionDefinition, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAllDefinitions not implemented")
+}
+func (UnimplementedProjectionsServer) GetRegistrationStatus(context.Context, *GetRegistrationStatusRequest) (*RegistrationStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRegistrationStatus not implemented")
 }
 func (UnimplementedProjectionsServer) Preview(context.Context, *PreviewProjectionRequest) (*OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors, error) {
 	return nil, status.Error(codes.Unimplemented, "method Preview not implemented")
@@ -183,6 +199,24 @@ func _Projections_GetAllDefinitions_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProjectionsServer).GetAllDefinitions(ctx, req.(*GetAllDefinitionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Projections_GetRegistrationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRegistrationStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectionsServer).GetRegistrationStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Projections_GetRegistrationStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectionsServer).GetRegistrationStatus(ctx, req.(*GetRegistrationStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -255,6 +289,10 @@ var Projections_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAllDefinitions",
 			Handler:    _Projections_GetAllDefinitions_Handler,
+		},
+		{
+			MethodName: "GetRegistrationStatus",
+			Handler:    _Projections_GetRegistrationStatus_Handler,
 		},
 		{
 			MethodName: "Preview",

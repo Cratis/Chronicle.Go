@@ -21,6 +21,7 @@ import (
 	"github.com/cratis/chronicle.go/contracts/eventstores"
 	"github.com/cratis/chronicle.go/contracts/eventtypes"
 	"github.com/cratis/chronicle.go/contracts/namespaces"
+	multiplexedcontracts "github.com/cratis/chronicle.go/contracts/observation/multiplexed"
 	contracts "github.com/cratis/chronicle.go/contracts/observation/reactors"
 	modelcontracts "github.com/cratis/chronicle.go/contracts/readmodels"
 	"github.com/cratis/chronicle.go/contracts/sequences"
@@ -64,6 +65,7 @@ type reactorKernel struct {
 	readKey          chan string
 	modelJSON        string
 	endConnection    chan error
+	multiplexed      multiplexedcontracts.MultiplexedObservationServer
 }
 
 func (k *reactorKernel) Connect(request *clients.ConnectRequest, stream grpc.ServerStreamingServer[clients.ConnectionKeepAlive]) error {
@@ -154,6 +156,9 @@ func reactorClient(t *testing.T, k *reactorKernel, registry *chronicle.Registry,
 	constraints.RegisterConstraintsServer(server, k)
 	sequences.RegisterEventSequencesServer(server, k)
 	contracts.RegisterReactorsServer(server, k)
+	if k.multiplexed != nil {
+		multiplexedcontracts.RegisterMultiplexedObservationServer(server, k.multiplexed)
+	}
 	modelcontracts.RegisterReadModelsServer(server, k)
 	done := make(chan struct{})
 	t.Cleanup(func() {

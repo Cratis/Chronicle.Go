@@ -22,6 +22,55 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type KernelStatus int32
+
+const (
+	KernelStatus_Accepting  KernelStatus = 0
+	KernelStatus_Degraded   KernelStatus = 1
+	KernelStatus_Recovering KernelStatus = 2
+)
+
+// Enum value maps for KernelStatus.
+var (
+	KernelStatus_name = map[int32]string{
+		0: "Accepting",
+		1: "Degraded",
+		2: "Recovering",
+	}
+	KernelStatus_value = map[string]int32{
+		"Accepting":  0,
+		"Degraded":   1,
+		"Recovering": 2,
+	}
+)
+
+func (x KernelStatus) Enum() *KernelStatus {
+	p := new(KernelStatus)
+	*p = x
+	return p
+}
+
+func (x KernelStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (KernelStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_clients_proto_enumTypes[0].Descriptor()
+}
+
+func (KernelStatus) Type() protoreflect.EnumType {
+	return &file_clients_proto_enumTypes[0]
+}
+
+func (x KernelStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use KernelStatus.Descriptor instead.
+func (KernelStatus) EnumDescriptor() ([]byte, []int) {
+	return file_clients_proto_rawDescGZIP(), []int{0}
+}
+
 type CompatibilityRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	ClientType      string                 `protobuf:"bytes,1,opt,name=ClientType,proto3" json:"ClientType,omitempty"`
@@ -369,6 +418,7 @@ func (x *ConnectedClient) GetClientType() string {
 type ConnectionKeepAlive struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ConnectionId  string                 `protobuf:"bytes,1,opt,name=ConnectionId,proto3" json:"ConnectionId,omitempty"`
+	Status        KernelStatus           `protobuf:"varint,2,opt,name=Status,proto3,enum=Cratis.Chronicle.Contracts.Clients.KernelStatus" json:"Status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -408,6 +458,13 @@ func (x *ConnectionKeepAlive) GetConnectionId() string {
 		return x.ConnectionId
 	}
 	return ""
+}
+
+func (x *ConnectionKeepAlive) GetStatus() KernelStatus {
+	if x != nil {
+		return x.Status
+	}
+	return KernelStatus_Accepting
 }
 
 type DescriptorSetResponse struct {
@@ -582,15 +639,21 @@ const file_clients_proto_rawDesc = "" +
 	"\vMachineName\x18\b \x01(\tR\vMachineName\x12\x1e\n" +
 	"\n" +
 	"ClientType\x18\t \x01(\tR\n" +
-	"ClientType\"9\n" +
+	"ClientType\"\x83\x01\n" +
 	"\x13ConnectionKeepAlive\x12\"\n" +
-	"\fConnectionId\x18\x01 \x01(\tR\fConnectionId\"C\n" +
+	"\fConnectionId\x18\x01 \x01(\tR\fConnectionId\x12H\n" +
+	"\x06Status\x18\x02 \x01(\x0e20.Cratis.Chronicle.Contracts.Clients.KernelStatusR\x06Status\"C\n" +
 	"\x15DescriptorSetResponse\x12*\n" +
 	"\x10SchemaDefinition\x18\x01 \x01(\tR\x10SchemaDefinition\"h\n" +
 	"\x1bIEnumerable_ConnectedClient\x12I\n" +
 	"\x05items\x18\x01 \x03(\v23.Cratis.Chronicle.Contracts.Clients.ConnectedClientR\x05items\"2\n" +
 	"\x1aSerializableDateTimeOffset\x12\x14\n" +
-	"\x05Value\x18\x01 \x01(\tR\x05Value2\xce\x05\n" +
+	"\x05Value\x18\x01 \x01(\tR\x05Value*;\n" +
+	"\fKernelStatus\x12\r\n" +
+	"\tAccepting\x10\x00\x12\f\n" +
+	"\bDegraded\x10\x01\x12\x0e\n" +
+	"\n" +
+	"Recovering\x10\x022\xce\x05\n" +
 	"\x11ConnectionService\x12\x89\x01\n" +
 	"\x12CheckCompatibility\x128.Cratis.Chronicle.Contracts.Clients.CompatibilityRequest\x1a9.Cratis.Chronicle.Contracts.Clients.CompatibilityResponse\x12x\n" +
 	"\aConnect\x122.Cratis.Chronicle.Contracts.Clients.ConnectRequest\x1a7.Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive0\x01\x12f\n" +
@@ -612,38 +675,41 @@ func file_clients_proto_rawDescGZIP() []byte {
 	return file_clients_proto_rawDescData
 }
 
+var file_clients_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_clients_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_clients_proto_goTypes = []any{
-	(*CompatibilityRequest)(nil),        // 0: Cratis.Chronicle.Contracts.Clients.CompatibilityRequest
-	(*CompatibilityResponse)(nil),       // 1: Cratis.Chronicle.Contracts.Clients.CompatibilityResponse
-	(*ConnectRequest)(nil),              // 2: Cratis.Chronicle.Contracts.Clients.ConnectRequest
-	(*ConnectedClient)(nil),             // 3: Cratis.Chronicle.Contracts.Clients.ConnectedClient
-	(*ConnectionKeepAlive)(nil),         // 4: Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive
-	(*DescriptorSetResponse)(nil),       // 5: Cratis.Chronicle.Contracts.Clients.DescriptorSetResponse
-	(*IEnumerable_ConnectedClient)(nil), // 6: Cratis.Chronicle.Contracts.Clients.IEnumerable_ConnectedClient
-	(*SerializableDateTimeOffset)(nil),  // 7: Cratis.Chronicle.Contracts.Clients.SerializableDateTimeOffset
-	(*emptypb.Empty)(nil),               // 8: google.protobuf.Empty
+	(KernelStatus)(0),                   // 0: Cratis.Chronicle.Contracts.Clients.KernelStatus
+	(*CompatibilityRequest)(nil),        // 1: Cratis.Chronicle.Contracts.Clients.CompatibilityRequest
+	(*CompatibilityResponse)(nil),       // 2: Cratis.Chronicle.Contracts.Clients.CompatibilityResponse
+	(*ConnectRequest)(nil),              // 3: Cratis.Chronicle.Contracts.Clients.ConnectRequest
+	(*ConnectedClient)(nil),             // 4: Cratis.Chronicle.Contracts.Clients.ConnectedClient
+	(*ConnectionKeepAlive)(nil),         // 5: Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive
+	(*DescriptorSetResponse)(nil),       // 6: Cratis.Chronicle.Contracts.Clients.DescriptorSetResponse
+	(*IEnumerable_ConnectedClient)(nil), // 7: Cratis.Chronicle.Contracts.Clients.IEnumerable_ConnectedClient
+	(*SerializableDateTimeOffset)(nil),  // 8: Cratis.Chronicle.Contracts.Clients.SerializableDateTimeOffset
+	(*emptypb.Empty)(nil),               // 9: google.protobuf.Empty
 }
 var file_clients_proto_depIdxs = []int32{
-	7, // 0: Cratis.Chronicle.Contracts.Clients.ConnectedClient.LastSeen:type_name -> Cratis.Chronicle.Contracts.Clients.SerializableDateTimeOffset
-	3, // 1: Cratis.Chronicle.Contracts.Clients.IEnumerable_ConnectedClient.items:type_name -> Cratis.Chronicle.Contracts.Clients.ConnectedClient
-	0, // 2: Cratis.Chronicle.Contracts.Clients.ConnectionService.CheckCompatibility:input_type -> Cratis.Chronicle.Contracts.Clients.CompatibilityRequest
-	2, // 3: Cratis.Chronicle.Contracts.Clients.ConnectionService.Connect:input_type -> Cratis.Chronicle.Contracts.Clients.ConnectRequest
-	4, // 4: Cratis.Chronicle.Contracts.Clients.ConnectionService.ConnectionKeepAlive:input_type -> Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive
-	8, // 5: Cratis.Chronicle.Contracts.Clients.ConnectionService.GetConnectedClients:input_type -> google.protobuf.Empty
-	8, // 6: Cratis.Chronicle.Contracts.Clients.ConnectionService.GetDescriptorSet:input_type -> google.protobuf.Empty
-	8, // 7: Cratis.Chronicle.Contracts.Clients.ConnectionService.ObserveConnectedClients:input_type -> google.protobuf.Empty
-	1, // 8: Cratis.Chronicle.Contracts.Clients.ConnectionService.CheckCompatibility:output_type -> Cratis.Chronicle.Contracts.Clients.CompatibilityResponse
-	4, // 9: Cratis.Chronicle.Contracts.Clients.ConnectionService.Connect:output_type -> Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive
-	8, // 10: Cratis.Chronicle.Contracts.Clients.ConnectionService.ConnectionKeepAlive:output_type -> google.protobuf.Empty
-	6, // 11: Cratis.Chronicle.Contracts.Clients.ConnectionService.GetConnectedClients:output_type -> Cratis.Chronicle.Contracts.Clients.IEnumerable_ConnectedClient
-	5, // 12: Cratis.Chronicle.Contracts.Clients.ConnectionService.GetDescriptorSet:output_type -> Cratis.Chronicle.Contracts.Clients.DescriptorSetResponse
-	6, // 13: Cratis.Chronicle.Contracts.Clients.ConnectionService.ObserveConnectedClients:output_type -> Cratis.Chronicle.Contracts.Clients.IEnumerable_ConnectedClient
-	8, // [8:14] is the sub-list for method output_type
-	2, // [2:8] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	8, // 0: Cratis.Chronicle.Contracts.Clients.ConnectedClient.LastSeen:type_name -> Cratis.Chronicle.Contracts.Clients.SerializableDateTimeOffset
+	0, // 1: Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive.Status:type_name -> Cratis.Chronicle.Contracts.Clients.KernelStatus
+	4, // 2: Cratis.Chronicle.Contracts.Clients.IEnumerable_ConnectedClient.items:type_name -> Cratis.Chronicle.Contracts.Clients.ConnectedClient
+	1, // 3: Cratis.Chronicle.Contracts.Clients.ConnectionService.CheckCompatibility:input_type -> Cratis.Chronicle.Contracts.Clients.CompatibilityRequest
+	3, // 4: Cratis.Chronicle.Contracts.Clients.ConnectionService.Connect:input_type -> Cratis.Chronicle.Contracts.Clients.ConnectRequest
+	5, // 5: Cratis.Chronicle.Contracts.Clients.ConnectionService.ConnectionKeepAlive:input_type -> Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive
+	9, // 6: Cratis.Chronicle.Contracts.Clients.ConnectionService.GetConnectedClients:input_type -> google.protobuf.Empty
+	9, // 7: Cratis.Chronicle.Contracts.Clients.ConnectionService.GetDescriptorSet:input_type -> google.protobuf.Empty
+	9, // 8: Cratis.Chronicle.Contracts.Clients.ConnectionService.ObserveConnectedClients:input_type -> google.protobuf.Empty
+	2, // 9: Cratis.Chronicle.Contracts.Clients.ConnectionService.CheckCompatibility:output_type -> Cratis.Chronicle.Contracts.Clients.CompatibilityResponse
+	5, // 10: Cratis.Chronicle.Contracts.Clients.ConnectionService.Connect:output_type -> Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive
+	9, // 11: Cratis.Chronicle.Contracts.Clients.ConnectionService.ConnectionKeepAlive:output_type -> google.protobuf.Empty
+	7, // 12: Cratis.Chronicle.Contracts.Clients.ConnectionService.GetConnectedClients:output_type -> Cratis.Chronicle.Contracts.Clients.IEnumerable_ConnectedClient
+	6, // 13: Cratis.Chronicle.Contracts.Clients.ConnectionService.GetDescriptorSet:output_type -> Cratis.Chronicle.Contracts.Clients.DescriptorSetResponse
+	7, // 14: Cratis.Chronicle.Contracts.Clients.ConnectionService.ObserveConnectedClients:output_type -> Cratis.Chronicle.Contracts.Clients.IEnumerable_ConnectedClient
+	9, // [9:15] is the sub-list for method output_type
+	3, // [3:9] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_clients_proto_init() }
@@ -656,13 +722,14 @@ func file_clients_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_clients_proto_rawDesc), len(file_clients_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_clients_proto_goTypes,
 		DependencyIndexes: file_clients_proto_depIdxs,
+		EnumInfos:         file_clients_proto_enumTypes,
 		MessageInfos:      file_clients_proto_msgTypes,
 	}.Build()
 	File_clients_proto = out.File

@@ -127,6 +127,7 @@ type EventStoreSubscriptionDefinition struct {
 	EventTypes         []*EventType            `protobuf:"bytes,3,rep,name=EventTypes,proto3" json:"EventTypes,omitempty"`
 	GenerationDelivery EventGenerationDelivery `protobuf:"varint,4,opt,name=GenerationDelivery,proto3,enum=Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventGenerationDelivery" json:"GenerationDelivery,omitempty"`
 	NamedTags          []*NamedTag             `protobuf:"bytes,5,rep,name=NamedTags,proto3" json:"NamedTags,omitempty"`
+	SourceNamespaces   []string                `protobuf:"bytes,6,rep,name=SourceNamespaces,proto3" json:"SourceNamespaces,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -192,6 +193,13 @@ func (x *EventStoreSubscriptionDefinition) GetGenerationDelivery() EventGenerati
 func (x *EventStoreSubscriptionDefinition) GetNamedTags() []*NamedTag {
 	if x != nil {
 		return x.NamedTags
+	}
+	return nil
+}
+
+func (x *EventStoreSubscriptionDefinition) GetSourceNamespaces() []string {
+	if x != nil {
+		return x.SourceNamespaces
 	}
 	return nil
 }
@@ -455,7 +463,7 @@ const file_observation_eventstoresubscriptions_proto_rawDesc = "" +
 	")observation_eventstoresubscriptions.proto\x12>Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions\x1a\x1bgoogle/protobuf/empty.proto\"\xd1\x01\n" +
 	"\x1aAddEventStoreSubscriptions\x12*\n" +
 	"\x10TargetEventStore\x18\x01 \x01(\tR\x10TargetEventStore\x12\x86\x01\n" +
-	"\rSubscriptions\x18\x02 \x03(\v2`.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinitionR\rSubscriptions\"\xcb\x03\n" +
+	"\rSubscriptions\x18\x02 \x03(\v2`.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinitionR\rSubscriptions\"\xf7\x03\n" +
 	" EventStoreSubscriptionDefinition\x12\x1e\n" +
 	"\n" +
 	"Identifier\x18\x01 \x01(\tR\n" +
@@ -465,7 +473,8 @@ const file_observation_eventstoresubscriptions_proto_rawDesc = "" +
 	"EventTypes\x18\x03 \x03(\v2I.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventTypeR\n" +
 	"EventTypes\x12\x87\x01\n" +
 	"\x12GenerationDelivery\x18\x04 \x01(\x0e2W.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventGenerationDeliveryR\x12GenerationDelivery\x12f\n" +
-	"\tNamedTags\x18\x05 \x03(\v2H.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.NamedTagR\tNamedTags\"Y\n" +
+	"\tNamedTags\x18\x05 \x03(\v2H.Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.NamedTagR\tNamedTags\x12*\n" +
+	"\x10SourceNamespaces\x18\x06 \x03(\tR\x10SourceNamespaces\"Y\n" +
 	"\tEventType\x12\x0e\n" +
 	"\x02Id\x18\x01 \x01(\tR\x02Id\x12\x1e\n" +
 	"\n" +

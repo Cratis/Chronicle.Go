@@ -163,6 +163,13 @@ func awaitWebhookCount(t *testing.T, ctx context.Context, service *webhooks.Serv
 	}
 }
 
+// hasRedactedHeader checks the read-back contract: header values are write-only,
+// so the name survives with an empty value and HeaderValuesSet reports presence.
+func hasRedactedHeader(definition webhooks.Definition) bool {
+	value, present := definition.Headers()["x-integration"]
+	return present && value == "" && definition.HeaderValuesSet()["x-integration"]
+}
+
 func TestKernelWebhookDefinitionRegisterListRemove(t *testing.T) {
 	f := newKernelFixture(t)
 	client := f.client(integrationRegistry[IntegrationPublished](t, events.WithID("IntegrationPublished")))
@@ -178,8 +185,8 @@ func TestKernelWebhookDefinitionRegisterListRemove(t *testing.T) {
 		t.Fatalf("webhook list count=%d err=%v", len(definitions), err)
 	}
 	definition := definitions[0].KernelDefinition()
-	if definition.Identifier != "notify" || definition.EventSequenceId != "event-log" || !definition.IsActive || !definition.IsReplayable || definition.Target.Url != "https://example.invalid/events" || definition.Target.Headers["x-integration"] != "go" || definition.Target.Authorization != nil || len(definition.EventTypes) != 1 || definition.EventTypes[0].Id != "IntegrationPublished" {
-		t.Fatalf("webhook readback differs: id=%s sequence=%s active=%v replayable=%v authPresent=%v events=%d headerPresent=%v", definition.Identifier, definition.EventSequenceId, definition.IsActive, definition.IsReplayable, definition.Target.Authorization != nil, len(definition.EventTypes), definition.Target.Headers["x-integration"] == "go")
+	if definition.Identifier != "notify" || definition.EventSequenceId != "event-log" || !definition.IsActive || !definition.IsReplayable || definition.Target.Url != "https://example.invalid/events" || !hasRedactedHeader(definitions[0]) || definition.Target.Authorization != nil || len(definition.EventTypes) != 1 || definition.EventTypes[0].Id != "IntegrationPublished" {
+		t.Fatalf("webhook readback differs: id=%s sequence=%s active=%v replayable=%v authPresent=%v events=%d headerPresent=%v", definition.Identifier, definition.EventSequenceId, definition.IsActive, definition.IsReplayable, definition.Target.Authorization != nil, len(definition.EventTypes), hasRedactedHeader(definitions[0]))
 	}
 	if err = store.Webhooks().Remove(f.ctx, "notify"); err != nil {
 		t.Fatal(err)

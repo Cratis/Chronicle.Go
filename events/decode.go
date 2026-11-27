@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/cratis/chronicle.go/internal/eventprotection"
 	"github.com/cratis/chronicle.go/internal/faults"
 )
 
@@ -17,7 +16,6 @@ import (
 // execute migrations locally or relabel the persisted context. T must be a
 // registered non-pointer event struct (except the built-in EventRedacted). Use a Client.Catalogs/EventStore catalog
 // to retain the selected naming policy. An unrelated ID is ErrProtocol.
-// Alternate content for any identity with a protected generation is refused with ErrUnsupported.
 func Decode[T any](catalog *Catalog, appended Appended) (T, error) {
 	var result T
 	if catalog == nil {
@@ -34,7 +32,7 @@ func Decode[T any](catalog *Catalog, appended Appended) (T, error) {
 	if descriptor.ref.ID != appended.Context.EventType.ID {
 		return result, fmt.Errorf("%w: event identity mismatch", faults.ErrProtocol)
 	}
-	content, err := generationContent(catalog, descriptor, appended)
+	content, err := generationContent(descriptor, appended)
 	if err != nil {
 		return result, err
 	}
@@ -42,22 +40,13 @@ func Decode[T any](catalog *Catalog, appended Appended) (T, error) {
 	return result, err
 }
 
-func generationContent(catalog *Catalog, descriptor Descriptor, appended Appended) (json.RawMessage, error) {
+func generationContent(descriptor Descriptor, appended Appended) (json.RawMessage, error) {
 	if descriptor.ref.Generation == appended.Context.EventType.Generation {
 		return appended.Content, nil
 	}
 	alternate, ok := appended.GenerationalContent[descriptor.ref.Generation]
 	if !ok {
 		return appended.Content, nil
-	}
-	protected, err := eventprotection.IdentityProtected(catalog.Descriptors(), func(d Descriptor) bool { return d.Ref().ID == descriptor.ref.ID })
-	if err != nil {
-		return nil, err
-	}
-	// Only current content is released: Cratis/Chronicle#4623;
-	// remove this guard with Cratis/Chronicle.Go#96.
-	if protected {
-		return nil, fmt.Errorf("%w: protected alternate-generation event content", faults.ErrUnsupported)
 	}
 	return alternate, nil
 }

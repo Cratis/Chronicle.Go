@@ -246,6 +246,9 @@ const (
 	FastForwardReplaying
 	// FastForwardNotAvailable means the observer is retired or removed, so nothing changed.
 	FastForwardNotAvailable
+	// FastForwardAccepted means the kernel accepted the request and applies it in the
+	// background; the positions in the result are not yet known and are zero.
+	FastForwardAccepted
 )
 
 // FastForwardResult is an owned value describing a fast forward.
@@ -269,7 +272,7 @@ func (s *Service) FastForward(ctx context.Context, id ID, sequence events.Sequen
 		return FastForwardResult{}, err
 	}
 	r, err := s.client.FastForward(ctx, &contracts.FastForward{EventStore: string(s.store), Namespace: string(s.namespace), ObserverId: string(id), EventSequenceId: string(sequence)})
-	if err == nil && (r == nil || r.Outcome < 0 || r.Outcome > 3) {
+	if err == nil && (r == nil || r.Outcome < 0 || r.Outcome > 4) {
 		err = faults.ErrProtocol
 	}
 	if err != nil {
@@ -290,6 +293,8 @@ const (
 	ObserverQuarantined
 	// PartitionQuarantined means the partition fence prevented recovery.
 	PartitionQuarantined
+	// RecoveryAccepted means the kernel accepted the request and applies it in the background.
+	RecoveryAccepted
 )
 
 // RetryPartition explicitly requests recovery of one failed partition without
@@ -299,7 +304,7 @@ func (s *Service) RetryPartition(ctx context.Context, id ID, sequence events.Seq
 		return 0, err
 	}
 	r, err := s.client.RetryPartition(ctx, &contracts.RetryPartition{EventStore: string(s.store), Namespace: string(s.namespace), ObserverId: string(id), EventSequenceId: string(sequence), Partition: string(partition)})
-	if err == nil && (r == nil || r.Outcome < 0 || r.Outcome > 3) {
+	if err == nil && (r == nil || r.Outcome < 0 || r.Outcome > 4) {
 		err = faults.ErrProtocol
 	}
 	if err != nil {
@@ -318,6 +323,8 @@ const (
 	QuarantineNotFound
 	// NotQuarantined means the partition was not quarantined.
 	NotQuarantined
+	// QuarantineAccepted means the kernel accepted the request and applies it in the background.
+	QuarantineAccepted
 )
 
 // QuarantineResult is an owned value. RetryRequested qualifies RetryOutcome;
@@ -338,7 +345,7 @@ func (s *Service) ClearPartitionQuarantine(ctx context.Context, id ID, sequence 
 		return QuarantineResult{}, err
 	}
 	r, err := s.client.ClearPartitionQuarantine(ctx, &contracts.ClearPartitionQuarantine{EventStore: string(s.store), Namespace: string(s.namespace), ObserverId: string(id), EventSequenceId: string(sequence), Partition: string(partition), RetryImmediately: retryImmediately})
-	if err == nil && (r == nil || r.Outcome < 0 || r.Outcome > 2 || r.RetryOutcome < 0 || r.RetryOutcome > 3) {
+	if err == nil && (r == nil || r.Outcome < 0 || r.Outcome > 3 || r.RetryOutcome < 0 || r.RetryOutcome > 4) {
 		err = faults.ErrProtocol
 	}
 	if err != nil {

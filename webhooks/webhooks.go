@@ -28,7 +28,12 @@ type ID string
 
 // Definition is an immutable webhook. Define supplies C# defaults; zero is invalid.
 // Formatting is redacted, including %#v. KernelDefinition explicitly exposes secrets.
-type Definition struct{ value *contracts.WebhookDefinition }
+type Definition struct {
+	value *contracts.WebhookDefinition
+	// headerValuesSet is populated only on read-back: header name to whether the
+	// kernel holds a non-empty value. Header values are write-only.
+	headerValuesSet map[string]bool
+}
 
 // Option configures a definition. Scalar options are last-wins; event filters
 // accumulate as a set. Options are reusable; nil options fail definition creation.
@@ -126,7 +131,7 @@ func Define(catalog *events.Catalog, id ID, target string, options ...Option) (D
 			seen[ref] = true
 		}
 	}
-	return Definition{c.value}, nil
+	return Definition{value: c.value}, nil
 }
 
 // Identifier returns the persisted identity.
@@ -166,12 +171,20 @@ func (d Definition) TargetURL() string {
 }
 
 // Headers returns a detached map that may contain secrets. Do not log it.
+// A definition returned by GetAll keeps only the header names, each with an empty
+// value: the kernel never returns header values. Use HeaderValuesSet to see which
+// headers have a configured value.
 func (d Definition) Headers() map[string]string {
 	if d.value == nil {
 		return nil
 	}
 	return maps.Clone(d.value.Target.Headers)
 }
+
+// HeaderValuesSet reports, for a definition read back with GetAll, whether each
+// header has a non-empty configured value without exposing the value. It is nil
+// for a definition prepared locally with Define.
+func (d Definition) HeaderValuesSet() map[string]bool { return maps.Clone(d.headerValuesSet) }
 
 // IsActive reports whether delivery is enabled.
 func (d Definition) IsActive() bool { return d.value != nil && d.value.IsActive }
@@ -264,14 +277,23 @@ func (s *Service) GetAll(ctx context.Context) ([]Definition, error) {
 		if item == nil || item.Identifier == "" {
 			return nil, faults.ErrProtocol
 		}
-		value := &contracts.WebhookDefinition{Identifier: item.Identifier, EventSequenceId: item.EventSequenceId, IsReplayable: item.IsReplayable, IsActive: item.IsActive, Target: &contracts.WebhookTarget{Url: item.Url, Headers: maps.Clone(item.Headers)}}
+		// Header values are write-only. Keep the names and drop any value an older
+		// kernel still returns, as the C# client does; presence comes from HeaderValuesSet.
+		headers := make(map[string]string, len(item.Headers))
+		valuesSet := make(map[string]bool, len(item.Headers))
+		for name, header := range item.Headers {
+			headers[name] = ""
+			set, reported := item.HeaderValuesSet[name]
+			valuesSet[name] = set || (!reported && header != "")
+		}
+		value := &contracts.WebhookDefinition{Identifier: item.Identifier, EventSequenceId: item.EventSequenceId, IsReplayable: item.IsReplayable, IsActive: item.IsActive, Target: &contracts.WebhookTarget{Url: item.Url, Headers: headers}}
 		for _, event := range item.EventTypes {
 			if event == nil || event.Id == "" || event.Generation == 0 {
 				return nil, faults.ErrProtocol
 			}
 			value.EventTypes = append(value.EventTypes, proto.Clone(event).(*contracts.EventType))
 		}
-		definitions = append(definitions, Definition{value})
+		definitions = append(definitions, Definition{value: value, headerValuesSet: valuesSet})
 	}
 	return definitions, nil
 }

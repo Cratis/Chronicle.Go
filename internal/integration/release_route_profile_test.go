@@ -275,14 +275,11 @@ func releaseRouteProfile[T any](t *testing.T) {
 			if fields["__subject"] != nil || fields["__subjects"] != nil || fields["name"] == nil || fields["secret"] == nil {
 				t.Fatal("release response shape witness changed")
 			}
-			if document.route == "watch" {
-				// Chronicle#4566: loaded-state updates corrupt already-plaintext
-				// values before SDK decoding. Kernel 19.32.3 empties them for
-				// default Id as well as lowercase id; 19.29.4 kept default Id.
-				checkReleaseRouteValue(t, "unsupported server watch", json.RawMessage(document.data), nil, "", "")
-			} else {
-				checkReleaseRouteValue(t, "pre-decode server "+document.route, json.RawMessage(document.data), nil, want, plaintext)
-			}
+			// Chronicle#4566 is fixed: the kernel publishes the protected document so
+			// Watch releases it once, and the raw watch changeset now carries the same
+			// released values as the other routes. The SDK still refuses classified
+			// Watch at admission; this characterizes the public RPC only.
+			checkReleaseRouteValue(t, "server "+document.route, json.RawMessage(document.data), nil, want, plaintext)
 		}
 		if calls := transport.releases.Swap(0); calls != 0 {
 			t.Errorf("second Release RPCs=%d", calls)

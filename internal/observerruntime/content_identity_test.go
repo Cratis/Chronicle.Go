@@ -17,32 +17,32 @@ import (
 type SiblingGenerationContent struct{ Value string }
 type PreviousSiblingGenerationContent SiblingGenerationContent
 
-func TestObserverAlternateUsesIdentityWideProtection(t *testing.T) {
+func TestObserverAlternateSelectsKernelContentWhateverTheIdentityProtection(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		classification compliance.Classification
 		currentTarget  bool
-		wantErr        error
 	}{
-		{"plain identity", compliance.Classification{}, false, nil},
-		{"PII sibling", compliance.Classification{PII: true}, false, faults.ErrUnsupported},
-		{"encrypted sibling", compliance.Classification{Encrypted: true}, false, faults.ErrUnsupported},
-		{"current target protected past", compliance.Classification{PII: true}, true, faults.ErrUnsupported},
+		{"plain identity", compliance.Classification{}, false},
+		{"PII sibling", compliance.Classification{PII: true}, false},
+		{"encrypted sibling", compliance.Classification{Encrypted: true}, false},
+		{"current target protected past", compliance.Classification{PII: true}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			catalog, descriptor, appended := identityObserverFixture(t, tc.classification, tc.currentTarget)
-			ec, value, err := observerruntime.DecodeContent(catalog, descriptor, appended)
-			if !errors.Is(err, tc.wantErr) {
+			_, value, err := observerruntime.DecodeContent(catalog, descriptor, appended)
+			if err != nil {
 				t.Fatalf("decode = %v", err)
 			}
-			if tc.wantErr != nil {
-				if value != nil || ec.EventType != appended.Context.EventType {
-					t.Fatalf("refused content = %#v, context = %#v", value, ec)
-				}
-				return
+			var got string
+			switch decoded := value.(type) {
+			case *PreviousSiblingGenerationContent:
+				got = decoded.Value
+			case *SiblingGenerationContent:
+				got = decoded.Value
 			}
-			if decoded, ok := value.(*PreviousSiblingGenerationContent); !ok || decoded.Value != "alternate" {
-				t.Fatalf("plain alternate = %#v", value)
+			if got != "alternate" {
+				t.Fatalf("alternate = %#v", value)
 			}
 		})
 	}

@@ -26,6 +26,10 @@ type Capabilities struct {
 	// subject (Chronicle#4561), and metadata beneath maps and on collection-valued
 	// array elements is applied (Chronicle#4551, #4552); all fixed in 19.32.2.
 	ProtectedRelease bool
+	// MultiplexedObservation means the kernel serves every reactor and reducer of
+	// a connection over one MultiplexedObservation call. The kernel advertises it
+	// in its compatibility response; a version does not imply it.
+	MultiplexedObservation bool
 }
 
 // Minimum kernel releases for each capability.
