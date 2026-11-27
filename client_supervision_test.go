@@ -307,6 +307,160 @@ func gateReplacementConnect(entered chan<- struct{}, release <-chan struct{}) gr
 	}
 }
 
+func TestCachedHandleFailsWhenRegistrationGenerationDies(t *testing.T) {
+	registrationStarted := make(chan struct{})
+	drainEntered, release := make(chan struct{}), make(chan struct{})
+	kernel := &supervisedKernel{
+		registerEventTypes: holdSecondRegistration(registrationStarted),
+		streamInterceptor:  gateSecondConnectDrain(drainEntered, release),
+	}
+	client, ctx := supervisionClient(t, kernel)
+	releaseDrain := sync.OnceFunc(func() { close(release) })
+	t.Cleanup(releaseDrain)
+	store, err := client.EventStore(ctx, "store")
+	if err != nil {
+		t.Fatal(err)
+	}
+	log := store.EventLog()
+	reconnectWithoutStoreReplay(t, ctx, client, kernel)
+
+	scope := eventsequences.WithScope(eventsequences.Scope{Expectation: eventsequences.NoCheck()})
+	appendCtx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	result := make(chan error, 1)
+	t.Cleanup(func() {
+		releaseDrain()
+		cancel()
+		for range result {
+		}
+	})
+	go func() {
+		defer close(result)
+		_, err := log.Append(appendCtx, "interrupted", lifecycleEvent{}, scope)
+		result <- err
+	}()
+	awaitSignal(t, appendCtx, registrationStarted)
+	kernel.endStream <- status.Error(codes.Unavailable, "lost during registration")
+	awaitSignal(t, appendCtx, drainEntered)
+	select {
+	case err := <-result:
+		requireGenerationLossBeforeAppend(t, err, appendCtx.Err(), kernel.appends.Load())
+	case <-appendCtx.Done():
+		t.Fatalf("append did not fail while the canceled generation was draining: %v", appendCtx.Err())
+	}
+
+	releaseDrain()
+	requireAppendAfterRegistrationRecovery(t, ctx, kernel, recoveryAppendOptions{
+		store: store,
+		log:   log,
+		scope: scope,
+	})
+}
+
+func holdSecondRegistration(started chan<- struct{}) func(context.Context, *eventtypes.RegisterEventTypesRequest) error {
+	var registrations atomic.Int32
+	return func(ctx context.Context, _ *eventtypes.RegisterEventTypesRequest) error {
+		if registrations.Add(1) != 2 {
+			return nil
+		}
+		close(started)
+		<-ctx.Done()
+		return ctx.Err()
+	}
+}
+
+func reconnectWithoutStoreReplay(t *testing.T, ctx context.Context, client *Client, kernel *supervisedKernel) {
+	t.Helper()
+	evictStores(t, client)
+	client.mu.Lock()
+	first := client.current
+	client.mu.Unlock()
+	kernel.endStream <- status.Error(codes.Unavailable, "replace initial generation")
+	awaitSignal(t, ctx, first.ctx.Done())
+	if err := client.Ready(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := kernel.registrations.Load(); got != 1 {
+		t.Fatalf("registrations after reconnect = %d, want 1", got)
+	}
+}
+
+type recoveryAppendOptions struct {
+	store *EventStore
+	log   *eventsequences.Sequence
+	scope eventsequences.AppendOption
+}
+
+func requireAppendAfterRegistrationRecovery(t *testing.T, ctx context.Context, kernel *supervisedKernel, options recoveryAppendOptions) {
+	t.Helper()
+	outcome, err := options.store.WaitForRegistration(ctx)
+	if err != nil || !outcome.IsSuccess() {
+		t.Fatalf("registration after generation loss: outcome = %+v, error = %v", outcome, err)
+	}
+	if got := kernel.registrations.Load(); got != 3 {
+		t.Fatalf("registrations after recovery = %d, want 3", got)
+	}
+	fresh, err := options.log.Append(ctx, "fresh", lifecycleEvent{}, options.scope)
+	if err != nil || fresh.Disposition != eventsequences.Committed {
+		t.Fatalf("fresh append: disposition = %v, error = %v", fresh.Disposition, err)
+	}
+	if got := kernel.appends.Load(); got != 1 {
+		t.Fatalf("total append RPCs = %d, want 1", got)
+	}
+}
+
+func requireGenerationLossBeforeAppend(t *testing.T, err, callerErr error, appends int32) {
+	t.Helper()
+	if callerErr != nil || appends != 0 {
+		t.Fatalf("append returned with caller error = %v, append RPCs = %d; want a live caller and no RPCs", callerErr, appends)
+	}
+	if err == nil {
+		t.Fatal("append returned no error after losing its registration generation")
+	}
+	var registration *RegistrationError
+	var unknown *eventsequences.OutcomeUnknownError
+	code := status.Code(err)
+	switch {
+	case errors.As(err, &registration), errors.As(err, &unknown),
+		errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded),
+		code == codes.Canceled, code == codes.DeadlineExceeded:
+		t.Fatalf("append exposed a registration, cancellation, or unknown-outcome error: %v", err)
+	}
+}
+
+func gateSecondConnectDrain(entered chan<- struct{}, release <-chan struct{}) grpc.StreamClientInterceptor {
+	var connects atomic.Int32
+	return func(ctx context.Context, desc *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+		stream, err := streamer(ctx, desc, conn, method, opts...)
+		if err != nil || method != clients.ConnectionService_Connect_FullMethodName {
+			return stream, err
+		}
+		if connects.Add(1) == 2 {
+			stream = &connectDrainGate{ClientStream: stream, entered: entered, release: release}
+		}
+		return stream, nil
+	}
+}
+
+type connectDrainGate struct {
+	grpc.ClientStream
+	entered  chan<- struct{}
+	release  <-chan struct{}
+	terminal bool
+}
+
+func (s *connectDrainGate) RecvMsg(message any) error {
+	if s.terminal && s.entered != nil {
+		// The supervisor cancels the generation before draining, and joins this
+		// receive before replacing it. Hold that interval open for the append.
+		close(s.entered)
+		s.entered = nil
+		<-s.release
+	}
+	err := s.ClientStream.RecvMsg(message)
+	s.terminal = err != nil
+	return err
+}
+
 func TestLostGenerationDoesNotReplayInflightAppend(t *testing.T) {
 	entered := make(chan struct{})
 	kernel := &supervisedKernel{appendCall: func(ctx context.Context) error { close(entered); <-ctx.Done(); return ctx.Err() }}
