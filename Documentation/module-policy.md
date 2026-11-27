@@ -146,6 +146,14 @@ stored documents and consumers before renaming an existing property. The check
 only covers flat models with a small set of builtin field types. It does not
 follow `readmodels.Define`, wrappers, or registrations with options.
 
+`CHR0048` points to `Clear` when a direct `projections.From` callback clears
+an explicitly named, required `string` with a matching `Path[M, string]`
+descriptor. Clearing writes null, not an empty string. To represent an absent
+value, use a `*string` field and a matching `Path[M, *string]`. To keep the
+field required, assign the value you want explicitly, such as `""` with
+`projections.Value`. This partial check does not cover model-bound tags, null
+`Value` writes, `EveryClear`, or indirect builders and callbacks.
+
 The [parity map](parity.md#declaration-diagnostics-preview) links the pinned C#
 rules, tests, and exact detection boundaries. The analyzer uses SDK `v0.21.0`'s
 declaration rules, which may differ from the consumer's SDK. A clean run does

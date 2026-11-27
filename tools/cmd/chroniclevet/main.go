@@ -7,10 +7,11 @@ package main
 import (
 	"github.com/cratis/chronicle.go/tools/internal/eventprotection"
 	"github.com/cratis/chronicle.go/tools/internal/migrationidentity"
+	"github.com/cratis/chronicle.go/tools/internal/projectionclear"
 	"github.com/cratis/chronicle.go/tools/internal/reservedsubject"
 	"golang.org/x/tools/go/analysis/unitchecker"
 )
 
 func main() {
-	unitchecker.Main(eventprotection.Analyzer, migrationidentity.Analyzer, reservedsubject.Analyzer)
+	unitchecker.Main(eventprotection.Analyzer, migrationidentity.Analyzer, reservedsubject.Analyzer, projectionclear.Analyzer)
 }
